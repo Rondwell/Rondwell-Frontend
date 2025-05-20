@@ -1,0 +1,15 @@
+@font-face {
+	font-family: 'Moulin Regular';
+	font-style: normal;
+	font-weight: normal;
+	src:
+		url('Moulin.ttf.woff') format('woff'),
+		url('Moulin.ttf.eot') format('eot');
+}
+
+.moulin {
+	font-family: 'Moulin Regular', sans-serif;
+	font-optical-sizing: auto;
+	font-weight: 400;
+	font-style: normal;
+}

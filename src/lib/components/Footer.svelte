@@ -27,12 +27,12 @@
 								>API Docs</a
 							>
 							<a
-								href="#discover"
+								href="/"
 								class="merriweather-sans text-[15px] font-bold text-[#7A7B7E] transition-colors"
 								>Discover</a
 							>
 							<a
-								href="#pricing"
+								href="/"
 								class="merriweather-sans text-[15px] font-bold text-[#7A7B7E] transition-colors"
 								>Pricing</a
 							>
@@ -40,17 +40,17 @@
 					</div>
 					<div class="flex space-x-8">
 						<a
-							href="#terms"
+							href="/"
 							class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
 							>Terms</a
 						>
 						<a
-							href="#privacy"
+							href="/"
 							class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
 							>Privacy Policy</a
 						>
 						<a
-							href="#security"
+							href="/"
 							class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
 							>Security</a
 						>

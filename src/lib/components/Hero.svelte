@@ -23,14 +23,14 @@
 			</h1>
 
 			<div class="flex flex-wrap justify-center gap-4">
-				<a
-					href="#features"
+				<button
+					type="button"
 					class="rounded-[9px] bg-white/90 text-[12px] text-[#06142D] px-6 py-3 font-medium transition-colors md:w-[161.25px] h-[36px] flex items-center justify-center gap-1 text-nowrap"
 				>
 					Join Waitlist
 
 					<img src={UserSvg} alt="User Icon" />
-				</a>
+				</button>
 			</div>
 		</div>
 	</div>

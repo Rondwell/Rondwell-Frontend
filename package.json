@@ -40,6 +40,7 @@
 		"vite-plugin-pwa": "^1.0.0"
 	},
 	"dependencies": {
+		"@sveltejs/adapter-netlify": "^5.0.2",
 		"gsap": "^3.13.0",
 		"motion-svelte": "^0.0.1",
 		"svelte-intersection-observer": "^1.0.0"

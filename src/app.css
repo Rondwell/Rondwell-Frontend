@@ -64,6 +64,10 @@ img {
     -moz-user-select: none;
 }
 
+button {
+    cursor: pointer;
+}
+
 @-webkit-keyframes slide-top {
     0% {
         -webkit-transform: translateY(0);

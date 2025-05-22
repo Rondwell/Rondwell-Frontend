@@ -1,8 +1,8 @@
 <script lang="ts">
 	// Image imports
 	import HeroBg from '$lib/assets/images/hero-bg.png';
-	import UserSvg from '$lib/assets/images/user.svg';
-	import TestComp from './TestComp.svelte';
+	import Hero1Bg from '$lib/assets/images/hero-1-bg.png';
+	import Clouds from './Clouds.svelte';
 
 	// Modal and form state
 	let showModal = false;
@@ -98,8 +98,11 @@
 			<div class="flex flex-wrap justify-center gap-4">
 				<button
 					type="button"
+					aria-haspopup="dialog"
+					aria-controls="waitlist-modal"
+					aria-expanded={showModal}
 					on:click={openModal}
-					class="flex h-[36px] cursor-pointer items-center justify-center gap-1 rounded-[9px] bg-white/90 px-6 py-3 text-[12px] font-medium text-nowrap text-[#06142D] transition-colors hover:bg-white md:w-[161.25px] dark:bg-[#06142D] dark:text-white dark:hover:bg-white"
+					class="flex h-[36px] cursor-pointer items-center justify-center gap-1 rounded-[9px] bg-white/90 px-6 py-3 text-[12px] font-medium text-nowrap text-[#06142D] transition-colors md:w-[161.25px] dark:bg-[#06142D] dark:text-white"
 				>
 					Join Waitlist
 					<svg
@@ -178,7 +181,10 @@
 
 				<form on:submit={handleSubmit} class="space-y-4">
 					<div>
-						<label for="modal-email" class="mb-2 block text-sm font-medium text-[#06142D] dark:text-white">
+						<label
+							for="modal-email"
+							class="mb-2 block text-sm font-medium text-[#06142D] dark:text-white"
+						>
 							Email Address *
 						</label>
 						<input
@@ -193,7 +199,10 @@
 					</div>
 
 					<div>
-						<label for="modal-name" class="mb-2 block text-sm font-medium text-[#06142D] dark:text-white">
+						<label
+							for="modal-name"
+							class="mb-2 block text-sm font-medium text-[#06142D] dark:text-white"
+						>
 							Name (optional)
 						</label>
 						<input

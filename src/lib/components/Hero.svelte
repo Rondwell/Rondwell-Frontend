@@ -96,7 +96,7 @@
 				<button
 					type="button"
 					on:click={openModal}
-					class="flex h-[36px] items-center justify-center gap-1 rounded-[9px] bg-white/90 px-6 py-3 text-[12px] font-medium text-nowrap text-[#06142D] transition-colors hover:bg-white md:w-[161.25px]"
+					class="flex h-[36px] items-center cursor-pointer justify-center gap-1 rounded-[9px] bg-white/90 px-6 py-3 text-[12px] font-medium text-nowrap text-[#06142D] transition-colors hover:bg-white md:w-[161.25px]"
 				>
 					Join Waitlist
 					<img src={UserSvg} alt="User Icon" />
@@ -208,5 +208,14 @@
 		#hero {
 			background-position: calc(50% + 130px) 50%;
 		}
+	}
+
+	.cursor-pointer {
+		cursor: pointer;
+		transition: all 0.3s ease;
+	}
+
+	.cursor-pointer:hover {
+		opacity: 0.8;
 	}
 </style>

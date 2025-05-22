@@ -49,5 +49,8 @@ export default defineConfig({
 	],
 	server: {
 		allowedHosts: []
+	},
+	css: {
+		postcss: './postcss.config.cjs'
 	}
 });

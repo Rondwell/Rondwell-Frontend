@@ -7,9 +7,9 @@
 </script>
 
 <footer class="relative flex min-h-screen w-full items-center overflow-x-hidden">
-	<div class="absolute left-0 bottom-0 pb-[100px] md:pb-[150px] w-full px-5 md:px-10">
+	<div class="absolute bottom-0 left-0 w-full px-5 pb-[100px] md:px-10 md:pb-[150px]">
 		<div
-			class="w-full md:container mx-auto flex h-[200px] items-center justify-between border-t border-[#E2E4E5] px-0 py-5 md:h-[123px]"
+			class="mx-auto flex h-[200px] w-full items-center justify-between border-t border-[#E2E4E5] px-0 py-5 md:container md:h-[123px]"
 		>
 			<div class="flex w-full flex-wrap items-center justify-between gap-4">
 				<div class="flex w-full flex-col gap-3 md:w-auto">
@@ -20,10 +20,10 @@
 						</a>
 
 						<!-- Nav Links -->
-						<div class="flex space-x-8 flex-row">
+						<div class="flex flex-row space-x-8">
 							<a
 								href="https://rondwell.com/api-docs"
-								class="merriweather-sans text-[15px] font-bold text-[#7A7B7E] transition-colors text-nowrap"
+								class="merriweather-sans text-[15px] font-bold text-nowrap text-[#7A7B7E] transition-colors"
 								>API Docs</a
 							>
 							<a

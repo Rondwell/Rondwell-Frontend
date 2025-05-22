@@ -6,13 +6,17 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Rondwell – AI-powered Event Management SaaS</title>
 
+
 		<!-- Open Graph -->
 		<meta property="og:title" content="Rondwell – AI-powered Event Management SaaS" />
 		<meta
 			property="og:description"
 			content="Rondwell is a smart, scalable, microservices-powered SaaS platform for event creation, analytics, real-time engagement, and intelligent automation."
 		/>
-		<meta property="og:image" content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" />
+		<meta
+			property="og:image"
+			content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png"
+		/>
 		<meta property="og:url" content="https://rondwell.com" />
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content="Rondwell" />
@@ -27,7 +31,10 @@
 			name="twitter:description"
 			content="Host smarter events with Rondwell — your all-in-one platform for ticketing, analytics, automation, Web3, and virtual rooms."
 		/>
-		<meta name="twitter:image" content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" />
+		<meta
+			name="twitter:image"
+			content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png"
+		/>
 		<meta name="twitter:url" content="https://rondwell.com" />
 		<meta name="twitter:site" content="@rondwellhq" />
 		<meta name="twitter:creator" content="@rondwellhq" />
@@ -42,7 +49,10 @@
 			itemprop="description"
 			content="Rondwell is a powerful, real-time SaaS platform that helps teams create, manage, analyze, and automate events at scale using AI and microservices."
 		/>
-		<meta itemprop="image" content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" />
+		<meta
+			itemprop="image"
+			content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png"
+		/>
 		<meta itemprop="url" content="https://rondwell.com" />
 		<meta itemprop="author" content="Rondwell Team" />
 		<meta itemprop="datePublished" content="2025-01-01" />
@@ -60,11 +70,40 @@
 		<link rel="apple-touch-icon" sizes="180x180" href="%sveltekit.assets%/apple-touch-icon.png" />
 		<link rel="icon" type="image/png" sizes="32x32" href="%sveltekit.assets%/favicon-32x32.png" />
 		<link rel="icon" type="image/png" sizes="16x16" href="%sveltekit.assets%/favicon-16x16.png" />
+		
+		<!-- Prevent flash of unstyled content -->
+		<script>
+			// This script runs before Svelte hydrates to prevent theme flash
+			(function () {
+				function getTheme() {
+					const stored = localStorage.getItem('theme');
+					if (stored && ['light', 'dark', 'system'].includes(stored)) {
+						if (stored === 'system') {
+							return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+						}
+						return stored;
+					}
+					return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+				}
+
+				const theme = getTheme();
+				document.documentElement.classList.add(theme);
+			})();
+		</script>
 
 		%sveltekit.head%
 	</head>
 
-	<body data-sveltekit-preload-data="hover" class="h-full w-full relative" style="background-image: url(%sveltekit.assets%/body-bg.png); background-size: cover; background-position: center; background-repeat: no-repeat;">
-		%sveltekit.body%
+	<body
+		data-sveltekit-preload-data="hover"
+		class="relative h-full w-full"
+		style="
+			background-image: url(%sveltekit.assets%/body-bg.png);
+			background-size: cover;
+			background-position: center;
+			background-repeat: no-repeat;
+		"
+	>
+		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

@@ -42,7 +42,7 @@
 	});
 </script>
 
-<nav class="absolute top-0 left-0 z-[999] w-full bg-transparent">
+<nav class="absolute top-0 left-0 z-[999] w-full bg-transparent border border-[#181515] border-opacity-10">
     <div class="w-full mx-auto flex items-center justify-between p-5 md:px-10">
         <!-- Logo -->
         <a href="/" class="text-xl font-bold text-indigo-600">
@@ -57,3 +57,9 @@
         </div>
     </div>
 </nav>
+
+<style>
+	.border-opacity-10 {
+		border-color: rgba(24, 21, 21, 0.1);
+	}
+</style>

@@ -209,7 +209,7 @@
 						/>
 					</div>
 
-					<div class="flex gap-3 pt-2">
+					<div class="flex flex-col-reverse md:flex-row gap-3 pt-2">
 						<button
 							type="button"
 							on:click={closeModal}

@@ -3,6 +3,7 @@
 	import HeroBg from '$lib/assets/images/hero-bg.png';
 	import Hero1Bg from '$lib/assets/images/hero-1-bg.png';
 	import Clouds from './Clouds.svelte';
+	import FlippingCta from './FlippingCTA.svelte';
 
 	// Modal and form state
 	let showModal = false;
@@ -84,16 +85,9 @@
 		class="z-10 flex w-full items-center justify-center px-4 py-16 pt-[280px] text-center text-white md:py-24 lg:py-32"
 	>
 		<div
-			class="flex h-[206px] w-full flex-col items-center justify-center rounded-[15px] border border-white/20 bg-white/45 backdrop-blur-md md:h-[224px] md:w-[502.5px] dark:border-white/30 dark:bg-white/20"
+			class="flex h-[206px] w-full flex-col items-center justify-center rounded-[15px] border border-white/20 bg-white/45 backdrop-blur-md md:h-[224px] md:w-[502.5px] dark:border-black/45 dark:bg-black/45"
 		>
-			<h1
-				class="mb-6 text-[30px] font-bold text-[#06142D] md:text-[40px] md:leading-[45px] dark:text-white"
-			>
-				Embark on Your <br />
-				<span class="bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] bg-clip-text text-transparent"
-					>Adventure!</span
-				>
-			</h1>
+			<FlippingCta />
 
 			<div class="flex flex-wrap justify-center gap-4">
 				<button

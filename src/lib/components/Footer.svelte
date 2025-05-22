@@ -20,10 +20,10 @@
 						</a>
 
 						<!-- Nav Links -->
-						<div class="flex space-x-8">
+						<div class="flex space-x-8 flex-row">
 							<a
 								href="https://rondwell.com/api-docs"
-								class="merriweather-sans text-[15px] font-bold text-[#7A7B7E] transition-colors"
+								class="merriweather-sans text-[15px] font-bold text-[#7A7B7E] transition-colors text-nowrap"
 								>API Docs</a
 							>
 							<a
@@ -66,7 +66,7 @@
 						<img src={LinkedInSvg} alt="LinkedIn" class="h-[18px] w-[18px]" />
 					</a>
 					<a
-						href="https://www.facebook.com/rondwell"
+						href="https://web.facebook.com/rondwellhq/"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"

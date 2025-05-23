@@ -1,9 +1,8 @@
 <script lang="ts">
 	// Image imports
 	import HeroBg from '$lib/assets/images/hero-bg.png';
-	import Hero1Bg from '$lib/assets/images/hero-1-bg.png';
-	import Clouds from './Clouds.svelte';
 	import FlippingCta from './FlippingCTA.svelte';
+	import GlowPng from '$lib/assets/images/Glow.png';
 
 	// Modal and form state
 	let showModal = false;
@@ -85,8 +84,15 @@
 		class="z-10 flex w-full items-center justify-center px-4 py-16 pt-[280px] text-center text-white md:py-24 lg:py-32"
 	>
 		<div
-			class="flex h-[206px] w-full flex-col items-center justify-center rounded-[15px] border border-white/20 bg-white/45 backdrop-blur-md md:h-[224px] md:w-[502.5px] dark:border-black/45 dark:bg-black/45"
+			class="relative flex h-[206px] w-full flex-col items-center justify-center rounded-[15px] border border-white/20 bg-white/60 backdrop-blur-md md:h-[224px] md:w-[502.5px] dark:border-black/45 dark:bg-black/45"
 		>
+			<img
+				src={GlowPng}
+				alt="Glow"
+				class="absolute -top-10 -right-6 z-0 w-[338.5px] md:w-[502.5px] opacity-40"
+				loading="lazy"
+			/>
+
 			<FlippingCta />
 
 			<div class="flex flex-wrap justify-center gap-4">

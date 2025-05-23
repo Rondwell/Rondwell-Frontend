@@ -74,7 +74,7 @@
 						<img src={FacebookSvg} alt="Facebook" class="h-[18px] w-[18px]" />
 					</a>
 					<a
-						href="https://www.rondwell.com"
+						href="mailto:info@rondwell.com"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"

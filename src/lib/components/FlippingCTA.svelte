@@ -12,9 +12,12 @@
 
 	const phrases: Phrase[] = [
 		{ firstWord: 'Embark', staticWords: 'on Your', secondWord: 'Adventure!', animation: 'flip' },
-		{ firstWord: 'Begin', staticWords: 'your new', secondWord: 'Journey!', animation: 'flip' },
-		{ firstWord: 'Explore', staticWords: 'fresh new', secondWord: 'Horizons!', animation: 'flip' },
-		{ firstWord: 'Unlock', staticWords: 'your true', secondWord: 'Potential!', animation: 'flip' }
+		{ firstWord: 'Deliver', staticWords: 'on Your', secondWord: 'Event!', animation: 'flip' },
+		{ firstWord: 'Create', staticWords: 'on Your', secondWord: 'Experience!', animation: 'flip' },
+		{ firstWord: 'Build', staticWords: 'on Your', secondWord: 'Moment!', animation: 'flip' },
+		{ firstWord: 'Launch', staticWords: 'on Your', secondWord: 'Vision!', animation: 'flip' },
+		{ firstWord: 'Command', staticWords: 'on Your', secondWord: 'Stage', animation: 'flip' },
+		{ firstWord: 'Inspire', staticWords: 'on Your', secondWord: 'Audience', animation: 'flip' }
 	];
 
 	let index = 0;
@@ -54,15 +57,14 @@
 </script>
 
 <h1
-	class="transition-container relative mb-6 px-7 font-bold text-[#06142D] text-[30px] md:text-[40px] md:leading-[45px] dark:text-white"
-	class:transitioning={isAnimating}
+	class="transition-container relative mb-6 w-[300px] md:w-auto md:px-20 text-[30px] font-bold text-[#06142D] md:text-[40px] md:leading-[45px] dark:text-white"
 >
 	{#if currentPhrase.animation === 'flip'}
 		{#if firstIsAnimated}
 			<span class="flip-container {isAnimating ? 'flipped' : ''}">
 				<span class="flip-inner">
 					<span class="flip-front">{currentPhrase.firstWord}</span>
-					<span class="flip-back gradient">{currentPhrase.firstWord}</span>
+					<span class="flip-back">{currentPhrase.firstWord}</span>
 				</span>
 			</span>
 			<span class="static-words">{currentPhrase.staticWords}</span>
@@ -72,7 +74,7 @@
 			<span class="static-words">{currentPhrase.staticWords}</span>
 			<span class="flip-container {isAnimating ? 'flipped' : ''}">
 				<span class="flip-inner">
-					<span class="flip-front gradient">{currentPhrase.secondWord}</span>
+					<span class="flip-front">{currentPhrase.secondWord}</span>
 					<span class="flip-back">{currentPhrase.secondWord}</span>
 				</span>
 			</span>
@@ -103,10 +105,6 @@
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
-	}
-
-	.static-words {
-		margin: 0 0.25em;
 	}
 
 	/* Smooth transition container */

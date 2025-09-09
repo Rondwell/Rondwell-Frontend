@@ -34,9 +34,7 @@
 <header class="flex items-center justify-between px-6 py-4 relative">
   <!-- Logo -->
   <div class="flex items-center gap-2">
-    <span class="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
-      Rondwell
-    </span>
+    <img src="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" alt="Rondwell Logo" class="h-8 w-auto" />
   </div>
 
   <!-- Navigation (desktop) -->

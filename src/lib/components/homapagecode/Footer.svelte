@@ -1,9 +1,4 @@
 <script lang="ts">
-	import LogoSvg from '$lib/assets/images/logo.svg';
-	import ArowSvg from '$lib/assets/images/arow.svg';
-	import LinkedInSvg from '$lib/assets/images/linkedin.svg';
-	import FacebookSvg from '$lib/assets/images/facebook.svg';
-	import SocialSvg from '$lib/assets/images/social.svg';
 </script>
 
 <footer class="relative flex min-h-screen w-full items-center overflow-x-hidden">
@@ -16,7 +11,7 @@
 					<div class="flex w-full gap-5">
 						<!-- Logo -->
 						<a href="/" class="text-xl font-bold text-indigo-600">
-							<img src={LogoSvg} alt="Logo" class="h-[20.98px] w-[68.18px]" />
+							<div class="h-[20.98px] w-[68.18px] bg-gray-400 rounded"></div>
 						</a>
 
 						<!-- Nav Links -->
@@ -63,7 +58,7 @@
 						rel="noopener noreferrer"
 						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"
 					>
-						<img src={LinkedInSvg} alt="LinkedIn" class="h-[18px] w-[18px]" />
+						<div class="h-[18px] w-[18px] bg-gray-400 rounded"></div>
 					</a>
 					<a
 						href="https://web.facebook.com/rondwellhq/"
@@ -71,7 +66,7 @@
 						rel="noopener noreferrer"
 						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"
 					>
-						<img src={FacebookSvg} alt="Facebook" class="h-[18px] w-[18px]" />
+						<div class="h-[18px] w-[18px] bg-gray-400 rounded"></div>
 					</a>
 					<a
 						href="mailto:info@rondwell.com"
@@ -79,17 +74,17 @@
 						rel="noopener noreferrer"
 						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"
 					>
-						<img src={SocialSvg} alt="Social" class="h-[18px] w-[18px]" />
+						<div class="h-[18px] w-[18px] bg-gray-400 rounded"></div>
 					</a>
 				</div>
 				<div class="w-full md:mt-4 md:text-center">
-					<p
+					<div
 						class="merriweather-sans flex items-center bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] bg-clip-text text-[14.25px] text-transparent md:justify-center"
 					>
-						Host your event with Rondwell
+						Organize your event with Rondwell
 
-						<img src={ArowSvg} alt="Arrow Icon" class="mb-1 ml-1" />
-					</p>
+						<div class="mb-1 ml-1 w-[18px] h-[18px] bg-gray-400 rounded"></div>
+					</div>
 				</div>
 			</div>
 		</div>

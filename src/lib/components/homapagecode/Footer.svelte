@@ -58,6 +58,7 @@
 						target="_blank"
 						rel="noopener noreferrer"
 						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"
+						aria-label="LinkedIn"
 					>
 						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<path d="M0 1.27797C0 0.572165 0.572164 0 1.27796 0H16.7265C17.4323 0 18.0045 0.572166 18.0045 1.27797V16.7265C18.0045 17.4323 17.4323 18.0045 16.7265 18.0045H1.27797C0.572165 18.0045 0 17.4323 0 16.7265V1.27797Z" fill="#AEA3C8"/>
@@ -71,6 +72,7 @@
 						target="_blank"
 						rel="noopener noreferrer"
 						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"
+						aria-label="Facebook"
 					>
 						<svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<path d="M12.3 8.06998V10.68H14.64C14.82 10.68 14.91 10.86 14.91 11.04L14.55 12.75C14.55 12.84 14.37 12.93 14.28 12.93H12.3V19.5H9.60005V13.02H8.07005C7.89005 13.02 7.80005 12.93 7.80005 12.75V11.04C7.80005 10.86 7.89005 10.77 8.07005 10.77H9.60005V7.79998C9.60005 6.26998 10.77 5.09998 12.3 5.09998H14.73C14.91 5.09998 15 5.18998 15 5.36998V7.52998C15 7.70998 14.91 7.79998 14.73 7.79998H12.57C12.39 7.79998 12.3 7.88998 12.3 8.06998Z" stroke="#AEA3C8" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round"/>

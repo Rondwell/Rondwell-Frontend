@@ -39,12 +39,12 @@
 
   <!-- Navigation (desktop) -->
   <nav class="hidden md:flex items-center gap-8 text-[#909EA3]">
-    <a href="#" class="flex items-center gap-1 hover:text-[#000000] transition">
+    <button class="flex items-center gap-1 hover:text-[#000000] transition">
       <Compass size={16} /> Discover Events
-    </a>
-    <a href="#" class="flex items-center gap-1 hover:text-[#000000] transition">
+    </button>
+    <button class="flex items-center gap-1 hover:text-[#000000] transition">
       <Calendar size={16} /> Explore Experiences
-    </a>
+    </button>
   </nav>
 
   <!-- Right side (desktop) -->
@@ -53,9 +53,9 @@
     <span class="text-sm">{now}</span>
 
     <!-- Create Event -->
-    <a href="#" class="flex items-center gap-1 hover:text-[#000000] transition">
+    <button class="flex items-center gap-1 hover:text-[#000000] transition">
       <PlusCircle size={16} /> Create Event
-    </a>
+    </button>
 
     <!-- Buttons -->
     <Button
@@ -82,15 +82,15 @@
     <div
       class="absolute top-full left-0 w-full bg-white shadow-md border-t border-gray-200 flex flex-col p-6 space-y-4 md:hidden z-50"
     >
-      <a href="#" class="flex items-center gap-2 text-[#909EA3] hover:text-black">
+      <button class="flex items-center gap-2 text-[#909EA3] hover:text-black">
         <Compass size={18} /> Discover Events
-      </a>
-      <a href="#" class="flex items-center gap-2 text-[#909EA3] hover:text-black">
+      </button>
+      <button class="flex items-center gap-2 text-[#909EA3] hover:text-black">
         <Calendar size={18} /> Explore Experiences
-      </a>
-      <a href="#" class="flex items-center gap-2 text-[#909EA3] hover:text-black">
+      </button>
+      <button class="flex items-center gap-2 text-[#909EA3] hover:text-black">
         <PlusCircle size={18} /> Create Event
-      </a>
+      </button>
 
       <Button
         class="bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] text-white rounded-full px-6 py-2 shadow-md w-fit"

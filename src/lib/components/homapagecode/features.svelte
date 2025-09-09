@@ -97,8 +97,8 @@
                     flex flex-col">
           
           <h3 class="text-sm sm:text-base font-medium mb-3 text-center">Shared Albums and files</h3>
-          <img src="/placeholder-tgk7n.png" alt="Event group photo"
-               class="w-full h-[120px] sm:h-[140px] object-cover rounded-xl mb-3"/>
+          <img src="/flower.png" alt="Event group"
+                class="w-full h-[120px] sm:h-[140px] object-cover rounded-xl mb-3"/>
           
           <Button class="w-[140px] sm:w-[146px] h-[30px] sm:h-[32px] bg-[#55686D] text-white text-xs sm:text-sm 
                          rounded-[30px] border-0 mx-auto">

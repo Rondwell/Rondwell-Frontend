@@ -3,17 +3,17 @@
   import Button from "$lib/components/Button.svelte";
 
   let avatars = [
-    "/avatars/a1.png",
-    "/avatars/a2.png",
-    "/avatars/a3.png",
-    "/avatars/a4.png"
+    "/favicon.png",
+    "/favicon.png",
+    "/favicon.png",
+    "/favicon.png"
   ];
 
   let albums = [
-    "/albums/pic1.jpg",
-    "/albums/pic2.jpg",
-    "/albums/pic3.jpg",
-    "/albums/pic4.jpg"
+    "/flower.png",
+    "/flower.png",
+    "/flower.png",
+    "/flower.png"
   ];
 </script>
 

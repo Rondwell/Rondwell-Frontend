@@ -20,7 +20,7 @@
             {#each attendees as i}
               <div class="w-12 h-12 rounded-full overflow-hidden">
                 <img
-                  src={`/diverse-group-portrait.png?height=48&width=48&query=person-${i}`}
+                  src={`/favicon.png`}
                   alt={`Attendee ${i}`}
                   class="w-full h-full object-cover"
                 />
@@ -41,9 +41,9 @@
         <h3 class="text-white text-lg font-medium text-center">Shared Albums and files</h3>
 
         <div class="grid grid-cols-3 gap-2">
-          <img src="/placeholder-h7078.png" alt="Event photo 1" class="w-full h-20 object-cover rounded-lg" />
-          <img src="/party-photo-2.jpg" alt="Event photo 2" class="w-full h-20 object-cover rounded-lg" />
-          <img src="/placeholder-lzw58.png" alt="Event photo 3" class="w-full h-20 object-cover rounded-lg" />
+          <img src="/flower.png" alt="Event photo 1" class="w-full h-20 object-cover rounded-lg" />
+          <img src="/flower.png" alt="Event photo 2" class="w-full h-20 object-cover rounded-lg" />
+          <img src="/flower.png" alt="Event photo 3" class="w-full h-20 object-cover rounded-lg" />
         </div>
 
         <button class="w-full bg-gray-900 text-white border-0 hover:bg-gray-800 rounded-lg py-2">

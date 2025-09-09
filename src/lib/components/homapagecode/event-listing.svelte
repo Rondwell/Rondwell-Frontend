@@ -6,7 +6,7 @@
     location: "Lagos",
     status: "Going",
     attendees: "+1.5K",
-    image: "/placeholder-u0ibp.png",
+    image: "/flower.png",
   });
 </script>
 
@@ -69,7 +69,7 @@
           <!-- Event Image -->
           <div class="w-24 h-20 rounded-xl overflow-hidden flex-shrink-0">
             <img
-              src={event.image || "/placeholder.svg"}
+              src={event.image || "/favicon.png"}
               alt={event.title}
               class="w-full h-full object-cover"
             />

@@ -83,7 +83,7 @@
 					>
 						Organize your event with Rondwell
 
-						<div class="mb-1 ml-1 w-[18px] h-[19px] bg-gray-400 rounded"></div>
+						<div class="mb-1 ml-1 w-[18px] h-[18px] bg-gray-400 rounded"></div>
 					</div>
 				</div>
 			</div>

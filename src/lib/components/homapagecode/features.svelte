@@ -8,6 +8,28 @@
     { icon: "📱", title: "Multimodal check-in system", color: "bg-blue-100" },
     { icon: "🏢", title: "Vendor, Speaker & Exhibitor Management", color: "bg-blue-100" },
   ];
+
+  let activeIndex = $state(0);
+  
+  let featureImages = [
+    "/flower.png", // Ticket Sales
+    "/flower.png", // Event communities  
+    "/flower.png", // Seating management
+    "/flower.png", // Multimodal check-in
+    "/flower.png"  // Vendor management
+  ];
+
+  let interval;
+  
+  $effect(() => {
+    interval = setInterval(() => {
+      activeIndex = (activeIndex + 1) % features.length;
+    }, 2000); // Change every 2 seconds
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  });
 </script>
 
 <section class="px-4 sm:px-6 py-16 sm:py-20 bg-white/50 rounded-[30px] backdrop-blur-sm">
@@ -36,7 +58,7 @@
       
       <!-- Features List -->
       <style>
-        /* Gradient border animation */
+        /* Modified gradient border animation to be applied conditionally */
         @keyframes border-rotate {
           0% { background-position: 0% 50%; }
           100% { background-position: 200% 50%; }
@@ -60,9 +82,19 @@
             #EFF0F0 100%
           );
           background-size: 200% auto;
-          animation: border-rotate 4s linear infinite;
+          animation: border-rotate 2s linear infinite;
         }
-        .animated-border .inner {
+        .static-border {
+          position: relative;
+          width: 100%;
+          max-width: 500px;
+          height: 66px;
+          border-radius: 16px;
+          padding: 2px;
+          background: #EFF0F0;
+        }
+        .animated-border .inner,
+        .static-border .inner {
           width: 100%;
           height: 100%;
           background: white;
@@ -75,7 +107,8 @@
 
       <div class="space-y-4 w-full">
         {#each features as feature, index}
-          <div class="animated-border w-full" key={index}>
+          <!-- Apply animated border only to active item -->
+          <div class={activeIndex === index ? "animated-border" : "static-border"} key={index}>
             <div class="inner">
               <!-- Icon -->
               <div class={`w-10 h-10 sm:w-12 sm:h-12 ${feature.color} rounded-xl flex items-center justify-center`}>
@@ -97,8 +130,9 @@
                     flex flex-col">
           
           <h3 class="text-sm sm:text-base font-medium mb-3 text-center">Shared Albums and files</h3>
-          <img src="/flower.png" alt="Event group"
-                class="w-full h-[120px] sm:h-[140px] object-cover rounded-xl mb-3"/>
+          <!-- Image changes based on active feature -->
+          <img src={featureImages[activeIndex] || "/placeholder.svg"} alt="Event group"
+                class="w-full h-[120px] sm:h-[140px] object-cover rounded-xl mb-3 transition-all duration-500"/>
           
           <Button class="w-[140px] sm:w-[146px] h-[30px] sm:h-[32px] bg-[#55686D] text-white text-xs sm:text-sm 
                          rounded-[30px] border-0 mx-auto">

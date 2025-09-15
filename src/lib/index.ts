@@ -1,17 +1,19 @@
-<script>
-  import Header from "@/components/header.svelte";
-  import HeroSection from "@/components/hero-section.svelte";
-  import EventCards from "@/components/event-cards.svelte";
-  import FeaturesSection from "@/components/features-section.svelte";
-  import EventListings from "@/components/event-listings.svelte";
-  import Footer from "@/components/footer.svelte";
-</script>
+// Re-exports for lib components, utils, and stores
 
-<div class="min-h-screen bg-gradient-to-br from-pink-100 via-purple-50 to-orange-100 flex flex-col">
-  <Header />
-  <HeroSection />
-  <EventCards />
-  <FeaturesSection />
-  <EventListings />
-  <Footer />
-</div>
+// Components
+export { default as Button } from './components/Button.svelte';
+export { default as Header } from './components/homapagecode/Header.svelte';
+export { default as Footer } from './components/homapagecode/Footer.svelte';
+export { default as Hero } from './components/homapagecode/Hero.svelte';
+export { default as Features } from './components/homapagecode/features.svelte';
+export { default as EventListing } from './components/homapagecode/event-listing.svelte';
+export { default as ThemeToggle } from './components/homapagecode/ThemeToggle.svelte';
+export { default as AnimatedEventCards } from './components/homapagecode/animated-event-cards.svelte';
+
+// Utils
+export * from './utils/cn';
+export * from './utils/animation';
+export * from './utils/products';
+
+// Stores
+export * from './stores/theme';

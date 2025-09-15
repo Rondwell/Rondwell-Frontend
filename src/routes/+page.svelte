@@ -2,7 +2,7 @@
 	import Header from '$lib/components/homapagecode/Header.svelte';
 	import Footer from '$lib/components/homapagecode/Footer.svelte';
 	import Hero from '$lib/components/homapagecode/Hero.svelte';
-	import EventCard from '$lib/components/homapagecode/event-card.svelte';
+
 	import Features from '$lib/components/homapagecode/features.svelte';
 	import EventListing from '$lib/components/homapagecode/event-listing.svelte';
 	
@@ -16,7 +16,7 @@
 	<Hero />
 
 	<!-- Event Card Section -->
-	<EventCard />
+	
 
 	<!-- Features Section -->
 	<Features />

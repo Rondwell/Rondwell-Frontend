@@ -2,15 +2,15 @@
   import Button from "$lib/components/Button.svelte";
 
   let features = [
-    { icon: "🎫", title: "Ticket Sales and Group ticketing", color: "bg-purple-100" },
-    { icon: "💬", title: "Event communities and forums", color: "bg-pink-100" },
-    { icon: "🪑", title: "Seating and capacity management", color: "bg-blue-100" },
-    { icon: "📱", title: "Multimodal check-in system", color: "bg-blue-100" },
-    { icon: "🏢", title: "Vendor, Speaker & Exhibitor Management", color: "bg-blue-100" },
+    { icon: "/ico1.png", title: "Ticket Sales and Group ticketing", color: "bg-purple-100" },
+    { icon: "/ico2.png", title: "Event communities and forums", color: "bg-pink-100" },
+    { icon: "/ico3.png", title: "Seating and capacity management", color: "bg-blue-100" },
+    { icon: "/ico3.png", title: "Multimodal check-in system", color: "bg-blue-100" },
+    { icon: "/ico3.png", title: "Vendor, Speaker & Exhibitor Management", color: "bg-blue-100" },
   ];
 
-  let activeIndex = $state(0);
-  
+  let activeIndex = 0;
+
   let featureImages = [
     "/flower.png", // Ticket Sales
     "/flower.png", // Event communities  
@@ -18,21 +18,9 @@
     "/flower.png", // Multimodal check-in
     "/flower.png"  // Vendor management
   ];
-
-  let interval;
-  
-  $effect(() => {
-    interval = setInterval(() => {
-      activeIndex = (activeIndex + 1) % features.length;
-    }, 2000); // Change every 2 seconds
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  });
 </script>
 
-<section class="px-4 sm:px-6 py-16 sm:py-20 bg-white/50 rounded-[30px] backdrop-blur-sm">
+<section class="px-4 sm:px-6 bg-[#ffe0f0]/20 py-16 sm:py-20  rounded-[30px] backdrop-blur-sm">
   <div class="max-w-7xl mx-auto">
     <!-- Section Header -->
     <div class="text-center space-y-4 mb-12 sm:mb-16">
@@ -49,7 +37,8 @@
       <Button 
         class="bg-[#333537] text-white text-[18px] sm:text-[20px] text-center h-[52px] sm:h-[60px] 
                w-full sm:w-[300px] px-6 sm:px-8 py-3 rounded-[13px] transition-colors duration-200">
-        ✨ Create Event with AI
+        <img src="/Aiicon.png" alt="AI Icon" class="w-6 h-6 object-contain" />
+        Create Event with AI
       </Button>
     </div>
 
@@ -58,33 +47,7 @@
       
       <!-- Features List -->
       <style>
-        /* Modified gradient border animation to be applied conditionally */
-        @keyframes border-rotate {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 200% 50%; }
-        }
-        .animated-border {
-          position: relative;
-          width: 100%;
-          max-width: 500px;
-          height: 66px;
-          border-radius: 16px;
-          padding: 2px;
-          background: linear-gradient(
-            90deg,
-            #EFF0F0 13%,
-            #AB46DD 28%,
-            #AB46DD 38%,
-            #AB46DD 45%,
-            #AB46DD 56%,
-            #EFF0F0 75%,
-            #EFF0F0 88%,
-            #EFF0F0 100%
-          );
-          background-size: 200% auto;
-          animation: border-rotate 2s linear infinite;
-        }
-        .static-border {
+        .feature-border {
           position: relative;
           width: 100%;
           max-width: 500px;
@@ -92,9 +55,24 @@
           border-radius: 16px;
           padding: 2px;
           background: #EFF0F0;
+          transition: background 0.3s ease;
         }
-        .animated-border .inner,
-        .static-border .inner {
+        .feature-border:hover {
+          background: linear-gradient(
+            90deg,
+            #EFF0F0 13%,
+            #AB46DD 28%,
+            #AB46DD 56%,
+            #EFF0F0 88%
+          );
+          background-size: 200% auto;
+          animation: border-rotate 2s linear infinite;
+        }
+        @keyframes border-rotate {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
+        }
+        .feature-border .inner {
           width: 100%;
           height: 100%;
           background: white;
@@ -107,12 +85,16 @@
 
       <div class="space-y-4 w-full">
         {#each features as feature, index}
-          <!-- Apply animated border only to active item -->
-          <div class={activeIndex === index ? "animated-border" : "static-border"} key={index}>
+          <div 
+            class="feature-border" 
+            key={index}
+            on:mouseenter={() => activeIndex = index}
+          >
             <div class="inner">
               <!-- Icon -->
               <div class={`w-10 h-10 sm:w-12 sm:h-12 ${feature.color} rounded-xl flex items-center justify-center`}>
-                <span class="text-lg sm:text-xl">{feature.icon}</span>
+                <img src={feature.icon} alt={feature.title} 
+                     class="w-6 h-6 sm:w-7 sm:h-7 object-contain" />
               </div>
               <!-- Text -->
               <span class="ml-3 sm:ml-4 text-base sm:text-lg font-medium text-gray-900">
@@ -128,24 +110,18 @@
         <div class="w-full max-w-[444px] h-auto rounded-[20px] p-4 text-white
                     bg-[linear-gradient(135deg,#27404f_0%,#3b4756_45%,#6ab3a9_100%)]
                     flex flex-col">
-          
           <h3 class="text-sm sm:text-base font-medium mb-3 text-center">Shared Albums and files</h3>
-          <!-- Image changes based on active feature -->
           <img src={featureImages[activeIndex] || "/placeholder.svg"} alt="Event group"
-                class="w-full h-[120px] sm:h-[140px] object-cover rounded-xl mb-3 transition-all duration-500"/>
-          
+               class="w-full h-[120px] sm:h-[140px] object-cover rounded-xl mb-3 transition-all duration-500"/>
           <Button class="w-[140px] sm:w-[146px] h-[30px] sm:h-[32px] bg-[#55686D] text-white text-xs sm:text-sm 
                          rounded-[30px] border-0 mx-auto">
             Add Photos
           </Button>
         </div>
-
-        <!-- Text below card -->
         <p class="text-base sm:text-[22px] text-[#3D3D4E] text-left mt-4 max-w-[444px]">
           Rondwell brings organizers, attendees, and professionals together to create unforgettable experiences.
         </p>
       </div>
-
     </div>
   </div>
 </section>

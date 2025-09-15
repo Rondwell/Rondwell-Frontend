@@ -6,17 +6,16 @@
     location: "Lagos",
     status: "Going",
     attendees: "+1.5K",
-    image: "/flower.png",
+    image: "/eventcard.png",
   });
 </script>
 
-<section class="px-6 sm:mb-[-250px] mb-[-400px] py-20">
+<section class="px-6 sm:mb-[-250px]  mb-[-400px] py-20">
   <div class="max-w-7xl mx-auto">
     <!-- Section Heading -->
-  <h2 class="text-[48px] md:text-[56px] font-medium text-gray-900 text-center mb-12">
-  Upcoming <span class="text-[#7B2CBF]">Events.</span>
-</h2>
-
+    <h2 class="text-[48px] md:text-[56px] font-medium text-gray-900 text-center mb-12">
+      Upcoming <span class="text-[#7B2CBF]">Events.</span>
+    </h2>
 
     <!-- Events Grid -->
     <div class="grid md:grid-cols-2 gap-8 mb-12">
@@ -34,20 +33,17 @@
             <!-- Title + Organizers -->
             <div class="space-y-1">
               <div class="flex items-center gap-2">
-                <span class="text-pink-500">✨</span>
+                <img src="/star.png" alt="Featured" class="w-4 h-4" />
                 <h3 class="font-semibold text-gray-900">{event.title}</h3>
               </div>
 
               <div class="flex items-center gap-2 text-sm text-gray-600">
-                <div class="flex -space-x-1">
-                  <div class="w-5 h-5 bg-orange-400 rounded-full border border-white"></div>
-                  <div class="w-5 h-5 bg-pink-400 rounded-full border border-white"></div>
-                </div>
+                <img src="/moon.png" alt="Organizer" class="w-4 h-4" />
                 <span>{event.organizers}</span>
               </div>
 
               <div class="flex items-center gap-2 text-sm text-gray-500">
-                <span>📍</span>
+                <img src="/location.png" alt="Location" class="w-4 h-4" />
                 <span>{event.location}</span>
               </div>
             </div>
@@ -67,7 +63,7 @@
           </div>
 
           <!-- Event Image -->
-          <div class="w-24 h-20 rounded-xl overflow-hidden flex-shrink-0">
+          <div class="w-24 h-30 rounded-xl overflow-hidden flex-shrink-0">
             <img
               src={event.image || "/favicon.png"}
               alt={event.title}

@@ -12,7 +12,7 @@
 					<div class="flex w-full gap-5">
 						<!-- Logo -->
 						<a href="/" class="text-xl font-bold text-indigo-600">
-							<img src="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" alt="Rondwell Logo" class="h-[20.98px] w-[68.18px] object-contain" />
+							<img src="logo.png" alt="Rondwell Logo" class="h-[20.98px] w-[68.18px] object-contain" />
 						</a>
 
 						<!-- Nav Links -->

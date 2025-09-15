@@ -30,8 +30,14 @@
   let isOpen = false;
 </script>
 
-<div class="w-full bg-gradient-to-r from-pink-200 via-purple-100 to-pink-100">
-  <header class="flex items-center justify-between px-6 py-4 relative max-w-screen-2xl mx-auto">
+<div 
+  class="w-full relative" 
+  style="background: linear-gradient(135deg, #eb9ec4ff 0%, #ffe0f0 20%, #ffd1e8 40%, #ffe0f0 70%, #ffd1e8 100%);"
+>
+  <!-- Mobile extra background -->
+  <div class="absolute inset-x-2 top-2 md:hidden bg-[#C7AFB8] rounded-[20px] h-[55px]"></div>
+
+  <header class="flex items-center justify-between px-6 py-4 relative max-w-screen-2xl mx-auto z-20">
     <!-- Logo -->
     <div class="flex items-center gap-2">
       <img src="/logo.png" alt="Rondwell Logo" class="h-8 w-auto" />
@@ -43,7 +49,6 @@
         <img src="/Disc.png" alt="Discover" class="w-4 h-4 object-contain" />
         Discover Events
       </button>
-
       <button class="flex items-center gap-1 hover:text-[#000000] transition">
         <img src="/Verified.png" alt="Verified" class="w-5 h-5 object-contain" />
         Explore Experiences
@@ -66,24 +71,29 @@
         Sign in
       </Button>
 
-      <!-- Toggle (mobile only, AFTER sign in) -->
+      <!-- Toggle (mobile only) -->
       <button
         class="md:hidden p-2 rounded-lg"
         on:click={() => (isOpen = !isOpen)}
         aria-label="Toggle menu"
       >
         {#if isOpen}
-          <img src="/closeicon.png" alt="Close menu" class="w-6 h-6 object-contain" />
+          <span class="text-2xl font-bold">×</span> <!-- Close as X -->
         {:else}
           <img src="/mobicon.png" alt="Open menu" class="w-6 h-6 object-contain" />
         {/if}
       </button>
     </div>
+  </header>
 
-    <!-- Mobile menu -->
-    {#if isOpen}
-      <div
-        class="absolute top-full left-0 w-full bg-gradient-to-r from-pink-200 via-purple-100 to-pink-100 shadow-md border-t border-gray-200 rounded-b-xl flex flex-col p-6 space-y-4 md:hidden z-50"
+  <!-- Mobile menu -->
+  {#if isOpen}
+    <div
+      class="fixed top-[70px] left-0 w-full bg-[#C7AFB8] md:hidden z-[9999] shadow-md border-t border-gray-200"
+    >
+      <div 
+        class="flex flex-col p-6 space-y-4"
+        style="background: linear-gradient(135deg, #eb9ec4ff 0%, #ffe0f0 20%, #ffd1e8 40%, #ffe0f0 70%, #ffd1e8 100%);"
       >
         <button class="flex items-center gap-2 text-[#909EA3] hover:text-black">
           <img src="/Disc.png" alt="Discover" class="w-[18px] h-[18px] object-contain" />
@@ -104,6 +114,6 @@
           Sign in
         </Button>
       </div>
-    {/if}
-  </header>
+    </div>
+  {/if}
 </div>

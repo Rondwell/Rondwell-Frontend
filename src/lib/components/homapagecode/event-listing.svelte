@@ -13,9 +13,10 @@
 <section class="px-6 sm:mb-[-250px]  mb-[-400px] py-20">
   <div class="max-w-7xl mx-auto">
     <!-- Section Heading -->
-    <h2 class="text-[48px] md:text-[56px] font-medium text-gray-900 text-center mb-12">
-      Upcoming <span class="text-[#7B2CBF]">Events.</span>
-    </h2>
+  <h2 class="text-[40px] md:text-[56px] font-medium text-gray-900 text-center mb-12 whitespace-nowrap">
+  Rondwell <span class="text-[#7B2CBF]">Events.</span>
+</h2>
+
 
     <!-- Events Grid -->
     <div class="grid md:grid-cols-2 gap-8 mb-12">

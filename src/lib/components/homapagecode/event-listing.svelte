@@ -76,11 +76,13 @@
 
     <!-- Centered Button -->
     <div class="flex justify-center">
-      <button
-        class="bg-[#333537] text-white text-[20px] text-center h-[60px] w-[300px] px-8 py-3 rounded-[13px] transition-colors duration-200 hover:bg-gray-900 hover:text-white"
-      >
-        Discover more events
-      </button>
+      <button 
+  class="bg-[#333537] text-white text-[20px] text-center h-[60px] w-[300px] px-8 py-3 rounded-[13px] transition-colors duration-200 hover:bg-gray-900 hover:text-white flex items-center justify-center gap-2"
+>
+  <img src="/Disc.png" alt="Discover Icon" class="w-6 h-6 object-contain" />
+  Discover more events
+</button>
+
     </div>
   </div>
 </section>

@@ -12,11 +12,11 @@
   let activeIndex = 0;
 
   let featureImages = [
-    "/flower.png", // Ticket Sales
-    "/flower.png", // Event communities  
-    "/flower.png", // Seating management
-    "/flower.png", // Multimodal check-in
-    "/flower.png"  // Vendor management
+    "/hero2.png", // Ticket Sales
+    "/hero2.png", // Event communities  
+    "/hero2.png", // Seating management
+    "/hero2.png", // Multimodal check-in
+    "/hero2.png"  // Vendor management
   ];
 </script>
 
@@ -82,46 +82,58 @@
           padding-left: 1rem;
         }
       </style>
+<div class="flex flex-col lg:flex-row 
+w-full lg:w-[1257px] h-auto lg:h-[528px] 
+            bg-gradient-to-br 
+            from-[#ffe0f0] via-white to-[#fce7f3] 
+            rounded-[24px] px-4 sm:px-6 py-6 sm:py-10 
+            shadow-lg shadow-pink-200/50 border border-pink-100 
+            gap-6 lg:gap-16 mx-auto">
 
-      <div class="space-y-4 w-full">
-        {#each features as feature, index}
-          <div 
-            class="feature-border" 
-            key={index}
-            on:mouseenter={() => activeIndex = index}
-          >
-            <div class="inner">
-              <!-- Icon -->
-              <div class={`w-10 h-10 sm:w-12 sm:h-12 ${feature.color} rounded-xl flex items-center justify-center`}>
-                <img src={feature.icon} alt={feature.title} 
-                     class="w-6 h-6 sm:w-7 sm:h-7 object-contain" />
-              </div>
-              <!-- Text -->
-              <span class="ml-3 sm:ml-4 text-base sm:text-lg font-medium text-gray-900">
-                {feature.title}
-              </span>
-            </div>
+  <!-- Features Section (Left on desktop, Bottom on mobile) -->
+  <div class="order-2 lg:order-1 space-y-4 w-full lg:w-1/2">
+    {#each features as feature, index}
+      <div 
+        class="feature-border" 
+        key={index}
+        on:mouseenter={() => activeIndex = index}
+      >
+        <div class="inner flex items-center">
+          <!-- Icon -->
+          <div class={`w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 ${feature.color} rounded-xl flex items-center justify-center`}>
+            <img src={feature.icon} alt={feature.title} 
+                 class="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 object-contain" />
           </div>
-        {/each}
-      </div>
-
-      <!-- Card Section -->
-      <div class="relative flex flex-col items-center text-center w-full">
-        <div class="w-full max-w-[444px] h-auto rounded-[20px] p-4 text-white
-                    bg-[linear-gradient(135deg,#27404f_0%,#3b4756_45%,#6ab3a9_100%)]
-                    flex flex-col">
-          <h3 class="text-sm sm:text-base font-medium mb-3 text-center">Shared Albums and files</h3>
-          <img src={featureImages[activeIndex] || "/placeholder.svg"} alt="Event group"
-               class="w-full h-[120px] sm:h-[140px] object-cover rounded-xl mb-3 transition-all duration-500"/>
-          <Button class="w-[140px] sm:w-[146px] h-[30px] sm:h-[32px] bg-[#55686D] text-white text-xs sm:text-sm 
-                         rounded-[30px] border-0 mx-auto">
-            Add Photos
-          </Button>
+          <!-- Text -->
+          <span class="ml-2 sm:ml-3 md:ml-4 text-sm sm:text-base md:text-lg font-medium text-gray-900">
+            {feature.title}
+          </span>
         </div>
-        <p class="text-base sm:text-[22px] text-[#3D3D4E] text-left mt-4 max-w-[444px]">
-          Rondwell brings organizers, attendees, and professionals together to create unforgettable experiences.
-        </p>
       </div>
-    </div>
+    {/each}
   </div>
+
+  <!-- Card Section (Right on desktop, Top on mobile) -->
+  <div class="order-1 lg:order-2 relative flex flex-col items-center text-center w-full lg:w-1/2 mt-6 lg:mt-0">
+    <div class="w-full max-w-[444px] h-auto rounded-[20px] p-4 text-white
+                bg-[linear-gradient(135deg,#27404f_0%,#3b4756_45%,#6ab3a9_100%)]
+                flex flex-col">
+      <h3 class="text-xs sm:text-sm md:text-base font-medium mb-3 text-center">
+        Shared Albums and files
+      </h3>
+      <img src={featureImages[activeIndex] || "/placeholder.svg"} alt="Event group"
+           class="w-full h-[100px] sm:h-[120px] md:h-[140px] object-cover rounded-xl mb-3 transition-all duration-500"/>
+      <Button class="w-[120px] sm:w-[140px] md:w-[146px] h-[28px] sm:h-[30px] md:h-[32px] bg-[#55686D] text-white text-xs sm:text-sm 
+                     rounded-[30px] border-0 mx-auto">
+        Add Photos
+      </Button>
+    </div>
+    <p class="text-sm sm:text-base md:text-[22px] text-[#3D3D4E] text-left mt-4 sm:mt-6 max-w-[444px]">
+      Rondwell brings organizers, attendees, and professionals together to create unforgettable experiences.
+    </p>
+  </div>
+</div>
+
+
+
 </section>

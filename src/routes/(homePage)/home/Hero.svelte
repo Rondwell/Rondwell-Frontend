@@ -1,0 +1,261 @@
+<!-- +page.svelte or your main page file -->
+<script lang="ts">
+	import { onMount, onDestroy } from 'svelte';
+	import Button from '$lib/components/Button.svelte';
+
+	// Hero section variables
+	let heroImages = ['hero-event-1.png', 'hero-event-2.png', 'hero-event-1.png', 'hero-event-2.png'];
+
+	let currentImageIndex = 0;
+	let intervalId: number;
+
+	onMount(() => {
+		intervalId = setInterval(() => {
+			currentImageIndex = (currentImageIndex + 1) % heroImages.length;
+		}, 4000);
+	});
+	onDestroy(() => {
+		if (intervalId) {
+			clearInterval(intervalId);
+		}
+	});
+</script>
+
+<!-- HERO SECTION -->
+<section class="relative overflow-hidden px-8 pt-10 pb-0 md:px-16 lg:pt-20">
+	<div class="absolute w-full">
+		<img src="grid-bg.png" alt="" class="w-full opacity-20" />
+	</div>
+
+	<div class="mx-auto max-w-7xl">
+		<div class="grid items-center gap-12 pb-10 lg:grid-cols-2">
+			<!-- LEFT -->
+			<div class="relative z-10 space-y-8 text-center lg:text-left">
+				<div class="space-y-4">
+					<h1 class="text-5xl leading-tight font-bold text-[#000000] lg:text-6xl">
+						Organize
+						<span
+							class="bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] bg-clip-text text-transparent"
+						>
+							Unforgettable
+						</span>
+						<br />
+						<span
+							class="bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] bg-clip-text text-transparent"
+						>
+							Events.
+						</span>
+					</h1>
+
+					<p
+						class="mx-auto max-w-[566px] text-[22px] leading-[40px] text-[#686768] md:text-[24px] lg:mx-0 lg:text-left"
+					>
+						Rondwell brings organizers, attendees, exhibitors and vendors together to create
+						unforgettable experiences.
+					</p>
+				</div>
+
+				<div class="flex flex-wrap items-center justify-center gap-6 lg:justify-start">
+					<Button
+						class="flex h-[60px] w-[300px] items-center justify-center gap-2 rounded-[13px] bg-[#333537] px-8 py-3 text-center text-[20px] text-white transition-colors duration-200 hover:bg-gray-900 hover:text-white"
+					>
+						<img src="/Aiicon.png" alt="AI Icon" class="h-6 w-6 object-contain" />
+						Create Event with AI
+					</Button>
+				</div>
+			</div>
+
+			<!-- RIGHT -->
+			<div class="relative flex justify-center lg:justify-end">
+				<div class="gradient-border-wrapper">
+					<div class="gradient-border relative h-[507px] w-[440px] overflow-hidden p-2">
+						{#each heroImages as img, i (i)}
+							<div
+								class="image-container"
+								class:active={i === currentImageIndex}
+								style="z-index: {heroImages.length - i};"
+							>
+								<img
+									src={img}
+									alt="Event attendees"
+									class="h-auto w-full rounded-xl object-cover"
+								/>
+							</div>
+						{/each}
+					</div>
+				</div>
+				<div class="relative">
+					<div class="stack-slide ss1"></div>
+					<div class="stack-slide ss2"></div>
+					<div class="stack-slide ss3"></div>
+				</div>
+			</div>
+		</div>
+
+		<!-- STACKED FLOATING CARDS -->
+		<div class="relative z-20 mt-20 mb-0 flex flex-col items-center">
+			<!-- First Card -->
+			<div
+				class="relative z-30 flex h-[48px] w-[320px] items-center justify-center rounded-full border-[3px] border-white bg-[rgba(255,255,255,0.65)] text-[12px] font-medium whitespace-nowrap text-[#3D235E] shadow-xl backdrop-blur-md"
+			>
+				<span class="flex items-center gap-2">
+					<img src="/heart-icon.png" alt="Heart" class="h-4 w-4" />
+					Trusted by over 100,000 people worldwide.
+				</span>
+			</div>
+
+			<!-- Second Card -->
+			<div
+				class="glass-card relative z-20 -mt-8 flex h-[70px] w-[280px] items-center justify-center rounded-2xl border-[3px] border-white bg-[rgba(255,255,255,0.65)] text-[12px] font-medium text-[#3D3D4E]"
+			>
+				<div class="mt-6">See Latest Events</div>
+			</div>
+
+			<!-- Arrow Card -->
+			<div
+				class="relative z-10 mt-[-21px] flex h-[58px] w-[58px] items-center justify-center rounded-full border-[3px] border-white bg-[rgba(255,255,255,0.65)]"
+			>
+				<img src="/arrow-down.png" alt="Arrow Down" class="absolute bottom-3 h-3 w-5" />
+			</div>
+		</div>
+	</div>
+</section>
+
+<style>
+	.gradient-border-wrapper {
+		position: relative;
+		padding: 4px;
+		border-radius: 25.3442px;
+		display: inline-block;
+		overflow: hidden;
+		z-index: 5;
+		box-shadow: inset 0px 0px 25.3442px rgba(255, 112, 166, 0.75);
+		filter: drop-shadow(0 0 4px rgba(215, 103, 255, 0.6));
+	}
+
+	.gradient-border-wrapper::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		border-radius: inherit;
+		background: repeating-conic-gradient(
+			from 0deg,
+			#f3d7d7 0deg 15deg,
+			#d767ff 0deg 30deg,
+			#ffa1c6 30deg 60deg,
+			#ff5595 60deg 90deg,
+			#ffcade 90deg 120deg,
+			#d767ff 120deg 150deg,
+			#ffc37c 150deg 180deg
+		);
+		background-size: 400% 400%;
+		animation: move-gradient 10s linear infinite;
+	}
+
+	@keyframes move-gradient {
+		0% {
+			background-position: 0% 0%;
+		}
+		100% {
+			background-position: 100% 0%;
+		}
+	}
+
+	.gradient-border {
+		background: rgb(251, 242, 242);
+		box-shadow: inset 0px 0px 25.3442px rgba(255, 112, 166, 0.25);
+		backdrop-filter: blur(11.9808px);
+		border-radius: 25.3442px;
+		animation: floatUpDown 4s ease-in-out infinite;
+	}
+
+	@keyframes floatUpDown {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-3px);
+		}
+	}
+
+	.image-container {
+		position: absolute;
+		top: 2;
+		left: 2;
+		width: 420px;
+		height: 100%;
+		opacity: 0;
+		transform: translateY(5px);
+		transition:
+			opacity 1s ease-in-out,
+			transform 1s ease-in-out;
+		pointer-events: none;
+	}
+
+	.image-container.active {
+		opacity: 1;
+		transform: translateY(0);
+		pointer-events: auto;
+	}
+
+	.stack-slide {
+		box-sizing: border-box;
+		position: absolute;
+		height: 115.43px;
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 100%);
+		box-shadow: inset 0px 0px 19.5639px rgba(255, 112, 166, 0.25);
+		backdrop-filter: blur(4.64644px);
+		border-radius: 12.7166px;
+		animation: shoveUp 4s ease-in-out infinite;
+	}
+
+	@keyframes shoveUp {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-15px);
+		}
+	}
+
+	.ss1 {
+		right: 20px;
+		width: 398.21px;
+		bottom: -20px;
+		z-index: 3;
+		animation-delay: 0s;
+	}
+	.ss2 {
+		right: 30px;
+		width: 378.21px;
+		bottom: -40px;
+		z-index: 2;
+		animation-delay: 0.2s;
+	}
+	.ss3 {
+		right: 40px;
+		width: 358.21px;
+		bottom: -60px;
+		z-index: 1;
+		animation-delay: 0.4s;
+	}
+
+	/* Floating stacked cards */
+	.glass-card {
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
+		border: 1px solid rgba(255, 255, 255, 0.4);
+		border-radius: 12px;
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+	}
+
+	.glass-card:hover {
+		transform: translateY(-3px);
+		transition: 0.3s ease;
+		box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25);
+	}
+</style>

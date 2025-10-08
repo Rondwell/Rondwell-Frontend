@@ -1,77 +1,54 @@
-<!-- src/lib/components/ThemeToggle.svelte -->
 <script lang="ts">
-	import { theme, type Theme } from '$lib/stores/theme';
-	import { onMount } from 'svelte';
+  import { onMount } from 'svelte';
+  import { writable } from 'svelte/store';
 
-	let mounted = false;
-	let currentTheme: Theme;
+  const theme = writable('light');
+  let mounted = false;
 
-	// Subscribe to theme changes
-	$: currentTheme = $theme;
+  onMount(() => {
+    mounted = true;
+    const stored = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (stored) {
+      theme.set(stored);
+    } else if (prefersDark) {
+      theme.set('dark');
+    }
 
-	onMount(() => {
-		mounted = true;
-	});
+    const unsubscribe = theme.subscribe((value) => {
+      if (mounted) {
+        localStorage.setItem('theme', value);
+        if (value === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    });
 
-	function cycleTheme() {
-		const themes: Theme[] = ['light', 'dark', 'system'];
-		const currentIndex = themes.indexOf(currentTheme);
-		const nextIndex = (currentIndex + 1) % themes.length;
-		theme.set(themes[nextIndex]);
-	}
+    return unsubscribe;
+  });
 
-	function getThemeIcon(themeValue: Theme): string {
-		switch (themeValue) {
-			case 'light':
-				return '☀️';
-			case 'dark':
-				return '🌙';
-			case 'system':
-				return '💻';
-			default:
-				return '💻';
-		}
-	}
-
-	function getThemeLabel(themeValue: Theme): string {
-		switch (themeValue) {
-			case 'light':
-				return 'Light';
-			case 'dark':
-				return 'Dark';
-			case 'system':
-				return 'System';
-			default:
-				return 'System';
-		}
-	}
+  function toggleTheme() {
+    theme.update(t => t === 'light' ? 'dark' : 'light');
+  }
 </script>
 
 {#if mounted}
-	<div class="group relative">
-		<button
-			on:click={cycleTheme}
-			class="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-lg font-medium text-gray-700 transition-all duration-200 hover:bg-gray-50 hover:shadow-md dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-			title="Toggle theme ({getThemeLabel(currentTheme)})"
-		>
-			<span>{getThemeIcon(currentTheme)}</span>
-		</button>
-
-		<!-- Hover tooltip -->
-		<div
-			class="absolute -top-10 left-1/2 -translate-x-1/2 transform rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 dark:bg-gray-700"
-		>
-			{getThemeLabel(currentTheme)}
-			<!-- Tooltip arrow -->
-			<div
-				class="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 transform bg-gray-900 dark:bg-gray-700"
-			></div>
-		</div>
-	</div>
+  <button
+    on:click={toggleTheme}
+    class="p-2 rounded-full bg-white/80 backdrop-blur-sm border border-gray-200 hover:bg-white/90 transition-colors"
+    aria-label="Toggle theme"
+  >
+    {#if $theme === 'light'}
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+      </svg>
+    {:else}
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+    {/if}
+  </button>
 {/if}
-
-<style>
-	button {
-		cursor: pointer;
-	}
-</style>

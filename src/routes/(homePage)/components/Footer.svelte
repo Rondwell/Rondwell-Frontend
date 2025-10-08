@@ -37,7 +37,7 @@
 						>
 					</div>
 				</div>
-				<div class="flex space-x-8">
+				<div class="flex flex-wrap space-x-8">
 					<a
 						href="/"
 						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"

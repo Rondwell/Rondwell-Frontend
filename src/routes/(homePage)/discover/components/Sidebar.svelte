@@ -12,7 +12,7 @@
 	];
 </script>
 
-<aside class="flex w-72 flex-col">
+<aside class="hidden w-68 flex-col lg:flex">
 	<div class="h-fit rounded-2xl border-2 border-gray-200 p-4">
 		<!-- Logo & Title -->
 		<div class="flex w-full items-center justify-start gap-2 py-6 text-xl font-bold">
@@ -35,9 +35,17 @@
 					{item.name}
 					<!-- Badge placeholder -->
 					{#if item.name === 'Events'}
-						<span class="ml-auto rounded-full bg-purple-100 p-2 text-xs text-purple-700">⌘E</span>
+						<span
+							class="ml-auto rounded-md {activeItem === item.name
+								? 'bg-purple-100'
+								: ''} p-2 text-xs">⌘E</span
+						>
 					{:else}
-						<span class="ml-auto p-2 text-xs text-gray-400">⌘V</span>
+						<span
+							class="ml-auto rounded-md p-2 text-xs {activeItem === item.name
+								? 'bg-purple-100'
+								: ''}">⌘V</span
+						>
 					{/if}
 				</button>
 			{/each}

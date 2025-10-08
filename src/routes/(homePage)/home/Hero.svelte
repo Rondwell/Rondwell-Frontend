@@ -1,34 +1,92 @@
-<!-- +page.svelte or your main page file -->
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import Button from '$lib/components/Button.svelte';
 
-	// Hero section variables
+	// Hero section image slider
 	let heroImages = ['hero-event-1.png', 'hero-event-2.png', 'hero-event-1.png', 'hero-event-2.png'];
-
 	let currentImageIndex = 0;
-	let intervalId: number;
+	let imageIntervalId: number;
+
+	// Stack slide animation setup
+	type StackItem = {
+		id: number;
+		bottom: number;
+		left: number;
+		z: number;
+		width: number;
+	};
+
+	function getLeftOffset(width: number): number {
+		const containerWidth = 440; // Same as the container
+		const cardWidth = (Number(width) / 100) * containerWidth;
+		return (containerWidth - cardWidth) / 2;
+	}
+
+	let stackItems: StackItem[] = [
+		{ id: 1, bottom: -60, originalBottom: -60, width: 86 },
+		{ id: 2, bottom: -40, originalBottom: -40, width: 89 },
+		{ id: 3, bottom: -20, originalBottom: -20, width: 92 }
+	].map((item, i) => ({
+		...item,
+		left: getLeftOffset(item.width),
+		z: i + 1
+	}));
+
+	let stackIntervalId: number;
+
+	const widthPresets = [85, 90, 95];
 
 	onMount(() => {
-		intervalId = setInterval(() => {
+		imageIntervalId = setInterval(() => {
 			currentImageIndex = (currentImageIndex + 1) % heroImages.length;
 		}, 4000);
+
+		stackIntervalId = setInterval(() => {
+			// Move each item up
+			stackItems = stackItems.map((item) => ({
+				...item,
+				bottom: item.bottom + 20
+			}));
+
+			// Reset items that go above
+			stackItems = stackItems.map((item) => {
+				if (item.bottom > -20) {
+					return {
+						...item,
+						bottom: -60
+					};
+				}
+				return item;
+			});
+
+			const reSorted = [...stackItems].sort((a, b) => a.bottom - b.bottom);
+			stackItems = reSorted.map((item, i) => {
+				const width = widthPresets[i];
+				const left = getLeftOffset(width);
+				return {
+					...item,
+					width,
+					left,
+					z: i + 1
+				};
+			});
+		}, 4000);
 	});
+
 	onDestroy(() => {
-		if (intervalId) {
-			clearInterval(intervalId);
-		}
+		clearInterval(imageIntervalId);
+		clearInterval(stackIntervalId);
 	});
 </script>
 
 <!-- HERO SECTION -->
-<section class="relative overflow-hidden px-8 pt-10 pb-0 md:px-16 lg:pt-20">
+<section class="relative overflow-hidden px-2 pt-10 pb-0 md:px-16 lg:pt-20">
 	<div class="absolute w-full">
 		<img src="grid-bg.png" alt="" class="w-full opacity-20" />
 	</div>
 
 	<div class="mx-auto max-w-7xl">
-		<div class="grid items-center gap-12 pb-10 lg:grid-cols-2">
+		<div class="grid items-center gap-12 lg:grid-cols-2">
 			<!-- LEFT -->
 			<div class="relative z-10 space-y-8 text-center lg:text-left">
 				<div class="space-y-4">
@@ -66,35 +124,43 @@
 			</div>
 
 			<!-- RIGHT -->
-			<div class="relative flex justify-center lg:justify-end">
-				<div class="gradient-border-wrapper">
-					<div class="gradient-border relative h-[507px] w-[440px] overflow-hidden p-2">
-						{#each heroImages as img, i (i)}
+			<div class="relative flex h-full min-h-[580px] w-full justify-center lg:justify-end">
+				<div
+					class="relative container mx-auto h-full max-h-[395px] w-full max-w-[340px] md:max-h-[514px] md:max-w-[445px]"
+				>
+					<div class="gradient-border-wrapper h-full w-full">
+						<div class="gradient-border relative h-full w-full overflow-hidden p-2">
+							{#each heroImages as img, i (i)}
+								<div
+									class="image-container w-full max-w-[315px] md:max-w-[420px]"
+									class:active={i === currentImageIndex}
+									style="z-index: {heroImages.length - i};"
+								>
+									<img
+										src={img}
+										alt="Event attendees"
+										class="h-auto w-full rounded-xl object-cover"
+									/>
+								</div>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Animated Stack Slides -->
+					<div class="relative w-full max-w-[340px] md:max-w-[440px]">
+						{#each stackItems as item (item.id)}
 							<div
-								class="image-container"
-								class:active={i === currentImageIndex}
-								style="z-index: {heroImages.length - i};"
-							>
-								<img
-									src={img}
-									alt="Event attendees"
-									class="h-auto w-full rounded-xl object-cover"
-								/>
-							</div>
+								class="stack-slide border-2 border-amber-400"
+								style="bottom: {item.bottom}px; left: {item.left}px; z-index: {item.z}; width: {item.width}%"
+							></div>
 						{/each}
 					</div>
-				</div>
-				<div class="relative">
-					<div class="stack-slide ss1"></div>
-					<div class="stack-slide ss2"></div>
-					<div class="stack-slide ss3"></div>
 				</div>
 			</div>
 		</div>
 
-		<!-- STACKED FLOATING CARDS -->
-		<div class="relative z-20 mt-20 mb-0 flex flex-col items-center">
-			<!-- First Card -->
+		<!-- STACKED FLOATING CARDS BELOW -->
+		<div class="relative z-20 mt-10 mb-0 flex flex-col items-center md:mt-20">
 			<div
 				class="relative z-30 flex h-[48px] w-[320px] items-center justify-center rounded-full border-[3px] border-white bg-[rgba(255,255,255,0.65)] text-[12px] font-medium whitespace-nowrap text-[#3D235E] shadow-xl backdrop-blur-md"
 			>
@@ -104,14 +170,12 @@
 				</span>
 			</div>
 
-			<!-- Second Card -->
 			<div
 				class="glass-card relative z-20 -mt-8 flex h-[70px] w-[280px] items-center justify-center rounded-2xl border-[3px] border-white bg-[rgba(255,255,255,0.65)] text-[12px] font-medium text-[#3D3D4E]"
 			>
 				<div class="mt-6">See Latest Events</div>
 			</div>
 
-			<!-- Arrow Card -->
 			<div
 				class="relative z-10 mt-[-21px] flex h-[58px] w-[58px] items-center justify-center rounded-full border-[3px] border-white bg-[rgba(255,255,255,0.65)]"
 			>
@@ -184,7 +248,6 @@
 		position: absolute;
 		top: 2;
 		left: 2;
-		width: 420px;
 		height: 100%;
 		opacity: 0;
 		transform: translateY(5px);
@@ -201,49 +264,17 @@
 	}
 
 	.stack-slide {
-		box-sizing: border-box;
 		position: absolute;
+		width: 398.21px;
 		height: 115.43px;
+		right: 20px;
 		background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 100%);
 		box-shadow: inset 0px 0px 19.5639px rgba(255, 112, 166, 0.25);
 		backdrop-filter: blur(4.64644px);
 		border-radius: 12.7166px;
-		animation: shoveUp 4s ease-in-out infinite;
+		transition: bottom 1s ease-in-out;
 	}
 
-	@keyframes shoveUp {
-		0%,
-		100% {
-			transform: translateY(0);
-		}
-		50% {
-			transform: translateY(-15px);
-		}
-	}
-
-	.ss1 {
-		right: 20px;
-		width: 398.21px;
-		bottom: -20px;
-		z-index: 3;
-		animation-delay: 0s;
-	}
-	.ss2 {
-		right: 30px;
-		width: 378.21px;
-		bottom: -40px;
-		z-index: 2;
-		animation-delay: 0.2s;
-	}
-	.ss3 {
-		right: 40px;
-		width: 358.21px;
-		bottom: -60px;
-		z-index: 1;
-		animation-delay: 0.4s;
-	}
-
-	/* Floating stacked cards */
 	.glass-card {
 		background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
 		border: 1px solid rgba(255, 255, 255, 0.4);
@@ -251,11 +282,11 @@
 		backdrop-filter: blur(10px);
 		-webkit-backdrop-filter: blur(10px);
 		box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+		transition: all 0.3s ease;
 	}
 
 	.glass-card:hover {
 		transform: translateY(-3px);
-		transition: 0.3s ease;
 		box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25);
 	}
 </style>

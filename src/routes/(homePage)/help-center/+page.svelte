@@ -47,7 +47,7 @@
 			<div class="mb-10 flex flex-col items-center gap-6 text-center">
 				<img src="logo.png" alt="" class="h-8" />
 				<h1 class="mb-4 text-4xl font-bold">Welcome. How can we help?</h1>
-				<div class="relative w-full max-w-3xl">
+				<div class="relative w-full max-w-2xl lg:max-w-3xl">
 					<input
 						type="text"
 						bind:value={searchQuery}

@@ -67,7 +67,7 @@
 	<div class="h-fit rounded-2xl border-2 border-gray-200 p-4">
 		<!-- Logo & Title -->
 		<div class="flex w-full items-center justify-start gap-2 py-6 text-xl font-bold">
-			<img src="logo1.png" alt="roundwell logo" class="h-11 w-11" />
+			<img src="/logo1.png" alt="roundwell logo" class="h-11 w-11" />
 			Discover
 		</div>
 

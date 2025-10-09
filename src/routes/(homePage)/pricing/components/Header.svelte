@@ -39,14 +39,14 @@
 				<img src="/logo.png" alt="Rondwell" class="h-8" />
 			</a>
 			<a href="/help-center" class="hidden items-center gap-1 font-medium text-gray-400 md:flex">
-				<img src="information.png" alt="warning icon" class="h-5 w-5" />
+				<img src="/information.png" alt="warning icon" class="h-5 w-5" />
 				Help Center</a
 			>
 		</div>
 
 		<div class="flex items-center gap-4 md:gap-10">
 			<span class="hidden text-sm text-gray-400 lg:block">{now}</span>
-			<img src="search-favorite.png" alt="search icon" class="hidden h-5 w-5 lg:block" />
+			<img src="/search-favorite.png" alt="search icon" class="hidden h-5 w-5 lg:block" />
 
 			<!-- Back Button -->
 			<a
@@ -54,7 +54,7 @@
 				class="hidden items-start gap-1 rounded-4xl bg-[#E9EBEC] px-4 py-2 text-[#717374] hover:text-gray-900 md:flex"
 			>
 				Back to rondwell.com
-				<img src="send-icon.png" alt="send icon" class="h-4 w-4" />
+				<img src="/send-icon.png" alt="send icon" class="h-4 w-4" />
 			</a>
 
 			<!-- Sign in (always visible) -->

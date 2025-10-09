@@ -81,7 +81,7 @@
 					class="h-[43px] w-full rounded-lg border border-gray-300 py-2 pr-4 pl-10 focus:ring-2 focus:ring-purple-500 focus:outline-none"
 				/>
 				<span class="absolute top-2.5 left-3 text-gray-400">
-					<img src="search.png" alt="search icon" class="h-5 w-5" />
+					<img src="/search.png" alt="search icon" class="h-5 w-5" />
 				</span>
 				<span class="absolute top-2 right-3 bg-[#eeeeef] p-1 text-sm text-gray-500">⌘K</span>
 			</div>
@@ -95,7 +95,7 @@
 		</div>
 
 		<div class="absolute bottom-0 w-full">
-			<img src="floor-light.svg.png" alt="" class="w-full opacity-50" />
+			<img src="/floor-light.svg.png" alt="" class="w-full opacity-50" />
 		</div>
 	</div>
 
@@ -123,7 +123,7 @@
 			<button
 				class="flex flex-shrink-0 items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-sm text-[#616265]"
 			>
-				<img src="filter-edit.png" alt="filter icon" class="h-5 w-5" />
+				<img src="/filter-edit.png" alt="filter icon" class="h-5 w-5" />
 				{filter}
 				<img src="/arrow-down.png" alt="Arrow Down" class="h-2 w-3 opacity-60" />
 			</button>

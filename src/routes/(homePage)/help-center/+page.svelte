@@ -39,7 +39,7 @@
 <div class="mx-auto max-w-4xl py-10">
 	<!-- Hero -->
 	<div class="mb-10 flex flex-col items-center gap-6 text-center">
-		<img src="logo.png" alt="" class="h-8" />
+		<img src="/logo.png" alt="" class="h-8" />
 		<h1 class="mb-4 text-4xl font-bold">Welcome. How can we help?</h1>
 		<div class="relative w-full max-w-2xl lg:max-w-3xl">
 			<input
@@ -49,7 +49,7 @@
 				class="h-[43px] w-full rounded-lg border border-gray-300 bg-[#FFFFFF] py-2 pr-4 pl-10 text-[#C5C6C6] focus:ring-2 focus:ring-purple-500 focus:outline-none"
 			/>
 			<span class="absolute top-2.5 left-3 text-gray-400">
-				<img src="search-favorite.png" alt="search icon" class="h-5 w-5" />
+				<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />
 			</span>
 		</div>
 	</div>

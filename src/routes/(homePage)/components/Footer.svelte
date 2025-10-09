@@ -12,7 +12,7 @@
 					<!-- Logo -->
 					<a href="/" class="text-xl font-bold text-indigo-600">
 						<img
-							src="logo.png"
+							src="/logo.png"
 							alt="Rondwell Logo"
 							class="h-[20.98px] w-[68.18px] object-contain"
 						/>

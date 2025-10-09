@@ -14,7 +14,7 @@
 			<button
 				class="flex cursor-pointer items-center gap-1 rounded-md bg-black px-6 py-2 text-white transition hover:bg-gray-800"
 			>
-				<img src="direct-normal.png" alt="icon" class="h-5 w-5" />
+				<img src="/direct-normal.png" alt="icon" class="h-5 w-5" />
 				Contact Us
 			</button>
 		</div>

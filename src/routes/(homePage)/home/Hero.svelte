@@ -3,7 +3,12 @@
 	import Button from '$lib/components/Button.svelte';
 
 	// Hero section image slider
-	let heroImages = ['hero-event-1.png', 'hero-event-2.png', 'hero-event-1.png', 'hero-event-2.png'];
+	let heroImages = [
+		'/hero-event-1.png',
+		'/hero-event-2.png',
+		'/hero-event-1.png',
+		'/hero-event-2.png'
+	];
 	let currentImageIndex = 0;
 	let imageIntervalId: number;
 
@@ -25,7 +30,8 @@
 	let stackItems: StackItem[] = [
 		{ id: 1, bottom: -60, originalBottom: -60, width: 86 },
 		{ id: 2, bottom: -40, originalBottom: -40, width: 89 },
-		{ id: 3, bottom: -20, originalBottom: -20, width: 92 }
+		{ id: 3, bottom: -20, originalBottom: -20, width: 92 },
+		{ id: 4, bottom: 0, originalBottom: 0, width: 95 }
 	].map((item, i) => ({
 		...item,
 		left: getLeftOffset(item.width),
@@ -34,7 +40,7 @@
 
 	let stackIntervalId: number;
 
-	const widthPresets = [85, 90, 95];
+	const widthPresets = [85, 90, 92, 95];
 
 	onMount(() => {
 		imageIntervalId = setInterval(() => {
@@ -50,7 +56,7 @@
 
 			// Reset items that go above
 			stackItems = stackItems.map((item) => {
-				if (item.bottom > -20) {
+				if (item.bottom > 0) {
 					return {
 						...item,
 						bottom: -60
@@ -82,7 +88,7 @@
 <!-- HERO SECTION -->
 <section class="relative overflow-hidden px-2 pt-10 pb-0 md:px-16 lg:pt-20">
 	<div class="absolute w-full">
-		<img src="grid-bg.png" alt="" class="w-full opacity-20" />
+		<img src="/grid-bg.png" alt="" class="w-full opacity-20" />
 	</div>
 
 	<div class="mx-auto max-w-7xl">
@@ -150,7 +156,7 @@
 					<div class="relative w-full max-w-[340px] md:max-w-[440px]">
 						{#each stackItems as item (item.id)}
 							<div
-								class="stack-slide border-2 border-amber-400"
+								class="stack-slide"
 								style="bottom: {item.bottom}px; left: {item.left}px; z-index: {item.z}; width: {item.width}%"
 							></div>
 						{/each}

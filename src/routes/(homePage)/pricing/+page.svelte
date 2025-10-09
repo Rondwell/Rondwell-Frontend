@@ -63,7 +63,7 @@
 		<div class="mx-auto max-w-4xl py-10">
 			<!-- Hero Section -->
 			<div class="mb-12 flex flex-col items-center gap-6 text-center">
-				<img src="logo.png" alt="" class="h-8" />
+				<img src="/logo.png" alt="" class="h-8" />
 				<h1 class="mb-4 text-5xl font-semibold">Pricing</h1>
 				<p class="mx-auto max-w-xl text-lg font-semibold text-[#7A7B7D]">
 					Use Rondwell for free with unlimited events and guests. Upgrade for more invites, 0%
@@ -120,7 +120,7 @@
       {i === 5 ? 'border-t border-gray-300 pt-2' : ''}
       {i === 6 ? 'border-b border-gray-300 pb-2 text-[#F31A7C]' : ''}"
 							>
-								<img src="tick.png" alt="tick" class="h-4 w-4 rounded-full" />
+								<img src="/tick.png" alt="tick" class="h-4 w-4 rounded-full" />
 								{feature}
 							</li>
 						{/each}
@@ -162,7 +162,7 @@
       {i === 5 ? 'border-t border-gray-300 pt-2' : ''}
       {i === 6 ? 'border-b border-gray-300 pb-2 text-[#F31A7C]' : ''}"
 							>
-								<img src="tick.png" alt="tick" class="h-4 w-4 rounded-full" />
+								<img src="/tick.png" alt="tick" class="h-4 w-4 rounded-full" />
 								{feature}
 							</li>
 						{/each}
@@ -245,7 +245,7 @@
 							class="flex items-start gap-1 rounded-md bg-[#939597] px-6 py-2 text-gray-300 transition hover:bg-gray-800"
 						>
 							Contact Us
-							<img src="send-icon1.png" alt="send icon" class="h-4 w-4" />
+							<img src="/send-icon1.png" alt="send icon" class="h-4 w-4" />
 						</button>
 					</div>
 				</div>

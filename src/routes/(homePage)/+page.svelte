@@ -2,7 +2,7 @@
 	import Header from './home/Header.svelte';
 	import Hero from './home/Hero.svelte';
 	import Features from './home/Features.svelte';
-	import EventList from './home/eventList.svelte';
+	import EventList from './home/EventList.svelte';
 	import EventSlide from './home/EventSlide.svelte';
 </script>
 

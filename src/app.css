@@ -1,7 +1,7 @@
-@import "tailwindcss";
-
 /* Import Merriweather Sans */
 @import url("https://fonts.googleapis.com/css2?family=Merriweather+Sans:wght@300;400;500;600;700&display=swap");
+
+@import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -123,6 +123,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     /* Ensure body has pure white background - removed all padding */
     @apply text-foreground font-sans;
@@ -132,20 +133,24 @@
 
 /* Removed gradient animations and kept only simple animations */
 @keyframes border-fade {
+
   0%,
   100% {
     opacity: 0.3;
   }
+
   50% {
     opacity: 1;
   }
 }
 
 @keyframes pulse-border {
+
   0%,
   100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.02);
   }
@@ -157,4 +162,37 @@
 
 .animate-pulse-border {
   animation: pulse-border 3s ease-in-out infinite;
+}
+
+.custom-scrollbar {
+  scrollbar-width: none;
+  /* Firefox - hide scrollbar */
+  -ms-overflow-style: none;
+  /* IE and Edge - hide scrollbar */
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  height: 0px;
+  /* Hide scrollbar by default */
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar,
+.custom-scrollbar:active::-webkit-scrollbar {
+  height: 6px;
+  /* Show scrollbar on hover/active */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  /* Light gray */
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #a1a1aa;
+  /* Darker on hover */
 }

@@ -110,7 +110,7 @@
 	>
 		{#each menuItems as item}
 			<button
-				class={`flex flex-shrink-0 items-center gap-3 rounded-md px-4 py-2 transition ${
+				class={`flex flex-shrink-0 cursor-pointer items-center gap-3 rounded-md px-4 py-2 transition ${
 					activeItem === item.name
 						? 'rounded-2xl border border-purple-700 text-purple-700'
 						: 'bg-[#eeeff0] text-gray-700'
@@ -130,7 +130,7 @@
 		>
 			{#each ['Category', 'Event Type', 'Location', 'Language', 'Currency'] as filter}
 				<button
-					class="flex flex-shrink-0 items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-sm text-[#616265]"
+					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-sm text-[#616265]"
 					on:click={() => (activeModal = filter)}
 				>
 					<img src="/filter-edit.png" alt="filter icon" class="h-5 w-5" />
@@ -141,7 +141,7 @@
 
 			<!-- Clear Button -->
 			<button
-				class="flex flex-shrink-0 items-center gap-1 rounded-md border border-purple-600 px-3 py-1 text-sm text-purple-600"
+				class="flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-md border border-purple-600 px-3 py-1 text-sm text-purple-600"
 				on:click={() => (activeModal = null)}
 			>
 				Clear

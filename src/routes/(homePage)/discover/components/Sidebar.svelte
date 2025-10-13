@@ -75,7 +75,7 @@
 		<nav class="flex-1 space-y-3">
 			{#each menuItems as item}
 				<button
-					class={`flex w-full items-center gap-3 rounded-md px-4 py-2 transition ${
+					class={`flex w-full cursor-pointer items-center gap-3 rounded-md px-4 py-2 transition ${
 						activeItem === item.name
 							? 'rounded-2xl border border-purple-700 text-purple-700'
 							: 'text-gray-700 hover:bg-gray-100'

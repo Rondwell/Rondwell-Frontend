@@ -39,7 +39,7 @@
 <div class="mx-auto max-w-4xl py-10">
 	<!-- Hero -->
 	<div class="mb-10 flex flex-col items-center gap-6 text-center">
-		<img src="/logo.png" alt="" class="h-8" />
+		<img src="/logo.svg" alt="" class="h-8" />
 		<h1 class="mb-4 text-4xl font-bold">Welcome. How can we help?</h1>
 		<div class="relative w-full max-w-2xl lg:max-w-3xl">
 			<input

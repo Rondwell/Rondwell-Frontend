@@ -30,10 +30,7 @@
 	let isOpen = false;
 </script>
 
-<div
-	class="relative w-full border-b border-[#909EA3]"
-	style="background: linear-gradient(135deg, #eb9ec4ff 0%, #ffe0f0 20%, #ffd1e8 40%, #ffe0f0 70%, #ffd1e8 100%);"
->
+<div class="relative w-full border-b border-[#909EA3]">
 	<!-- Mobile extra background -->
 	<div class="absolute inset-x-2 top-2 h-[55px] rounded-[20px] bg-[#C7AFB8] md:hidden"></div>
 
@@ -42,7 +39,7 @@
 	>
 		<!-- Logo -->
 		<a href="/" class="flex items-center gap-2">
-			<img src="/logo.png" alt="Rondwell Logo" class="h-8 w-auto" />
+			<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
 		</a>
 
 		<!-- Navigation (desktop) -->

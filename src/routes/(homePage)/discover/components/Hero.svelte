@@ -1,7 +1,13 @@
 <!-- src/lib/components/Header.svelte -->
 <script lang="ts">
+	import CategoryModal from './modal/CategoryModal.svelte';
+	import EventTypeDropdown from './modal/EventTypeModel.svelte';
+	import LanguageModal from './modal/LanguageModal.svelte';
+	import LocationModal from './modal/LocationModal.svelte';
+
 	let searchQuery = '';
 	let activeItem = 'Events';
+	let activeModal: string | null = null;
 
 	const GRAY = '#545260';
 	const PURPLE = '#A667E4';
@@ -64,16 +70,16 @@
 	];
 </script>
 
-<header class="h-full">
-	<div class="hero-section relative mb-6 h-full">
+<header class="relative h-full">
+	<div class="hero-section relative mb-6 h-full rounded-t-[12px]">
 		<div
-			class="mb-8 flex flex-col items-center justify-center gap-6 px-6 py-15 pb-20 text-center lg:pb-38"
+			class="mb-8 flex flex-col items-center justify-center gap-6 px-6 py-15 pb-20 text-center lg:pb-28"
 		>
 			<!-- Main Title -->
 			<h1 class="text-5xl font-bold text-gray-800">Discover Unlimited Events</h1>
 
 			<!-- Search Bar -->
-			<div class="relative w-full max-w-4xl">
+			<div class="relative w-full max-w-3xl">
 				<input
 					type="text"
 					bind:value={searchQuery}
@@ -87,7 +93,7 @@
 			</div>
 
 			<!-- Stats -->
-			<div class="text-md flex gap-6 font-bold text-gray-400">
+			<div class="md:text-md flex gap-4 text-sm font-bold text-gray-400 md:gap-6">
 				<span>39,374 <span class="font-medium">Events</span></span>
 				<div class="border border-l border-gray-600"></div>
 				<span>1,599,060 <span class="font-medium">Organizers</span></span>
@@ -95,7 +101,7 @@
 		</div>
 
 		<div class="absolute bottom-0 w-full">
-			<img src="/floor-light.svg.png" alt="" class="w-full opacity-50" />
+			<img src="/floor-light.svg.png" alt="" class="w-full" />
 		</div>
 	</div>
 
@@ -117,44 +123,80 @@
 		{/each}
 	</div>
 
-	<!-- Filters (optional - can be moved to main content later) -->
-	<div class="custom-scrollbar flex gap-4 overflow-x-auto overflow-y-hidden pt-4 whitespace-nowrap">
-		{#each ['Category', 'Event Type', 'Location', 'Language', 'Currency'] as filter}
-			<button
-				class="flex flex-shrink-0 items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-sm text-[#616265]"
-			>
-				<img src="/filter-edit.png" alt="filter icon" class="h-5 w-5" />
-				{filter}
-				<img src="/arrow-down.png" alt="Arrow Down" class="h-2 w-3 opacity-60" />
-			</button>
-		{/each}
-		<button
-			class="flex flex-shrink-0 items-center gap-1 rounded-full border border-purple-200 px-3 py-1 text-sm text-purple-600"
+	<div class="relative">
+		<!-- Filters (optional - can be moved to main content later) -->
+		<div
+			class="custom-scrollbar flex gap-4 overflow-x-auto overflow-y-hidden pt-4 whitespace-nowrap"
 		>
-			Clear
-			<span>
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
+			{#each ['Category', 'Event Type', 'Location', 'Language', 'Currency'] as filter}
+				<button
+					class="flex flex-shrink-0 items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-sm text-[#616265]"
+					on:click={() => (activeModal = filter)}
 				>
-					<path
-						d="M7.9987 15.1663C4.04536 15.1663 0.832031 11.953 0.832031 7.99967C0.832031 4.04634 4.04536 0.833008 7.9987 0.833008C11.952 0.833008 15.1654 4.04634 15.1654 7.99967C15.1654 11.953 11.952 15.1663 7.9987 15.1663ZM7.9987 1.83301C4.5987 1.83301 1.83203 4.59967 1.83203 7.99967C1.83203 11.3997 4.5987 14.1663 7.9987 14.1663C11.3987 14.1663 14.1654 11.3997 14.1654 7.99967C14.1654 4.59967 11.3987 1.83301 7.9987 1.83301Z"
-						fill="#A9AAAA"
-					/>
-					<path
-						d="M6.11161 10.3869C5.98495 10.3869 5.85828 10.3402 5.75828 10.2402C5.56495 10.0469 5.56495 9.7269 5.75828 9.53357L9.53162 5.76023C9.72495 5.5669 10.0449 5.5669 10.2383 5.76023C10.4316 5.95357 10.4316 6.27357 10.2383 6.4669L6.46495 10.2402C6.37161 10.3402 6.23828 10.3869 6.11161 10.3869Z"
-						fill="#A9AAAA"
-					/>
-					<path
-						d="M9.88495 10.3869C9.75828 10.3869 9.63162 10.3402 9.53162 10.2402L5.75828 6.4669C5.56495 6.27357 5.56495 5.95357 5.75828 5.76023C5.95161 5.5669 6.27161 5.5669 6.46495 5.76023L10.2383 9.53357C10.4316 9.7269 10.4316 10.0469 10.2383 10.2402C10.1383 10.3402 10.0116 10.3869 9.88495 10.3869Z"
-						fill="#A9AAAA"
-					/>
-				</svg>
-			</span>
-		</button>
+					<img src="/filter-edit.png" alt="filter icon" class="h-5 w-5" />
+					{filter}
+					<img src="/arrow-down.png" alt="Arrow Down" class="h-2 w-3 opacity-60" />
+				</button>
+			{/each}
+
+			<!-- Clear Button -->
+			<button
+				class="flex flex-shrink-0 items-center gap-1 rounded-md border border-purple-600 px-3 py-1 text-sm text-purple-600"
+				on:click={() => (activeModal = null)}
+			>
+				Clear
+				<span>
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+					>
+						<path
+							d="M7.9987 15.1663C4.04536 15.1663 0.832031 11.953 0.832031 7.99967C0.832031 4.04634 4.04536 0.833008 7.9987 0.833008C11.952 0.833008 15.1654 4.04634 15.1654 7.99967C15.1654 11.953 11.952 15.1663 7.9987 15.1663ZM7.9987 1.83301C4.5987 1.83301 1.83203 4.59967 1.83203 7.99967C1.83203 11.3997 4.5987 14.1663 7.9987 14.1663C11.3987 14.1663 14.1654 11.3997 14.1654 7.99967C14.1654 4.59967 11.3987 1.83301 7.9987 1.83301Z"
+							fill="#A9AAAA"
+						/>
+						<path
+							d="M6.11161 10.3869C5.98495 10.3869 5.85828 10.3402 5.75828 10.2402C5.56495 10.0469 5.56495 9.7269 5.75828 9.53357L9.53162 5.76023C9.72495 5.5669 10.0449 5.5669 10.2383 5.76023C10.4316 5.95357 10.4316 6.27357 10.2383 6.4669L6.46495 10.2402C6.37161 10.3402 6.23828 10.3869 6.11161 10.3869Z"
+							fill="#A9AAAA"
+						/>
+						<path
+							d="M9.88495 10.3869C9.75828 10.3869 9.63162 10.3402 9.53162 10.2402L5.75828 6.4669C5.56495 6.27357 5.56495 5.95357 5.75828 5.76023C5.95161 5.5669 6.27161 5.5669 6.46495 5.76023L10.2383 9.53357C10.4316 9.7269 10.4316 10.0469 10.2383 10.2402C10.1383 10.3402 10.0116 10.3869 9.88495 10.3869Z"
+							fill="#A9AAAA"
+						/>
+					</svg>
+				</span>
+			</button>
+		</div>
+		<CategoryModal open={activeModal === 'Category'} onClose={() => (activeModal = null)} />
+
+		{#if activeModal === 'Event Type'}
+			<EventTypeDropdown
+				open={activeModal === 'Event Type'}
+				on:close={() => (activeModal = null)}
+				on:select={(e) => console.log('Selected:', e.detail)}
+			/>
+		{/if}
+
+		<!-- Placeholders for other modals -->
+		{#if activeModal === 'Location'}
+			<LocationModal
+				open={activeModal === 'Location'}
+				on:close={() => (activeModal = null)}
+				on:select={(e) => console.log('Selected location:', e.detail)}
+			/>
+		{/if}
+		{#if activeModal === 'Language'}
+			<LanguageModal
+				open={activeModal === 'Language'}
+				on:close={() => (activeModal = null)}
+				on:select={(e) => console.log('Selected language:', e.detail)}
+			/>
+		{/if}
+		{#if activeModal === 'Currency'}
+			<!-- Add CurrencyModal here -->
+		{/if}
 	</div>
 </header>
 

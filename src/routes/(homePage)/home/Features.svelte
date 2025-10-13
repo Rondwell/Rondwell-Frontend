@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import Button from '$lib/components/Button.svelte';
 
 	let features = [
 		{ icon: '/ico1.png', title: 'Ticket Sales and Group ticketing', color: 'bg-purple-100' },
@@ -64,43 +63,16 @@
 
 <section
 	bind:this={sectionRef}
-	class="rounded-[30px] bg-[#ffe0f0]/20 px-4 py-16 backdrop-blur-sm sm:px-6"
+	class="rounded-[30px] bg-[#FEF3F7] px-4 py-16 backdrop-blur-sm sm:px-6"
 >
 	<div class="mx-auto max-w-7xl">
-		<!-- Section Header -->
-		<div class="mb-12 space-y-4 text-center sm:mb-16">
-			<h2 class="text-3xl font-semibold text-[#000000] sm:text-4xl md:text-5xl">
-				Rondwell
-				<span
-					class="bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text font-semibold text-transparent"
-				>
-					Events.
-				</span>
-			</h2>
-			<p class="mx-auto max-w-2xl text-base text-balance text-[#686768] sm:text-lg">
-				Organize any kind of event on Rondwell, manage your event pages, embeddings, attendees,
-				accept payments in multiple currencies.
-			</p>
-			<Button
-				class="h-[52px] w-full rounded-[13px] bg-[#333537] px-6 py-3 text-center 
-               text-[18px] text-white transition-colors duration-200 sm:h-[60px] sm:w-[300px] sm:px-8 sm:text-[20px]"
-			>
-				<img src="/Aiicon.png" alt="AI Icon" class="h-6 w-6 object-contain" />
-				Create Event with AI
-			</Button>
-		</div>
-
 		<!-- Content Grid -->
 		<div class="grid grid-cols-1 items-center gap-10 sm:gap-12 lg:grid-cols-2">
 			<div
-				class="mx-auto flex h-auto w-full flex-col gap-6 rounded-[24px] border
-            border-pink-100 bg-gradient-to-br from-[#ffe0f0]
-            via-white to-[#fce7f3] px-4 py-6 shadow-lg
-            shadow-pink-200/50 sm:px-6 sm:py-10 lg:h-[528px]
-            lg:w-[1257px] lg:flex-row lg:gap-16"
+				class="bg-color flex h-auto w-full flex-col-reverse gap-6 p-10 sm:p-20 lg:w-[1257px] lg:flex-row lg:gap-16"
 			>
 				<!-- Features Section (Left on desktop, Bottom on mobile) -->
-				<div class="order-2 w-full flex-1 space-y-3 lg:order-1">
+				<div class="w-full space-y-3">
 					{#each features as feature, index (index)}
 						<div
 							class="feature-border {index === activeIndex ? 'active' : ''}"
@@ -125,21 +97,21 @@
 				</div>
 
 				<!-- Card Section (Right on desktop, Top on mobile) -->
-				<div
-					class="relative order-1 flex w-full flex-1 flex-col items-center text-center lg:order-2"
-				>
-					<img
-						src={featureImages[activeIndex] || '/placeholder.svg'}
-						alt="Event group"
-						class="w-full lg:max-w-[444px]"
-						style="aspect-ratio: 16/9;"
-					/>
-					<p
-						class="mt-4 w-full text-center text-sm font-medium text-gray-400 md:text-xl lg:max-w-[444px] lg:text-left"
-					>
-						Rondwell brings organizers, attendees, and professionals together to create
-						unforgettable experiences.
-					</p>
+				<div class="relative flex w-full justify-center text-center lg:justify-end">
+					<div class="h-full">
+						<img
+							src={featureImages[activeIndex] || '/placeholder.svg'}
+							alt="Event group"
+							class="w-full lg:max-w-[444px]"
+							style="aspect-ratio: 16/9;"
+						/>
+						<p
+							class="mt-4 w-full text-center text-sm font-medium text-gray-400 md:text-xl lg:max-w-[444px] lg:text-left"
+						>
+							Rondwell brings organizers, attendees, and professionals together to create
+							unforgettable experiences.
+						</p>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -148,6 +120,13 @@
 
 <!-- Features List -->
 <style>
+	.bg-color {
+		box-sizing: border-box;
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 100%);
+		box-shadow: inset 0px 0px 47.5964px rgba(255, 112, 166, 0.25);
+		backdrop-filter: blur(11.3042px);
+		border-radius: 30.9377px;
+	}
 	.feature-border {
 		position: relative;
 		width: 100%;

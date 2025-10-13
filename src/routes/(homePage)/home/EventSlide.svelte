@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '$lib/components/Button.svelte';
 	import { onMount, onDestroy } from 'svelte';
 
 	let currentIndex = 0;
@@ -112,6 +113,28 @@
 					></button>
 				{/each}
 			</div> -->
+		</div>
+
+		<div class="mt-30 space-y-4 text-center">
+			<h2 class="text-3xl font-semibold text-[#000000] sm:text-4xl md:text-5xl">
+				Rondwell
+				<span
+					class="bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text font-semibold text-transparent"
+				>
+					Events.
+				</span>
+			</h2>
+			<p class="mx-auto max-w-2xl text-base text-balance text-[#686768] sm:text-lg">
+				Organize any kind of event on Rondwell, manage your event pages, embeddings, attendees,
+				accept payments in multiple currencies.
+			</p>
+			<Button
+				class="h-[52px] w-full rounded-[13px] bg-[#333537] px-6 py-3 text-center 
+               text-[18px] text-white transition-colors duration-200 sm:h-[60px] sm:w-[300px] sm:px-8 sm:text-[20px]"
+			>
+				<img src="/Aiicon.png" alt="AI Icon" class="mr-2 h-6 w-6 object-contain" />
+				Create Event with AI
+			</Button>
 		</div>
 	</div>
 </section>

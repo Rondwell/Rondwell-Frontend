@@ -63,7 +63,7 @@
 		<div class="mx-auto max-w-4xl py-10">
 			<!-- Hero Section -->
 			<div class="mb-12 flex flex-col items-center gap-6 text-center">
-				<img src="/logo.png" alt="" class="h-8" />
+				<img src="/logo.svg" alt="" class="h-8" />
 				<h1 class="mb-4 text-5xl font-semibold">Pricing</h1>
 				<p class="mx-auto max-w-xl text-lg font-semibold text-[#7A7B7D]">
 					Use Rondwell for free with unlimited events and guests. Upgrade for more invites, 0%

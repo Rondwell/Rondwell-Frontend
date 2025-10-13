@@ -83,6 +83,18 @@
 		clearInterval(imageIntervalId);
 		clearInterval(stackIntervalId);
 	});
+
+	function scrollToId(id: string, options?: ScrollIntoViewOptions) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.scrollIntoView({
+				behavior: options?.behavior ?? 'smooth',
+				block: options?.block ?? 'start'
+			});
+		} else {
+			console.warn(`Element with id "${id}" not found.`);
+		}
+	}
 </script>
 
 <!-- HERO SECTION -->
@@ -132,7 +144,7 @@
 			<!-- RIGHT -->
 			<div class="relative flex h-full min-h-[580px] w-full justify-center lg:justify-end">
 				<div
-					class="relative container mx-auto h-full max-h-[395px] w-full max-w-[340px] md:max-h-[514px] md:max-w-[445px]"
+					class="relative h-full max-h-[395px] w-full max-w-[340px] md:max-h-[514px] md:max-w-[445px]"
 				>
 					<div class="gradient-border-wrapper h-full w-full">
 						<div class="gradient-border relative h-full w-full overflow-hidden p-2">
@@ -182,11 +194,13 @@
 				<div class="mt-6">See Latest Events</div>
 			</div>
 
-			<div
-				class="relative z-10 mt-[-21px] flex h-[58px] w-[58px] items-center justify-center rounded-full border-[3px] border-white bg-[rgba(255,255,255,0.65)]"
+			<button
+				type="button"
+				on:click={() => scrollToId('events')}
+				class="nav-card relative z-10 mt-[-21px] flex h-[58px] w-[58px] items-center justify-center rounded-full border-[3px] border-white bg-[rgba(255,255,255,0.65)]"
 			>
 				<img src="/arrow-down.png" alt="Arrow Down" class="absolute bottom-3 h-3 w-5" />
-			</div>
+			</button>
 		</div>
 	</div>
 </section>
@@ -294,5 +308,14 @@
 	.glass-card:hover {
 		transform: translateY(-3px);
 		box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25);
+	}
+
+	.nav-card {
+		transition: all 0.3s ease;
+		cursor: pointer;
+	}
+
+	.nav-card:hover {
+		transform: translateY(-3px);
 	}
 </style>

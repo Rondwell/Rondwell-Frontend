@@ -39,7 +39,7 @@
 	>
 		<!-- Logo -->
 		<a href="/" class="flex items-center gap-2">
-			<img src="/logo.png" alt="Rondwell Logo" class="h-8 w-auto" />
+			<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
 		</a>
 
 		<!-- Navigation (desktop) -->

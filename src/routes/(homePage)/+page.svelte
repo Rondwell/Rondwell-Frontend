@@ -7,8 +7,13 @@
 </script>
 
 <main class="relative w-full">
-	<Header />
 	<div class="hero-section">
+		<div class="highlight highlight-1"></div>
+		<div class="highlight highlight-2"></div>
+		<div class="highlight highlight-3"></div>
+		<div class="highlight highlight-4"></div>
+		<Header />
+
 		<!-- Landing Section -->
 		<Hero />
 
@@ -26,16 +31,52 @@
 <style>
 	.hero-section {
 		position: relative;
-		background: linear-gradient(
-			135deg,
-			#eb9ec4ff 0%,
-			#ffe0f0 20%,
-			#ffd1e8 40%,
-			#ffffff 70%,
-			#ffd1e8 100%,
-			#e6e6fa 80%,
-			#ffd1e8 90%,
-			#f8e1ff 100%
-		);
+		overflow: hidden;
+		background:
+			linear-gradient(0deg, rgba(251, 219, 231, 0.33), rgba(251, 219, 231, 0.33)), #ffffff;
+	}
+
+	.highlight {
+		position: absolute;
+		border-radius: 50%;
+		z-index: 1;
+	}
+
+	/* Example highlight 1 */
+	.highlight-1 {
+		width: 693px;
+		height: 662px;
+		left: -60px;
+		top: 58px;
+		background: rgba(255, 117, 169, 0.55);
+		filter: blur(189px);
+	}
+
+	/* Example highlight 2 */
+	.highlight-2 {
+		width: 547px;
+		height: 549px;
+		left: 892px;
+		top: 58px;
+		background: rgba(255, 195, 124, 0.44);
+		filter: blur(189px);
+	}
+
+	.highlight-3 {
+		width: 312px;
+		height: 299px;
+		left: 210px;
+		top: 683px;
+		background: #ff7eaf;
+		filter: blur(189px);
+	}
+
+	.highlight-4 {
+		width: 609px;
+		height: 613px;
+		left: 1044px;
+		top: 817px;
+		background: rgba(231, 126, 231, 0.66);
+		filter: blur(189px);
 	}
 </style>

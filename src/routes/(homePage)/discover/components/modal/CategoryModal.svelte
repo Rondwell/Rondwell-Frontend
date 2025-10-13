@@ -1,0 +1,69 @@
+<script lang="ts">
+	import { clickOutside } from '$lib/utils/constant';
+
+	export let open = false;
+	export let onClose: () => void;
+
+	const categories = [
+		'🎨 Art',
+		'🎭 Culture',
+		'💼 Business',
+		'📈 Career',
+		'📣 Speaker',
+		'🛠 Workshop',
+		'🤝 Networking',
+		'🛍 Trade Show',
+		'🏟 Expo',
+		'🎉 Festival',
+		'🎊 Party',
+		'🎵 Concert',
+		'🎭 Performance',
+		'🎧 DJ',
+		'😂 Comedy',
+		'🎬 Film',
+		'👀 Screening',
+		'🎮 Gaming',
+		'🏅 Sports',
+		'🏋️ Fitness',
+		'🏃 Race',
+		'🧘 Retreat',
+		'🌿 Wellness',
+		'❤️ Health',
+		'🎗 Charity',
+		'🤝 Community',
+		'🎓 Education',
+		'🔬 Science',
+		'💡 Technology',
+		'🖥 Technology',
+		'🚀 Startup',
+		'👨‍👩‍👧‍👦 Family',
+		'🧒 Kids',
+		'🛐 Religion',
+		'🧳 Travel'
+	];
+</script>
+
+{#if open}
+	<div class="absolute z-50 mt-2 rounded-lg bg-[#EBECED]" use:clickOutside={onClose}>
+		<div class="w-full max-w-2xl rounded-[16px] bg-[#EBECED] p-7">
+			<div class="mb-4 flex items-center justify-between">
+				<h2 class="text-lg font-semibold">Select event category</h2>
+				<button class="cursor-pointer text-gray-500 hover:text-gray-800" on:click={onClose}
+					>✕</button
+				>
+			</div>
+
+			<div
+				class="custom-scrollbar mt-6 grid max-h-[70vh] grid-cols-3 gap-4 overflow-y-auto sm:grid-cols-4"
+			>
+				{#each categories as category}
+					<button
+						class="flex flex-shrink-0 cursor-pointer flex-wrap items-center justify-center gap-1 rounded-full bg-[#FDFDFD] px-3 py-2 text-sm text-[#909EA3]"
+					>
+						{category}
+					</button>
+				{/each}
+			</div>
+		</div>
+	</div>
+{/if}

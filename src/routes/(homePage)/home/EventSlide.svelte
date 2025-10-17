@@ -86,15 +86,11 @@
 						transform: translate(-50%, -50%);
 					"
 				>
-					<div
-						class="rounded-xl border border-gray-100 bg-white p-1.5 shadow-md sm:rounded-2xl sm:p-2 sm:shadow-lg"
-					>
-						<img
-							src={iconData.icon}
-							alt="App icon"
-							class="h-8 w-8 rounded-lg sm:h-10 sm:w-10 sm:rounded-xl lg:h-12 lg:w-12"
-						/>
-					</div>
+					<img
+						src={iconData.icon}
+						alt="App icon"
+						class="h-12 w-12 rounded-lg sm:rounded-xl md:h-14 md:w-14 lg:h-18 lg:w-18"
+					/>
 				</div>
 			{/each}
 
@@ -132,8 +128,10 @@
 				class="h-[52px] w-full rounded-[13px] bg-[#333537] px-6 py-3 text-center 
                text-[18px] text-white transition-colors duration-200 sm:h-[60px] sm:w-[300px] sm:px-8 sm:text-[20px]"
 			>
-				<img src="/Aiicon.png" alt="AI Icon" class="mr-2 h-6 w-6 object-contain" />
-				Create Event with AI
+				<a href="/create-event" class="flex w-full items-center justify-center gap-2">
+					<img src="/Aiicon.svg" alt="AI Icon" class="mr-2 h-6 w-6 object-contain" />
+					Create Event with AI
+				</a>
 			</Button>
 		</div>
 	</div>

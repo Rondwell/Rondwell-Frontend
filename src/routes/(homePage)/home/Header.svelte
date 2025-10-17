@@ -55,21 +55,26 @@
 		</nav>
 
 		<!-- Right side -->
-		<div class="flex items-center gap-4 text-[#909EA3]">
-			<!-- Current time (desktop only) -->
-			<span class="hidden text-sm md:inline">{now}</span>
+		<div class="flex items-center gap-4 text-[#909EA3] lg:gap-10">
+			<div class="flex items-center gap-4">
+				<!-- Current time (desktop only) -->
+				<span class="hidden text-sm md:inline">{now}</span>
 
-			<!-- Create Event (desktop only) -->
-			<a href="/" class="hidden items-center gap-1 transition md:flex">
-				<img src="/vec.png" alt="Vector" class="h-[18px] w-[18px]" />
-				Create Event
-			</a>
+				<!-- Create Event (desktop only) -->
+				<a
+					href="/create-event"
+					class="hidden items-center gap-1 border-l border-gray-400 pl-4 transition md:flex"
+				>
+					<img src="/vec.png" alt="Vector" class="h-[18px] w-[18px]" />
+					Create Event
+				</a>
+			</div>
 
 			<!-- Sign in (always visible) -->
 			<Button
 				class="cursor-pointer rounded-full bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] px-4 py-2 text-white shadow-md"
 			>
-				Sign in
+				<a href="/auth" class="w-full"> Sign in </a>
 			</Button>
 
 			<!-- Toggle (mobile only) -->
@@ -106,7 +111,7 @@
 					Explore Experiences
 				</a>
 
-				<a href="/" class="flex items-center gap-2 text-[#909EA3] md:hidden">
+				<a href="/create-event" class="flex items-center gap-2 text-[#909EA3] md:hidden">
 					<img src="/vec.png" alt="Vector" class="h-[18px] w-[18px]" />
 					Create Event
 				</a>

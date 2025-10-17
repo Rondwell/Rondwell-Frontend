@@ -61,7 +61,7 @@
 			<Button
 				class="cursor-pointer justify-end rounded-full bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] px-4 py-2 text-white shadow-md md:hidden"
 			>
-				Sign in
+				<a href="/auth" class="w-full"> Sign in </a>
 			</Button>
 
 			<!-- Toggle (mobile only) -->
@@ -98,7 +98,7 @@
 					Explore Experiences
 				</a>
 
-				<a href="/" class="flex items-center gap-2 text-[#909EA3] md:hidden">
+				<a href="/create-event" class="flex items-center gap-2 text-[#909EA3] md:hidden">
 					<img src="/vec.png" alt="Vector" class="h-[18px] w-[18px]" />
 					Create Event
 				</a>

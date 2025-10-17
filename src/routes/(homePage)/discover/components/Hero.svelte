@@ -1,13 +1,57 @@
 <!-- src/lib/components/Header.svelte -->
 <script lang="ts">
+	import { tick } from 'svelte';
 	import CategoryModal from './modal/CategoryModal.svelte';
-	import EventTypeDropdown from './modal/EventTypeModel.svelte';
+	import EventTypeModal from './modal/EventTypeModel.svelte';
 	import LanguageModal from './modal/LanguageModal.svelte';
 	import LocationModal from './modal/LocationModal.svelte';
 
 	let searchQuery = '';
 	let activeItem = 'Events';
-	let activeModal: string | null = null;
+	let activeModal: string | null;
+
+	function scrollToId(id: string, options?: ScrollIntoViewOptions) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.scrollIntoView({
+				behavior: options?.behavior ?? 'smooth',
+				block: options?.block ?? 'start'
+			});
+		}
+	}
+
+	let modalPosition = { top: 0, left: 0 };
+
+	async function handleFilterClick(filter: string, event: MouseEvent) {
+		let isMobile = window.innerWidth <= 768;
+
+		const target = event.currentTarget as HTMLElement;
+		const container = document.querySelector('#filter-button') as HTMLElement;
+
+		if (activeModal === filter) {
+			activeModal = null;
+			return;
+		}
+
+		activeModal = filter;
+		await tick();
+
+		if (activeModal === 'Category') {
+			scrollToId('Category');
+			return;
+		}
+
+		const targetRect = target.getBoundingClientRect();
+		const containerRect = container.getBoundingClientRect();
+
+		const relativeTop = targetRect.bottom - containerRect.top + container.scrollTop + 20;
+		const relativeLeft = targetRect.left - containerRect.left + container.scrollLeft;
+
+		modalPosition = {
+			top: relativeTop,
+			left: isMobile ? 0 : relativeLeft
+		};
+	}
 
 	const GRAY = '#545260';
 	const PURPLE = '#A667E4';
@@ -130,8 +174,9 @@
 		>
 			{#each ['Category', 'Event Type', 'Location', 'Language', 'Currency'] as filter}
 				<button
+					id="filter-button"
 					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-sm text-[#616265]"
-					on:click={() => (activeModal = filter)}
+					on:click={(e) => handleFilterClick(filter, e)}
 				>
 					<img src="/filter-edit.png" alt="filter icon" class="h-5 w-5" />
 					{filter}
@@ -172,9 +217,10 @@
 		<CategoryModal open={activeModal === 'Category'} onClose={() => (activeModal = null)} />
 
 		{#if activeModal === 'Event Type'}
-			<EventTypeDropdown
+			<EventTypeModal
 				open={activeModal === 'Event Type'}
-				on:close={() => (activeModal = null)}
+				onClose={() => (activeModal = null)}
+				position={modalPosition}
 				on:select={(e) => console.log('Selected:', e.detail)}
 			/>
 		{/if}
@@ -183,15 +229,15 @@
 		{#if activeModal === 'Location'}
 			<LocationModal
 				open={activeModal === 'Location'}
-				on:close={() => (activeModal = null)}
-				on:select={(e) => console.log('Selected location:', e.detail)}
+				onClose={() => (activeModal = null)}
+				position={modalPosition}
 			/>
 		{/if}
 		{#if activeModal === 'Language'}
 			<LanguageModal
 				open={activeModal === 'Language'}
-				on:close={() => (activeModal = null)}
-				on:select={(e) => console.log('Selected language:', e.detail)}
+				onClose={() => (activeModal = null)}
+				position={modalPosition}
 			/>
 		{/if}
 		{#if activeModal === 'Currency'}

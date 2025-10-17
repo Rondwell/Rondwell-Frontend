@@ -56,7 +56,7 @@
 						<!-- Title + Organizers -->
 						<div class="space-y-2">
 							<div class="flex items-center gap-2 text-lg">
-								<img src="/star.png" alt="Featured" class="h-4 w-4" />
+								<img src="/star.svg" alt="Featured" class="h-5 w-5" />
 								<h3 class="font-semibold text-gray-900">{event.title}</h3>
 							</div>
 

@@ -3,6 +3,9 @@
 	import { createEventDispatcher } from 'svelte';
 
 	export let open: boolean = false;
+	export let onClose: () => void;
+	export let position = { top: 0, left: 0 };
+
 	let selected = 'Virtual';
 	const options = [
 		{ icon: '/vid1.svg', label: 'Virtual' },
@@ -16,14 +19,14 @@
 		selected = option;
 		dispatch('select', option);
 	}
-
-	function closeModal() {
-		open = false;
-	}
 </script>
 
 {#if open}
-	<div class="absolute left-37 z-40 mt-2 inline-block text-left" use:clickOutside={closeModal}>
+	<div
+		class="absolute z-40 mt-2 inline-block text-left"
+		use:clickOutside={onClose}
+		style="top: {position.top}px; left: {position.left}px;"
+	>
 		<div class="relative w-[270px] max-w-lg rounded-lg bg-[#FFFCFC] p-4">
 			<span class="text-sm font-semibold text-[#B8B7B7]">Choose event type:</span>
 

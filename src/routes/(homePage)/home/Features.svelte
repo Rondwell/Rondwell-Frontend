@@ -63,55 +63,53 @@
 
 <section
 	bind:this={sectionRef}
-	class="rounded-[30px] bg-[#FEF3F7] px-4 py-16 backdrop-blur-sm sm:px-6"
+	class="rounded-[30px] bg-[#FEF3F7] px-4 py-16 backdrop-blur-sm sm:px-6 md:px-20"
 >
 	<div class="mx-auto max-w-7xl">
 		<!-- Content Grid -->
-		<div class="grid grid-cols-1 items-center gap-10 sm:gap-12 lg:grid-cols-2">
-			<div
-				class="bg-color flex h-auto w-full flex-col-reverse gap-6 p-10 sm:p-20 lg:w-[1257px] lg:flex-row lg:gap-16"
-			>
-				<!-- Features Section (Left on desktop, Bottom on mobile) -->
-				<div class="w-full space-y-3">
-					{#each features as feature, index (index)}
-						<div
-							class="feature-border {index === activeIndex ? 'active' : ''}"
-							role="button"
-							tabindex="-1"
-							on:mouseenter={() => (activeIndex = index)}
-						>
-							<div class="inner flex items-center gap-2 md:gap-4">
-								<!-- Icon -->
-								<div
-									class={`h-9 w-9 md:h-12 md:w-12 ${feature.color} flex items-center justify-center rounded-xl`}
-								>
-									<img src={feature.icon} alt={feature.title} class="h-5 w-5 md:h-7 md:w-7" />
-								</div>
-								<!-- Text -->
-								<span class="text-xs font-medium text-gray-900 sm:text-base md:text-lg">
-									{feature.title}
-								</span>
+		<div
+			class="bg-color flex h-auto w-full flex-col-reverse gap-6 p-5 sm:p-20 lg:flex-row lg:gap-16"
+		>
+			<!-- Features Section (Left on desktop, Bottom on mobile) -->
+			<div class="w-full space-y-3">
+				{#each features as feature, index (index)}
+					<div
+						class="feature-border {index === activeIndex ? 'active' : ''}"
+						role="button"
+						tabindex="-1"
+						on:mouseenter={() => (activeIndex = index)}
+					>
+						<div class="inner flex items-center gap-2 md:gap-4">
+							<!-- Icon -->
+							<div
+								class={`h-9 w-9 md:h-12 md:w-12 ${feature.color} flex items-center justify-center rounded-xl`}
+							>
+								<img src={feature.icon} alt={feature.title} class="h-5 w-5 md:h-7 md:w-7" />
 							</div>
+							<!-- Text -->
+							<span class="text-xs font-medium text-gray-900 sm:text-base md:text-lg">
+								{feature.title}
+							</span>
 						</div>
-					{/each}
-				</div>
-
-				<!-- Card Section (Right on desktop, Top on mobile) -->
-				<div class="relative flex w-full justify-center text-center lg:justify-end">
-					<div class="h-full">
-						<img
-							src={featureImages[activeIndex] || '/placeholder.svg'}
-							alt="Event group"
-							class="w-full lg:max-w-[444px]"
-							style="aspect-ratio: 16/9;"
-						/>
-						<p
-							class="mt-4 w-full text-center text-sm font-medium text-gray-400 md:text-xl lg:max-w-[444px] lg:text-left"
-						>
-							Rondwell brings organizers, attendees, and professionals together to create
-							unforgettable experiences.
-						</p>
 					</div>
+				{/each}
+			</div>
+
+			<!-- Card Section (Right on desktop, Top on mobile) -->
+			<div class="relative flex w-full justify-center lg:justify-end">
+				<div class="h-full">
+					<img
+						src={featureImages[activeIndex] || '/placeholder.svg'}
+						alt="Event group"
+						class="w-full lg:max-w-[444px]"
+						style="aspect-ratio: 16/9;"
+					/>
+					<p
+						class="mt-4 w-full text-left text-sm font-medium text-gray-400 md:text-xl lg:max-w-[444px]"
+					>
+						Rondwell brings organizers, attendees, and professionals together to create
+						unforgettable experiences.
+					</p>
 				</div>
 			</div>
 		</div>

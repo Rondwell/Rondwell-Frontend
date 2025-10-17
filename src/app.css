@@ -131,6 +131,11 @@
   }
 }
 
+a,
+button {
+  cursor: pointer;
+}
+
 /* Removed gradient animations and kept only simple animations */
 @keyframes border-fade {
 

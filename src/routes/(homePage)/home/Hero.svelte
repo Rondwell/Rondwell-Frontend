@@ -98,17 +98,17 @@
 </script>
 
 <!-- HERO SECTION -->
-<section class="relative overflow-hidden px-2 pt-10 pb-0 md:px-16 lg:pt-20">
+<section class="relative overflow-hidden px-2 pt-10 pb-0 md:px-20 lg:pt-20">
 	<div class="absolute w-full">
 		<img src="/grid-bg.png" alt="" class="w-full opacity-20" />
 	</div>
 
 	<div class="mx-auto max-w-7xl">
-		<div class="grid items-center gap-12 lg:grid-cols-2">
+		<div class="grid items-start gap-12 lg:grid-cols-2">
 			<!-- LEFT -->
 			<div class="relative z-10 space-y-8 text-center lg:text-left">
 				<div class="space-y-4">
-					<h1 class="text-5xl leading-tight font-bold text-[#000000] lg:text-6xl">
+					<h1 class="text-4xl leading-tight font-bold text-[#000000] md:text-5xl lg:text-6xl">
 						Organize
 						<span
 							class="bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] bg-clip-text text-transparent"
@@ -124,7 +124,7 @@
 					</h1>
 
 					<p
-						class="mx-auto max-w-[566px] text-[22px] leading-[40px] text-[#686768] md:text-[24px] lg:mx-0 lg:text-left"
+						class="mx-auto max-w-[566px] text-[18px] text-[#686768] md:text-[24px] md:leading-[40px] lg:mx-0 lg:text-left"
 					>
 						Rondwell brings organizers, attendees, exhibitors and vendors together to create
 						unforgettable experiences.
@@ -133,10 +133,12 @@
 
 				<div class="flex flex-wrap items-center justify-center gap-6 lg:justify-start">
 					<Button
-						class="flex h-[60px] w-[300px] items-center justify-center gap-2 rounded-[13px] bg-[#333537] px-8 py-3 text-center text-[20px] text-white transition-colors duration-200 hover:bg-gray-900 hover:text-white"
+						class="h-[60px] w-[300px] rounded-[13px] bg-[#333537] px-8 py-3 text-center text-[20px] text-white transition-colors duration-200 hover:bg-gray-900 hover:text-white"
 					>
-						<img src="/Aiicon.png" alt="AI Icon" class="h-6 w-6 object-contain" />
-						Create Event with AI
+						<a href="/create-event" class="flex w-full items-center justify-center gap-2">
+							<img src="/Aiicon.svg" alt="AI Icon" class="h-6 w-6 object-contain" />
+							Create Event with AI
+						</a>
 					</Button>
 				</div>
 			</div>
@@ -144,7 +146,7 @@
 			<!-- RIGHT -->
 			<div class="relative flex h-full min-h-[580px] w-full justify-center lg:justify-end">
 				<div
-					class="relative h-full max-h-[395px] w-full max-w-[340px] md:max-h-[514px] md:max-w-[445px]"
+					class="relative h-full max-h-[395px] w-full max-w-[340px] md:max-h-[507px] md:max-w-[445px]"
 				>
 					<div class="gradient-border-wrapper h-full w-full">
 						<div class="gradient-border relative h-full w-full overflow-hidden p-2">
@@ -178,7 +180,7 @@
 		</div>
 
 		<!-- STACKED FLOATING CARDS BELOW -->
-		<div class="relative z-20 mt-10 mb-0 flex flex-col items-center md:mt-20">
+		<div class="relative z-20 mb-0 flex flex-col items-center md:mt-20">
 			<div
 				class="relative z-30 flex h-[48px] w-[320px] items-center justify-center rounded-full border-[3px] border-white bg-[rgba(255,255,255,0.65)] text-[12px] font-medium whitespace-nowrap text-[#3D235E] shadow-xl backdrop-blur-md"
 			>

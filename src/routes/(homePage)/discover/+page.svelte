@@ -13,7 +13,7 @@
 		<Sidebar />
 
 		<!-- Main Content Area -->
-		<div class="flex h-full flex-1 flex-col gap-7 md:px-4">
+		<div class="flex h-full flex-1 flex-col gap-7 px-2 md:px-4">
 			<!-- Hero -->
 			<Hero />
 			<EventList />

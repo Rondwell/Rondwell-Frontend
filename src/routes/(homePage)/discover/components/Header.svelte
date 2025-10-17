@@ -60,7 +60,7 @@
 			<span class="hidden text-sm md:inline">{now}</span>
 
 			<!-- Create Event (desktop only) -->
-			<a href="/" class="hidden items-center gap-1 transition md:flex">
+			<a href="/create-event" class="hidden items-center gap-1 transition md:flex">
 				<img src="/vec.png" alt="Vector" class="h-[18px] w-[18px]" />
 				Create Event
 			</a>
@@ -69,13 +69,13 @@
 			<Button
 				class="hidden cursor-pointer rounded-full px-4 py-2 text-white shadow-md hover:bg-gradient-to-r lg:block lg:bg-[#ECEDED] lg:text-[#777779]"
 			>
-				Sign in
+				<a href="/auth" class="w-full"> Sign in </a>
 			</Button>
 
 			<Button
 				class="cursor-pointer rounded-full bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] px-4 py-2 text-white shadow-md hover:bg-gradient-to-r lg:hidden"
 			>
-				Sign in
+				<a href="/auth" class="w-full"> Sign in </a>
 			</Button>
 
 			<!-- Toggle (mobile only) -->
@@ -112,7 +112,7 @@
 					Explore Experiences
 				</a>
 
-				<a href="/" class="flex items-center gap-2 text-[#909EA3] md:hidden">
+				<a href="/create-event" class="flex items-center gap-2 text-[#909EA3] md:hidden">
 					<img src="/vec.png" alt="Vector" class="h-[18px] w-[18px]" />
 					Create Event
 				</a>

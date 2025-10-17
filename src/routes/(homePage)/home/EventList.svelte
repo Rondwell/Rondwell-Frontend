@@ -8,7 +8,8 @@
 		status: 'Attending',
 		availability: 'sold out',
 		attendees: '+1.5K',
-		image: '/eventcard.png'
+		image: '/eventcard.png',
+		tag: 'Tech Cabal'
 	};
 
 	const event2 = {
@@ -20,7 +21,8 @@
 		status: 'Attending',
 		availability: 'sold out',
 		attendees: '+3.2k',
-		image: '/eventcard1.png'
+		image: '/eventcard1.png',
+		tag: ''
 	};
 
 	const event3 = {
@@ -32,14 +34,15 @@
 		status: 'Attending',
 		availability: 'selling out',
 		attendees: '+2K',
-		image: '/eventcard2.png'
+		image: '/eventcard2.png',
+		tag: ''
 	};
 
 	// Add each event twice
 	const events = [event1, event2, event3, event1, event2, event3];
 </script>
 
-<section id="events" class="px-10 pt-10 pb-20">
+<section id="events" class="px-5 pt-10 pb-20 md:px-20">
 	<div class="mx-auto max-w-7xl">
 		<!-- Section Heading -->
 		<h2
@@ -51,7 +54,7 @@
 		<!-- Events Grid -->
 		<div class="mb-12 grid gap-4 md:grid-cols-2">
 			{#each events as event, index (index)}
-				<div class="flex flex-col gap-4 rounded-md bg-[#FDFDFD] p-6 md:flex-row">
+				<div class="flex flex-col gap-4 rounded-md bg-[#FDFDFD] p-2 md:flex-row md:p-6">
 					<div class="flex-1 space-y-3">
 						<!-- Event Time -->
 						<div class="flex items-center gap-2">
@@ -61,7 +64,7 @@
 						<!-- Title + Organizers -->
 						<div class="space-y-2">
 							<div class="flex items-center gap-2 text-lg">
-								<img src="/star.png" alt="Featured" class="h-4 w-4" />
+								<img src="/star.svg" alt="Featured" class="h-5 w-5" />
 								<h3 class="font-semibold text-gray-900">{event.title}</h3>
 							</div>
 
@@ -83,7 +86,7 @@
 							</div>
 
 							<!-- Status + Attendees -->
-							<div class="flex items-center gap-4">
+							<div class="relatve flex items-center gap-4">
 								<span class="rounded-sm bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
 									{event.status}
 								</span>
@@ -94,6 +97,12 @@
 										>{event.attendees}</span
 									>
 								</div>
+								{#if event.tag}
+									<div class="ml-7 flex items-center gap-2 text-sm">
+										<img src="/tech-icon.svg" alt="icon" class="" />
+										<span>{event.tag}</span>
+									</div>
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -116,7 +125,7 @@
 				href="/discover"
 				class="flex h-[60px] w-[300px] items-center justify-center gap-2 rounded-[13px] bg-[#333537] px-8 py-3 text-center text-[20px] text-white transition-colors duration-200 hover:bg-gray-900 hover:text-white"
 			>
-				<img src="/Disc1.png" alt="Discover Icon" class="h-6 w-6 object-contain" />
+				<img src="/Disc1.svg" alt="Discover Icon" class="h-6 w-6 object-contain" />
 				Discover more events
 			</a>
 		</div>

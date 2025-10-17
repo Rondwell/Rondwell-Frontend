@@ -132,11 +132,11 @@
 			</div>
 			<div class="w-full md:mt-4 md:text-center">
 				<div
-					class="merriweather-sans flex items-center bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] bg-clip-text text-[14.25px] text-transparent md:justify-center"
+					class="merriweather-sans flex items-center gap-1 bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] bg-clip-text text-[14.25px] text-transparent md:justify-center"
 				>
 					Organize your event with Rondwell
 
-					<CheckCircle size={18} class="mb-1 ml-1" />
+					<img src="/send-icon.svg" alt="send icon" class="self-start" />
 				</div>
 			</div>
 		</div>

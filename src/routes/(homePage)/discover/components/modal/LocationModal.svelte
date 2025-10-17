@@ -3,6 +3,9 @@
 	import { createEventDispatcher } from 'svelte';
 
 	export let open: boolean = false;
+	export let onClose: () => void;
+	export let position = { top: 0, left: 0 };
+
 	const dispatch = createEventDispatcher();
 
 	let search = '';
@@ -33,14 +36,14 @@
 		dispatch('select', loc);
 		dispatch('close');
 	}
-
-	function closeModal() {
-		dispatch('close');
-	}
 </script>
 
 {#if open}
-	<div class="absolute left-78 z-40 mt-2 inline-block w-48 text-left" use:clickOutside={closeModal}>
+	<div
+		class="absolute left-78 z-40 mt-2 inline-block w-48 text-left"
+		use:clickOutside={onClose}
+		style="top: {position.top}px; left: {position.left}px;"
+	>
 		<div class="relative w-96 rounded-lg bg-white shadow-lg">
 			<!-- Tabs -->
 			<div

@@ -66,7 +66,7 @@
 	</div>
 
 	<!-- Main Content -->
-	<main class="relative mb-[106px] flex-1 px-4 md:mb-0 md:p-10 lg:flex lg:gap-15 lg:p-15">
+	<main class="relative mb-[106px] flex-1 md:mb-0 md:p-5 lg:flex lg:gap-15 lg:p-15">
 		<!-- Left Panel -->
 		<div class="hidden w-full max-w-[450px] space-y-6 lg:block">
 			<!-- Image -->

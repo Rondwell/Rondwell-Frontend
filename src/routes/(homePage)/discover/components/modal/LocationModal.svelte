@@ -40,11 +40,11 @@
 
 {#if open}
 	<div
-		class="absolute left-78 z-40 mt-2 inline-block w-48 text-left"
+		class="absolute left-78 z-40 mt-2 inline-block w-full max-w-96 text-left"
 		use:clickOutside={onClose}
 		style="top: {position.top}px; left: {position.left}px;"
 	>
-		<div class="relative w-96 rounded-lg bg-white shadow-lg">
+		<div class="relative w-full rounded-lg bg-white shadow-lg">
 			<!-- Tabs -->
 			<div
 				class="mb-3 flex h-[175px] flex-col justify-between gap-2 p-2"

@@ -8,7 +8,7 @@
 	// Menu items
 	const menuItems = [
 		{ id: 'create', label: 'Create Event', icon: 'plus', active: true },
-		{ id: 'event', label: 'Event', icon: '/ticket-2.svg' },
+		{ id: 'event', label: 'Events', icon: '/ticket-2.svg' },
 		{ id: 'collections', label: 'Collections', icon: '/cate.svg' },
 		{ id: 'discover', label: 'Discover', icon: '/disc.svg' },
 		{ id: 'experience', label: 'Experience', icon: '/exp.svg' }

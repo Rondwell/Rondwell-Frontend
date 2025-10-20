@@ -43,7 +43,7 @@
 				<a href="/">
 					<img src="/logo.svg" alt="Rondwell" class="h-8" />
 				</a>
-				<a href="/help-center" class="hidden items-center gap-1 font-medium text-gray-400 md:flex">
+				<a href="/help-center" class="hidden items-center gap-1 font-medium text-gray-400 lg:flex">
 					<img src="/information.png" alt="warning icon" class="h-5 w-5" />
 					Help Center</a
 				>

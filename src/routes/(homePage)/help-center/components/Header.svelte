@@ -75,11 +75,11 @@
 					on:click={() => (isOpen = !isOpen)}
 					aria-label="Toggle menu"
 				>
-					{#if isOpen}
-						<img src="/mobicon1.svg" alt="Open menu" />
-					{:else}
-						<img src="/mobicon.svg" alt="Open menu" class="h-6 w-6" />
-					{/if}
+					<img
+						src="/mobicon.svg"
+						alt="Open menu"
+						class={`h-6 w-6 transition-transform duration-300 ${isOpen ? 'rotate-[-45deg]' : ''}`}
+					/>
 				</button>
 			</div>
 		</div>

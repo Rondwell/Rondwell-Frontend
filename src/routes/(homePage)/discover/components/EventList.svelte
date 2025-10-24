@@ -48,7 +48,11 @@
 <section class="relative max-w-6xl">
 	<h1 class="text-xl font-bold">Featured Events</h1>
 	<main class="h-full py-5">
-		<EventCard {events} />
+		<div class="mb-12 grid gap-4 lg:grid-cols-2">
+			{#each events as event, index (index)}
+				<EventCard {event} />
+			{/each}
+		</div>
 	</main>
 	<Scroll />
 </section>

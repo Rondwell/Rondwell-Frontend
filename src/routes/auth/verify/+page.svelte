@@ -2,7 +2,7 @@
 <script lang="ts">
 	import Header from '../components/Header.svelte';
 
-	let code = Array(6).fill('');
+	let code = Array(5).fill('');
 	let email = 'you@gmail.com'; // In real app, this would come from session or URL param
 
 	function handleInput(e: Event, index: number) {
@@ -40,11 +40,11 @@
 	}
 </script>
 
-<main class="bg min-h-screen">
+<main class="bg flex h-full min-h-screen flex-col items-stretch">
 	<Header />
 
-	<div class="mx-4">
-		<div class="mx-auto my-15 w-full max-w-[405px] rounded-[12px] bg-[#FDFCFB] p-6 shadow-sm">
+	<div class="flex h-full flex-1 items-center justify-center px-4 py-15">
+		<div class="mx-auto w-full max-w-[405px] rounded-[12px] bg-[#FDFCFB] p-6 shadow-sm">
 			<div class="mb-6 space-y-3 text-left">
 				<button
 					aria-label="Go back"
@@ -67,7 +67,7 @@
 				</button>
 				<h2 class="mt-6 text-3xl font-semibold">Enter code</h2>
 				<span class="space-y-1">
-					<p class="text-[#919091]">Please enter the 6 digit code we sent to</p>
+					<p class="text-[#919091]">Please enter the 5 digit code we sent to</p>
 					<p>{email}</p>
 				</span>
 			</div>
@@ -81,7 +81,7 @@
 							type="text"
 							maxlength="1"
 							pattern="[0-9]"
-							class="h-[48.75px] w-[48.75px] rounded-md border border-gray-300 text-center text-lg focus:ring-2 focus:ring-black focus:outline-none"
+							class="h-[48.75px] w-[48.75px] rounded-md border border-gray-300 text-center text-lg focus:ring-2 focus:ring-black focus:outline-none md:w-full"
 							value={_}
 						/>
 					{/each}
@@ -144,13 +144,6 @@
 						Paste Code
 					</button>
 					<button on:click={resendCode} class="text-[#B9B7B7]"> Resend code in 42s </button>
-				</div>
-
-				<!-- Optional: Progress indicator -->
-				<div class="mt-6">
-					<button class="w-full rounded-md bg-black py-2 font-medium text-white hover:bg-gray-800">
-						Verify Code
-					</button>
 				</div>
 			</div>
 		</div>

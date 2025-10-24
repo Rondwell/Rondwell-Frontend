@@ -5,9 +5,9 @@
 	let eventName = 'SPREAD THE WORD';
 	let name = fromEventPage ? eventName : fullName;
 
-	// setTimeout(() => {
-	// 	window.location.href = fromEventPage ? '/event-page' : '/dashboard';
-	// }, 2000);
+	setTimeout(() => {
+		window.location.href = fromEventPage ? '/event-page' : '/overview';
+	}, 2000);
 </script>
 
 <section class="relative flex min-h-screen items-center justify-center bg-[#f4f1f0]">

@@ -16,13 +16,13 @@
 	}
 </script>
 
-<div class="w-full max-w-4xl p-4">
+<div class="w-full max-w-4xl px-2 py-4 md:p-4">
 	<!-- Page Header -->
 	<h1 class="mb-12 text-3xl font-bold">Settings</h1>
 
 	<!-- Navigation Tabs -->
 	<div class="mb-10">
-		<nav class="flex space-x-8 overflow-x-auto border-b border-gray-400">
+		<nav class="custom-scrollbar flex space-x-8 overflow-x-auto border-b border-gray-400">
 			<!-- Accounts -->
 			<button
 				on:click|preventDefault={() => setTab('account')}

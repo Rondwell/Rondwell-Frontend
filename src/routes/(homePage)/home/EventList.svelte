@@ -54,7 +54,11 @@
 		</h2>
 
 		<!-- Events Grid -->
-		<EventCard {events} />
+		<div class="mb-12 grid gap-4 lg:grid-cols-2">
+			{#each events as event, index (index)}
+				<EventCard {event} />
+			{/each}
+		</div>
 
 		<!-- Centered Button -->
 		<div class="flex justify-center">

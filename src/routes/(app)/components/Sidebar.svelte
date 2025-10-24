@@ -2,16 +2,19 @@
 <script>
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
+	import ProfileMenu from './ProfileMenu.svelte';
+	import { goto } from '$app/navigation';
 
 	export let background_color = '';
+	let showMenu = false;
 
 	// Menu items
 	const menuItems = [
-		{ id: 'create', label: 'Create Event', icon: 'plus', active: true },
-		{ id: 'event', label: 'Events', icon: '/ticket-2.svg' },
-		{ id: 'collections', label: 'Collections', icon: '/cate.svg' },
-		{ id: 'discover', label: 'Discover', icon: '/disc.svg' },
-		{ id: 'experience', label: 'Experience', icon: '/exp.svg' }
+		{ id: 'create', label: 'Create Event', icon: 'plus', active: true, nav: '/create-event' },
+		{ id: 'event', label: 'Events', icon: '/ticket-2.svg', nav: '' },
+		{ id: 'collections', label: 'Collections', icon: '/cate.svg', nav: '' },
+		{ id: 'discover', label: 'Discover', icon: '/disc.svg', nav: '' },
+		{ id: 'experience', label: 'Experience', icon: '/exp.svg', nav: '' }
 	];
 
 	$: mobileMenuItems = [...menuItems.slice(1, 3), menuItems[0], ...menuItems.slice(3)];
@@ -43,6 +46,9 @@
 				<button
 					class={`flex h-full flex-col items-center justify-center text-gray-500`}
 					aria-label={item.label}
+					on:click={() => {
+						goto(item.nav);
+					}}
 				>
 					{#if item.icon === 'plus'}
 						<div
@@ -70,7 +76,7 @@
 {:else}
 	<!-- Desktop Sidebar -->
 	<aside
-		class="fixed top-0 left-0 z-40 hidden h-screen w-[117px] flex-col items-center justify-evenly gap-10 border-r py-10 md:flex"
+		class="custom-scrollbar fixed top-0 left-0 z-40 hidden h-screen w-[117px] flex-col items-center justify-evenly gap-10 overflow-y-auto border-r py-10 md:flex"
 	>
 		<div class="flex flex-col items-center space-y-10">
 			<!-- Hamburger Menu -->
@@ -81,7 +87,12 @@
 			</div>
 
 			<!-- Create Event (active) -->
-			<button class="flex flex-col items-center justify-center gap-1">
+			<button
+				class="flex flex-col items-center justify-center gap-1"
+				on:click={() => {
+					goto('/create-event');
+				}}
+			>
 				<div
 					class="flex h-[48px] w-[48px] items-center justify-center rounded-full text-white"
 					style="background: linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%);"
@@ -104,6 +115,9 @@
 		<div class="space-y-5">
 			{#each menuItems.slice(1) as item}
 				<button
+					on:click={() => {
+						goto(item.nav);
+					}}
 					class="flex w-full flex-col items-center justify-center gap-1 p-2 text-gray-500 transition-colors"
 					title={item.label}
 					aria-label={item.label}
@@ -116,14 +130,21 @@
 
 		<!-- Bottom utility icons -->
 		<div class="mt-auto flex w-full flex-col items-center justify-center space-y-4">
-			<img src="/notification.svg" alt="" />
-			<img src="/face-1.svg" alt="" />
+			<img src="/notification.svg" alt="" class="cursor-pointer" />
+			<button
+				on:click={() => {
+					showMenu = !showMenu;
+				}}
+			>
+				<img src="/face-1.svg" alt="" />
+			</button>
 		</div>
 	</aside>
+	<ProfileMenu bind:showMenu />
 {/if}
 
 <!-- Spacer to prevent content overlap with fixed sidebar/bottom nav -->
-<div class={isMobile ? 'pb-20' : 'pl-16'}></div>
+<!-- <div class={isMobile ? 'pb-20' : 'pl-16'}></div> -->
 
 <style>
 	.gradient-text {

@@ -3,8 +3,6 @@
 	import { goto } from '$app/navigation';
 	import Header from './components/Header.svelte';
 
-	export let mode = 'login';
-
 	let email = '';
 	let password = '';
 	let phone = '';
@@ -24,11 +22,11 @@
 	}
 </script>
 
-<main class="bg min-h-screen">
+<main class="bg flex h-full min-h-screen flex-col items-stretch">
 	<Header />
 
-	<div class="mx-4">
-		<div class="mx-auto my-15 w-full max-w-[405px] rounded-[12px] bg-[#FDFCFB] p-6 shadow-sm">
+	<div class="h-full flex-1 px-4 py-15">
+		<div class="mx-auto w-full max-w-[405px] rounded-[12px] bg-[#FDFCFB] p-6 shadow-sm">
 			<div class="mb-6 space-y-3 text-left">
 				<div class="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-[#F4F3F3]">
 					<img src="/logo1.svg" alt="logo" />
@@ -36,9 +34,7 @@
 				<h2 class="text-2xl font-semibold">
 					Welcome to <span class="gradient-text">Rondwell</span>
 				</h2>
-				<p class="text-[#919091]">
-					{mode === 'login' ? 'Please sign in below' : 'Please sign up below'}
-				</p>
+				<p class="text-sm text-[#919091]">Please sign in or sign up below</p>
 			</div>
 
 			<div class="space-y-4">
@@ -56,13 +52,21 @@
 						>
 							<svg
 								width="14"
-								height="18"
-								viewBox="0 0 14 18"
+								height="17"
+								viewBox="0 0 14 17"
 								fill="none"
 								xmlns="http://www.w3.org/2000/svg"
 							>
 								<path
-									d="M9.4375 17.0625H4.9375C1.63 17.0625 0.625 16.0575 0.625 12.75V5.25C0.625 1.9425 1.63 0.9375 4.9375 0.9375H9.4375C12.745 0.9375 13.75 1.9425 13.75 5.25V12.75C13.75 16.0575 12.745 17.0625 9.4375 17.0625ZM4.9375 2.0625C2.2525 2.0625 1.75 2.5725 1.75 5.25V12.75C1.75 15.4275 2.2525 15.9375 4.9375 15.9375H9.4375C12.1225 15.9375 12.625 15.4275 12.625 12.75V5.25C12.625 2.5725 12.1225 2.0625 9.4375 2.0625H4.9375Z"
+									d="M8.0625 3.75H5.0625C4.755 3.75 4.5 3.495 4.5 3.1875C4.5 2.88 4.755 2.625 5.0625 2.625H8.0625C8.37 2.625 8.625 2.88 8.625 3.1875C8.625 3.495 8.37 3.75 8.0625 3.75Z"
+									fill="#A9A8A7"
+								/>
+								<path
+									d="M6.56094 13.9578C5.60844 13.9578 4.83594 13.1853 4.83594 12.2328C4.83594 11.2803 5.60844 10.5078 6.56094 10.5078C7.51344 10.5078 8.28594 11.2803 8.28594 12.2328C8.28594 13.1853 7.51344 13.9578 6.56094 13.9578ZM6.56094 11.6253C6.23094 11.6253 5.96094 11.8953 5.96094 12.2253C5.96094 12.5553 6.23094 12.8253 6.56094 12.8253C6.89094 12.8253 7.16094 12.5553 7.16094 12.2253C7.16094 11.8953 6.89094 11.6253 6.56094 11.6253Z"
+									fill="#A9A8A7"
+								/>
+								<path
+									d="M8.8125 16.125H4.3125C1.005 16.125 0 15.12 0 11.8125V4.3125C0 1.005 1.005 0 4.3125 0H8.8125C12.12 0 13.125 1.005 13.125 4.3125V11.8125C13.125 15.12 12.12 16.125 8.8125 16.125ZM4.3125 1.125C1.6275 1.125 1.125 1.635 1.125 4.3125V11.8125C1.125 14.49 1.6275 15 4.3125 15H8.8125C11.4975 15 12 14.49 12 11.8125V4.3125C12 1.635 11.4975 1.125 8.8125 1.125H4.3125Z"
 									fill="#A9A8A7"
 								/>
 							</svg>
@@ -100,30 +104,17 @@
 					/>
 				</div>
 
-				{#if mode === 'login'}
-					<div class="flex justify-between text-sm">
-						<a href="/auth" class="text-purple-600 hover:underline">Forgot password?</a>
-					</div>
-				{/if}
+				<div class="hidden justify-between text-sm">
+					<a href="/auth" class="text-purple-600 hover:underline">Forgot password?</a>
+				</div>
 
 				<!-- Main action button -->
 				<button
 					on:click={handleClick}
 					class="w-full rounded-md bg-black py-2 font-medium text-white hover:bg-gray-800"
 				>
-					{mode === 'login' ? 'Login' : 'Sign Up'}
+					Continue With {usePhone ? 'Phone' : 'Email'}
 				</button>
-
-				<!-- Switch between login/signup -->
-				<div class="mt-4 text-left text-sm text-gray-500">
-					{mode === 'login' ? 'I don’t have an account' : 'Already have an account? '}
-					<button
-						on:click={() => (mode = mode === 'login' ? 'signup' : 'login')}
-						class="text-purple-600 hover:underline"
-					>
-						{mode === 'login' ? 'Sign up' : 'Login'}
-					</button>
-				</div>
 
 				<!-- Google sign in button -->
 				<button
@@ -143,6 +134,39 @@
 					</svg>
 
 					<span>Sign in with Google</span>
+				</button>
+
+				<button
+					class="flex w-full items-center justify-center space-x-2 rounded-md bg-[#F4F2F1] py-2 text-[#7C7C7E]"
+				>
+					<svg
+						width="21"
+						height="20"
+						viewBox="0 0 21 20"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+					>
+						<path
+							opacity="0.4"
+							d="M14.4701 8.45339C12.861 8.45611 11.5542 9.76299 11.5569 11.3666C11.5514 12.4884 12.1858 13.4604 13.1115 13.9504L13.1115 16.5097C13.1143 16.6921 13.234 16.9372 13.3838 17.0488L14.059 17.5607C14.285 17.7268 14.6526 17.7295 14.8758 17.5607L15.551 17.0488C15.7008 16.9372 15.8233 16.6949 15.8206 16.507L15.8206 16.0605C15.8233 15.9543 15.7362 15.8672 15.6273 15.8672L14.5709 15.8672C14.413 15.8672 14.2823 15.7365 14.2823 15.5786C14.2823 15.4207 14.413 15.29 14.5709 15.29L15.6327 15.29C15.7362 15.29 15.8233 15.2029 15.8233 15.0994L15.826 13.9477C16.7517 13.4631 17.3834 12.4884 17.3861 11.3694C17.3861 9.76299 16.0765 8.45339 14.4701 8.45339ZM15.1481 12.0119C14.7723 12.3876 14.1625 12.3876 13.7867 12.0119C13.411 11.6362 13.411 11.0263 13.7867 10.6506C14.1625 10.2748 14.7723 10.2748 15.1481 10.6506C15.5238 11.0263 15.5238 11.6362 15.1481 12.0119Z"
+							fill="#292D32"
+						/>
+						<path
+							d="M15.1475 12.0166C15.5234 11.6407 15.5234 11.0312 15.1475 10.6553C14.7715 10.2794 14.1621 10.2794 13.7861 10.6553C13.4102 11.0312 13.4102 11.6407 13.7861 12.0166C14.1621 12.3925 14.7715 12.3925 15.1475 12.0166Z"
+							fill="#292D32"
+						/>
+						<path
+							d="M6.99885 7.70083C9.12538 7.70083 10.8493 5.97694 10.8493 3.85042C10.8493 1.72389 9.12538 0 6.99885 0C4.87233 0 3.14844 1.72389 3.14844 3.85042C3.14844 5.97694 4.87233 7.70083 6.99885 7.70083Z"
+							fill="#292D32"
+						/>
+						<path
+							opacity="0.4"
+							d="M7 9.63281C8.18471 9.63281 9.30183 9.87719 10.2812 10.3076C10.1102 10.6907 10.0146 11.1149 10.0146 11.5615C10.0147 12.701 10.6349 13.6928 11.5547 14.2256V15.793H0.385742C0.170194 15.793 0.000117394 15.6237 0 15.4082C0 12.2201 3.14202 9.63295 7 9.63281Z"
+							fill="#292D32"
+						/>
+					</svg>
+
+					<span>Sign in with Passkey</span>
 				</button>
 			</div>
 		</div>

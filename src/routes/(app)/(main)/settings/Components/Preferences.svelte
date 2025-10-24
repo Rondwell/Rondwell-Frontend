@@ -164,9 +164,12 @@
 	<p class="mb-4 text-sm text-[#8C8F93]">Choose your desired Rondwell interface.</p>
 
 	<!-- Theme Selection -->
-	<div class="mb-4 flex gap-4">
+	<div class="mb-4 flex flex-col gap-4 md:flex-row">
 		{#each themes as theme}
-			<button class="flex-1 cursor-pointer rounded-lg" on:click={() => selectTheme(theme.key)}>
+			<button
+				class="w-fit flex-1 cursor-pointer rounded-lg"
+				on:click={() => selectTheme(theme.key)}
+			>
 				<img src={theme.img} alt={theme.label} />
 
 				<div

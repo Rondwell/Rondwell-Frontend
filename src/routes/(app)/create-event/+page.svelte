@@ -201,7 +201,7 @@
 					style="background-color: {selectedTheme.cover};"
 				>
 					<div
-						class="flex h-[34.75px] w-[54px] items-center justify-center"
+						class="flex h-[34.75px] w-[54px] items-center justify-center rounded-[3.75px]"
 						style="background-color: {selectedTheme.smallCover};"
 					>
 						<svg
@@ -228,7 +228,7 @@
 					style="background-color: {selectedTheme.cover};"
 				>
 					<div
-						class="flex h-[34.75px] w-[54px] items-center justify-center"
+						class="flex h-[34.75px] w-[54px] items-center justify-center rounded-[3.75px]"
 						style="background-color: {selectedTheme.smallCover};"
 					>
 						<svg
@@ -905,7 +905,7 @@
 					style="background-color: {selectedTheme.cover};"
 				>
 					<div
-						class="flex h-[34.75px] w-[54px] items-center justify-center"
+						class="flex h-[34.75px] w-[54px] items-center justify-center rounded-[3.75px]"
 						style="background-color: {selectedTheme.smallCover};"
 					>
 						<svg
@@ -932,7 +932,7 @@
 					style="background-color: {selectedTheme.cover};"
 				>
 					<div
-						class="flex h-[34.75px] w-[54px] items-center justify-center"
+						class="flex h-[34.75px] w-[54px] items-center justify-center rounded-[3.75px]"
 						style="background-color: {selectedTheme.smallCover};"
 					>
 						<svg

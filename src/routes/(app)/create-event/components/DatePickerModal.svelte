@@ -131,7 +131,7 @@
 
 {#if open}
 	<!-- Modal Container -->
-	<div class="traingle absolute top-full left-0 z-40 mt-2 w-[270px]">
+	<div class="traingle absolute top-full right-[-90px] z-40 mt-2 w-[270px] md:right-auto md:left-0">
 		<div class="bg relative h-full max-h-[300px] min-h-[280px] w-full space-y-3 p-3">
 			<!-- Header -->
 			<div class="mb-4 flex items-center justify-between">
@@ -231,9 +231,21 @@
 		content: '';
 		position: absolute;
 		top: -18px;
-		left: 60px;
+		left: 120px;
 		border-width: 8px;
 		border-style: solid;
 		border-color: transparent transparent white transparent;
+	}
+
+	@media (min-width: 739px) {
+		.traingle::before {
+			content: '';
+			position: absolute;
+			top: -18px;
+			left: 60px;
+			border-width: 8px;
+			border-style: solid;
+			border-color: transparent transparent white transparent;
+		}
 	}
 </style>

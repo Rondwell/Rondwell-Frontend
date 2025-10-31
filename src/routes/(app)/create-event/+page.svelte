@@ -389,7 +389,7 @@
 						style="background-color: {selectedColor.cover};"
 					>
 						<!-- Start -->
-						<div class="flex w-full max-w-[80px] flex-col items-start">
+						<div class="flex w-full max-w-[70px] flex-col items-start">
 							<div class="flex items-center space-x-2">
 								<span
 									class="h-[11.25px] w-[11.25px] rounded-full"

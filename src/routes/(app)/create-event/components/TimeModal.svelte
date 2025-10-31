@@ -57,9 +57,9 @@
 
 {#if open}
 	<div
-		class="traingle absolute top-full left-0 z-40 mt-2 max-w-[201.75px] {referenceTime !== null
+		class="traingle absolute top-full right-0 z-40 mt-2 max-w-[201.75px] {referenceTime !== null
 			? 'w-[201.75px]'
-			: 'w-full'}"
+			: 'w-[150px]'}"
 	>
 		<div
 			class="custom-scrollbar relative h-[332.25px] w-full space-y-3 overflow-hidden overflow-y-auto rounded-sm bg-[#FFFCFC] p-3"
@@ -89,7 +89,7 @@
 		content: '';
 		position: absolute;
 		top: -18px;
-		left: 60px;
+		right: 30px;
 		border-width: 8px;
 		border-style: solid;
 		border-color: transparent transparent white transparent;

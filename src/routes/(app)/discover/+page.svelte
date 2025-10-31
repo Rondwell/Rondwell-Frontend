@@ -1,18 +1,16 @@
-<script context="module">
-	export const prerender = false;
-</script>
-
 <script>
 	import Header from './components/Header.svelte';
 	import DiscoverSidebar from './components/Sidebar.svelte';
 	import Sidebar from '../components/Sidebar.svelte';
 	import Hero from './components/Hero.svelte';
 	import EventList from './components/EventList.svelte';
-	import { get } from 'svelte/store';
-	import { page } from '$app/stores';
 
-	$: url = $page.url;
-	$: show = url.searchParams.get('show') === 'true';
+	let show = false;
+
+	if (typeof window !== 'undefined') {
+		const params = new URLSearchParams(window.location.search);
+		show = params.get('show') === 'true';
+	}
 </script>
 
 <div class="relative flex min-h-screen text-sm font-medium">

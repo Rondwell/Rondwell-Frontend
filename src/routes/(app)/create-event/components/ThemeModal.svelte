@@ -55,7 +55,7 @@
 		>
 			<!-- Style (always open view) -->
 			{#if activeTab === 'style'}
-				<div class="custom-scrollbar mt-4 flex h-full flex-wrap items-center justify-center gap-4">
+				<div class="flex h-full flex-wrap items-center justify-center gap-4">
 					{#each styles as style, i}
 						<button
 							class="relative flex w-24 cursor-pointer flex-col items-center rounded-xl"
@@ -96,15 +96,22 @@
 
 			<!-- Font Modal -->
 			{#if activeTab === 'font'}
-				<div class="grid h-full grid-cols-3 gap-4 sm:grid-cols-4">
+				<div class="flex h-full w-full flex-wrap items-center justify-center gap-4">
 					{#each fonts as font}
 						<button
-							class="cursor-pointer rounded-lg border bg-[#FAFCFE] p-3 text-center hover:border-black"
-							class:border-black={selectedFont === font}
+							class="flex h-fit w-fit flex-col items-center gap-1"
 							on:click={() => selectFont(font)}
 						>
-							<div class="text-xl font-semibold">Ag</div>
-							<p class="mt-1 text-sm">{font}</p>
+							<div
+								class="w-[89px] cursor-pointer rounded-lg border bg-[#FAFCFE] p-3 text-center text-xl font-semibold {selectedFont ===
+								font
+									? 'border-black'
+									: ''}"
+								style="font-family: {font};"
+							>
+								Ag
+							</div>
+							<p class="mt-1 text-xs">{font}</p>
 						</button>
 					{/each}
 				</div>

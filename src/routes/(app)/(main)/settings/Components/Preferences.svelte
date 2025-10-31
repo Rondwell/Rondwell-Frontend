@@ -2,10 +2,11 @@
 <script lang="ts">
 	import { clickOutside } from '$lib/utils/constant';
 	import { onMount } from 'svelte';
+	import { theme, applyTheme } from '$lib/stores/theme';
 
 	let selectedTheme = 'light';
 
-	const themes = [
+	const themes: { key: 'system' | 'light' | 'dark'; label: string; img: string }[] = [
 		{
 			key: 'system',
 			label: 'System',
@@ -23,38 +24,18 @@
 		}
 	];
 
-	function applyTheme(theme: any) {
-		const html = document.documentElement;
-
-		if (theme === 'light') {
-			html.classList.remove('dark');
-		} else if (theme === 'dark') {
-			html.classList.add('dark');
-		} else {
-			// system: follow OS preference
-			if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-				html.classList.add('dark');
-			} else {
-				html.classList.remove('dark');
-			}
-		}
-	}
-
-	function selectTheme(theme: any) {
-		selectedTheme = theme;
-		localStorage.setItem('theme', theme);
-		applyTheme(theme);
+	function selectTheme(t: 'system' | 'light' | 'dark') {
+		selectedTheme = t;
+		localStorage.setItem('theme', t);
+		theme.set(t);
+		applyTheme(t);
 	}
 
 	onMount(() => {
-		const savedTheme = localStorage.getItem('theme') || 'system';
-		selectedTheme = savedTheme;
-		applyTheme(savedTheme);
-
-		// react to system theme changes
-		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-			if (selectedTheme === 'system') applyTheme('system');
-		});
+		const saved = (localStorage.getItem('theme') as 'system' | 'light' | 'dark') || 'system';
+		selectedTheme = saved;
+		theme.set(saved);
+		applyTheme(saved);
 	});
 
 	// Mock data for notification settings
@@ -201,7 +182,12 @@
 	<!-- Language Selection -->
 	<div class="mt-6">
 		<label for="language" class="mb-2 block text-sm font-medium text-[#8C8F93]">Language</label>
-		<div class="relative inline-block text-left">
+		<div
+			class="relative inline-block text-left"
+			use:clickOutside={() => {
+				open = false;
+			}}
+		>
 			<!-- Trigger button -->
 			<button
 				on:click={() => (open = !open)}
@@ -215,9 +201,6 @@
 			{#if open}
 				<div
 					class="absolute left-0 z-10 mt-1 flex w-full flex-col items-start rounded-sm bg-[#FFFFFF] shadow-lg"
-					use:clickOutside={() => {
-						open = false;
-					}}
 				>
 					{#each options as option}
 						<button

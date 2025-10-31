@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 
 	export let showMenu = false;
@@ -49,8 +48,7 @@
 
 {#if showMenu}
 	<div
-		class="bg fixed bottom-10 left-30 z-50 hidden w-90 rounded-xl p-6 text-sm md:block"
-		use:clickOutside={onClose}
+		class="triangle bg fixed bottom-10 left-30 z-50 hidden w-90 rounded-xl p-6 text-sm md:block"
 	>
 		<!-- Active Profile -->
 		<div class="flex items-center space-x-3">
@@ -277,5 +275,27 @@
 
 	.animate-spin-once {
 		animation: spin-once 1s ease-in-out 1;
+	}
+
+	/* Triangle pointer */
+	.triangle::before {
+		content: '';
+		position: absolute;
+		left: -18px;
+		bottom: 16px;
+		border-width: 8px;
+		border-style: solid;
+		border-color: transparent #f8f8f8 transparent transparent;
+	}
+
+	.triangle::after {
+		content: '';
+		position: absolute;
+		left: -18px;
+		bottom: 16px;
+		border-width: 8px;
+		border-style: solid;
+		border-color: transparent rgba(0, 0, 0, 0.08) transparent transparent;
+		z-index: -1;
 	}
 </style>

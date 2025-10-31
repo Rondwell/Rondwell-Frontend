@@ -19,7 +19,7 @@
 	</div>
 	<main class="relative mb-[106px] flex min-h-screen w-full flex-col p-3 md:mb-0 md:p-5">
 		<Header />
-		<div class="bg flex w-full flex-1 p-3 md:px-12 md:py-8">
+		<div class="bg flex w-full flex-1 p-3 md:p-6 lg:p-8">
 			<slot class="h-full w-full flex-1" />
 		</div>
 	</main>

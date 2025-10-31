@@ -1,8 +1,5 @@
 <script lang="ts">
-	import { clickOutside } from '$lib/utils/constant';
-
 	export let open = false;
-	export let onClose: () => void;
 
 	const categories = [
 		'🎨 Art',
@@ -44,12 +41,13 @@
 </script>
 
 {#if open}
-	<div id="Category" class="absolute z-50 mt-2 rounded-lg bg-[#EBECED]" use:clickOutside={onClose}>
+	<div id="Category" class="absolute z-50 mt-2 rounded-lg bg-[#EBECED]">
 		<div class="w-full max-w-2xl rounded-[16px] bg-[#EBECED] p-7">
 			<div class="mb-4 flex items-center justify-between">
 				<h2 class="text-lg font-semibold">Select event category</h2>
-				<button class="cursor-pointer text-gray-500 hover:text-gray-800" on:click={onClose}
-					>✕</button
+				<button
+					class="cursor-pointer text-gray-500 hover:text-gray-800"
+					on:click={() => (open = false)}>✕</button
 				>
 			</div>
 

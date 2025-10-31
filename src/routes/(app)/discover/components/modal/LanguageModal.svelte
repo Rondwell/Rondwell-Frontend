@@ -1,9 +1,7 @@
 <script lang="ts">
-	import { clickOutside } from '$lib/utils/constant';
 	import { createEventDispatcher, onMount, onDestroy } from 'svelte';
 
 	export let open: boolean = false;
-	export let onClose: () => void;
 	export let position = { top: 0, left: 0 };
 
 	const dispatch = createEventDispatcher();
@@ -26,7 +24,6 @@
 {#if open}
 	<div
 		class="absolute left-114 z-50 mt-2 w-48 rounded-lg bg-[#FFFCFC] p-3"
-		use:clickOutside={onClose}
 		style="top: {position.top}px; left: {position.left}px;"
 	>
 		{#each languages as lang}

@@ -12,9 +12,9 @@
 	// Menu items
 	const menuItems = [
 		{ id: 'create', label: 'Create Event', icon: 'plus', active: true, nav: '/create-event' },
-		{ id: 'event', label: 'Events', icon: '/ticket-2.svg', nav: '' },
-		{ id: 'collections', label: 'Collections', icon: '/cate.svg', nav: '' },
-		{ id: 'discover', label: 'Discover', icon: '/disc.svg', nav: '' },
+		{ id: 'event', label: 'Events', icon: '/ticket-2.svg', nav: '/events' },
+		{ id: 'collections', label: 'Collections', icon: '/cate.svg', nav: '/collection' },
+		{ id: 'discover', label: 'Discover', icon: '/disc.svg', nav: '/discover?show=true' },
 		{ id: 'experience', label: 'Experience', icon: '/exp.svg', nav: '' }
 	];
 

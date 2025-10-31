@@ -10,7 +10,6 @@
 
 	let activeTab = 'style'; // 'color', 'style', 'font', 'template'
 	const styles = ['Minimal', 'Quantum', 'Warp', 'Emoji', 'Confetti', 'Pattern', 'Seasonal'];
-	// const colors = ['Light Rose', 'orange', 'amber', 'red', 'green', 'blue', 'purple', 'pink'];
 	const fonts = [
 		'Default',
 		'Musio',
@@ -47,73 +46,73 @@
 {#if open}
 	<!-- Main Modal -->
 	<div
-		class="bg fixed inset-x-0 bottom-0 z-50 flex h-full min-h-[236.25px] w-full gap-4 p-6 lg:h-auto"
+		class="bg fixed inset-x-0 bottom-0 z-50 flex min-h-[236.25px] w-full flex-col gap-4 p-6"
 		style="max-height: 70vh; overflow-y: auto;"
 		transition:fly={{ y: 300, duration: 300 }}
 	>
 		<div
-			class="relative flex h-full w-full flex-col items-center justify-between gap-4 overflow-y-auto text-gray-500"
+			class="custom-scrollbar relative flex h-full w-full flex-col items-center justify-between gap-6 overflow-y-auto text-gray-500 lg:items-stretch"
 		>
-			<div class="flex h-full w-full items-center justify-center">
-				<!-- Style (always open view) -->
-				{#if activeTab === 'style'}
-					<div class="mt-4 flex flex-wrap items-center gap-4 overflow-x-auto pb-2">
-						{#each styles as style, i}
-							<button
-								class="relative flex w-24 cursor-pointer flex-col items-center rounded-xl"
-								on:click={() => selectStyle(style)}
-							>
-								<img
-									src={`/${style}.svg`}
-									alt={style}
-									class="mb-1 h-[72px] w-full rounded-lg {selectedStyle === style
-										? 'border-2 border-black'
-										: ''}"
-								/>
-								<span class="text-xs text-gray-700">{style}</span>
-								{#if i === 6}
-									<span class="absolute bottom-4 rounded bg-orange-500 px-1 text-xs text-white"
-										>NEW</span
-									>
-								{/if}
-							</button>
-						{/each}
-					</div>
-				{/if}
-				<!-- Color Modal -->
-				{#if activeTab === 'color'}
-					<div class="mt-2 flex space-x-3">
-						{#each colors as color}
-							<button
-								aria-label="color"
-								class="h-12 w-12 cursor-pointer rounded-full border-2"
-								style="background-color: {color.bg};"
-								class:border-black={selectedColor === color}
-								on:click={() => selectColor(color)}
-							></button>
-						{/each}
-					</div>
-				{/if}
+			<!-- Style (always open view) -->
+			{#if activeTab === 'style'}
+				<div class="custom-scrollbar mt-4 flex h-full flex-wrap items-center justify-center gap-4">
+					{#each styles as style, i}
+						<button
+							class="relative flex w-24 cursor-pointer flex-col items-center rounded-xl"
+							on:click={() => selectStyle(style)}
+						>
+							<img
+								src={`/${style}.svg`}
+								alt={style}
+								class="mb-1 h-[72px] w-full rounded-lg {selectedStyle === style
+									? 'border-2 border-black'
+									: ''}"
+							/>
+							<span class="text-xs text-gray-700">{style}</span>
+							{#if i === 6}
+								<span class="absolute bottom-4 rounded bg-orange-500 px-1 text-xs text-white"
+									>NEW</span
+								>
+							{/if}
+						</button>
+					{/each}
+				</div>
+			{/if}
 
-				<!-- Font Modal -->
-				{#if activeTab === 'font'}
-					<div class="mt-4 grid grid-cols-3 gap-4 rounded-md bg-[#FAFCFE] p-4 md:grid-cols-4">
-						{#each fonts as font}
-							<button
-								class="cursor-pointer rounded-lg border p-3 text-center hover:border-black"
-								class:border-black={selectedFont === font}
-								on:click={() => selectFont(font)}
-							>
-								<div class="text-xl font-semibold">Ag</div>
-								<p class="mt-1 text-sm">{font}</p>
-							</button>
-						{/each}
-					</div>
-				{/if}
-			</div>
+			<!-- Color Modal -->
+			{#if activeTab === 'color'}
+				<div class="flex h-full flex-wrap items-center justify-center space-x-3">
+					{#each colors as color}
+						<button
+							aria-label="color"
+							class="h-12 w-12 cursor-pointer rounded-full border-2"
+							style="background-color: {color.bg};"
+							class:border-black={selectedColor === color}
+							on:click={() => selectColor(color)}
+						></button>
+					{/each}
+				</div>
+			{/if}
+
+			<!-- Font Modal -->
+			{#if activeTab === 'font'}
+				<div class="grid h-full grid-cols-3 gap-4 sm:grid-cols-4">
+					{#each fonts as font}
+						<button
+							class="cursor-pointer rounded-lg border bg-[#FAFCFE] p-3 text-center hover:border-black"
+							class:border-black={selectedFont === font}
+							on:click={() => selectFont(font)}
+						>
+							<div class="text-xl font-semibold">Ag</div>
+							<p class="mt-1 text-sm">{font}</p>
+						</button>
+					{/each}
+				</div>
+			{/if}
+
 			<!-- Toolbar -->
 			<div
-				class="flex h-full min-h-[50px] w-full flex-col items-center justify-center gap-4 space-x-4 md:flex-row"
+				class="grid h-full min-h-[50px] w-full place-items-center gap-4 sm:grid-cols-2 lg:grid-cols-4"
 			>
 				<button
 					class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
@@ -200,17 +199,5 @@
 
 	button.selected {
 		background-color: #e6dfde;
-	}
-
-	/* For color palette */
-	:root {
-		--tw-color-red: #ef4444;
-		--tw-color-orange: #f97316;
-		--tw-color-amber: #f59e0b;
-		--tw-color-yellow: #eab308;
-		--tw-color-green: #22c55e;
-		--tw-color-blue: #3b82f6;
-		--tw-color-purple: #8b5cf6;
-		--tw-color-pink: #ec4899;
 	}
 </style>

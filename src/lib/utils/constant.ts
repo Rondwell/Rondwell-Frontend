@@ -1,10 +1,13 @@
-export function clickOutside(node: HTMLElement, onClose: () => void) {
+export function clickOutside(node: HTMLElement, callback: () => void) {
     const handleClick = (event: MouseEvent) => {
-        if (!node.contains(event.target as Node)) {
-            onClose();
+        if (
+            node &&
+            !node.contains(event.target as Node) &&
+            node.offsetParent !== null // ensures element is visible
+        ) {
+            callback();
         }
     };
-
     document.addEventListener('click', handleClick, true);
 
     return {

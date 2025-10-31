@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import ProfileMenu from './ProfileMenu.svelte';
 	import { goto } from '$app/navigation';
+	import { clickOutside } from '$lib/utils/constant';
 
 	export let background_color = '';
 	let showMenu = false;
@@ -76,7 +77,7 @@
 {:else}
 	<!-- Desktop Sidebar -->
 	<aside
-		class="custom-scrollbar fixed top-0 left-0 z-40 hidden h-screen w-[117px] flex-col items-center justify-evenly gap-10 overflow-y-auto border-r py-10 md:flex"
+		class="fixed top-0 left-0 z-40 hidden h-screen w-[117px] flex-col items-center justify-evenly gap-10 border-r py-10 md:flex"
 	>
 		<div class="flex flex-col items-center space-y-10">
 			<!-- Hamburger Menu -->
@@ -112,7 +113,7 @@
 		</div>
 
 		<!-- Other menu items -->
-		<div class="space-y-5">
+		<div class="custom-scrollbar space-y-5 overflow-y-auto">
 			{#each menuItems.slice(1) as item}
 				<button
 					on:click={() => {
@@ -131,16 +132,18 @@
 		<!-- Bottom utility icons -->
 		<div class="mt-auto flex w-full flex-col items-center justify-center space-y-4">
 			<img src="/notification.svg" alt="" class="cursor-pointer" />
-			<button
-				on:click={() => {
-					showMenu = !showMenu;
-				}}
-			>
-				<img src="/face-1.svg" alt="" />
-			</button>
+			<div use:clickOutside={() => (showMenu = false)}>
+				<button
+					on:click={() => {
+						showMenu = !showMenu;
+					}}
+				>
+					<img src="/face-1.svg" alt="" />
+				</button>
+				<ProfileMenu bind:showMenu />
+			</div>
 		</div>
 	</aside>
-	<ProfileMenu bind:showMenu />
 {/if}
 
 <!-- Spacer to prevent content overlap with fixed sidebar/bottom nav -->

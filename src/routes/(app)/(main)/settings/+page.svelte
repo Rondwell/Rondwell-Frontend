@@ -16,7 +16,7 @@
 	}
 </script>
 
-<div class="w-full max-w-4xl px-2 py-4 md:p-4">
+<div class="w-full max-w-4xl">
 	<!-- Page Header -->
 	<h1 class="mb-12 text-3xl font-bold">Settings</h1>
 

@@ -2,9 +2,10 @@
 <script lang="ts">
 	import { tick, onDestroy, onMount } from 'svelte';
 	import CategoryModal from './modal/CategoryModal.svelte';
-	import EventTypeModal from './modal/EventTypeModel.svelte';
+	import EventTypeModal from './modal/EventTypeModal.svelte';
 	import LanguageModal from './modal/LanguageModal.svelte';
 	import LocationModal from './modal/LocationModal.svelte';
+	import { clickOutside } from '$lib/utils/constant';
 
 	let searchQuery = '';
 	let activeItem = 'Events';
@@ -275,7 +276,12 @@
 		{/each}
 	</div>
 
-	<div class="relative mt-4">
+	<div
+		class="relative mt-4"
+		use:clickOutside={() => {
+			activeModal = '';
+		}}
+	>
 		<!-- Filters (optional - can be moved to main content later) -->
 		<div class="custom-scrollbar flex gap-4 overflow-x-auto overflow-y-hidden whitespace-nowrap">
 			{#each ['Category', 'Event Type', 'Location', 'Language', 'Currency'] as filter}
@@ -324,7 +330,6 @@
 		{#if activeModal === 'Event Type'}
 			<EventTypeModal
 				open={activeModal === 'Event Type'}
-				{onClose}
 				position={modalPosition}
 				on:select={(e) => console.log('Selected:', e.detail)}
 			/>
@@ -332,10 +337,10 @@
 
 		<!-- Placeholders for other modals -->
 		{#if activeModal === 'Location'}
-			<LocationModal open={activeModal === 'Location'} {onClose} position={modalPosition} />
+			<LocationModal open={activeModal === 'Location'} position={modalPosition} />
 		{/if}
 		{#if activeModal === 'Language'}
-			<LanguageModal open={activeModal === 'Language'} {onClose} position={modalPosition} />
+			<LanguageModal open={activeModal === 'Language'} position={modalPosition} />
 		{/if}
 		{#if activeModal === 'Currency'}
 			<!-- Add CurrencyModal here -->

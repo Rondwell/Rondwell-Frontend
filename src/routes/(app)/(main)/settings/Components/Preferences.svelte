@@ -201,7 +201,12 @@
 	<!-- Language Selection -->
 	<div class="mt-6">
 		<label for="language" class="mb-2 block text-sm font-medium text-[#8C8F93]">Language</label>
-		<div class="relative inline-block text-left">
+		<div
+			class="relative inline-block text-left"
+			use:clickOutside={() => {
+				open = false;
+			}}
+		>
 			<!-- Trigger button -->
 			<button
 				on:click={() => (open = !open)}
@@ -215,9 +220,6 @@
 			{#if open}
 				<div
 					class="absolute left-0 z-10 mt-1 flex w-full flex-col items-start rounded-sm bg-[#FFFFFF] shadow-lg"
-					use:clickOutside={() => {
-						open = false;
-					}}
 				>
 					{#each options as option}
 						<button

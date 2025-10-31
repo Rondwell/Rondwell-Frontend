@@ -2,10 +2,11 @@
 <script lang="ts">
 	import { clickOutside } from '$lib/utils/constant';
 	import { onMount } from 'svelte';
+	import { theme, applyTheme } from '$lib/stores/theme';
 
 	let selectedTheme = 'light';
 
-	const themes = [
+	const themes: { key: 'system' | 'light' | 'dark'; label: string; img: string }[] = [
 		{
 			key: 'system',
 			label: 'System',
@@ -23,38 +24,18 @@
 		}
 	];
 
-	function applyTheme(theme: any) {
-		const html = document.documentElement;
-
-		if (theme === 'light') {
-			html.classList.remove('dark');
-		} else if (theme === 'dark') {
-			html.classList.add('dark');
-		} else {
-			// system: follow OS preference
-			if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-				html.classList.add('dark');
-			} else {
-				html.classList.remove('dark');
-			}
-		}
-	}
-
-	function selectTheme(theme: any) {
-		selectedTheme = theme;
-		localStorage.setItem('theme', theme);
-		applyTheme(theme);
+	function selectTheme(t: 'system' | 'light' | 'dark') {
+		selectedTheme = t;
+		localStorage.setItem('theme', t);
+		theme.set(t);
+		applyTheme(t);
 	}
 
 	onMount(() => {
-		const savedTheme = localStorage.getItem('theme') || 'system';
-		selectedTheme = savedTheme;
-		applyTheme(savedTheme);
-
-		// react to system theme changes
-		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-			if (selectedTheme === 'system') applyTheme('system');
-		});
+		const saved = (localStorage.getItem('theme') as 'system' | 'light' | 'dark') || 'system';
+		selectedTheme = saved;
+		theme.set(saved);
+		applyTheme(saved);
 	});
 
 	// Mock data for notification settings

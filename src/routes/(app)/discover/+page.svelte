@@ -1,3 +1,7 @@
+<script context="module">
+	export const prerender = false;
+</script>
+
 <script>
 	import Header from './components/Header.svelte';
 	import DiscoverSidebar from './components/Sidebar.svelte';
@@ -7,8 +11,8 @@
 	import { get } from 'svelte/store';
 	import { page } from '$app/stores';
 
-	const url = get(page).url;
-	const show = url.searchParams.get('show') ?? false;
+	$: url = $page.url;
+	$: show = url.searchParams.get('show') === 'true';
 </script>
 
 <div class="relative flex min-h-screen text-sm font-medium">

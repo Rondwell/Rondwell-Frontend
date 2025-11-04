@@ -46,16 +46,17 @@
 {#if open}
 	<!-- Main Modal -->
 	<div
-		class="bg fixed inset-x-0 bottom-0 z-50 flex min-h-[236.25px] w-full flex-col gap-4 p-6"
-		style="max-height: 70vh; overflow-y: auto;"
+		class="bg fixed inset-x-0 bottom-0 z-50 flex h-auto w-full flex-col p-6"
+		style="max-height: 70vh;"
 		transition:fly={{ y: 300, duration: 300 }}
 	>
+		<!-- Scrollable content -->
 		<div
-			class="custom-scrollbar relative flex h-full w-full flex-col items-center justify-between gap-6 overflow-y-auto text-gray-500 lg:items-stretch"
+			class="custom-scrollbar mb-10 flex max-h-[180px] flex-col items-center justify-between gap-6 overflow-y-auto text-gray-500 md:flex-1 lg:items-stretch lg:pb-[50px]"
 		>
 			<!-- Style (always open view) -->
 			{#if activeTab === 'style'}
-				<div class="flex h-full flex-wrap items-center justify-center gap-4">
+				<div class="flex flex-wrap items-center justify-center gap-4">
 					{#each styles as style, i}
 						<button
 							class="relative flex w-24 cursor-pointer flex-col items-center rounded-xl"
@@ -81,7 +82,7 @@
 
 			<!-- Color Modal -->
 			{#if activeTab === 'color'}
-				<div class="flex h-full flex-wrap items-center justify-center space-x-3">
+				<div class="flex flex-wrap items-center justify-center gap-3">
 					{#each colors as color}
 						<button
 							aria-label="color"
@@ -96,12 +97,9 @@
 
 			<!-- Font Modal -->
 			{#if activeTab === 'font'}
-				<div class="flex h-full w-full flex-wrap items-center justify-center gap-4">
+				<div class="flex flex-wrap items-center justify-center gap-4">
 					{#each fonts as font}
-						<button
-							class="flex h-fit w-fit flex-col items-center gap-1"
-							on:click={() => selectFont(font)}
-						>
+						<button class="flex flex-col items-center gap-1" on:click={() => selectFont(font)}>
 							<div
 								class="w-[89px] cursor-pointer rounded-lg border bg-[#FAFCFE] p-3 text-center text-xl font-semibold {selectedFont ===
 								font
@@ -116,83 +114,82 @@
 					{/each}
 				</div>
 			{/if}
+		</div>
 
-			<!-- Toolbar -->
-			<div
-				class="grid h-full min-h-[50px] w-full place-items-center gap-4 sm:grid-cols-2 lg:grid-cols-4"
+		<!-- Toolbar (fixed at bottom inside modal) -->
+		<div
+			class="sticky bottom-0 grid min-h-[50px] w-full place-items-center gap-4 text-gray-500 sm:grid-cols-2 lg:grid-cols-4"
+		>
+			<button
+				class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
+				class:selected={activeTab === 'color'}
+				on:click={() => (activeTab = 'color')}
 			>
-				<button
-					class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
-					class:selected={activeTab === 'color'}
-					on:click={() => (activeTab = 'color')}
-				>
-					<div class="flex items-center gap-1">
-						<span style="background-color: {selectedColor.bg}" class="h-6 w-6 rounded-full"></span>
-						<p>Color</p>
-					</div>
-					<div class="flex items-center gap-1">
-						<p>{selectedColor.name}</p>
-						<span>{@html arrow}</span>
-					</div>
-				</button>
+				<div class="flex items-center gap-1">
+					<span style="background-color: {selectedColor.bg}" class="h-6 w-6 rounded-full"></span>
+					<p>Color</p>
+				</div>
+				<div class="flex items-center gap-1">
+					<p>{selectedColor.name}</p>
+					<span>{@html arrow}</span>
+				</div>
+			</button>
 
-				<button
-					class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
-					class:selected={activeTab === 'style'}
-					on:click={() => (activeTab = 'style')}
-				>
-					<div class="flex items-center gap-1">
-						<span class="h-6 w-6 rounded-full bg-[#E8E2DC]"></span>
-						<p>Style</p>
-					</div>
-					<div class="flex items-center gap-1">
-						<p>{selectedStyle === 'Minimal' ? 'Default' : selectedStyle}</p>
-						<span>{@html arrow}</span>
-					</div>
-				</button>
+			<button
+				class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
+				class:selected={activeTab === 'style'}
+				on:click={() => (activeTab = 'style')}
+			>
+				<div class="flex items-center gap-1">
+					<span class="h-6 w-6 rounded-full bg-[#E8E2DC]"></span>
+					<p>Style</p>
+				</div>
+				<div class="flex items-center gap-1">
+					<p>{selectedStyle === 'Minimal' ? 'Default' : selectedStyle}</p>
+					<span>{@html arrow}</span>
+				</div>
+			</button>
 
-				<button
-					class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
-					class:selected={activeTab === 'font'}
-					on:click={() => (activeTab = 'font')}
-				>
-					<div class="flex items-center gap-1">
-						<span class="text-lg font-semibold" style="font-family: {selectedFont};">Ag</span>
-						<p>Font</p>
-					</div>
+			<button
+				class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
+				class:selected={activeTab === 'font'}
+				on:click={() => (activeTab = 'font')}
+			>
+				<div class="flex items-center gap-1">
+					<span class="text-lg font-semibold" style="font-family: {selectedFont};">Ag</span>
+					<p>Font</p>
+				</div>
 
-					<div class="flex items-center gap-1">
-						<p>{selectedFont}</p>
-						<span>{@html arrow}</span>
-					</div>
-				</button>
+				<div class="flex items-center gap-1">
+					<p>{selectedFont}</p>
+					<span>{@html arrow}</span>
+				</div>
+			</button>
 
-				<button
-					class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
-				>
-					<div class="flex items-center gap-1">
-						<svg
-							width="22"
-							height="22"
-							viewBox="0 0 22 22"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M10.5 0.75C15.8848 0.75 20.25 5.11522 20.25 10.5V11.25C20.25 16.6348 15.8848 21 10.5 21V0.75Z"
-								fill="#D1CCC5"
-							/>
-							<circle cx="10.875" cy="10.875" r="9.75" stroke="#D1CCC5" stroke-width="2.25" />
-						</svg>
-
-						<p>Template</p>
-					</div>
-					<div class="flex items-center gap-1">
-						<p>Default</p>
-						<span>{@html arrow}</span>
-					</div>
-				</button>
-			</div>
+			<button
+				class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
+			>
+				<div class="flex items-center gap-1">
+					<svg
+						width="22"
+						height="22"
+						viewBox="0 0 22 22"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+					>
+						<path
+							d="M10.5 0.75C15.8848 0.75 20.25 5.11522 20.25 10.5V11.25C20.25 16.6348 15.8848 21 10.5 21V0.75Z"
+							fill="#D1CCC5"
+						/>
+						<circle cx="10.875" cy="10.875" r="9.75" stroke="#D1CCC5" stroke-width="2.25" />
+					</svg>
+					<p>Template</p>
+				</div>
+				<div class="flex items-center gap-1">
+					<p>Default</p>
+					<span>{@html arrow}</span>
+				</div>
+			</button>
 		</div>
 	</div>
 {/if}
@@ -203,7 +200,6 @@
 		backdrop-filter: blur(20px);
 		border-radius: 18.75px 18.75px 0px 0px;
 	}
-
 	button.selected {
 		background-color: #e6dfde;
 	}

@@ -73,7 +73,7 @@
 		<!-- Action Buttons -->
 		<div class="mb-4 flex w-full flex-wrap gap-3">
 			<button
-				class="flex w-full items-center gap-2 rounded-md bg-[#FDFDFD] px-3 py-1 text-sm font-medium md:min-w-70"
+				class="flex w-full items-center gap-2 rounded-md bg-[#FDFDFD] px-3 py-1 text-sm font-medium md:min-w-70 lg:w-fit"
 			>
 				<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E2E8FC]">
 					<svg
@@ -97,7 +97,7 @@
 			</button>
 
 			<button
-				class="flex w-full items-center gap-2 rounded-md bg-[#FDFDFD] px-3 py-1 text-sm font-medium md:min-w-70"
+				class="flex w-full items-center gap-2 rounded-md bg-[#FDFDFD] px-3 py-1 text-sm font-medium md:min-w-70 lg:w-fit"
 			>
 				<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#F2E4F8]">
 					<svg
@@ -117,7 +117,7 @@
 			</button>
 
 			<button
-				class="flex w-full items-center gap-2 rounded-md bg-[#FDFDFD] px-3 py-1 text-sm font-medium md:min-w-70"
+				class="flex w-full items-center gap-2 rounded-md bg-[#FDFDFD] px-3 py-1 text-sm font-medium md:min-w-70 lg:w-fit"
 			>
 				<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#FBDEEC]">
 					<svg

@@ -2,6 +2,7 @@
 	import Icon from '@iconify/svelte';
 
 	export let showMenu = false;
+	export let className = 'fixed bottom-10 left-30 hidden md:block';
 
 	let activeProfile = {
 		name: 'Shivani Chauhan',
@@ -48,7 +49,7 @@
 
 {#if showMenu}
 	<div
-		class="triangle bg fixed bottom-10 left-30 z-50 hidden w-90 rounded-xl p-6 text-sm md:block"
+		class="triangle bg custom-scrollbar z-50 max-h-[540px] w-90 overflow-y-auto rounded-xl p-6 text-sm {className}"
 	>
 		<!-- Active Profile -->
 		<div class="flex items-center space-x-3">
@@ -277,25 +278,49 @@
 		animation: spin-once 1s ease-in-out 1;
 	}
 
-	/* Triangle pointer */
-	.triangle::before {
+	/* .triangle::before {
 		content: '';
 		position: absolute;
-		left: -18px;
-		bottom: 16px;
+		top: -16px;
+		left: 13%;
+		transform: translateX(-50%);
 		border-width: 8px;
 		border-style: solid;
-		border-color: transparent #f8f8f8 transparent transparent;
+		border-color: transparent transparent #f4f5f6 transparent;
 	}
 
 	.triangle::after {
 		content: '';
 		position: absolute;
-		left: -18px;
-		bottom: 16px;
+		top: -18px;
+		left: 13%;
+		transform: translateX(-50%);
 		border-width: 8px;
 		border-style: solid;
-		border-color: transparent rgba(0, 0, 0, 0.08) transparent transparent;
+		border-color: transparent transparent rgba(0, 0, 0, 0.08) transparent;
 		z-index: -1;
+	} */
+
+	/* Desktop view (triangle on the side) */
+	@media (min-width: 739px) {
+		.triangle::before {
+			content: '';
+			position: absolute;
+			left: -18px;
+			bottom: 16px;
+			border-width: 8px;
+			border-style: solid;
+			border-color: transparent #f8f8f8 transparent transparent;
+		}
+		.triangle::after {
+			content: '';
+			position: absolute;
+			left: -18px;
+			bottom: 16px;
+			border-width: 8px;
+			border-style: solid;
+			border-color: transparent rgba(0, 0, 0, 0.08) transparent transparent;
+			z-index: -1;
+		}
 	}
 </style>

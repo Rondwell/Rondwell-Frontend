@@ -325,7 +325,7 @@
 				</span>
 			</button>
 		</div>
-		<CategoryModal open={activeModal === 'Category'} {onClose} />
+		<CategoryModal open={activeModal === 'Category'} />
 
 		{#if activeModal === 'Event Type'}
 			<EventTypeModal

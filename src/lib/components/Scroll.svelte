@@ -23,7 +23,7 @@
 	{#if showScrollTop}
 		<button
 			on:click={scrollToTop}
-			class="scroll-bg fixed right-6 bottom-6 z-50 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full p-3 shadow-xl transition duration-30"
+			class="scroll-bg fixed right-6 bottom-30 z-50 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full p-3 shadow-xl transition duration-30"
 		>
 			<img src="/arrow-down.png" alt="Arrow Down" class="h-3 w-5 opacity-80" />
 		</button>

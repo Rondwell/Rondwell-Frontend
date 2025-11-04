@@ -26,7 +26,7 @@
 </script>
 
 {#if open}
-	<div class="absolute top-full left-0 z-40 mt-2 w-full max-w-[662.8px]">
+	<div id="description" class="absolute top-full left-0 z-40 mt-2 w-full max-w-[662.8px]">
 		<div class="w-full max-w-[662.8px] overflow-hidden rounded-sm bg-[#FFFCFC]">
 			<div class="flex h-[50px] w-full items-center justify-end bg-[#F4F5F6] px-3">
 				<button
@@ -467,13 +467,18 @@
 
 				<!-- Done button -->
 				<div class="flex justify-end">
-					<button class="rounded-md bg-gray-800 px-4 py-2 text-sm text-white"> Done </button>
+					<button
+						class="rounded-md bg-gray-800 px-4 py-2 text-sm text-white"
+						on:click={() => (open = false)}
+					>
+						Done
+					</button>
 				</div>
 
 				<!-- AI Suggest Modal -->
 				{#if showAIModal}
 					<div
-						class="absolute bottom-[50px] left-2 z-50 w-85 rounded-md border bg-[#F8F8F9] p-2 shadow-lg"
+						class="absolute bottom-[50px] left-[-10px] z-50 w-85 rounded-md border bg-[#F8F8F9] p-2 shadow-lg md:left-0"
 					>
 						<div class="mb-4 flex items-start justify-between">
 							<div
@@ -601,9 +606,7 @@
 							></textarea>
 						</div>
 
-						<button
-							class="mb-5 w-full rounded-md bg-gray-800 py-1.5 text-sm text-white"
-						>
+						<button class="mb-5 w-full rounded-md bg-gray-800 py-1.5 text-sm text-white">
 							Generate
 						</button>
 					</div>

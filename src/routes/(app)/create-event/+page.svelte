@@ -52,6 +52,16 @@
 	let approvalRequired = false;
 	let capacity = '';
 
+	function scrollToId(id: string, options?: ScrollIntoViewOptions) {
+		const el = document.getElementById(id);
+		if (el) {
+			el.scrollIntoView({
+				behavior: options?.behavior ?? 'smooth',
+				block: options?.block ?? 'start'
+			});
+		}
+	}
+
 	let visibility_icon = 'mdi:web';
 
 	function formatDate(date: Date) {
@@ -255,7 +265,10 @@
 					<button
 						class="flex w-full items-center gap-2 rounded-[9px] px-4 py-3 text-left"
 						style="background-color: {selectedColor.cover};"
-						on:click={() => (showAIModal = !showAIModal)}
+						on:click={() => {
+							showAIModal = !showAIModal;
+							scrollToId('aiModal');
+						}}
 					>
 						<div
 							class="flex h-[34.75px] w-[54px] items-center justify-center rounded-[3.75px]"
@@ -658,7 +671,10 @@
 			>
 				<button
 					class="custom-scrollbar relative w-full"
-					on:click={() => (openDescriptionModal = !openDescriptionModal)}
+					on:click={() => {
+						openDescriptionModal = !openDescriptionModal;
+						scrollToId('description');
+					}}
 				>
 					<div
 						class="pointer-events-none absolute top-2 left-3 text-gray-400"
@@ -1049,7 +1065,10 @@
 					<button
 						class="flex w-full items-center gap-2 rounded-[9px] px-4 py-3 text-left"
 						style="background-color: {selectedColor.cover};"
-						on:click={() => (showAIModal = !showAIModal)}
+						on:click={() => {
+							showAIModal = !showAIModal;
+							scrollToId('aiModal');
+						}}
 					>
 						<div
 							class="flex h-[34.75px] w-[54px] items-center justify-center rounded-[3.75px]"

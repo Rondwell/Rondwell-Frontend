@@ -13,13 +13,13 @@
 	}
 </script>
 
-<div class="relative flex min-h-screen text-sm font-medium">
+<div class="relative flex min-h-screen bg-[#F4F5F6] text-sm font-medium">
 	<!-- Sidebar -->
 	<div class="relative md:min-w-[117px] {show ? '' : 'hidden'}">
 		<Sidebar background_color="#F4F5F6" />
 		<!-- <SideMenu /> -->
 	</div>
-	<main class="relative h-full w-full">
+	<main class="relative h-full w-full {show ? 'mb-[106px] md:mb-0' : ''}">
 		<div class={show ? 'hidden' : ''}>
 			<Header />
 		</div>
@@ -28,7 +28,9 @@
 			<DiscoverSidebar />
 
 			<!-- Main Content Area -->
-			<div class="flex h-full flex-1 flex-col gap-7 overflow-x-hidden px-2 lg:px-4">
+			<div
+				class="custom-scrollbar flex h-full flex-1 flex-col gap-7 overflow-x-hidden overflow-y-auto px-2 lg:px-4"
+			>
 				<!-- Hero -->
 				<Hero />
 				<EventList />

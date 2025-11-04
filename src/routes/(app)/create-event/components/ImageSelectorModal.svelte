@@ -54,8 +54,10 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-start justify-center bg-black/40 sm:items-center">
-		<div class="w-[846px] max-w-[90%] space-y-2 rounded-xl bg-white p-4 shadow-xl">
+	<div class="fixed inset-0 z-50 flex items-start justify-center bg-black/40 py-6 sm:items-center">
+		<div
+			class="custom-scrollbar h-full w-[846px] max-w-[90%] space-y-2 overflow-y-auto rounded-xl bg-white p-4 shadow-xl md:h-auto"
+		>
 			<!-- Header -->
 			<div class="flex items-center justify-between">
 				<h2 class="w-full text-center font-semibold text-black">Choose Image</h2>
@@ -125,7 +127,7 @@
 				</div>
 
 				<!-- Folder grid OR image grid -->
-				<div class="flex-1 py-4 md:p-4">
+				<div class="h-full flex-1 py-4 md:p-4">
 					{#if currentFolder}
 						<!-- Back button -->
 						<div class="mb-3 flex items-center gap-2">

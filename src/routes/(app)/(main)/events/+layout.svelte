@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { subMenuItems, activeSubItem } from '$lib/stores/uiStore.js';
-	import { onMount } from 'svelte';
 
 	const eventsIcon = {
 		overviewIcon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -62,26 +61,24 @@
     </svg>`
 	};
 
-	onMount(() => {
-		subMenuItems.set([
-			{ label: 'Overview', icon: eventsIcon.overviewIcon, nav: '/events' },
-			{ label: 'Attendees', icon: eventsIcon.attendeeIcon, nav: '/events/attendees' },
-			{
-				label: 'Registration',
-				icon: eventsIcon.registrationIcon,
-				nav: '/events/registration'
-			},
-			{
-				label: 'Participants',
-				icon: eventsIcon.participantsIcon,
-				nav: '/events/participants'
-			},
-			{ label: 'Planning', icon: eventsIcon.planningIcon, nav: '/events/planning' },
-			{ label: 'Insights', icon: eventsIcon.insightsIcon, nav: '/events/insights' },
-			{ label: 'More', icon: eventsIcon.moreIcon, nav: '/events/more' }
-		]);
-		activeSubItem.set('Overview');
-	});
+	subMenuItems.set([
+		{ label: 'Overview', icon: eventsIcon.overviewIcon, nav: '/events' },
+		{ label: 'Attendees', icon: eventsIcon.attendeeIcon, nav: '/events/attendees' },
+		{
+			label: 'Registration',
+			icon: eventsIcon.registrationIcon,
+			nav: '/events/registration'
+		},
+		{
+			label: 'Participants',
+			icon: eventsIcon.participantsIcon,
+			nav: '/events/participants'
+		},
+		{ label: 'Planning', icon: eventsIcon.planningIcon, nav: '/events/planning' },
+		{ label: 'Insights', icon: eventsIcon.insightsIcon, nav: '/events/insights' },
+		{ label: 'More', icon: eventsIcon.moreIcon, nav: '/events/more' }
+	]);
+	activeSubItem.set('Overview');
 </script>
 
 <slot />

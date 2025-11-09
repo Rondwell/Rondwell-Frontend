@@ -57,6 +57,7 @@
 
 {#if open}
 	<div
+		id="time"
 		class="traingle absolute top-full right-0 z-40 mt-2 max-w-[201.75px] {referenceTime !== null
 			? 'w-[201.75px]'
 			: 'w-[150px]'}"

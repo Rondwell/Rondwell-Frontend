@@ -16,6 +16,7 @@
 
 {#if open}
 	<div
+		id="ticket"
 		class="absolute top-[20px] right-[-10px] z-40 mt-2 inline-block text-left lg:top-auto lg:right-0 lg:bottom-[30px]"
 	>
 		<div class="relative w-[315px] max-w-lg rounded-lg bg-[#FFFCFC] p-4 shadow-lg">

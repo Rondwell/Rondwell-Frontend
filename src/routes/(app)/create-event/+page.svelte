@@ -15,13 +15,14 @@
 	import TicketModal from './components/TicketModal.svelte';
 	import TimeModal from './components/TimeModal.svelte';
 	import VisibilityModal from './components/VisibilityModal.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import ThemeModal from './components/ThemeModal.svelte';
 	import { colors, type Color } from '$lib/utils/colors';
 
 	let showImageSelectorModal = false;
 	let showThemeModal = false;
 	let showSettingsModal = false;
+	let showAIModalMobile = false;
 	let showAIModal = false;
 	let openCollectionModal = false;
 	let openVisibilityModal = false;
@@ -52,12 +53,30 @@
 	let approvalRequired = false;
 	let capacity = '';
 
-	function scrollToId(id: string, options?: ScrollIntoViewOptions) {
+	function scrollToId(id: string, options?: { behavior?: ScrollBehavior }) {
 		const el = document.getElementById(id);
-		if (el) {
-			el.scrollIntoView({
-				behavior: options?.behavior ?? 'smooth',
-				block: options?.block ?? 'start'
+		if (!el) return;
+
+		const isMobile = window.innerWidth <= 768;
+		const rect = el.getBoundingClientRect();
+		const viewHeight = window.innerHeight - (isMobile ? 100 : 0);
+
+		let scrollAmount = 0;
+
+		// If top of element is above the viewport
+		if (rect.top < 0) {
+			scrollAmount = rect.top - 16; // add small padding
+		}
+		// If bottom of element is below the viewport
+		else if (rect.bottom > viewHeight) {
+			scrollAmount = rect.bottom - viewHeight + 16; // add small padding
+		}
+
+		if (scrollAmount !== 0) {
+			window.scrollBy({
+				top: scrollAmount,
+				left: 0,
+				behavior: options?.behavior ?? 'smooth'
 			});
 		}
 	}
@@ -118,7 +137,7 @@
 </script>
 
 <div
-	class="relative flex min-h-screen text-sm font-medium"
+	class="relative flex min-h-screen overflow-auto"
 	style="background-color: {selectedColor.bg}; color: {selectedColor.text}; font-family: {selectedFont}"
 >
 	<!-- Sidebar -->
@@ -265,8 +284,9 @@
 					<button
 						class="flex w-full items-center gap-2 rounded-[9px] px-4 py-3 text-left"
 						style="background-color: {selectedColor.cover};"
-						on:click={() => {
+						on:click={async () => {
 							showAIModal = !showAIModal;
+							await tick();
 							scrollToId('aiModal');
 						}}
 					>
@@ -431,7 +451,11 @@
 									use:clickOutside={() => (openStartDatePickerModal = false)}
 								>
 									<button
-										on:click={() => (openStartDatePickerModal = !openStartDatePickerModal)}
+										on:click={async () => {
+											openStartDatePickerModal = !openStartDatePickerModal;
+											await tick();
+											scrollToId('date');
+										}}
 										class="rounded-t-r w-full p-2 text-sm font-semibold"
 										style="background-color: {selectedColor.smallCover}; border-top-left-radius: 9.75px;"
 										><p class="mr-auto w-fit">{formatDate(startDate)}</p></button
@@ -440,7 +464,11 @@
 								</div>
 								<div class="relative w-full" use:clickOutside={() => (openStartTimeModal = false)}>
 									<button
-										on:click={() => (openStartTimeModal = !openStartTimeModal)}
+										on:click={async () => {
+											openStartTimeModal = !openStartTimeModal;
+											await tick();
+											scrollToId('time');
+										}}
 										class="w-full p-2 text-sm font-semibold"
 										style="background-color: {selectedColor.smallCover}; border-top-right-radius: 9.75px;"
 										><p class="ml-auto w-fit">{startTime}</p></button
@@ -452,7 +480,11 @@
 									use:clickOutside={() => (openEndDatePickerModal = false)}
 								>
 									<button
-										on:click={() => (openEndDatePickerModal = !openEndDatePickerModal)}
+										on:click={async () => {
+											openEndDatePickerModal = !openEndDatePickerModal;
+											await tick();
+											scrollToId('date');
+										}}
 										class="w-full p-2 text-sm font-semibold"
 										style="background-color: {selectedColor.smallCover}; border-bottom-left-radius: 9.75px;"
 										><p class="mr-auto w-fit">{formatDate(endDate)}</p></button
@@ -465,7 +497,11 @@
 								</div>
 								<div class="relative w-full" use:clickOutside={() => (openEndTimeModal = false)}>
 									<button
-										on:click={() => (openEndTimeModal = !openEndTimeModal)}
+										on:click={async () => {
+											openEndTimeModal = !openEndTimeModal;
+											await tick();
+											scrollToId('time');
+										}}
 										class="w-full p-2 text-sm font-semibold"
 										style="background-color: {selectedColor.smallCover}; border-bottom-right-radius: 9.75px;"
 										><p class="ml-auto w-fit">{endTime}</p></button
@@ -542,7 +578,11 @@
 					<button
 						class="flex h-[44px] w-full items-center justify-between rounded-[9.75px] px-3 py-2"
 						style="background-color: {selectedColor.cover};"
-						on:click={() => (showEventTypeModal = !showEventTypeModal)}
+						on:click={async () => {
+							showEventTypeModal = !showEventTypeModal;
+							await tick();
+							scrollToId('eventType');
+						}}
 					>
 						<div class="flex items-center gap-1" style="color: {selectedColor.lightText}">
 							<svg
@@ -621,7 +661,11 @@
 				<button
 					class="w-full rounded-[9.75px] p-3 text-left"
 					style="background-color: {selectedColor.cover};"
-					on:click={() => (openEventLocationModal = !openEventLocationModal)}
+					on:click={async () => {
+						openEventLocationModal = !openEventLocationModal;
+						await tick();
+						scrollToId('location');
+					}}
 				>
 					<div class="flex items-center gap-1" style="color: {selectedColor.lightText}">
 						<svg
@@ -671,8 +715,9 @@
 			>
 				<button
 					class="custom-scrollbar relative w-full"
-					on:click={() => {
+					on:click={async () => {
 						openDescriptionModal = !openDescriptionModal;
+						await tick();
 						scrollToId('description');
 					}}
 				>
@@ -769,7 +814,11 @@
 									aria-label="edit"
 									class="flex items-center gap-1"
 									style="color: {selectedColor.lightText}"
-									on:click={() => (openTicketModal = !openTicketModal)}
+									on:click={async () => {
+										openTicketModal = !openTicketModal;
+										await tick();
+										scrollToId('ticket');
+									}}
 								>
 									<svg
 										width="19"
@@ -898,7 +947,11 @@
 									aria-label="edit"
 									class="flex items-center gap-1"
 									style="color: {selectedColor.lightText}"
-									on:click={() => (openCapacityModal = !openCapacityModal)}
+									on:click={async () => {
+										openCapacityModal = !openCapacityModal;
+										await tick();
+										scrollToId('capacity');
+									}}
 								>
 									<svg
 										width="14"
@@ -1059,14 +1112,15 @@
 				<div
 					class="relative"
 					use:clickOutside={() => {
-						showAIModal = false;
+						showAIModalMobile = false;
 					}}
 				>
 					<button
 						class="flex w-full items-center gap-2 rounded-[9px] px-4 py-3 text-left"
 						style="background-color: {selectedColor.cover};"
-						on:click={() => {
-							showAIModal = !showAIModal;
+						on:click={async () => {
+							showAIModalMobile = !showAIModalMobile;
+							await tick();
 							scrollToId('aiModal');
 						}}
 					>
@@ -1092,7 +1146,7 @@
 							<div class="font-semibold">Generate with AI</div>
 						</div>
 					</button>
-					<AIModal open={showAIModal} />
+					<AIModal open={showAIModalMobile} />
 				</div>
 
 				<div

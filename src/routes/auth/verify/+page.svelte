@@ -2,7 +2,7 @@
 <script lang="ts">
 	import Header from '../components/Header.svelte';
 
-	let code = Array(5).fill('');
+	let code = Array(6).fill('');
 	let email = 'you@gmail.com'; // In real app, this would come from session or URL param
 
 	function handleInput(e: Event, index: number) {
@@ -10,7 +10,7 @@
 		const value = target?.value ?? '';
 		if (value.length === 1 && /[0-9]/.test(value)) {
 			code[index] = value;
-			if (index < 5) {
+			if (index < 6) {
 				document.getElementById(`code-${index + 1}`)?.focus();
 			}
 		} else if (value.length === 0) {
@@ -44,7 +44,7 @@
 	<Header />
 
 	<div class="flex h-full flex-1 items-center justify-center px-4 py-15">
-		<div class="mx-auto w-full max-w-[405px] rounded-[12px] bg-[#FDFCFB] p-6 shadow-sm">
+		<div class="mx-auto w-full max-w-[405px] rounded-[12px] bg-[#FDFCFB] px-4 py-6 md:px-6 shadow-sm">
 			<div class="mb-6 space-y-3 text-left">
 				<button
 					aria-label="Go back"
@@ -81,7 +81,7 @@
 							type="text"
 							maxlength="1"
 							pattern="[0-9]"
-							class="h-[48.75px] w-[48.75px] rounded-md border border-gray-300 text-center text-lg focus:ring-2 focus:ring-black focus:outline-none md:w-full"
+							class="h-[48.75px] w-[45px] sm:w-[48.75px] rounded-md border border-gray-300 text-center text-lg focus:ring-2 focus:ring-black focus:outline-none md:w-full"
 							value={_}
 						/>
 					{/each}

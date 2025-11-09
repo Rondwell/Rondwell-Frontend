@@ -7,7 +7,7 @@
 	import { goto } from '$app/navigation';
 	import { clickOutside } from '$lib/utils/constant';
 	import { showSubMenu } from '$lib/stores/uiStore.js';
-	
+
 	export let background_color = '';
 	let showMenu = false;
 	let activeItem = '';
@@ -60,7 +60,14 @@
 
 	// Reactive mobile detection
 	let isMobile = false;
-	const noLayoutRoutes = ['/create-event', '/discover', '/overview', 'settings'];
+	const noLayoutRoutes = [
+		'/create-event',
+		'/discover',
+		'/overview',
+		'settings',
+		'/events',
+		'/collection'
+	];
 
 	function toggleSubMenu() {
 		if (noLayoutRoutes.includes($page.url.pathname)) {
@@ -89,7 +96,12 @@
 		}
 		const match = menuItems.find((item) => path.startsWith(item.nav));
 		activeItem = match ? match.id : '';
-		console.log(path, match, activeItem);
+	}
+
+	$: {
+		if (activeItem) {
+			showSubMenu.update((v) => false);
+		}
 	}
 </script>
 

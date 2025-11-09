@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { subMenuItems, activeSubItem } from '$lib/stores/uiStore.js';
+	import { page } from '$app/stores';
+	import { showSubMenu, subMenuItems, activeSubItem } from '$lib/stores/uiStore.js';
+	import { get } from 'svelte/store';
 
 	const eventsIcon = {
 		overviewIcon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -61,24 +63,51 @@
     </svg>`
 	};
 
-	subMenuItems.set([
-		{ label: 'Overview', icon: eventsIcon.overviewIcon, nav: '/events' },
-		{ label: 'Attendees', icon: eventsIcon.attendeeIcon, nav: '/events/attendees' },
-		{
-			label: 'Registration',
-			icon: eventsIcon.registrationIcon,
-			nav: '/events/registration'
-		},
-		{
-			label: 'Participants',
-			icon: eventsIcon.participantsIcon,
-			nav: '/events/participants'
-		},
-		{ label: 'Planning', icon: eventsIcon.planningIcon, nav: '/events/planning' },
-		{ label: 'Insights', icon: eventsIcon.insightsIcon, nav: '/events/insights' },
-		{ label: 'More', icon: eventsIcon.moreIcon, nav: '/events/more' }
-	]);
-	activeSubItem.set('Overview');
+	function updateEventSubMenu(eventId: string) {
+		subMenuItems.set([
+			{ label: 'Overview', icon: eventsIcon.overviewIcon, nav: `/events/${eventId}` },
+			{ label: 'Attendees', icon: eventsIcon.attendeeIcon, nav: `/events/${eventId}/attendees` },
+			{
+				label: 'Registration',
+				icon: eventsIcon.registrationIcon,
+				nav: `/events/${eventId}/registration`
+				// nav: ''
+			},
+			{
+				label: 'Participants',
+				icon: eventsIcon.participantsIcon,
+				nav: `/events/${eventId}/participants`
+				// nav: ''
+			},
+			{ label: 'Planning', icon: eventsIcon.planningIcon, nav: `/events/${eventId}/planning` },
+			{ label: 'Insights', icon: eventsIcon.insightsIcon, nav: `/events/${eventId}/insights` },
+			{ label: 'More', icon: eventsIcon.moreIcon, nav: `/events/${eventId}/more` }
+		]);
+	}
+
+	$: {
+		const path = $page.url.pathname;
+
+		// Only handle event routes
+		const eventMatch = path.match(/^\/events\/([^/]+)/);
+		if (eventMatch) {
+			const eventId = eventMatch[1];
+
+			// Build the submenu dynamically for this event
+			updateEventSubMenu(eventId);
+
+			// Find matching submenu item
+			const currentMenu = get(subMenuItems);
+			const active = currentMenu.find((item) => path === item.nav)?.label || 'Overview'; // default for /events/[id]
+			activeSubItem.set(active);
+			showSubMenu.set(true);
+		} else {
+			// Reset submenu outside of event routes
+			showSubMenu.set(false);
+			subMenuItems.set([]);
+			activeSubItem.set('');
+		}
+	}
 </script>
 
 <slot />

@@ -33,7 +33,7 @@
 </script>
 
 {#if open}
-	<div class="absolute top-full left-0 z-40 mt-2 w-full max-w-[662.8px]">
+	<div id="location" class="absolute top-full left-0 z-40 mt-2 w-full max-w-[662.8px]">
 		<div class="relative w-full max-w-[662.8px] overflow-hidden rounded-sm bg-[#FFFCFC]">
 			<input
 				type="text"

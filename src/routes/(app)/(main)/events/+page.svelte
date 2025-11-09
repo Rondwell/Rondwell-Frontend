@@ -1,7 +1,7 @@
 <script lang="ts">
 	import EventCard from '$lib/components/EventCard.svelte';
 
-	let activeTab = 'Upcoming';
+	let activeTab = 'Created';
 
 	const events = [
 		{
@@ -62,10 +62,23 @@
 	}
 
 	// Reactive: Filter events based on active tab
+	// $: filteredEvents = events.filter((event) => {
+	// 	const eventDate = new Date(event.date);
+	// 	const today = getToday();
+	// 	return activeTab === 'Created' ? eventDate >= today : eventDate < today;
+	// });
+
+	let type: string;
+
 	$: filteredEvents = events.filter((event) => {
-		const eventDate = new Date(event.date);
-		const today = getToday();
-		return activeTab === 'Upcoming' ? eventDate >= today : eventDate < today;
+		if (activeTab === 'Created') {
+			// Example: show events NOT marked as attending
+			return (type = 'mine');
+		}
+		if (activeTab === 'Attending') {
+			return (type = 'attending');
+		}
+		return true;
 	});
 
 	// Reactive: Group filtered events by date
@@ -89,19 +102,19 @@
 		<div class="h-[50px] w-fit rounded bg-[#E0E9EC] p-1 text-[#98A1A4]">
 			<button
 				class={`h-full w-25 cursor-pointer rounded px-3 py-1 text-sm ${
-					activeTab === 'Upcoming' ? 'bg-white text-black shadow-md' : ''
+					activeTab === 'Created' ? 'bg-white text-black shadow-md' : ''
 				}`}
-				on:click={() => (activeTab = 'Upcoming')}
+				on:click={() => (activeTab = 'Created')}
 			>
-				Upcoming
+				Created
 			</button>
 			<button
 				class={`h-full w-25 cursor-pointer rounded px-3 py-1 text-sm ${
-					activeTab === 'Past' ? 'bg-white text-black shadow-md' : ''
+					activeTab === 'Attending' ? 'bg-white text-black shadow-md' : ''
 				}`}
-				on:click={() => (activeTab = 'Past')}
+				on:click={() => (activeTab = 'Attending')}
 			>
-				Past
+				Attending
 			</button>
 		</div>
 	</div>
@@ -124,7 +137,7 @@
 
 				<div class="flex w-full max-w-[687px] flex-col gap-4">
 					{#each dayEvents as event, index (index)}
-						<EventCard {event} />
+						<EventCard {event} {type} />
 					{/each}
 				</div>
 			</div>

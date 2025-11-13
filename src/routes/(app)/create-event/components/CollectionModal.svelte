@@ -16,7 +16,7 @@
 </script>
 
 {#if open}
-	<div class="traingle absolute z-40 mt-2 inline-block text-left">
+	<div class="triangle absolute z-40 mt-2 inline-block text-left">
 		<div class="relative w-[315px] max-w-lg rounded-lg bg-[#FFFCFC] p-4">
 			<span class="text-sm font-semibold text-[#B8B7B7]">Choose collectin of the event:</span>
 
@@ -85,7 +85,7 @@
 
 <style>
 	/* Triangle pointer */
-	.traingle::before {
+	.triangle::before {
 		content: '';
 		position: absolute;
 		top: -18px;

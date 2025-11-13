@@ -137,7 +137,9 @@
 
 				<div class="flex w-full max-w-[687px] flex-col gap-4">
 					{#each dayEvents as event, index (index)}
-						<EventCard {event} {type} />
+						<a href="/events/1">
+							<EventCard {event} {type} />
+						</a>
 					{/each}
 				</div>
 			</div>

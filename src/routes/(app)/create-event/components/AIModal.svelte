@@ -122,7 +122,7 @@
 				<!-- Dropdown -->
 				{#if showDropdown}
 					<div
-						class="traingle absolute right-0 left-0 z-10 mt-2 rounded-lg border border-gray-200 bg-white p-3 shadow-lg"
+						class="triangle absolute right-0 left-0 z-10 mt-2 rounded-lg border border-gray-200 bg-white p-3 shadow-lg"
 					>
 						<p class="my-2 text-xs text-[#B8B7B7]">Choose event type:</p>
 						<div class="overflow-y-auto text-sm text-gray-700">

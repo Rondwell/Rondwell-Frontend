@@ -10,6 +10,7 @@
 	const themes = {
 		default: 'linear-gradient(180deg, #d1e8f5 0%, #EAF2F5 17%, #f4f5f6 35%)',
 		eventMain: 'linear-gradient(180deg, #DBD4F1 0%, #DBE5F5 17%, #F4F5F6 35%)',
+		eventRegistration: 'linear-gradient(180deg, #DDD1E1 0%, #F2EBE8 17%, #F4F5F6 35%)',
 		eventMore: 'linear-gradient(180deg, #FFD8D2 0%, #FFECE9 17%, #FAF9F6 35%)',
 		collection: 'linear-gradient(180deg, #F4E1D2 0%, #F8F2E9 17%, #FAF9F6 35%)'
 	};
@@ -33,7 +34,7 @@
 	function getThemeForRoute(path: string | null): string {
 		if (!path) return themes.default;
 
-		// if (path.startsWith('/events/') && path.includes('/more')) return themes.eventMore;
+		if (path.startsWith('/events/') && path.includes('/registration')) return themes.eventRegistration;
 		if (path.startsWith('/events/')) return themes.eventMain;
 		if (path.startsWith('/collections/')) return themes.collection;
 

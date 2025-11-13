@@ -58,7 +58,7 @@
 {#if open}
 	<div
 		id="time"
-		class="traingle absolute top-full right-0 z-40 mt-2 max-w-[201.75px] {referenceTime !== null
+		class="triangle absolute top-full right-0 z-40 mt-2 max-w-[201.75px] {referenceTime !== null
 			? 'w-[201.75px]'
 			: 'w-[150px]'}"
 	>
@@ -86,7 +86,7 @@
 
 <style>
 	/* Triangle pointer */
-	.traingle::before {
+	.triangle::before {
 		content: '';
 		position: absolute;
 		top: -18px;

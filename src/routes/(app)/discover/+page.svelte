@@ -4,6 +4,7 @@
 	import Sidebar from '../components/Sidebar.svelte';
 	import Hero from './components/Hero.svelte';
 	import EventList from './components/EventList.svelte';
+	import Footer from '../../(homePage)/components/Footer.svelte';
 
 	let show = false;
 
@@ -35,6 +36,9 @@
 				<Hero />
 				<EventList />
 			</div>
+		</div>
+		<div class={show ? 'hidden' : ''}>
+			<Footer />
 		</div>
 	</main>
 </div>

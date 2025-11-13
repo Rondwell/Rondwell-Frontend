@@ -255,12 +255,8 @@
 <!-- <div class={isMobile ? 'pb-20' : 'pl-16'}></div> -->
 
 <style>
-	.gradient-text {
-		background: linear-gradient(90deg, #db3ec6 0%, #963dd4 50%, #513be2 100%);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-		color: transparent;
+	button {
+		transition: all 0.3s ease;
 	}
 
 	.selected {
@@ -272,27 +268,46 @@
 		height: 48px;
 		border-radius: 12px;
 		background: rgba(81, 59, 226, 0.2);
-		overflow: hidden; /* crucial! clips the pseudo-element corners */
+		overflow: hidden;
+		transition:
+			background 0.3s ease,
+			transform 0.3s ease;
+	}
+
+	.selected:hover {
+		transform: scale(1.05);
 	}
 
 	.selected::before {
 		content: '';
 		position: absolute;
 		inset: 0;
-		padding: 2px; /* border thickness */
-		border-radius: inherit; /* ensures rounded gradient corners */
+		padding: 2px;
+		border-radius: inherit;
 		background: linear-gradient(90deg, #db3ec6, #963dd4, #513be2);
-		/* Create the hollow center */
 		-webkit-mask:
 			linear-gradient(#fff 0 0) content-box,
 			linear-gradient(#fff 0 0);
-		/* Standard property for broader compatibility */
 		mask:
 			linear-gradient(#fff 0 0) content-box,
 			linear-gradient(#fff 0 0);
 		-webkit-mask-composite: xor;
-		/* Standard composite value (exclude is equivalent to xor in many browsers) */
 		mask-composite: exclude;
 		pointer-events: none;
+		opacity: 0;
+		transition: opacity 0.3s ease;
+	}
+
+	.selected::before {
+		opacity: 1;
+	}
+
+	.gradient-text {
+		background: linear-gradient(90deg, #db3ec6 0%, #963dd4 50%, #513be2 100%);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		color: transparent;
+		transition: all 0.3s ease;
 	}
 </style>

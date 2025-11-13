@@ -10,7 +10,7 @@
 		time: '11:30AM - 12:30AM GMT+1',
 		location: 'Location Missing',
 		description: 'Megaexe Party',
-		organizer: 'John Calendar',
+		organizer: 'John Collection',
 		approvalRequired: true,
 		invites: {
 			accepted: 1,
@@ -27,7 +27,7 @@
 		],
 		admins: [{ name: 'John Odoemenem', email: 'johnmedic23@gmail.com', role: 'Creator' }],
 		visibility: {
-			calendar: 'John Calendar',
+			collection: 'John Collection',
 			status: 'Public'
 		}
 	};
@@ -151,7 +151,7 @@
 				</svg>
 			</button>
 		</div>
-		<h1 class="mb-4 text-4xl font-bold">{eventData.title}</h1>
+		<h1 class="mb-4 text-3xl md:text-4xl font-bold">{eventData.title}</h1>
 
 		{#if eventIsFuture}
 			<!-- Action Buttons -->
@@ -649,7 +649,7 @@
 		</div>
 
 		<div class="flex h-full flex-col gap-4 lg:flex-row">
-			<div class="w-full max-w-[284.7px] rounded-md bg-[#FDFDFD]">
+			<div class="w-full md:max-w-[284.7px] rounded-md bg-[#FDFDFD]">
 				<div class="flex w-full flex-col gap-5 p-3">
 					<div class="text-sm font-medium text-[#B6B7B7]">
 						<div class="flex items-center">
@@ -947,7 +947,7 @@
 				{/each}
 			</div>
 
-			<div class="mt-3 flex items-start gap-1 text-xs text-gray-500">
+			<div class="mt-3 flex items-center gap-1 text-xs text-gray-500">
 				<p>Learn more about adding hosts / managers</p>
 				<svg width="9" height="9" viewBox="0 0 9 9" fill="none" xmlns="http://www.w3.org/2000/svg">
 					<rect
@@ -996,14 +996,14 @@
 					<div class="flex gap-3">
 						<img src="/tech-icon.svg" alt="icon" class="h-10 w-10" />
 						<span class="lg:hidden">
-							<div class="text-xs font-medium text-[#ABADAD]">Managing Calendar</div>
-							<div class="text-sm text-gray-500">{eventData.visibility.calendar}</div>
+							<div class="text-xs font-medium text-[#ABADAD]">Managing Collection</div>
+							<div class="text-sm text-gray-500">{eventData.visibility.collection}</div>
 						</span>
 					</div>
 					<div>
 						<span class="hidden lg:inline">
-							<div class="text-xs font-medium text-[#ABADAD]">Managing Calendar</div>
-							<div class="text-sm text-gray-500">{eventData.visibility.calendar}</div>
+							<div class="text-xs font-medium text-[#ABADAD]">Managing Collection</div>
+							<div class="text-sm text-gray-500">{eventData.visibility.collection}</div>
 						</span>
 						<div class="mt-1 mb-3 flex flex-col items-start gap-1 lg:flex-row lg:items-center">
 							<span class="flex items-center text-[#46C036]">
@@ -1012,7 +1012,7 @@
 							</span>
 							<p class="hidden lg:flex">—</p>
 							<p class="text-sm text-gray-500">
-								This event is listed on the calendar page. Calendar admins have manage access to the
+								This event is listed on the collection page. Collection admins have manage access to the
 								event.
 							</p>
 						</div>
@@ -1104,7 +1104,7 @@
 									/>
 								</svg>
 
-								Transfer Calendar
+								Transfer Collection
 							</button>
 						</div>
 					</div>

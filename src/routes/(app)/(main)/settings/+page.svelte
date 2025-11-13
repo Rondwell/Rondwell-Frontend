@@ -2,37 +2,15 @@
 	import Account from './Components/Account.svelte';
 	import Preferences from './Components/Preferences.svelte';
 	import Payment from './Components/Payment.svelte';
+	import Nav from '../../components/Nav.svelte';
 
 	let activeTab = 'account';
 
 	const tabs = [
-		{ id: 'account', label: 'Account', icon: 'user' },
-		{ id: 'preferences', label: 'Preferences', icon: 'dots' },
-		{ id: 'payment', label: 'Payment', icon: 'payment' }
-	];
-
-	function setTab(tab: string) {
-		activeTab = tab;
-	}
-</script>
-
-<div class="w-full max-w-4xl">
-	<!-- Page Header -->
-	<h1 class="mb-12 text-3xl font-bold">Settings</h1>
-
-	<!-- Navigation Tabs -->
-	<div class="mb-10">
-		<nav class="custom-scrollbar flex space-x-8 overflow-x-auto border-b border-gray-400">
-			<!-- Accounts -->
-			<button
-				on:click|preventDefault={() => setTab('account')}
-				class="flex w-full items-center justify-center gap-2 border-b-2 pb-3 font-medium
-					{activeTab === 'account'
-					? 'border-[#DB3EC6] text-[#DB3EC6]'
-					: 'border-transparent text-gray-500 hover:text-gray-700'}"
-			>
-				<!-- User Icon -->
-				<svg
+		{
+			id: 'account',
+			label: 'Account',
+			icon: `				<svg
 					width="20"
 					height="20"
 					viewBox="0 0 20 20"
@@ -52,20 +30,12 @@
 						d="M13.3346 13.6776C12.993 13.6776 12.7096 13.3942 12.7096 13.0526C12.7096 11.9026 11.493 10.9609 10.0013 10.9609C8.50964 10.9609 7.29297 11.9026 7.29297 13.0526C7.29297 13.3942 7.00964 13.6776 6.66797 13.6776C6.3263 13.6776 6.04297 13.3942 6.04297 13.0526C6.04297 11.2109 7.81797 9.71094 10.0013 9.71094C12.1846 9.71094 13.9596 11.2109 13.9596 13.0526C13.9596 13.3942 13.6763 13.6776 13.3346 13.6776Z"
 						fill="currentColor"
 					/>
-				</svg>
-
-				Account
-			</button>
-
-			<!-- Preferences -->
-			<button
-				on:click|preventDefault={() => setTab('preferences')}
-				class="flex w-full items-center justify-center gap-2 border-b-2 pb-3 font-medium
-					{activeTab === 'preferences'
-					? 'border-[#DB3EC6] text-[#DB3EC6]'
-					: 'border-transparent text-gray-500 hover:text-gray-700'}"
-			>
-				<svg
+				</svg>`
+		},
+		{
+			id: 'preferences',
+			label: 'Preferences',
+			icon: `<svg
 					width="20"
 					height="20"
 					viewBox="0 0 20 20"
@@ -108,20 +78,12 @@
 						d="M11.6654 11.4609H8.33203C7.99036 11.4609 7.70703 11.1776 7.70703 10.8359C7.70703 10.4943 7.99036 10.2109 8.33203 10.2109H11.6654C12.007 10.2109 12.2904 10.4943 12.2904 10.8359C12.2904 11.1776 12.007 11.4609 11.6654 11.4609Z"
 						fill="currentColor"
 					/>
-				</svg>
-
-				Preferences
-			</button>
-
-			<!-- Payment -->
-			<button
-				on:click|preventDefault={() => setTab('payment')}
-				class="flex w-full items-center justify-center gap-2 border-b-2 pb-3 font-medium
-					{activeTab === 'payment'
-					? 'border-[#DB3EC6] text-[#DB3EC6]'
-					: 'border-transparent text-gray-500 hover:text-gray-700'}"
-			>
-				<svg
+				</svg>`
+		},
+		{
+			id: 'payment',
+			label: 'Payment',
+			icon: `<svg
 					width="20"
 					height="23"
 					viewBox="0 0 20 23"
@@ -143,11 +105,17 @@
 						fill="#2A2D32"
 						stroke="currentColor"
 					/>
-				</svg>
-				Payment
-			</button>
-		</nav>
-	</div>
+				</svg>`
+		}
+	];
+</script>
+
+<div class="w-full max-w-4xl">
+	<!-- Page Header -->
+	<h1 class="mb-12 text-3xl font-bold">Settings</h1>
+
+	<!-- Navigation Tabs -->
+	<Nav {tabs} bind:activeTab />
 
 	<!-- Content Area -->
 	{#if activeTab === 'account'}

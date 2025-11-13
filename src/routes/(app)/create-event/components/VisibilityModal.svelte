@@ -41,7 +41,7 @@
 </script>
 
 {#if open}
-	<div class="traingle absolute right-0 z-40 mt-2 inline-block text-left">
+	<div class="triangle absolute right-0 z-40 mt-2 inline-block text-left">
 		<div class="relative w-[315px] max-w-lg rounded-lg bg-[#FFFCFC] p-4 shadow-lg">
 			<!-- Icon -->
 			<div class="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
@@ -117,7 +117,7 @@
 
 <style>
 	/* Triangle pointer */
-	.traingle::before {
+	.triangle::before {
 		content: '';
 		position: absolute;
 		top: -18px;

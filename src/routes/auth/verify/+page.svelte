@@ -81,7 +81,7 @@
 							type="text"
 							maxlength="1"
 							pattern="[0-9]"
-							class="h-[48.75px] w-[45px] sm:w-[48.75px] rounded-md border border-gray-300 text-center text-lg focus:ring-2 focus:ring-black focus:outline-none md:w-full"
+							class="h-[48.75px] w-[42px] sm:w-[48.75px] rounded-md border border-gray-300 text-center text-lg focus:ring-2 focus:ring-black focus:outline-none md:w-full"
 							value={_}
 						/>
 					{/each}

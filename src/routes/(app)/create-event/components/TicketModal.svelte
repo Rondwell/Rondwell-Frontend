@@ -55,7 +55,7 @@
 
 			<!-- Header -->
 			<div class="mb-4">
-				<h2 class="text-lg font-semibold text-black">Ticket Regiatration</h2>
+				<h2 class="text-lg font-semibold text-black">Ticket Registration</h2>
 				<p class="mt-1 text-sm leading-snug font-light text-[#8E8E90]">
 					If turned on, attendees will be able to purchase a ticket while registering for event.
 				</p>

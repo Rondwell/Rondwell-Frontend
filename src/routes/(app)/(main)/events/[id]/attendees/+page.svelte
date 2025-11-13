@@ -1,9 +1,12 @@
 <script>
 	import { clickOutside } from '$lib/utils/constant';
 	import AttendeeDetailModal from '../components/AttendeeDetailModal.svelte';
+	import ShowAttendeeList from './components/ShowAttendeeList.svelte';
 
 	let searchQuery = '';
 	let showModal = false;
+
+	let openShowAttendeeList = false;
 
 	const eventData = {
 		title: "Faithful's Graduating Party",
@@ -186,42 +189,53 @@
 					Check In Guest
 				</button>
 
-				<button
-					class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
+				<div
+					class="relative w-full md:w-fit"
+					use:clickOutside={() => {
+						openShowAttendeeList = false;
+					}}
 				>
-					<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#F8EFDD]">
-						<svg
-							width="27"
-							height="27"
-							viewBox="0 0 27 27"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								opacity="0.4"
-								d="M9.83444 4.36719C6.97179 4.36719 4.64453 6.69445 4.64453 9.55709C4.64453 12.3651 6.84068 14.6377 9.70332 14.7361C9.79073 14.7251 9.87814 14.7251 9.9437 14.7361C9.96555 14.7361 9.97648 14.7361 9.99833 14.7361C10.0093 14.7361 10.0093 14.7361 10.0202 14.7361C12.8173 14.6377 15.0134 12.3651 15.0243 9.55709C15.0243 6.69445 12.6971 4.36719 9.83444 4.36719Z"
-								fill="#EAAB26"
-							/>
-							<path
-								d="M15.385 15.4617C12.3366 13.4294 7.36526 13.4294 4.29502 15.4617C2.90741 16.3904 2.14258 17.6469 2.14258 18.9908C2.14258 20.3347 2.90741 21.5803 4.2841 22.4981C5.81375 23.5252 7.82416 24.0387 9.83457 24.0387C11.845 24.0387 13.8554 23.5252 15.385 22.4981C16.7617 21.5694 17.5266 20.3238 17.5266 18.969C17.5156 17.6251 16.7617 16.3795 15.385 15.4617Z"
-								fill="#EAAB26"
-							/>
-							<path
-								opacity="0.4"
-								d="M21.8413 10.3454C22.0161 12.465 20.5083 14.3225 18.4214 14.5738C18.4105 14.5738 18.4105 14.5738 18.3995 14.5738H18.3668C18.3012 14.5738 18.2356 14.5738 18.181 14.5956C17.1212 14.6502 14.4605 14.5446 15.4167 13.6888C16.5421 12.6835 17.1867 11.1757 17.0556 9.53683C16.9791 8.65181 16.6732 7.84328 16.2143 7.15493C16.6295 6.94734 17.1103 6.81622 17.6019 6.77252C19.7434 6.58677 21.6555 8.18199 21.8413 10.3454Z"
-								fill="#EAAB26"
-							/>
-							<path
-								d="M23.9733 18.227C23.8859 19.2869 23.2085 20.2047 22.0722 20.8274C20.9796 21.4284 19.6029 21.7125 18.2371 21.6797C19.0238 20.9695 19.4827 20.0845 19.5701 19.1448C19.6794 17.79 19.0347 16.4898 17.7454 15.4518C17.0134 14.8727 15.8427 14.7523 15.2324 14.0751C17.6471 13.3758 20.6846 13.8457 22.5529 15.3535C23.5581 16.162 24.0717 17.1781 23.9733 18.227Z"
-								fill="#EAAB26"
-							/>
-						</svg>
-					</div>
-					<div>
-						<p>Attendees List</p>
-						<p class="text-xs text-[#B8BABA]">Shown to guests</p>
-					</div>
-				</button>
+					<button
+						class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
+						on:click={() => {
+							openShowAttendeeList = !openShowAttendeeList;
+						}}
+					>
+						<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#F8EFDD]">
+							<svg
+								width="27"
+								height="27"
+								viewBox="0 0 27 27"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									opacity="0.4"
+									d="M9.83444 4.36719C6.97179 4.36719 4.64453 6.69445 4.64453 9.55709C4.64453 12.3651 6.84068 14.6377 9.70332 14.7361C9.79073 14.7251 9.87814 14.7251 9.9437 14.7361C9.96555 14.7361 9.97648 14.7361 9.99833 14.7361C10.0093 14.7361 10.0093 14.7361 10.0202 14.7361C12.8173 14.6377 15.0134 12.3651 15.0243 9.55709C15.0243 6.69445 12.6971 4.36719 9.83444 4.36719Z"
+									fill="#EAAB26"
+								/>
+								<path
+									d="M15.385 15.4617C12.3366 13.4294 7.36526 13.4294 4.29502 15.4617C2.90741 16.3904 2.14258 17.6469 2.14258 18.9908C2.14258 20.3347 2.90741 21.5803 4.2841 22.4981C5.81375 23.5252 7.82416 24.0387 9.83457 24.0387C11.845 24.0387 13.8554 23.5252 15.385 22.4981C16.7617 21.5694 17.5266 20.3238 17.5266 18.969C17.5156 17.6251 16.7617 16.3795 15.385 15.4617Z"
+									fill="#EAAB26"
+								/>
+								<path
+									opacity="0.4"
+									d="M21.8413 10.3454C22.0161 12.465 20.5083 14.3225 18.4214 14.5738C18.4105 14.5738 18.4105 14.5738 18.3995 14.5738H18.3668C18.3012 14.5738 18.2356 14.5738 18.181 14.5956C17.1212 14.6502 14.4605 14.5446 15.4167 13.6888C16.5421 12.6835 17.1867 11.1757 17.0556 9.53683C16.9791 8.65181 16.6732 7.84328 16.2143 7.15493C16.6295 6.94734 17.1103 6.81622 17.6019 6.77252C19.7434 6.58677 21.6555 8.18199 21.8413 10.3454Z"
+									fill="#EAAB26"
+								/>
+								<path
+									d="M23.9733 18.227C23.8859 19.2869 23.2085 20.2047 22.0722 20.8274C20.9796 21.4284 19.6029 21.7125 18.2371 21.6797C19.0238 20.9695 19.4827 20.0845 19.5701 19.1448C19.6794 17.79 19.0347 16.4898 17.7454 15.4518C17.0134 14.8727 15.8427 14.7523 15.2324 14.0751C17.6471 13.3758 20.6846 13.8457 22.5529 15.3535C23.5581 16.162 24.0717 17.1781 23.9733 18.227Z"
+									fill="#EAAB26"
+								/>
+							</svg>
+						</div>
+						<div>
+							<p>Attendees List</p>
+							<p class="text-xs text-[#B8BABA]">Shown to guests</p>
+						</div>
+					</button>
+					<ShowAttendeeList bind:open={openShowAttendeeList} />
+				</div>
 			</div>
 		{/if}
 	</div>
@@ -231,75 +245,10 @@
 			<h1 class="text-xl font-semibold">Attendee List</h1>
 			<div class="flex items-center gap-1">
 				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
-					<svg
-						width="14"
-						height="15"
-						viewBox="0 0 14 15"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<rect x="0.00195312" y="8.99219" width="2.33501" height="5.24454" fill="#606264" />
-						<rect x="10.8965" y="8.99219" width="2.33501" height="5.24454" fill="#606264" />
-						<rect y="11.9922" width="13.2317" height="2.24766" fill="#606264" />
-						<rect
-							width="2.29175"
-							height="6.86362"
-							transform="matrix(0.720456 -0.6935 0.720456 0.6935 1.56055 5.78125)"
-							fill="#606264"
-						/>
-						<rect
-							width="2.29175"
-							height="6.82182"
-							transform="matrix(0.720456 0.6935 -0.720456 0.6935 9.9043 4.21875)"
-							fill="#606264"
-						/>
-						<rect
-							x="5.45117"
-							y="8.99219"
-							width="8.99063"
-							height="2.33501"
-							transform="rotate(-90 5.45117 8.99219)"
-							fill="#606264"
-						/>
-					</svg>
+					<img src="/download-icon.svg" alt="download icon" />
 				</div>
 				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
-					<svg
-						width="15"
-						height="15"
-						viewBox="0 0 15 15"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M8.00781 6.52775L13.0605 1.66406"
-							stroke="#606264"
-							stroke-width="1.87305"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-						<path
-							d="M13.5573 4.03453V1.1875H10.5996"
-							stroke="#606264"
-							stroke-width="1.87305"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-						<path
-							d="M1.23242 7.70312V8.89532C1.23242 11.861 2.46479 13.0472 5.54571 13.0472H9.24281C12.3237 13.0472 13.5561 11.861 13.5561 8.89532V7.70906"
-							stroke="#606264"
-							stroke-width="1.87305"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-						<path
-							d="M6.77808 1.1875H5.54571C2.46479 1.1875 1.23242 2.37376 1.23242 5.33942"
-							stroke="#606264"
-							stroke-width="1.87305"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-					</svg>
+					<img src="/export.svg" alt="export icon" />
 				</div>
 			</div>
 		</div>

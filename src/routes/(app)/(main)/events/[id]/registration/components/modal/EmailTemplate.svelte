@@ -17,7 +17,7 @@
 {#if open}
 	<!-- Overlay -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm md:inset-y-0 md:right-10 md:left-auto md:w-lg md:justify-start md:bg-transparent md:backdrop-blur-none"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm md:-bottom-25 md:right-10 md:left-auto md:w-lg md:justify-start md:bg-transparent md:backdrop-blur-none"
 	>
 		<!-- Panel -->
 		<div

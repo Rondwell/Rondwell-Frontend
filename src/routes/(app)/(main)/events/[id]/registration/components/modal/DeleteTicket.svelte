@@ -8,7 +8,7 @@
 </script>
 
 {#if open}
-	<div id="capacity" class="absolute right-0 bottom-[30px] z-40 mt-2 inline-block text-left">
+	<div id="capacity" class="absolute -right-5 sm:right-0 bottom-[30px] z-40 mt-2 inline-block text-left">
 		<div class="relative w-[315px] max-w-lg rounded-lg bg-[#FFFCFC] p-4 shadow-lg">
 			<!-- Collapse Icon -->
 			<div

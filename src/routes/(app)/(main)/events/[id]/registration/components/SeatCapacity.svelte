@@ -1,4 +1,8 @@
 <script>
+	import { clickOutside } from '$lib/utils/constant';
+	import TemplateEditor from './modal/TemplateEditor.svelte';
+	import TemplateModal from './modal/TemplateModal.svelte';
+
 	const cards = [
 		{
 			title: 'Theatre / Auditorium seating',
@@ -13,9 +17,12 @@
 			created: '10/12/2025'
 		}
 	];
+
+	let showTemplateModal = false;
+	let showEditorModal = false;
 </script>
 
-<div class="">
+<div class="relative">
 	<div class="mb-6">
 		<h2 class="mb-1 text-lg font-semibold">Seating & Capacity Management for Megaexe Party</h2>
 		<p class="mb-4 w-[70%] text-sm text-[#8C8F93]">
@@ -24,22 +31,30 @@
 		</p>
 	</div>
 	<div>
-		<div class="mb-4 flex items-center justify-between">
+		<div class="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
 			<!-- Label -->
 			<span class="text-lg font-semibold text-gray-900">Your design</span>
 
 			<!-- Buttons -->
 			<div class="flex items-center gap-2">
-				<button
-					class="rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
-				>
-					Browse template
-				</button>
-				<button
-					class="rounded-md bg-gray-800 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700"
-				>
-					Create from scratch
-				</button>
+				<div use:clickOutside={() => (showTemplateModal = false)} class="relative">
+					<button
+						on:click={() => (showTemplateModal = !showTemplateModal)}
+						class="rounded-md bg-gray-800 p-3 text-sm font-medium text-white hover:bg-gray-700"
+					>
+						Browse template
+					</button>
+					<TemplateModal bind:open={showTemplateModal} />
+				</div>
+				<div>
+					<button
+						on:click={() => (showEditorModal = true)}
+						class="rounded-md bg-gray-800 p-3 text-sm font-medium text-white hover:bg-gray-700"
+					>
+						Create from scratch
+					</button>
+					<TemplateEditor bind:open={showEditorModal} />
+				</div>
 			</div>
 		</div>
 
@@ -47,7 +62,7 @@
 			{#each cards as card}
 				<div class="w-full overflow-hidden rounded-xl bg-white p-4 shadow-md">
 					<!-- Image placeholder -->
-					<img src={card.img} alt="" class="w-full h-60" />
+					<img src={card.img} alt="" class="h-60 w-full" />
 
 					<!-- Content -->
 					<div class="pt-4">
@@ -146,7 +161,7 @@
 
 						<!-- Use design button -->
 						<button
-							class="mt-4 w-full rounded-md bg-gradient-to-r from-pink-500 to-indigo-600 py-2 text-sm font-medium text-white"
+							class="mt-4 w-full rounded-md bg-gradient-to-r from-pink-500 to-indigo-600 py-3 text-sm font-medium text-white"
 						>
 							Use design
 						</button>

@@ -2,6 +2,8 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
 	import { goto } from '$app/navigation';
+	import { clickOutside } from '$lib/utils/constant';
+	import InviteGuestsModal from './components/InviteGuestsModal.svelte';
 
 	const eventData = {
 		title: "Faithful's Graduating Party",
@@ -86,6 +88,7 @@
 
 	$: eventIsFuture = isFutureEvent(eventData);
 	let value = 100 / eventData?.attendees?.length;
+	let showInviteGuestsModal = false;
 </script>
 
 <div class="max-w-6xl">
@@ -151,34 +154,43 @@
 				</svg>
 			</button>
 		</div>
-		<h1 class="mb-4 text-3xl md:text-4xl font-bold">{eventData.title}</h1>
+		<h1 class="mb-4 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
 
 		{#if eventIsFuture}
 			<!-- Action Buttons -->
 			<div class="mb-4 flex w-full flex-wrap gap-3">
-				<button
-					class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
+				<div
+					class="relative w-full md:w-fit"
+					use:clickOutside={() => {
+						showInviteGuestsModal = false;
+					}}
 				>
-					<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E2E8FC]">
-						<svg
-							width="20"
-							height="22"
-							viewBox="0 0 20 22"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M17.2196 10.4232C16.5968 10.2593 15.8647 10.1719 14.9906 10.1719C13.7778 10.1719 13.3299 10.4669 12.7071 10.9367C12.6743 10.9586 12.6415 10.9913 12.6087 11.0241L11.5708 12.1277C10.6967 13.0454 9.12331 13.0564 8.24922 12.1167L7.21124 11.0241C7.17846 10.9913 7.14568 10.9586 7.1129 10.9367C6.49011 10.4669 6.04214 10.1719 4.82934 10.1719C3.95526 10.1719 3.22321 10.2593 2.60042 10.4232C-2.60499e-07 11.1224 0 13.1875 0 15.0012V16.0173C0 18.7598 -5.20998e-07 21.8628 5.84547 21.8628H13.9745C17.8533 21.8628 19.82 19.8961 19.82 16.0173V15.0012C19.82 13.1875 19.82 11.1224 17.2196 10.4232ZM12.4558 17.9294H7.3642C6.94901 17.9294 6.6103 17.5907 6.6103 17.1646C6.6103 16.7385 6.94901 16.3998 7.3642 16.3998H12.4558C12.871 16.3998 13.2097 16.7385 13.2097 17.1646C13.2097 17.5907 12.871 17.9294 12.4558 17.9294Z"
-								fill="#146AEB"
-							/>
-							<path
-								d="M17.7867 4.82934V8.87201C17.743 8.85016 17.6884 8.83923 17.6447 8.8283C16.8798 8.62071 16.0167 8.52237 14.9896 8.52237C13.307 8.52237 12.5203 9.01405 11.7118 9.62591C11.6025 9.70239 11.5042 9.80073 11.4168 9.88814L10.3679 10.9917C10.2695 11.1009 10.0947 11.1665 9.90898 11.1665C9.72324 11.1665 9.54842 11.1009 9.43916 10.9808L8.4121 9.89906C8.31377 9.7898 8.20451 9.69147 8.09525 9.61499C7.30857 9.01405 6.51096 8.52237 4.82834 8.52237C3.80128 8.52237 2.93812 8.62071 2.17329 8.8283C2.12959 8.83923 2.07495 8.85016 2.03125 8.87201V4.82934C2.03125 2.56764 2.03125 0 6.86059 0H12.9574C17.7867 0 17.7867 2.56764 17.7867 4.82934Z"
-								fill="#146AEB"
-							/>
-						</svg>
-					</div>
-					Invite Attendee
-				</button>
+					<button
+						on:click={() => (showInviteGuestsModal = !showInviteGuestsModal)}
+						class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
+					>
+						<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E2E8FC]">
+							<svg
+								width="20"
+								height="22"
+								viewBox="0 0 20 22"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									d="M17.2196 10.4232C16.5968 10.2593 15.8647 10.1719 14.9906 10.1719C13.7778 10.1719 13.3299 10.4669 12.7071 10.9367C12.6743 10.9586 12.6415 10.9913 12.6087 11.0241L11.5708 12.1277C10.6967 13.0454 9.12331 13.0564 8.24922 12.1167L7.21124 11.0241C7.17846 10.9913 7.14568 10.9586 7.1129 10.9367C6.49011 10.4669 6.04214 10.1719 4.82934 10.1719C3.95526 10.1719 3.22321 10.2593 2.60042 10.4232C-2.60499e-07 11.1224 0 13.1875 0 15.0012V16.0173C0 18.7598 -5.20998e-07 21.8628 5.84547 21.8628H13.9745C17.8533 21.8628 19.82 19.8961 19.82 16.0173V15.0012C19.82 13.1875 19.82 11.1224 17.2196 10.4232ZM12.4558 17.9294H7.3642C6.94901 17.9294 6.6103 17.5907 6.6103 17.1646C6.6103 16.7385 6.94901 16.3998 7.3642 16.3998H12.4558C12.871 16.3998 13.2097 16.7385 13.2097 17.1646C13.2097 17.5907 12.871 17.9294 12.4558 17.9294Z"
+									fill="#146AEB"
+								/>
+								<path
+									d="M17.7867 4.82934V8.87201C17.743 8.85016 17.6884 8.83923 17.6447 8.8283C16.8798 8.62071 16.0167 8.52237 14.9896 8.52237C13.307 8.52237 12.5203 9.01405 11.7118 9.62591C11.6025 9.70239 11.5042 9.80073 11.4168 9.88814L10.3679 10.9917C10.2695 11.1009 10.0947 11.1665 9.90898 11.1665C9.72324 11.1665 9.54842 11.1009 9.43916 10.9808L8.4121 9.89906C8.31377 9.7898 8.20451 9.69147 8.09525 9.61499C7.30857 9.01405 6.51096 8.52237 4.82834 8.52237C3.80128 8.52237 2.93812 8.62071 2.17329 8.8283C2.12959 8.83923 2.07495 8.85016 2.03125 8.87201V4.82934C2.03125 2.56764 2.03125 0 6.86059 0H12.9574C17.7867 0 17.7867 2.56764 17.7867 4.82934Z"
+									fill="#146AEB"
+								/>
+							</svg>
+						</div>
+						Invite Attendee
+					</button>
+					<InviteGuestsModal bind:open={showInviteGuestsModal} />
+				</div>
 
 				<button
 					class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium sm:min-w-70 md:w-fit"
@@ -649,7 +661,7 @@
 		</div>
 
 		<div class="flex h-full flex-col gap-4 lg:flex-row">
-			<div class="w-full md:max-w-[284.7px] rounded-md bg-[#FDFDFD]">
+			<div class="w-full rounded-md bg-[#FDFDFD] md:max-w-[284.7px]">
 				<div class="flex w-full flex-col gap-5 p-3">
 					<div class="text-sm font-medium text-[#B6B7B7]">
 						<div class="flex items-center">
@@ -661,37 +673,7 @@
 					<div class="text-sm font-medium text-[#B6B7B7]">
 						<div class="flex gap-1">
 							<p>{eventData?.invites.opened} Email Opened</p>
-							<svg
-								width="18"
-								height="18"
-								viewBox="0 0 18 18"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M8.61453 1.43451C4.66552 1.43451 1.43451 4.66552 1.43451 8.61453C1.43451 12.5635 4.66552 15.7945 8.61453 15.7945C12.5635 15.7945 15.7945 12.5635 15.7945 8.61453C15.7945 4.66552 12.5635 1.43451 8.61453 1.43451Z"
-									stroke="#ADAEAE"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									opacity="0.34"
-									d="M8.61486 11.4899V7.89985"
-									stroke="#ADAEAE"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									opacity="0.34"
-									d="M8.61877 5.73986H8.61232"
-									stroke="#ADAEAE"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
+							<img src="/information.svg" alt="" />
 						</div>
 						<div class="">{eventData?.invites.declined} Declined</div>
 					</div>
@@ -761,31 +743,7 @@
 					class="flex w-32 items-center gap-1 rounded-sm bg-[#EBECED] px-3 py-2 text-sm font-medium text-[#616265]"
 				>
 					<p>All Attendee</p>
-					<svg
-						width="11"
-						height="11"
-						viewBox="0 0 11 11"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z"
-							fill="#616265"
-							stroke="#616265"
-							stroke-width="0.37461"
-						/>
-						<rect
-							x="5.06035"
-							y="5.85137"
-							width="3.37149"
-							height="1.12383"
-							rx="0.561915"
-							transform="rotate(-180 5.06035 5.85137)"
-							fill="#616265"
-							stroke="#616265"
-							stroke-width="0.37461"
-						/>
-					</svg>
+					<img src="/arrow-left.svg" alt="arrow icon" class="h-3 w-3" />
 				</button>
 			</div>
 
@@ -841,31 +799,7 @@
 						class="flex w-fit items-center gap-1 rounded-sm bg-[#EBECED] px-3 py-2 text-xs font-medium text-[#616265] md:text-sm"
 					>
 						<p>All Admins</p>
-						<svg
-							width="11"
-							height="11"
-							viewBox="0 0 11 11"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z"
-								fill="#616265"
-								stroke="#616265"
-								stroke-width="0.37461"
-							/>
-							<rect
-								x="5.06035"
-								y="5.85137"
-								width="3.37149"
-								height="1.12383"
-								rx="0.561915"
-								transform="rotate(-180 5.06035 5.85137)"
-								fill="#616265"
-								stroke="#616265"
-								stroke-width="0.37461"
-							/>
-						</svg>
+						<img src="/arrow-left.svg" alt="arrow icon" class="h-3 w-3" />
 					</button>
 					<button
 						class="flex w-fit items-center gap-1 rounded-md bg-[#EBECED] px-3 py-2 text-xs font-medium text-[#616265] transition-colors hover:bg-gray-200 md:text-sm"
@@ -907,39 +841,8 @@
 								{admin.role}
 							</div>
 							<div class="flex items-center gap-1">
-								<svg
-									width="13"
-									height="13"
-									viewBox="0 0 13 13"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
-								>
-									<path
-										d="M7.09062 1.65712L1.53353 7.28009C1.32196 7.49416 1.1104 7.91517 1.06809 8.22201L0.764845 10.3699C0.652011 11.1477 1.19503 11.69 1.96371 11.5829L4.0864 11.2761C4.38259 11.2333 4.79867 11.0192 5.01729 10.8052L10.5744 5.18218C11.5335 4.21172 11.9848 3.08427 10.5744 1.65712C9.16394 0.229967 8.04971 0.686655 7.09062 1.65712Z"
-										stroke="#A9AAAA"
-										stroke-width="1.49844"
-										stroke-miterlimit="10"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-									<path
-										d="M6.29297 2.46094C6.76546 4.16638 8.08421 5.50077 9.77673 5.986"
-										stroke="#A9AAAA"
-										stroke-width="1.49844"
-										stroke-miterlimit="10"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-									<rect
-										x="8.15757"
-										y="11.0912"
-										width="4.22292"
-										height="0.713575"
-										fill="#A9AAAA"
-										stroke="#A9AAAA"
-										stroke-width="0.713575"
-									/>
-								</svg>
+								<img src="/edit-icon.svg" alt="edit icon" class="h-4 w-4" />
+
 								<p class="text-sm text-gray-400 lg:hidden">Edit</p>
 							</div>
 						</div>
@@ -1012,8 +915,8 @@
 							</span>
 							<p class="hidden lg:flex">—</p>
 							<p class="text-sm text-gray-500">
-								This event is listed on the collection page. Collection admins have manage access to the
-								event.
+								This event is listed on the collection page. Collection admins have manage access to
+								the event.
 							</p>
 						</div>
 						<div class="flex flex-col gap-2 sm:flex-row">

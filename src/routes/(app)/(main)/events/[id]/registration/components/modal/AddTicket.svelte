@@ -50,11 +50,13 @@
 	<div
 		id="ticket"
 		class="absolute {type === 'update'
-			? 'bottom-[30px]'
-			: 'top-[20px]'} right-[-10px] z-40 mt-2 inline-block text-left lg:top-auto"
+			? '-right-5 bottom-[30px] sm:right-[-10px] '
+			: 'top-[20px] right-[-10px]'} z-40 mt-2 inline-block text-left lg:top-auto"
 	>
 		<div
-			class="custom-scrollbar relative h-97 w-[315px] max-w-lg overflow-y-auto rounded-lg bg-[#FFFCFC] p-4 shadow-lg"
+			class="custom-scrollbar relative {type === 'update'
+				? 'h-102'
+				: 'h-97'} w-[315px] max-w-lg overflow-y-auto rounded-lg bg-[#FFFCFC] p-4 shadow-lg"
 		>
 			<!-- Collapse Icon -->
 			<div class="mb-4 flex items-start justify-between">

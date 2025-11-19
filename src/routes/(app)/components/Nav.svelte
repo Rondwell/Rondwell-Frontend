@@ -17,7 +17,7 @@
 		{#each tabs as tab}
 			<button
 				on:click|preventDefault={() => setTab(tab.id)}
-				class="md:max-w-5o flex w-30 max-w-90 flex-shrink-0 items-center justify-center gap-2 border-b-2 pb-3 font-medium transition-colors duration-300 sm:w-50 md:w-full md:flex-shrink
+				class="flex flex-shrink-0 items-center justify-center gap-2 border-b-2 pb-3 font-medium transition-colors duration-300 w-full max-w-50 lg:max-w-none lg:flex-shrink
 					{activeTab === tab.id
 					? 'border-[#DB3EC6] text-[#DB3EC6]'
 					: 'border-transparent text-gray-500 hover:text-gray-700'}"

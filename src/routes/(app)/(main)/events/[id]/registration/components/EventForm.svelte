@@ -1,9 +1,11 @@
 <!-- src/routes/event/forms/+page.svelte -->
 <script lang="ts">
+	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
+	import QuestionTypeList from './modal/QuestionTypeList.svelte';
 
 	// Mock data for event forms
-	const eventData = {
+	const eventData: any = {
 		title: 'Megaexe Party',
 		collection: 'John Collection',
 		tabs: [
@@ -46,7 +48,8 @@
 						icon: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M12.1675 1.50781H5.81414C3.74629 1.50781 2.99707 2.25703 2.99707 4.36234V13.6377C2.99707 15.743 3.74629 16.4922 5.81414 16.4922H12.16C14.2354 16.4922 14.9846 15.743 14.9846 13.6377V4.36234C14.9846 2.25703 14.2354 1.50781 12.1675 1.50781ZM8.99083 14.4693C8.27158 14.4693 7.67969 13.8774 7.67969 13.1582C7.67969 12.4389 8.27158 11.847 8.99083 11.847C9.71008 11.847 10.302 12.4389 10.302 13.1582C10.302 13.8774 9.71008 14.4693 8.99083 14.4693ZM10.4893 4.692H7.49239C7.18521 4.692 6.93047 4.43726 6.93047 4.13008C6.93047 3.8229 7.18521 3.56817 7.49239 3.56817H10.4893C10.7964 3.56817 11.0512 3.8229 11.0512 4.13008C11.0512 4.43726 10.7964 4.692 10.4893 4.692Z" fill="#CECECF"/>
 </svg>
-`
+`,
+						selected: 'Off'
 					}
 				]
 			},
@@ -64,7 +67,8 @@
 <path opacity="0.2" fill-rule="evenodd" clip-rule="evenodd" d="M5.61914 8.24619L11.0217 7.86719L5.61914 10.3468V8.24619Z" fill="#CECECF"/>
 <path opacity="0.603" fill-rule="evenodd" clip-rule="evenodd" d="M5.61724 8.24619L0.213867 7.86719L5.61724 10.3468V8.24619Z" fill="#CECECF"/>
 </svg>
-`
+`,
+						selected: 'Off'
 					},
 					{
 						id: 5,
@@ -73,7 +77,8 @@
 						icon: `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M15.6526 12.4048L13.0553 15.5193C12.9988 15.587 12.9305 15.6409 12.8546 15.6778C12.7787 15.7147 12.6968 15.7337 12.614 15.7336H0.301529C0.242779 15.7336 0.185309 15.7144 0.136182 15.6784C0.0870534 15.6424 0.0484065 15.5911 0.0249893 15.5308C0.00157216 15.4706 -0.00559526 15.404 0.00436774 15.3393C0.0143307 15.2745 0.0409901 15.2145 0.0810704 15.1664L2.68034 12.0519C2.73665 11.9845 2.80474 11.9306 2.8804 11.8938C2.95608 11.8569 3.03771 11.8378 3.12025 11.8377H15.4321C15.4908 11.8377 15.5483 11.8569 15.5974 11.8929C15.6465 11.9289 15.6852 11.9802 15.7087 12.0404C15.732 12.1007 15.7392 12.1672 15.7292 12.232C15.7193 12.2967 15.6926 12.3568 15.6526 12.4048ZM13.0553 6.1331C12.9988 6.06545 12.9305 6.01151 12.8546 5.97464C12.7787 5.93779 12.6968 5.91879 12.614 5.91884H0.301529C0.242779 5.91884 0.185309 5.93803 0.136182 5.97405C0.0870534 6.01008 0.0484065 6.06136 0.0249893 6.12159C0.00157216 6.18184 -0.00559526 6.24843 0.00436774 6.31317C0.0143307 6.37789 0.0409901 6.43796 0.0810704 6.486L2.68034 9.60051C2.73665 9.66798 2.80474 9.7218 2.8804 9.75867C2.95608 9.79551 3.03771 9.81463 3.12025 9.81477H15.4321C15.4908 9.81477 15.5483 9.79559 15.5974 9.75956C15.6465 9.72353 15.6852 9.67226 15.7087 9.61202C15.732 9.55177 15.7392 9.48519 15.7292 9.42045C15.7193 9.35572 15.6926 9.29565 15.6526 9.24761L13.0553 6.1331ZM0.301529 3.89595H12.614C12.6968 3.89598 12.7787 3.87699 12.8546 3.84013C12.9305 3.80326 12.9988 3.74932 13.0553 3.68166L15.6526 0.567159C15.6926 0.519132 15.7193 0.45906 15.7292 0.394324C15.7392 0.329587 15.732 0.263007 15.7087 0.202763C15.6852 0.14252 15.6465 0.0912363 15.5974 0.0552148C15.5483 0.019193 15.4908 2.21833e-06 15.4321 0H3.12025C3.03771 0.00015705 2.95608 0.0192556 2.8804 0.0561132C2.80474 0.092971 2.73665 0.146803 2.68034 0.214277L0.0817404 3.32879C0.0416989 3.37675 0.0150513 3.43678 0.00506567 3.50143C-0.00491993 3.56609 0.00219062 3.63262 0.0255252 3.69284C0.0488598 3.75306 0.0874042 3.80433 0.136431 3.84041C0.185459 3.87649 0.242836 3.89579 0.301529 3.89595Z" fill="#CECECF"/>
 </svg>
-`
+`,
+						selected: 'Off'
 					}
 				]
 			},
@@ -84,6 +89,7 @@
 					{
 						id: 6,
 						type: 'Do you have experience in Python?',
+						icon: '/checkbox-icon.svg',
 						questionType: 'Checkbox',
 						options: ['Early Bird Ticket', 'Investors Only', 'Standard In...', 'Accelerate...'],
 						required: false
@@ -91,6 +97,7 @@
 					{
 						id: 7,
 						type: 'Terms and Conditions',
+						icon: '/terms-icon.svg',
 						questionType: 'Terms',
 						options: ['Early Bird Ti...', 'Investors Only', 'Standard In...', 'Accelerate...'],
 						required: true
@@ -98,6 +105,7 @@
 					{
 						id: 8,
 						type: 'Are you creative?',
+						icon: '/option-icon.svg',
 						questionType: 'Multi Select',
 						options: ['Early Bird Ti...', 'Investors Only', 'Standard In...', 'Accelerate...'],
 						required: true
@@ -105,6 +113,7 @@
 					{
 						id: 9,
 						type: 'What company do you work for?',
+						icon: '/buildings-2.svg',
 						questionType: 'Office',
 						options: ['Standard In...', 'Accelerate...'],
 						required: false
@@ -112,6 +121,7 @@
 					{
 						id: 10,
 						type: 'Are you creative?',
+						icon: '/text-icon.svg',
 						questionType: 'Text',
 						options: ['Early Bird Ti...', 'Investors Only', 'Standard In...', 'Accelerate...'],
 						required: false
@@ -119,6 +129,7 @@
 					{
 						id: 11,
 						type: 'Are you creative?',
+						icon: '/text-icon.svg',
 						questionType: 'Long Text',
 						options: [],
 						required: true
@@ -126,6 +137,7 @@
 					{
 						id: 12,
 						type: 'What is your LinkedIn profile?',
+						icon: '/user-octagon.svg',
 						questionType: 'LinkedIn',
 						options: [],
 						required: false
@@ -133,6 +145,7 @@
 					{
 						id: 13,
 						type: 'Are you creative?',
+						icon: '/checkbox-icon.svg',
 						questionType: 'Checkbox',
 						options: [],
 						required: true
@@ -144,48 +157,10 @@
 
 	let menuOpen: number | null = null;
 
-	const toggleMenu = (id: number) => {
-		menuOpen = menuOpen === id ? null : id;
-	};
-
 	let options = ['Off', 'Optional', 'Required'];
-	let selected = 'Off';
 	let open = false;
 
-	function selectOption(option: string) {
-		selected = option;
-		open = false;
-	}
-
-	// Function to toggle question requirement
-	const toggleRequired = (categoryId: number, questionId: number) => {
-		const category = eventData.registrationQuestions.find((c) => c.id === categoryId);
-		if (category) {
-			const question = category.questions.find((q) => q.id === questionId);
-			if (question) {
-				question.required = !question.required;
-				console.log('Toggled required for question:', questionId, 'to', question.required);
-			}
-		}
-	};
-
-	// Function to change Web3 address requirement
-	const changeWeb3Requirement = (questionId: number, requirement: string) => {
-		const category = eventData.registrationQuestions.find((c) => c.category === 'Web3 Identity');
-		if (category) {
-			const question = category.questions.find((q) => q.id === questionId);
-			if (question) {
-				question.required = requirement === 'Required';
-				console.log('Changed Web3 requirement for question:', questionId, 'to', requirement);
-			}
-		}
-	};
-
-	// Function to add new question
-	const addQuestion = () => {
-		console.log('Adding new question...');
-		// In a real app, this would open a modal or form to create a new question
-	};
+	let showAddQuestion = false;
 
 	// Function to delete question
 	const deleteQuestion = (questionId: number) => {
@@ -218,7 +193,8 @@
 			<div class="mb-6 flex w-full flex-wrap gap-3">
 				{#each eventData.registrationQuestions[0].questions as question}
 					<div
-						class="flex w-full items-center gap-2 rounded-[8px] bg-[#FDFDFD] px-4 py-3 text-sm font-medium shadow-sm sm:min-w-55 md:w-fit"
+						use:clickOutside={() => (menuOpen = null)}
+						class="relative flex w-full items-center gap-2 rounded-[8px] bg-[#FDFDFD] px-4 py-3 text-sm font-medium shadow-sm sm:min-w-55 md:w-fit"
 					>
 						<div class="flex w-full items-center justify-between gap-2">
 							<div class="flex items-center gap-2">
@@ -228,29 +204,35 @@
 							{#if question.required}
 								<span class="text-xs text-gray-500">Required</span>
 							{:else}
-								<div class="relative">
-									<div class="flex items-center gap-1">
-										<span class="text-xs text-gray-500">Off</span>
+								<div>
+									<button
+										on:click={() => (menuOpen = menuOpen === question.id ? null : question.id)}
+										class="flex items-center gap-1"
+									>
+										<span class="text-xs text-gray-500">{question.selected}</span>
 
-										<img src="/up-down-icon.svg" alt=""  class="h-4 w-4"/>
-									</div>
+										<img src="/up-down-icon.svg" alt="" class="h-4 w-4" />
+									</button>
 									{#if menuOpen === question.id}
-										<ul
-											class="absolute z-10 mt-1 w-32 rounded-md border border-gray-200 bg-white shadow-lg"
+										<div
+											class="triangle absolute top-13 left-0 z-10 mt-1 w-full rounded-md border border-gray-200 bg-white p-2 shadow-lg"
 										>
 											{#each options as option}
-												<li
-													class="flex cursor-pointer items-center justify-between px-3 py-1.5 hover:bg-gray-100"
-													class:selected={option === selected}
-													on:click={() => selectOption(option)}
+												<button
+													class="flex w-full cursor-pointer items-center justify-between px-3 py-1.5 {option ===
+													question.selected
+														? 'bg-[#F0F0F0]'
+														: ''}"
+													class:selected={option === question.selected}
+													on:click={() => (question.selected = option)}
 												>
 													<span>{option}</span>
-													{#if option === selected}
+													{#if option === question.selected}
 														<Icon icon="mdi:tick" class="h-4 w-4 text-black" />
 													{/if}
-												</li>
+												</button>
 											{/each}
-										</ul>
+										</div>
 									{/if}
 								</div>
 							{/if}
@@ -271,17 +253,44 @@
 			<div class="mb-6 flex w-full flex-wrap gap-3">
 				{#each eventData.registrationQuestions[1].questions as question}
 					<div
-						class="flex w-full items-center gap-2 rounded-[8px] bg-[#FDFDFD] px-4 py-3 text-sm font-medium shadow-sm sm:min-w-55 md:w-fit"
+						use:clickOutside={() => (menuOpen = null)}
+						class="relative flex w-full items-center gap-2 rounded-[8px] bg-[#FDFDFD] px-4 py-3 text-sm font-medium shadow-sm sm:min-w-55 md:w-fit"
 					>
 						<div class="flex w-full items-center justify-between gap-2">
 							<div class="flex items-center gap-2">
 								<p>{@html question.icon}</p>
 								<span class="font-medium">{question.type}</span>
 							</div>
-							<div class="flex items-center gap-1">
-								<span class="text-xs text-gray-500">Off</span>
+							<div>
+								<button
+									on:click={() => (menuOpen = menuOpen === question.id ? null : question.id)}
+									class="flex items-center gap-1"
+								>
+									<span class="text-xs text-gray-500">{question.selected}</span>
 
-								<img src="/up-down-icon.svg" alt=""  class="h-4 w-4"/>
+									<img src="/up-down-icon.svg" alt="" class="h-4 w-4" />
+								</button>
+								{#if menuOpen === question.id}
+									<div
+										class="triangle absolute top-13 left-0 z-10 mt-1 w-full rounded-md border border-gray-200 bg-white p-2 shadow-lg"
+									>
+										{#each options as option}
+											<button
+												class="flex w-full cursor-pointer items-center justify-between px-3 py-1.5 {option ===
+												question.selected
+													? 'bg-[#F0F0F0]'
+													: ''}"
+												class:selected={option === question.selected}
+												on:click={() => (question.selected = option)}
+											>
+												<span>{option}</span>
+												{#if option === question.selected}
+													<Icon icon="mdi:tick" class="h-4 w-4 text-black" />
+												{/if}
+											</button>
+										{/each}
+									</div>
+								{/if}
 							</div>
 						</div>
 					</div>
@@ -291,7 +300,7 @@
 
 		<!-- Custom Questions Section -->
 		<div class="">
-			<div class="mb-3 flex flex-col md:flex-row gap-2 md:items-center md:justify-between">
+			<div class="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 				<div class="flex items-center gap-2">
 					<img src="/cq-icon.svg" alt="" />
 
@@ -305,13 +314,16 @@
 						All Tickets
 						<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
 					</button>
-					<button
-						on:click={addQuestion}
-						class="flex w-fit items-center gap-1 rounded-md bg-[#EBECED] px-3 py-2 text-xs font-medium text-[#616265] transition-colors hover:bg-gray-200 md:text-sm"
-					>
-						<Icon icon="mdi:plus" class="text-xl" />
-						Add Question
-					</button>
+					<div use:clickOutside={() => (showAddQuestion = false)}>
+						<button
+							on:click={() => (showAddQuestion = !showAddQuestion)}
+							class="flex w-fit items-center gap-1 rounded-md bg-[#EBECED] px-3 py-2 text-xs font-medium text-[#616265] transition-colors hover:bg-gray-200 md:text-sm"
+						>
+							<Icon icon="mdi:plus" class="text-xl" />
+							Add Question
+						</button>
+						<QuestionTypeList bind:open={showAddQuestion} />
+					</div>
 				</div>
 			</div>
 
@@ -322,12 +334,12 @@
 							<div class="flex items-center gap-2">
 								<Icon icon="mdi:drag" class="h-6 w-6 text-gray-400" />
 
-								<div class="">
+								<div class="w-fit md:w-auto">
 									<span class="mb-1 font-medium">{question.type}</span>
 
-									<div class="flex flex-col md:flex-row md:items-center gap-2">
-										<span class="text-sm text-[#B3B4B4]">
-											<p>{@html question.icon}</p>
+									<div class="flex flex-col gap-2 lg:flex-row lg:items-center">
+										<span class="flex items-center gap-1 text-sm text-[#B3B4B4]">
+											<img src={question.icon} alt=" " />
 											{question.questionType}
 											{question.required === true ? '- Required' : ''}
 										</span>
@@ -359,7 +371,7 @@
 							</div>
 
 							<div class="relative">
-								<div class="flex self-start items-center gap-2">
+								<div class="flex w-8 items-center gap-2 self-start md:w-auto">
 									<img src="/delete-icon.svg" alt="" />
 									<img src="/edit-icon.svg" alt="" />
 								</div>
@@ -371,3 +383,16 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	/* Triangle pointer */
+	.triangle::before {
+		content: '';
+		position: absolute;
+		top: -18px;
+		left: 90px;
+		border-width: 8px;
+		border-style: solid;
+		border-color: transparent transparent white transparent;
+	}
+</style>

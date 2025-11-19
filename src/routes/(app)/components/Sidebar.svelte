@@ -6,7 +6,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { clickOutside } from '$lib/utils/constant';
-	import { showSubMenu } from '$lib/stores/uiStore.js';
+	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 
 	export let background_color = '';
 	let showMenu = false;
@@ -100,7 +100,9 @@
 
 	$: {
 		if (activeItem) {
-			showSubMenu.update((v) => false);
+			showSubMenu.set(false);
+			subMenuItems.set([]);
+			activeSubItem.set('');
 		}
 	}
 </script>

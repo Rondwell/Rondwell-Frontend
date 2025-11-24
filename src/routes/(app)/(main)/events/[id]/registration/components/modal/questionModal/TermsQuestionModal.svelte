@@ -7,13 +7,25 @@
 
 	const dispatch = createEventDispatcher();
 
+	type QuestionData = {
+		contentType: string;
+		termsContent: string;
+		termsLink: string;
+		collectSignature: boolean;
+		helpText: string;
+		ticketIds: string[];
+		ticketOptions: string[];
+	};
+
 	export let open = false;
-	export let questionData = {
+	export let questionData: QuestionData = {
 		contentType: 'text',
 		termsContent: '',
 		termsLink: '',
 		collectSignature: false,
-		helpText: 'Guests will type their signature to agree'
+		helpText: 'Guests will type their signature to agree',
+		ticketIds: [],
+		ticketOptions: ['Early Bird Ticket', 'Investors Only', 'Standard In...', 'Accelerate...']
 	};
 
 	function closeModal() {
@@ -44,6 +56,16 @@
 
 	let showDropdown = false;
 
+	let buttonOpen = false;
+
+	function toggleTicket(opt: any) {
+		if (questionData.ticketIds.includes(opt)) {
+			questionData.ticketIds = questionData.ticketIds.filter((t) => t !== opt);
+		} else {
+			questionData.ticketIds = [...questionData.ticketIds, opt];
+		}
+	}
+
 	function handleReturn (){
 		open = false;
 		dispatch('return')
@@ -51,7 +73,7 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 px-2 z-50 flex items-center justify-center">
+	<div class="fixed inset-0 px-3 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
 		<div
 			class="custom-scrollbar h-full max-h-127 w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 shadow-xl"
 		>
@@ -183,6 +205,53 @@
 						</button>
 					</div>
 					<div class="text-sm text-gray-600">{questionData.helpText}</div>
+				</div>
+
+				<div use:clickOutside={() => (buttonOpen = false)} class="relative w-full">
+					<button
+						class="mb-2 flex w-full cursor-pointer items-center justify-between rounded-lg border border-[#ECEDED] bg-[#FDFDFD] p-3 text-sm font-medium text-[#B3B5B7]"
+						on:click={() => (buttonOpen = !buttonOpen)}
+					>
+						<span class="flex items-center gap-1">
+							Choose Ticket
+							<img src="/information.svg" alt="" />
+						</span>
+						<img src="/arrow-left.svg" alt="" class="rotate-90 transform" />
+					</button>
+
+					{#if buttonOpen}
+						<div
+							class="absolute left-0 z-10 w-full rounded-lg border border-gray-200 bg-white p-2 shadow-lg"
+						>
+							<div class="flex flex-col gap-2">
+								{#each questionData.ticketOptions as option, i}
+									<button
+										on:click={() => toggleTicket(option)}
+										class="flex w-full items-center justify-between rounded-sm p-2
+				{questionData.ticketIds.includes(option) ? 'bg-[#F0F0F0]' : ''}"
+									>
+										<div
+											class="max-w-60 flex-1 truncate rounded-2xl px-2 py-1 text-xs font-medium"
+											class:bg-[#F4E1D5]={i === 0}
+											class:text-[#D79813]={i === 0}
+											class:bg-[#E3F4E1]={i === 1}
+											class:text-[#3CBD2C]={i === 1}
+											class:bg-[#E9DAE4]={i === 2}
+											class:text-[#94748D]={i === 2}
+											class:bg-[#E2E8FC]={i === 3}
+											class:text-[#146AEB]={i === 3}
+										>
+											{option}
+										</div>
+
+										{#if questionData.ticketIds.includes(option)}
+											<Icon icon="mdi:check" class="inline h-4 w-4 text-black" />
+										{/if}
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/if}
 				</div>
 
 				<button

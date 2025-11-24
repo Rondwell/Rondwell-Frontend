@@ -95,9 +95,13 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2">
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3"
+		on:click={() => (open = false)}
+	>
 		<div
 			class="flex h-full max-h-140 w-full max-w-3xl flex-col rounded-lg bg-[#F8F8F9] shadow-lg md:max-h-120"
+			on:click|stopPropagation
 		>
 			<!-- Header -->
 			<div class="flex items-center justify-between border-b border-gray-200 p-3">

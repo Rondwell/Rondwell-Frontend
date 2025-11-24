@@ -75,7 +75,7 @@
 		}
 	}
 
-		function handleReturn (){
+	function handleReturn (){
 		open = false;
 		dispatch('return')
 	}
@@ -83,7 +83,7 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 px-2 z-50 flex items-center justify-center">
+	<div class="fixed inset-0 px-3 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
 		<div
 			class="custom-scrollbar h-full max-h-120 w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 shadow-xl"
 		>

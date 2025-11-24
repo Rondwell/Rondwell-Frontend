@@ -42,9 +42,12 @@
     "typescript-eslint": "^8.20.0"
   },
   "dependencies": {
+    "@carbon/charts-svelte": "^1.22.18",
     "@iconify/svelte": "^5.0.2",
     "@sveltejs/adapter-netlify": "^5.0.2",
     "bits-ui": "^0.21.2",
+    "carbon-components": "^10.59.2",
+    "d3": "^7.9.0",
     "gsap": "^3.13.0",
     "lucide-svelte": "^0.454.0",
     "motion-svelte": "^0.0.1",

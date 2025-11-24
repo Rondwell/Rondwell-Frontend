@@ -1,4 +1,8 @@
 <script lang="ts">
+	import TextEditor from '$lib/components/TextEditor.svelte';
+	import { clickOutside } from '$lib/utils/constant';
+	import Icon from '@iconify/svelte';
+
 	export let open: boolean = false;
 	export let title: string = 'Declined Email';
 	export let description: string =
@@ -12,16 +16,20 @@
 		onSave?.(message);
 		open = false;
 	}
+
+	let showDropdown = false;
 </script>
 
 {#if open}
 	<!-- Overlay -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm md:-bottom-25 md:right-10 md:left-auto md:w-lg md:justify-start md:bg-transparent md:backdrop-blur-none"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-2 backdrop-blur-sm"
+		on:click={() => (open = false)}
 	>
 		<!-- Panel -->
 		<div
-			class="custom-scrollbar flex h-full max-h-120 w-full max-w-lg flex-col rounded-t-lg bg-white shadow-lg md:w-full md:max-w-none md:rounded-none md:shadow-none"
+			class="flex h-full max-h-120 w-full max-w-lg flex-col rounded-lg bg-white shadow-lg"
+			on:click|stopPropagation
 		>
 			<!-- Header -->
 			<div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
@@ -104,7 +112,7 @@
 			</div>
 
 			<!-- Body -->
-			<div class="px-5 py-4">
+			<div class="custom-scrollbar flex-1 overflow-y-auto px-5 py-4">
 				<h3 class="mb-1 font-semibold text-gray-800">{title}</h3>
 				<p class="text-xs font-medium text-gray-500">{description}</p>
 
@@ -112,6 +120,24 @@
 					<div class="relative mb-2 rounded-md border border-gray-200 bg-white p-3 shadow-sm">
 						<div class="flex items-center justify-between">
 							<p class="font-medium text-gray-700">{subject}</p>
+						</div>
+
+						<div
+							class=""
+							use:clickOutside={() => {
+								showDropdown = false;
+							}}
+						>
+							<!-- + button -->
+							<button
+								class="absolute top-15 left-0 mr-2 rounded-sm bg-[#939597] p-1 text-lg font-bold text-white"
+								on:click={() => (showDropdown = !showDropdown)}
+							>
+								<Icon icon="mdi:plus" class="text-xl" />
+							</button>
+
+							<!-- Dropdown -->
+							<TextEditor open={showDropdown} className="-top-10 left-10" />
 						</div>
 
 						<textarea

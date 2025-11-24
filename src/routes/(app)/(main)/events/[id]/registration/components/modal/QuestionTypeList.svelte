@@ -297,7 +297,7 @@
 
 <section class="">
 	{#if open}
-		<div class="fixed inset-0 z-50 px-2 flex items-center justify-center">
+		<div class="fixed inset-0 z-50 px-3 flex items-center justify-center bg-black/50 backdrop-blur-sm">
 			<div
 				class="custom-scrollbar max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 shadow-xl"
 			>

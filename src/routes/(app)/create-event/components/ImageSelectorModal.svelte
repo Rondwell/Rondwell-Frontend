@@ -54,7 +54,7 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-start justify-center bg-black/40 py-6 sm:items-center">
+	<div class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 py-6 sm:items-center">
 		<div
 			class="custom-scrollbar h-full w-[846px] max-w-[90%] space-y-2 overflow-y-auto rounded-xl bg-white p-4 shadow-xl md:h-auto"
 		>

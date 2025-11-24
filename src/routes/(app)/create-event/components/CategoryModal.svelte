@@ -57,7 +57,7 @@
 
 {#if open}
 	<!-- Overlay -->
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
 		<!-- Modal -->
 		<div class="w-full max-w-2xl rounded-[16px] bg-[#EBECED] p-7 shadow-lg">
 			<!-- Header -->

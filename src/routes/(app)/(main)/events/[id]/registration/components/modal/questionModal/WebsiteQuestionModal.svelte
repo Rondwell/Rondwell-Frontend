@@ -76,7 +76,7 @@
 </script>
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-center justify-center px-2">
+	<div class="fixed inset-0 z-50 flex items-center justify-center px-3 bg-black/50 backdrop-blur-sm">
 		<div
 			class="custom-scrollbar h-full max-h-105 w-full max-w-md overflow-y-auto rounded-lg bg-white p-4 shadow-xl"
 		>

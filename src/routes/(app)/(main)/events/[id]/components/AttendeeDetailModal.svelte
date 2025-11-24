@@ -31,6 +31,16 @@
 		]
 	};
 
+	let registrationQuestions = [
+		'Do you have experience in Python?',
+		'Terms and Conditions',
+		'Are you creative',
+		'What company do you work for?',
+		'Are you creative?',
+		'Are you creative',
+		'What is your LinkedIn profile?'
+	];
+
 	let showViewEmail: any = null;
 	let showEmailModal: any = null;
 
@@ -101,11 +111,13 @@
 {#if open}
 	<!-- Container -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm md:inset-y-0 md:right-10 md:left-auto md:w-lg md:justify-start md:bg-transparent md:backdrop-blur-none"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 backdrop-blur-sm lg:inset-y-0 lg:justify-end lg:p-0 lg:pr-10"
+		on:click={() => (open = false)}
 	>
 		<!-- Panel -->
 		<div
-			class="custom-scrollbar h-full max-h-150 w-full max-w-lg overflow-y-auto rounded-t-lg bg-white shadow-lg md:w-full md:max-w-none md:rounded-none md:shadow-none"
+			class="flex h-full max-h-150 w-full max-w-lg flex-col rounded-tr-lg bg-[#F8F9F9] shadow-lg lg:w-lg lg:max-w-none lg:rounded-none lg:shadow-none"
+			on:click|stopPropagation
 		>
 			<!-- Header -->
 			<div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
@@ -188,7 +200,7 @@
 			</div>
 
 			<!-- Content -->
-			<div class="px-6 pt-4 pb-10 md:pb-4">
+			<div class="custom-scrollbar flex-1 overflow-y-auto px-6 pt-4 pb-10 md:pb-4">
 				<!-- Attendee Info -->
 				<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 					<div class="flex items-center gap-2">
@@ -246,6 +258,29 @@
 					<button class="rounded-[22px] bg-[#F4ECDA] px-2 py-1 text-xs text-[#D79B1B]">
 						{attendee.tag} <span class="ml-1 cursor-pointer font-semibold">×</span>
 					</button>
+				</div>
+
+				<!-- Registration Questions -->
+				<div class="mt-6 border-t pt-6">
+					<div class="flex items-center justify-between">
+						<h3 class="font-semibold text-gray-900">Registration Questions</h3>
+
+						<button
+							class="flex items-center gap-1 rounded-md bg-[#DCDCDC] px-3 py-1 text-xs text-[#A9AAAA]"
+						>
+							<img src="/edit-icon.svg" alt="" />
+							Edit
+						</button>
+					</div>
+
+					<div class="mt-4 flex flex-col gap-3">
+						{#each registrationQuestions as question}
+							<div>
+								<p class="text-sm text-[#B6B8BA]">{question}</p>
+								<p class="mt-1 text-xs text-[#B6B8BA]">──</p>
+							</div>
+						{/each}
+					</div>
 				</div>
 
 				<!-- Timeline -->
@@ -610,21 +645,21 @@
 						</div>
 					{/each}
 				</div>
+			</div>
 
-				<div
-					class="relative w-full"
-					use:clickOutside={() => {
-						showReportAttendee = false;
-					}}
+			<div
+				class="relative w-full border-t border-gray-200 p-4"
+				use:clickOutside={() => {
+					showReportAttendee = false;
+				}}
+			>
+				<button
+					on:click={() => (showReportAttendee = !showReportAttendee)}
+					class="w-full text-left text-xs font-semibold text-[#A6A7A7]"
 				>
-					<button
-						on:click={() => (showReportAttendee = !showReportAttendee)}
-						class="border-t w-full text-left border-gray-200 py-2 text-xs font-semibold text-[#A6A7A7]"
-					>
-						Report Attendee
-					</button>
-					<Report bind:open={showReportAttendee} />
-				</div>
+					Report Attendee
+				</button>
+				<Report bind:open={showReportAttendee} />
 			</div>
 		</div>
 	</div>

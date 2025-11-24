@@ -1,5 +1,6 @@
 <!-- src/routes/event/collaboration/+page.svelte -->
 <script lang="ts">
+	import { getStatusStyle } from '$lib/utils/statusStyle';
 	import Icon from '@iconify/svelte';
 
 	let searchQuery = '';
@@ -82,7 +83,7 @@
 <div class="">
 	<!-- Collaboration Requests Section -->
 	<div class="mb-6">
-		<div class="mb-4 flex flex-col items-center justify-between gap-4 md:flex-row">
+		<div class="mb-4 flex flex-wrap items-center justify-between gap-4 md:flex-row">
 			<div>
 				<h2 class="mb-1 text-xl font-semibold">Requests for Megaexe Party</h2>
 				<p class="text-sm text-gray-600">
@@ -91,7 +92,7 @@
 			</div>
 			<button
 				on:click={addCollaborationRequest}
-				class="flex w-full items-center justify-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white transition-colors hover:bg-gray-800 md:w-fit"
+				class="flex w-full items-center justify-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white transition-colors hover:bg-gray-800 sm:w-fit"
 			>
 				<Icon icon="mdi:plus" class="text-xl" />
 				Add Request
@@ -99,7 +100,7 @@
 		</div>
 
 		<!-- Search and Filters -->
-		<div class="mb-4 flex flex-col md:items-center justify-between md:flex-row">
+		<div class="mb-4 flex flex-col justify-between lg:flex-row lg:items-center">
 			<div class="relative mb-4 w-full max-w-xl">
 				<input
 					type="text"
@@ -137,9 +138,10 @@
 
 		<!-- Collaboration Requests List -->
 		{#each eventData.collaborationRequests as request}
+			{@const styling = getStatusStyle(request.status)}
 			<div class="mb-2 rounded-lg bg-white p-4">
-				<div class="flex flex-col gap-2 md:flex-row md:items-center justify-between">
-					<div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-5">
+				<div class="flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
+					<div class="flex flex-wrap gap-2 md:flex-row md:items-center md:gap-5">
 						<div class="flex items-center gap-2">
 							<img src={request.avatar} alt={request.company} class="h-8 w-8 rounded-full" />
 							<div class="font-medium">{request.company}</div>
@@ -147,28 +149,22 @@
 								{request.role}
 							</span>
 						</div>
-						<span class="text-sm text-[#B6B7B7]">{request.description}</span>
-						<div class="text-sm text-gray-600">{request.date}</div>
+						<div class="flex items-center gap-2">
+							<span
+								class="max-w-[200px] truncate text-sm text-[#B6B7B7] md:max-w-[150px] lg:max-w-[250px]"
+								>{request.description}</span
+							>
+							<div class="text-sm text-gray-600">{request.date}</div>
+						</div>
 					</div>
 
-					<div class="flex gap-2 items-center">
-						{#if request.status === 'Declined'}
-							<span class="rounded-[11px] bg-[#FFECEC] px-2 py-1 text-xs text-[#FF0004]">
-								{request.status}
-							</span>
-						{:else if request.status === 'Accepted'}
-							<span class="rounded-[11px] bg-[#f2d7a6] px-2 py-1 text-xs text-[#FFA600]">
-								{request.status}
-							</span>
-						{:else if request.status === 'Pending'}
-							<span class="rounded-[11px] bg-[#FFFBD4] px-2 py-1 text-xs text-[#FFE500]">
-								{request.status}
-							</span>
-						{:else}
-							<span class="rounded-[11px] bg-[#EBECED] px-2 py-1 text-xs text-gray-800">
-								{request.status}
-							</span>
-						{/if}
+					<div class="flex items-center gap-2">
+						<span
+							class="rounded-[11px] px-2 py-1 text-xs"
+							style="background: {styling.bg}; color: {styling.text}"
+						>
+							{request.status}
+						</span>
 
 						<button
 							on:click={() => handleActions(request.id)}

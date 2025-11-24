@@ -51,7 +51,7 @@
 		id="ticket"
 		class="absolute {type === 'update'
 			? '-right-5 bottom-[30px] sm:right-[-10px] '
-			: 'top-[20px] right-[-10px]'} z-40 mt-2 inline-block text-left lg:top-auto"
+			: 'top-8 -right-10'} z-40 mt-2 inline-block text-left lg:top-auto"
 	>
 		<div
 			class="custom-scrollbar relative {type === 'update'

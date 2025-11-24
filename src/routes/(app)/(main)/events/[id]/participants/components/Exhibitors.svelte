@@ -1,8 +1,11 @@
 <!-- src/routes/event/exhibitors/+page.svelte -->
 <script lang="ts">
+	import { getStatusStyle } from '$lib/utils/statusStyle';
 	import Icon from '@iconify/svelte';
+	import AddParticipant from './modal/AddParticipant.svelte';
 
 	let searchQuery = '';
+	let showAddModal = false;
 
 	// Mock data for exhibitors
 	const eventData = {
@@ -74,12 +77,6 @@
 		]
 	};
 
-	// Function to add a new exhibitor
-	const addExhibitor = () => {
-		console.log('Adding new exhibitor...');
-		// In a real app, this would open a modal or form to create a new exhibitor
-	};
-
 	// Function to search exhibitors
 	const searchExhibitors = (event: any) => {
 		console.log('Searching exhibitors:', event.target.value);
@@ -102,24 +99,27 @@
 <div class="">
 	<!-- Exhibitors Section -->
 	<div class="mb-6">
-		<div class="mb-4 flex flex-col items-center justify-between gap-4 md:flex-row">
+		<div class="mb-4 flex flex-wrap items-center justify-between gap-4 md:flex-row">
 			<div>
 				<h2 class="mb-1 text-xl font-semibold">Exhibitors for Megaexe Party</h2>
 				<p class="text-sm text-gray-600">
 					Manage businesses showcasing their products and services at your event.
 				</p>
 			</div>
-			<button
-				on:click={addExhibitor}
-				class="flex w-full items-center justify-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white transition-colors hover:bg-gray-800 md:w-fit"
-			>
-				<Icon icon="mdi:plus" class="text-xl" />
-				Add Exhibitor
-			</button>
+			<div>
+				<button
+					on:click={() => (showAddModal = true)}
+					class="flex w-full items-center justify-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white transition-colors hover:bg-gray-800 sm:w-fit"
+				>
+					<Icon icon="mdi:plus" class="text-xl" />
+					Add Exhibitor
+				</button>
+				<AddParticipant bind:open={showAddModal} participant="Exhibitor" />
+			</div>
 		</div>
 
 		<!-- Search and Filters -->
-		<div class="mb-4 flex flex-col md:items-center justify-between md:flex-row">
+		<div class="mb-4 flex flex-col justify-between lg:flex-row lg:items-center">
 			<div class="relative mb-4 w-full max-w-xl">
 				<input
 					type="text"
@@ -157,52 +157,28 @@
 
 		<!-- Exhibitors List -->
 		{#each eventData.exhibitors as exhibitor}
+			{@const styling = getStatusStyle(exhibitor.status)}
 			<div class="mb-2 rounded-lg bg-white p-4">
-				<div class="flex items-center justify-between">
-					<div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-5">
+				<div class="flex items-end justify-between md:items-start lg:items-center">
+					<div class="flex flex-wrap gap-2 md:flex-row md:items-center md:gap-5">
 						<div class="flex items-center gap-2">
 							<img src={exhibitor.avatar} alt={exhibitor.company} class="h-8 w-8 rounded-full" />
 							<div class="font-medium">{exhibitor.company}</div>
 						</div>
 
-						<div class="text-sm text-[#B6B7B7]">{exhibitor.packageName}</div>
-						<div class="text-sm text-gray-600">{exhibitor.setupStatus}</div>
+						<div class="flex items-center gap-2">
+							<div class="text-sm text-[#B6B7B7]">{exhibitor.packageName}</div>
+							<div class="text-sm text-gray-600">{exhibitor.setupStatus}</div>
+						</div>
 					</div>
 
-					<div class="flex flex-col items-end gap-2 md:flex-row md:items-center">
-						{#if exhibitor.status === 'Confirmed' || exhibitor.status === 'Approved'}
-							<span class="rounded-[11px] bg-[#E3F4E1] px-2 py-1 text-xs text-[#3CBD2C]">
-								{exhibitor.status}
-							</span>
-						{:else if exhibitor.status === 'Invited'}
-							<span class="rounded-[11px] bg-[#DBE4FF] px-2 py-1 text-xs text-[#003BFF]">
-								{exhibitor.status}
-							</span>
-						{:else if exhibitor.status === 'Applied'}
-							<span class="rounded-[11px] bg-[#f7c1a4] px-2 py-1 text-xs text-[#F87937]">
-								{exhibitor.status}
-							</span>
-						{:else if exhibitor.status === 'Declined'}
-							<span class="rounded-[11px] bg-[#FFECEC] px-2 py-1 text-xs text-[#FF0004]">
-								{exhibitor.status}
-							</span>
-						{:else if exhibitor.status === 'Accepted'}
-							<span class="rounded-[11px] bg-[#f2d7a6] px-2 py-1 text-xs text-[#FFA600]">
-								{exhibitor.status}
-							</span>
-						{:else if exhibitor.status === 'Pending'}
-							<span class="rounded-[11px] bg-[#FFFBD4] px-2 py-1 text-xs text-[#FFE500]">
-								{exhibitor.status}
-							</span>
-						{:else if exhibitor.status === 'Live'}
-							<span class="rounded-[11px] bg-[#C7FFFF] px-2 py-1 text-xs text-[#008080]">
-								{exhibitor.status}
-							</span>
-						{:else}
-							<span class="rounded-[11px] bg-[#EBECED] px-2 py-1 text-xs text-gray-800">
-								{exhibitor.status}
-							</span>
-						{/if}
+					<div class="flex flex-col items-end gap-2 lg:flex-row lg:items-center">
+						<span
+							class="rounded-[11px] px-2 py-1 text-xs"
+							style="background: {styling.bg}; color: {styling.text}"
+						>
+							{exhibitor.status}
+						</span>
 
 						<div class="group relative">
 							<button

@@ -365,7 +365,7 @@
 			{#if layout === 'grid'}
 				<div class="flex flex-wrap gap-4">
 					{#each eventData.tickets as ticket}
-						<div class="w-full rounded-lg bg-[#FDFDFD] p-4 md:max-w-[433px]">
+						<div class="w-full rounded-lg bg-[#FDFDFD] p-4 md:max-w-[400px]">
 							<!-- Header -->
 							<div class="mb-2 flex items-center justify-between text-sm">
 								<div class="font-medium">{ticket.type}</div>

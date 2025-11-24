@@ -13,7 +13,7 @@
 </script>
 
 {#if open}
-	<div id="aiModal" class="absolute left-0 bottom-10 z-40 mt-2 inline-block text-left">
+	<div id="aiModal" class="absolute left-5 bottom-10 z-40 mt-2 inline-block text-left">
 		<div class="relative w-full rounded-lg bg-[#FFFCFC] p-4 shadow-lg md:w-[390px]">
 			<div
 				class="mb-3 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#F5DCDD]"

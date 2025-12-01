@@ -2,8 +2,15 @@
 <script lang="ts">
 	import { getStatusStyle } from '$lib/utils/statusStyle';
 	import Icon from '@iconify/svelte';
+	import Filter from './modal/Filter.svelte';
+	import Status from './modal/Status.svelte';
+	import { clickOutside } from '$lib/utils/constant';
+	import RequestDetail from './modal/RequestDetail.svelte';
 
 	let searchQuery = '';
+	let showFilter = false;
+	let showStatus = false;
+	let showDetail: number | null = null;
 
 	// Mock data for collaboration requests
 	const eventData = {
@@ -54,30 +61,6 @@
 			}
 		]
 	};
-
-	// Function to add a new collaboration request (Note: This is labeled as "Add Vendor" in the design)
-	const addCollaborationRequest = () => {
-		console.log('Adding new collaboration request...');
-		// In a real app, this would open a modal or form to create a new collaboration request
-	};
-
-	// Function to search collaboration requests
-	const searchCollaborationRequests = (event: any) => {
-		console.log('Searching collaboration requests:', event.target.value);
-		// In a real app, this would filter the collaboration requests list
-	};
-
-	// Function to handle actions for each collaboration request
-	const handleActions = (requestId: number) => {
-		console.log('Handling actions for collaboration request:', requestId);
-		// In a real app, this would open a dropdown menu with options
-	};
-
-	// Function to change collaboration request status
-	const changeStatus = (requestId: number, newStatus: string) => {
-		console.log('Changing status for collaboration request:', requestId, 'to', newStatus);
-		// In a real app, this would update the collaboration request's status
-	};
 </script>
 
 <div class="">
@@ -90,13 +73,13 @@
 					Review and respond to all incoming proposals from Speakers, Exhibitors, and Vendors.
 				</p>
 			</div>
-			<button
+			<!-- <button
 				on:click={addCollaborationRequest}
 				class="flex w-full items-center justify-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white transition-colors hover:bg-gray-800 sm:w-fit"
 			>
 				<Icon icon="mdi:plus" class="text-xl" />
 				Add Request
-			</button>
+			</button> -->
 		</div>
 
 		<!-- Search and Filters -->
@@ -121,18 +104,26 @@
 					<img src="/export.svg" alt="export icon" />
 				</div>
 
-				<button
-					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
-				>
-					<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
-					Role
-				</button>
-				<button
-					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
-				>
-					<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
-					Status
-				</button>
+				<div use:clickOutside={() => (showStatus = false)} class="relative">
+					<button
+						on:click={() => (showStatus = !showStatus)}
+						class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
+					>
+						<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
+						Status
+					</button>
+					<Status bind:open={showStatus} participant="cr" />
+				</div>
+				<div use:clickOutside={() => (showFilter = false)} class="relative">
+					<button
+						on:click={() => (showFilter = !showFilter)}
+						class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
+					>
+						<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
+						Role
+					</button>
+					<Filter bind:open={showFilter} participant="cr" />
+				</div>
 			</div>
 		</div>
 
@@ -149,7 +140,7 @@
 								{request.role}
 							</span>
 						</div>
-						<div class="flex items-center gap-2">
+						<div class="flex flex-col gap-2 md:flex-row md:items-center">
 							<span
 								class="max-w-[200px] truncate text-sm text-[#B6B7B7] md:max-w-[150px] lg:max-w-[250px]"
 								>{request.description}</span
@@ -166,12 +157,20 @@
 							{request.status}
 						</span>
 
-						<button
-							on:click={() => handleActions(request.id)}
-							class="rounded-md bg-gray-200 px-3 py-1 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-300"
+						<div
+							class="group relative"
+							use:clickOutside={() => {
+								if (showDetail === request.id) showDetail = null;
+							}}
 						>
-							Review & Respond
-						</button>
+							<button
+								on:click={() => (showDetail = showDetail === request.id ? null : request.id)}
+								class="rounded-md bg-gray-200 px-3 py-1 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-300"
+							>
+								Review & Respond
+							</button>
+							<RequestDetail open={showDetail === request.id} />
+						</div>
 					</div>
 				</div>
 			</div>

@@ -1,36 +1,47 @@
-<script>
-	import Icon from '@iconify/svelte';
+<script lang="ts">
 	export let open = false;
+	export let participant = 'speaker';
 
-	const items = [
-		{ label: 'All', icon: 'mdi:view-grid-outline' },
-		{ label: 'Assigned', icon: 'mdi:account-badge' },
-		{ label: 'Unassigned', icon: 'mdi:account-badge-outline' }
-	];
+	let items: any[];
 
-	export const setupStatusItems = [
-		{ label: 'All', icon: 'mdi:view-grid-outline' },
-		{ label: 'Set Up', icon: 'mdi:check-circle-outline' },
-		{ label: 'Not Set Up', icon: 'mdi:cog-outline' },
-		{ label: 'Published', icon: 'mdi:checkbox-multiple-marked-outline' },
-		{ label: 'Draft', icon: 'mdi:file-document-edit-outline' }
-	];
-
-	export const orderStatusItems = [
-		{ label: 'All', icon: 'mdi:view-grid-outline' },
-		{ label: 'With Orders', icon: 'mdi:package-variant-closed' },
-		{ label: 'No Orders', icon: 'mdi:package-variant' }
-	];
+	if (participant === 'speaker') {
+		items = [
+			{ label: 'All', icon: '/category.svg' },
+			{ label: 'Assigned', icon: '/ticket-1.svg' },
+			{ label: 'Unassigned', icon: '/ticket-2-1.svg' }
+		];
+	} else if (participant === 'exhibitor') {
+		items = [
+			{ label: 'All', icon: '/category.svg' },
+			{ label: 'Set Up', icon: '/setting.svg' },
+			{ label: 'Not Set Up', icon: '/setting-2.svg' },
+			{ label: 'Published', icon: '/note-2.svg' },
+			{ label: 'Draft', icon: '/bookmark.svg' }
+		];
+	} else if (participant === 'vendor') {
+		items = [
+			{ label: 'All', icon: '/category.svg' },
+			{ label: 'With Orders', icon: '/box-tick.svg' },
+			{ label: 'No Orders', icon: '/box-remove.svg' }
+		];
+	} else if (participant === 'cr') {
+		items = [
+			{ label: 'All', icon: '/category.svg' },
+			{ label: 'Speaker', icon: '/speaker.svg' },
+			{ label: 'Exhibitor', icon: '/shapes-1.svg' },
+			{ label: 'Vendor', icon: '/vendor.svg' }
+		];
+	}
 </script>
 
 {#if open}
 	<div
-		class="absolute right-0 z-50 mt-2 w-48 space-y-3 rounded-xl bg-white p-4 text-[15px] text-gray-700 shadow-lg"
+		class="absolute right-0 z-50 mt-2 w-48 rounded-xl bg-white p-2 text-[15px] text-[#768387] shadow-lg"
 	>
 		{#each items as item}
-			<div class="flex cursor-pointer items-center justify-between">
+			<div class="flex cursor-pointer items-center justify-between p-2 hover:bg-[#EBECED]">
 				<span>{item.label}</span>
-				<Icon icon={item.icon} class="text-xl" />
+				<img src={item.icon} alt="" />
 			</div>
 		{/each}
 	</div>

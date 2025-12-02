@@ -1,86 +1,175 @@
-<script>
-	import Icon from '@iconify/svelte';
+<script lang="ts">
+	import { onMount, tick } from 'svelte';
+	import SendMail from './SendMail.svelte';
+	import RemoveParticipant from './RemoveParticipant.svelte';
+	import ProfileDetail from './ProfileDetail.svelte';
+	import Assign from './Assign.svelte';
+	import SendReminder from './SendReminder.svelte';
+	import ApproveParticipant from './ApproveParticipant.svelte';
+	import DeclineParticipant from './DeclineParticipant.svelte';
+	import ManageContribution from './ManageContribution.svelte';
+	import CreateOrder from './CreateOrder.svelte';
+
 	export let open = false;
+	export let participant = 'speaker';
+	export let buttonEl: HTMLElement;
 
-	let visibility = true;
+	let dropdownEl: HTMLElement;
+	let positionAbove = false;
 
-	const actions = [
-		{ label: 'View Details', icon: 'mdi:eye-outline' },
-		{ label: 'Edit Details', icon: 'mdi:pencil-outline' },
-		{ label: 'Assign Session', icon: 'mdi:calendar-check-outline' },
-		{ label: 'Send Message', icon: 'mdi:message-text-outline' },
-		{ label: 'Send Reminder', icon: 'mdi:clock-outline' },
-		{ label: 'Resend Invitation', icon: 'mdi:send-outline' }
-	];
+	let visibility = false;
+	let showEmailTemplate = false;
+	let showRemoveParticipant = false;
+	let showProfile = false;
+	let showAssign = false;
+	let showSendReminder = false;
+	let showApproveParticipant = false;
+	let showDeclineParticipant = false;
+	let showManageContribution = false;
+	let showCreateOrder = false;
 
-	export const profileActionsItems = [
-		{ label: 'View Details', icon: 'mdi:eye-outline' },
-		{ label: 'Edit Details', icon: 'mdi:pencil-outline' },
-		{ label: 'Approve Application', icon: 'mdi:check-circle-outline' },
-		{ label: 'Decline Invitation', icon: 'mdi:close-circle-outline' },
-		{ label: 'Manage Contribution/Payment', icon: 'mdi:cash-multiple' },
-		{ label: 'Manage Visibility', icon: 'mdi:toggle-switch-off-outline' },
-		{ label: 'Send Message', icon: 'mdi:message-text-outline' },
-		{ label: 'Send Reminder', icon: 'mdi:clock-outline' },
-		{ label: 'Resend Invitation', icon: 'mdi:send-outline' },
-		{ label: 'View Digital Booth', icon: 'mdi:monitor' },
-		{ label: 'Remove Exhibitor', icon: 'mdi:trash-can-outline', danger: true }
-	];
+	let items: any[];
 
-	export const vendorActionsItems = [
-		{ label: 'View Details', icon: 'mdi:eye-outline' },
-		{ label: 'Edit Details', icon: 'mdi:pencil-outline' },
-		{ label: 'Create Order', icon: 'mdi:cart-plus' },
-		{ label: 'Request Quote', icon: 'mdi:file-document-outline' },
-		{ label: 'View All Orders', icon: 'mdi:clipboard-list-outline' },
-		{ label: 'Approve Application', icon: 'mdi:check-circle-outline' },
-		{ label: 'Decline Invitation', icon: 'mdi:close-circle-outline' },
-		{ label: 'Manage Visibility', icon: 'mdi:toggle-switch-off-outline' },
-		{ label: 'Send Message', icon: 'mdi:message-text-outline' },
-		{ label: 'Remove Vendor', icon: 'mdi:trash-can-outline', danger: true }
-	];
+	if (participant === 'speaker') {
+		items = [
+			{ label: 'View Details', icon: '/eye.svg' },
+			{ label: 'Edit Details', icon: '/edit-icon-2.svg' },
+			{ label: 'Assign Session', icon: '/profile.svg' },
+			{ label: 'Manage Visibility', icon: '' },
+			{ label: 'Send Message', icon: '/message-text.svg' },
+			{ label: 'Send Reminder', icon: '/clock.svg' },
+			{ label: 'Resend Invitation', icon: '/send-2.svg' },
+			{ label: 'Remove Speaker', icon: '/delete-icon.svg' }
+		];
+	} else if (participant === 'exhibitor') {
+		items = [
+			{ label: 'View Details', icon: '/eye.svg' },
+			{ label: 'Edit Details', icon: '/edit-icon-2.svg' },
+			{ label: 'Approve Application', icon: '/clipboard-tick.svg' },
+			{ label: 'Decline Invitation', icon: '/clipboard-close.svg' },
+			{ label: 'Manage Contribution/Payment', icon: '/setting.svg' },
+			{ label: 'Manage Visibility', icon: '' },
+			{ label: 'Send Message', icon: '/message-text.svg' },
+			{ label: 'Send Reminder', icon: '/clock.svg' },
+			{ label: 'Resend Invitation', icon: '/send-3.svg' },
+			{ label: 'View Digital Booth', icon: '/eye-2.svg' },
+			{ label: 'Remove Exhibitor', icon: '/delete-icon.svg' }
+		];
+	} else if (participant === 'vendor') {
+		items = [
+			{ label: 'View Details', icon: '/eye.svg' },
+			{ label: 'Edit Details', icon: '/edit-icon-2.svg' },
+			{ label: 'Create Order', icon: '/box-tick.svg' },
+			{ label: 'Request Quote', icon: '/receipt-edit.svg' },
+			{ label: 'View All Orders', icon: '/document-search.svg' },
+			{ label: 'Approve Application', icon: '/clipboard-tick.svg' },
+			{ label: 'Decline Invitation', icon: '/clipboard-close.svg' },
+			{ label: 'Manage Visibility', icon: '' },
+			{ label: 'Send Reminder', icon: '/clock.svg' },
+			{ label: 'Send Message', icon: '/send-3.svg' },
+			{ label: 'Remove Vendor', icon: '/delete-icon.svg' }
+		];
+	}
 
-	const danger = { label: 'Remove Speaker', icon: 'mdi:trash-can-outline' };
+	function handleItemClick(label: string) {
+		if (label.includes('Send Message')) {
+			showEmailTemplate = true;
+		} else if (label.startsWith('Remove')) {
+			showRemoveParticipant = true;
+		} else if (label.startsWith('View Details')) {
+			showProfile = true;
+		} else if (label.startsWith('Assign Session')) {
+			showAssign = true;
+		} else if (label.startsWith('Send Reminder')) {
+			showSendReminder = true;
+		} else if (label.startsWith('Approve Application')) {
+			showApproveParticipant = true;
+		} else if (label.startsWith('Decline Invitation')) {
+			showDeclineParticipant = true;
+		} else if (label.startsWith('Manage Contribution/Payment')) {
+			showManageContribution = true;
+		} else if (label.startsWith('Create Order')) {
+			showCreateOrder = true;
+		}
+		// Close the dropdown after clicking
+		open = false;
+	}
+
+	function updateDropdownPosition() {
+		if (!dropdownEl || !buttonEl) return;
+
+		const buttonRect = buttonEl.getBoundingClientRect();
+		const dropdownHeight = dropdownEl.offsetHeight + 250;
+		const spaceBelow = window.innerHeight - buttonRect.bottom;
+		// const spaceAbove = window.innerHeight - buttonRect.top;
+		const spaceAbove = buttonRect.top;
+
+		positionAbove = spaceBelow < dropdownHeight && spaceAbove > dropdownHeight;
+	}
+
+	$: if (open) {
+		tick().then(updateDropdownPosition);
+	}
+
+	onMount(() => {
+		window.addEventListener('resize', updateDropdownPosition);
+		window.addEventListener('scroll', updateDropdownPosition, true);
+
+		return () => {
+			window.removeEventListener('resize', updateDropdownPosition);
+			window.removeEventListener('scroll', updateDropdownPosition, true);
+		};
+	});
 </script>
 
 {#if open}
-	<div class="w-72 space-y-4 rounded-xl bg-white p-4 text-[15px] text-gray-700 shadow-lg">
-		<!-- Mapped actions -->
-		{#each actions.slice(0, 3) as item}
-			<div class="flex cursor-pointer items-center justify-between">
-				<span>{item.label}</span>
-				<Icon icon={item.icon} class="text-xl" />
-			</div>
-		{/each}
-
-		<!-- Toggle row -->
-		<div class="flex cursor-pointer items-center justify-between">
-			<span>Manage Visibility</span>
-
-			<div
-				class="flex h-6 w-12 items-center rounded-full bg-gray-300 p-1 transition-all"
-				class:bg-green-400={visibility}
-				on:click={() => (visibility = !visibility)}
+	<div
+		bind:this={dropdownEl}
+		class="custom-scrollbar absolute right-0 z-50 flex h-80 w-72 flex-col overflow-hidden overflow-y-auto rounded-xl bg-white p-2 text-[15px] text-[#768387] shadow-lg transition-all"
+		class:bottom-full={positionAbove}
+		class:top-full={!positionAbove}
+		style="margin-top: 8px; margin-bottom: 8px;"
+	>
+		{#each items as item}
+			<button
+				on:click={() => handleItemClick(item.label)}
+				class="flex w-full cursor-pointer items-center justify-between p-2 hover:bg-[#EBECED]"
 			>
-				<div
-					class="h-5 w-5 transform rounded-full bg-white shadow-md transition-all"
-					class:translate-x-6={visibility}
-				></div>
-			</div>
-		</div>
-
-		<!-- Remaining mapped items -->
-		{#each actions.slice(3) as item}
-			<div class="flex cursor-pointer items-center justify-between">
 				<span>{item.label}</span>
-				<Icon icon={item.icon} class="text-xl" />
-			</div>
+				{#if item.label === 'Manage Visibility'}
+					<div
+						class="flex h-5 w-8 items-center rounded-full p-1 transition-all"
+						class:bg-gray-300={!visibility}
+						class:bg-black={visibility}
+						on:click={() => (visibility = !visibility)}
+					>
+						<div
+							class="h-4 w-4 transform rounded-full bg-white shadow-md transition-all"
+							class:translate-x-2={visibility}
+						></div>
+					</div>
+				{:else}
+					<img src={item.icon} alt="" class="h-5 w-5" />
+				{/if}
+			</button>
 		{/each}
-
-		<!-- Danger option -->
-		<div class="flex cursor-pointer items-center justify-between text-red-500">
-			<span>{danger.label}</span>
-			<Icon icon={danger.icon} class="text-xl" />
-		</div>
 	</div>
 {/if}
+
+<SendMail bind:open={showEmailTemplate} onSave={() => {}} onPreview={() => {}} />
+
+<RemoveParticipant bind:open={showRemoveParticipant} {participant} />
+
+<ProfileDetail bind:open={showProfile} {participant} on:close={() => (showProfile = false)} />
+
+<Assign bind:open={showAssign} />
+
+<SendReminder bind:open={showSendReminder} {participant} />
+
+<ApproveParticipant bind:open={showApproveParticipant} {participant} />
+
+<DeclineParticipant bind:open={showDeclineParticipant} {participant} />
+
+<ManageContribution bind:open={showManageContribution} {participant} />
+
+<CreateOrder bind:open={showCreateOrder} />

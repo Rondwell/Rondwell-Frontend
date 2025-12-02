@@ -104,10 +104,10 @@
 
 <div class="max-w-6xl">
 	<!-- Event Header -->
-	<div class="mb-6">
-		<div class="mb-2 flex items-center justify-between">
+	<div class="mb-6 sm:mb-8">
+		<div class="mb-2 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
 			<div class="flex items-center gap-2">
-				<span class="text-sm text-[#83808D]">John Collection</span>
+				<span class="text-xs text-[#83808D] sm:text-sm">John Collection</span>
 				<svg
 					width="11"
 					height="11"
@@ -135,7 +135,7 @@
 				</svg>
 			</div>
 			<button
-				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
+				class="flex w-full items-center justify-center gap-1 rounded-md bg-[#DCE4EE] px-3 py-2 text-xs font-medium text-[#5D646F] transition-colors hover:bg-[#ccd6e0] sm:w-auto sm:justify-start sm:text-sm"
 			>
 				Event Page
 				<svg
@@ -165,28 +165,32 @@
 				</svg>
 			</button>
 		</div>
-		<h1 class="mb-10 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
+		<h1 class="mb-8 text-2xl leading-tight font-bold sm:mb-10 sm:text-3xl md:text-4xl">
+			{eventData.title}
+		</h1>
 	</div>
 
 	<!-- Clone Event Section -->
-	<div class="mb-6 flex flex-col">
-		<div class="mb-1 flex items-center justify-between gap-3">
-			<h2 class="text-xl font-semibold">Clone Event</h2>
+	<div class="mb-6 flex flex-col sm:mb-8">
+		<div
+			class="mb-2 flex flex-col items-start justify-between gap-3 sm:mb-4 sm:flex-row sm:items-center"
+		>
+			<h2 class="text-lg font-semibold sm:text-xl">Clone Event</h2>
 			<button
-				class="flex items-start gap-1 rounded-md bg-[#EBECED] px-3 py-2 text-sm font-medium text-[#5D646F] transition-colors hover:bg-gray-200"
+				class="flex w-full items-center justify-center gap-1 rounded-md bg-[#EBECED] px-3 py-2 text-xs font-medium text-[#5D646F] transition-colors hover:bg-gray-200 sm:w-auto sm:justify-start sm:text-sm"
 			>
 				Learn More
 				<img src="/send-icon.png" alt="icon" class="h-3 w-3" />
 			</button>
 		</div>
-		<p class="text-sm text-gray-600">
+		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">
 			Create a new event with the same information as this one. Everything except the guest list and
 			event Marketing will be copied over.
 		</p>
 
 		<button
 			on:click={cloneEvent}
-			class="mt-3 flex w-fit items-center gap-2 rounded-md bg-gray-900 px-4 py-2 font-medium text-white transition-colors hover:bg-gray-800"
+			class="mt-2 flex w-full items-center justify-center gap-2 rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 sm:w-fit sm:py-2"
 		>
 			<svg
 				width="17"
@@ -221,20 +225,20 @@
 	</div>
 
 	<!-- Event Page Section -->
-	<div class="mt-8 mb-6 border-t pt-8">
-		<h2 class="mb-1 text-xl font-semibold">Event Page</h2>
-		<p class="text-sm text-gray-600">
+	<div class="mt-6 mb-6 border-t pt-6 sm:mt-8 sm:mb-8 sm:pt-8">
+		<h2 class="mb-2 text-lg font-semibold sm:text-xl">Event Page</h2>
+		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">
 			When you choose a new URL, the current one will no longer work. Do not change your URL if you
 			have already shared the event.
 		</p>
 
-		<div class="mt-3 mb-4 rounded-lg bg-[#DADCDD] px-3 py-2">
-			<div class="mb-2 flex flex-col justify-between gap-2 md:mb-0 md:flex-row md:items-center">
-				<div class="text-sm text-[#7A7C7E]">
+		<div class="mt-3 mb-4 rounded-lg bg-[#DADCDD] px-3 py-2.5 sm:px-4 sm:py-3">
+			<div class="mb-2 flex flex-col justify-between gap-2 sm:mb-0 sm:flex-row sm:items-center">
+				<div class="text-xs text-[#7A7C7E] sm:text-sm">
 					Upgrade to Rondwell Plus to set a custom URL for this event.
 				</div>
 				<button
-					class="flex w-fit items-start gap-1 rounded-md bg-[#E3E4E5] px-3 py-2 text-sm font-medium text-[#7A7C7E] transition-colors hover:bg-gray-200"
+					class="flex w-fit items-center justify-center gap-1 rounded-md bg-[#E3E4E5] px-3 py-2 text-xs font-medium text-[#7A7C7E] transition-colors hover:bg-gray-200 sm:justify-start sm:text-sm"
 				>
 					Learn More
 					<img src="/send-icon.png" alt="icon" class="h-3 w-3" />
@@ -242,10 +246,14 @@
 			</div>
 		</div>
 
-		<div class="max-w-60">
-			<label for="url" class="mb-1 block text-sm font-medium text-gray-700">Public URL</label>
+		<div class="w-full sm:max-w-60">
+			<label for="url" class="mb-2 block text-xs font-medium text-gray-700 sm:text-sm"
+				>Public URL</label
+			>
 			<div class="flex items-center">
-				<span class="rounded-l-md bg-[#EBECED] px-3 py-2.5 text-sm">ron.d/</span>
+				<span class="rounded-l-md bg-[#EBECED] px-3 py-2.5 text-xs sm:rounded-l-md sm:text-sm"
+					>ron.d/</span
+				>
 				<input
 					type="text"
 					value={eventData.publicUrl.split('/')[1]}
@@ -253,11 +261,11 @@
 						const target = e.target as HTMLInputElement | null;
 						if (target) eventData.publicUrl = `ron.d/${target.value}`;
 					}}
-					class="flex-1 rounded-r-md border border-gray-300 bg-[#F4F5F6] px-3 py-2 text-sm focus:ring-0 focus:outline-none"
+					class="rounded-r-md border border-gray-300 bg-[#F4F5F6] px-3 py-2 text-xs focus:ring-0 focus:outline-none sm:rounded-r-md sm:text-sm"
 				/>
 				<button
 					on:click={updatePublicUrl}
-					class="ml-1 md:ml-2 rounded-md bg-[#939596] px-3 py-2 text-sm font-medium text-white transition-colors"
+					class="w-fit rounded-md bg-[#939596] px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-gray-700 ml-2 sm:w-auto sm:text-sm"
 				>
 					Update
 				</button>
@@ -266,26 +274,32 @@
 	</div>
 
 	<!-- Embed Event Section -->
-	<div class="mt-8 mb-6 border-t pt-8">
-		<h2 class="mb-1 text-xl font-semibold">Embed Event</h2>
-		<p class="text-sm text-gray-600">
+	<div class="mt-6 mb-6 border-t pt-6 sm:mt-8 sm:mb-8 sm:pt-8">
+		<h2 class="mb-2 text-lg font-semibold sm:text-xl">Embed Event</h2>
+		<p class="mb-4 text-xs text-gray-600 sm:mb-6 sm:text-sm">
 			Have your own site? Embed the event to let visitors know about it.
 		</p>
 
-		<div class="my-4 flex flex-col items-center gap-4 md:flex-row">
+		<div
+			class="my-4 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
+		>
 			{#each embedAs as embed}
 				<button
-					class="flex w-full items-center justify-between gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-90 md:w-fit"
+					class="flex w-full items-center justify-between gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2.5 text-xs font-medium shadow-sm transition-all hover:shadow-md sm:w-70 sm:p-2 sm:text-sm"
 					on:click={() => (selectedEmbed = embed.name)}
 				>
-					<div class="flex items-center gap-2">
-						<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#FBDEEC]">
+					<div class="flex min-w-0 items-center gap-2">
+						<div
+							class="flex h-[44px] w-[44px] flex-shrink-0 items-center justify-center rounded-sm bg-[#FBDEEC]"
+						>
 							<p>{@html embed.svg}</p>
 						</div>
-						{embed.name}
+						<span class="truncate">{embed.name}</span>
 					</div>
 					{#if selectedEmbed === embed.name}
-						<div class="flex h-6 w-6 items-center justify-center rounded-full bg-[#F31A7C]">
+						<div
+							class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#F31A7C]"
+						>
 							<Icon icon="mdi:tick" class="text-xl text-white" />
 						</div>
 					{/if}
@@ -293,17 +307,19 @@
 			{/each}
 		</div>
 
-		<div class="my-4">
-			<p class="mb-2 text-lg text-gray-600">Paste the following HTML code snippet to your page.</p>
-			<div class="relative">
-				<div class="overflow-x-auto rounded-lg bg-white p-5 text-sm">
-					<pre class="max-w-90 p-3">
-		                <code>{escapeHtml(eventData.embedCode)}</code>
-	                </pre>
+		<div class="my-4 sm:my-6">
+			<p class="mb-2 text-sm text-gray-600 sm:mb-3 sm:text-base">
+				Paste the following HTML code snippet to your page.
+			</p>
+			<div class="relative md:max-w-158 lg:max-w-auto">
+				<div
+					class="custom-scrollbar overflow-x-auto rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-sm sm:p-5 sm:text-sm"
+				>
+					<pre class=""><code>{escapeHtml(eventData.embedCode)}</code></pre>
 				</div>
 				<button
 					on:click={() => copyToClipboard(eventData.embedCode)}
-					class="absolute top-4 right-4 flex items-center gap-1 rounded-md bg-[#F6F6F6] p-2 text-xs font-medium text-[#616265]"
+					class="absolute top-3 right-3 flex items-center gap-1 rounded-md bg-[#F6F6F6] p-2 text-xs font-medium text-[#616265] transition-colors hover:bg-gray-100 sm:top-4 sm:right-4"
 				>
 					<img src="/copy.svg" alt="" />
 					Copy
@@ -311,28 +327,28 @@
 			</div>
 		</div>
 
-		<div class="mb-4">
-			<p class="my-2 text-sm text-gray-600">
+		<div class="mb-4 sm:mb-6">
+			<p class="my-2 text-xs text-gray-600 sm:my-3 sm:text-sm">
 				This gives you the following button. Click to see it in action!
 			</p>
-			<div class="relative flex justify-center">
-				<img src="/embed-bg.png" alt="" class="w-full h-full min-h-40" />
+			<div class="relative flex justify-center overflow-hidden rounded-lg">
+				<img src="/embed-bg.png" alt="" class="h-full min-h-40 w-full object-cover sm:min-h-48" />
 				<button
-					class="absolute top-15 rounded-xl bg-black px-4 py-2 font-medium text-white transition-colors hover:bg-gray-800"
+					class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 sm:px-6 sm:py-3 sm:text-base"
 				>
 					Register for Event
 				</button>
 			</div>
 		</div>
 
-		<div class="mb-4">
-			<p class="mb-2 text-sm text-gray-600">
+		<div class="mb-4 sm:mb-6">
+			<p class="mb-2 text-xs text-gray-600 sm:mb-3 sm:text-sm">
 				If you want to use your own styling for the button, simply remove the luma-checkout--button
 				class from the snippet above.
 			</p>
-			<p class="text-sm text-gray-600">
+			<p class="text-xs text-gray-600 sm:text-sm">
 				For advanced usage, check out our <span
-					class="cursor-pointer text-pink-600 hover:text-pink-700"
+					class="cursor-pointer font-medium text-pink-600 hover:text-pink-700"
 					>example code and documentation</span
 				>.
 			</p>
@@ -340,16 +356,16 @@
 	</div>
 
 	<!-- Transfer Event Section -->
-	<div class="mt-8 mb-6 border-t pt-8">
-		<h2 class="mb-2 text-xl font-semibold">Transfer Event</h2>
-		<p class="mb-4 text-sm text-gray-600 lg:max-w-[70%]">
-			This event is managed by <span class="text-pink-600">John Collection</span>, with the admins
-			of the calendar having manage access to the event. You can move it to a different calendar if
-			you want.
+	<div class="mt-6 mb-6 border-t pt-6 sm:mt-8 sm:mb-8 sm:pt-8">
+		<h2 class="mb-2 text-lg font-semibold sm:mb-3 sm:text-xl">Transfer Event</h2>
+		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm lg:max-w-[70%]">
+			This event is managed by <span class="font-medium text-pink-600">John Collection</span>, with
+			the admins of the calendar having manage access to the event. You can move it to a different
+			calendar if you want.
 		</p>
 		<button
 			on:click={transferEvent}
-			class="flex items-center gap-2 rounded-md border border-gray-300 bg-gray-900 px-4 py-2 font-medium text-white "
+			class="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 sm:w-auto sm:py-2"
 		>
 			<svg
 				width="21"
@@ -415,15 +431,15 @@
 	</div>
 
 	<!-- Cancel Event Section -->
-	<div class="mt-8 border-t pt-8">
-		<h2 class="mb-2 text-xl font-semibold">Cancel Event</h2>
-		<p class="mb-4 text-sm text-gray-600 lg:max-w-[70%]">
+	<div class="mt-6 mb-6 border-t pt-6 sm:mt-8 sm:pt-8">
+		<h2 class="mb-2 text-lg font-semibold sm:mb-3 sm:text-xl">Cancel Event</h2>
+		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm lg:max-w-[70%]">
 			Cancel and permanently delete this event. This operation cannot be undone. If there are any
 			registered guests, we will notify them that the event has been canceled.
 		</p>
 		<button
 			on:click={cancelEvent}
-			class="flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 font-medium text-white transition-colors"
+			class="flex w-full items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700 sm:w-auto sm:py-2"
 		>
 			<svg
 				width="17"

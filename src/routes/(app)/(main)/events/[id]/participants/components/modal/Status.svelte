@@ -1,49 +1,58 @@
-<script>
-	import Icon from '@iconify/svelte';
+<script lang="ts">
 	export let open = false;
+	export let participant = 'speaker';
 
-	const items = [
-		{ label: 'All', icon: 'mdi:view-grid-outline' },
-		{ label: 'Invited', icon: 'mdi:ticket-confirmation-outline' },
-		{ label: 'Accepted', icon: 'mdi:check-decagram' },
-		{ label: 'Confirmed', icon: 'mdi:account-check' },
-		{ label: 'Declined', icon: 'mdi:account-cancel' },
-		{ label: 'Manual Add', icon: 'mdi:account-plus' }
-	];
+	let items: any[];
 
-	export const invitationStatusItems = [
-		{ label: 'All', icon: 'mdi:view-grid-outline' },
-		{ label: 'Invited', icon: 'mdi:account-plus-outline' },
-		{ label: 'Applied', icon: 'mdi:file-document-outline' },
-		{ label: 'Approved', icon: 'mdi:check-decagram' },
-		{ label: 'Contribution', icon: 'mdi:coffee-outline' },
-		{ label: 'Pending', icon: 'mdi:clock-outline' },
-		{ label: 'Live', icon: 'mdi:video-wireless-outline' },
-		{ label: 'Declined', icon: 'mdi:account-cancel-outline' },
-		{ label: 'Manual Add', icon: 'mdi:account-plus' }
-	];
-
-	export const invitationStatusItems1 = [
-		{ label: 'All', icon: 'mdi:view-grid-outline' },
-		{ label: 'Invited', icon: 'mdi:account-plus-outline' },
-		{ label: 'Applied', icon: 'mdi:file-document-outline' },
-		{ label: 'Approved', icon: 'mdi:check-decagram' },
-		{ label: 'Order Pending', icon: 'mdi:clock-outline' },
-		{ label: 'Order Confirmed', icon: 'mdi:checkbox-marked-circle-outline' },
-		{ label: 'Fulfilled', icon: 'mdi:check-all' },
-		{ label: 'Declined', icon: 'mdi:account-cancel-outline' },
-		{ label: 'Manual Add', icon: 'mdi:account-plus' }
-	];
+	if (participant === 'speaker') {
+		items = [
+			{ label: 'All', icon: '/category.svg' },
+			{ label: 'Invited', icon: '/ticket-1.svg' },
+			{ label: 'Accepted', icon: '/ticket-2-1.svg' },
+			{ label: 'Confirmed', icon: '/Ticket Star 2.svg' },
+			{ label: 'Declined', icon: '/ticket-expired.svg' },
+			{ label: 'Manual Add', icon: '/profile-add.svg' }
+		];
+	} else if (participant === 'exhibitor') {
+		items = [
+			{ label: 'All', icon: '/category.svg' },
+			{ label: 'Invited', icon: '/profile-add-1.svg' },
+			{ label: 'Applied', icon: '/note.svg' },
+			{ label: 'Approved', icon: '/profile-tick.svg' },
+			{ label: 'Contribution', icon: '/shapes.svg' },
+			{ label: 'Pending', icon: '/clock.svg' },
+			{ label: 'Live', icon: '/like.svg' },
+			{ label: 'Declined', icon: '/profile-delete.svg' },
+			{ label: 'Manual Add', icon: '/profile-add.svg' }
+		];
+	} else if (participant === 'vendor') {
+		items = [
+			{ label: 'All', icon: '/category.svg' },
+			{ label: 'Invited', icon: '/profile-add-1.svg' },
+			{ label: 'Applied', icon: '/note.svg' },
+			{ label: 'Approved', icon: '/profile-tick.svg' },
+			{ label: 'Order Pending', icon: '/box-time.svg' },
+			{ label: 'Order Confirmed', icon: '/box-tick.svg' },
+			{ label: 'Fulfilled', icon: '/box-tick.svg' },
+			{ label: 'Declined', icon: '/profile-delete.svg' },
+			{ label: 'Manual Add', icon: '/profile-add.svg' }
+		];
+	} else if (participant === 'cr') {
+		items = [
+			{ label: 'All', icon: '/category.svg' },
+			{ label: 'Pending', icon: '/timer.svg' },
+			{ label: 'Accepted', icon: '/tick-circle.svg' },
+			{ label: 'Declined', icon: '/close-circle.svg' }
+		];
+	}
 </script>
 
 {#if open}
-	<div
-		class="absolute z-50 mt-2 w-56 space-y-3 rounded-xl bg-white p-4 text-[15px] text-gray-700 shadow-lg"
-	>
+	<div class="absolute z-50 mt-2 w-56 rounded-xl bg-white p-2 text-[15px] text-[#768387] shadow-lg {participant === 'cr' ? 'right-0' : ''}">
 		{#each items as item}
-			<div class="flex cursor-pointer items-center justify-between">
+			<div class="flex cursor-pointer items-center justify-between p-2 hover:bg-[#EBECED]">
 				<span>{item.label}</span>
-				<Icon icon={item.icon} class="text-xl" />
+				<img src={item.icon} alt="" />
 			</div>
 		{/each}
 	</div>

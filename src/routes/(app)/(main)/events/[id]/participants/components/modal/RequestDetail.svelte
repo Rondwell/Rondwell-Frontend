@@ -35,7 +35,7 @@
 			on:click|stopPropagation
 		>
 			<!-- Header -->
-			<div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+			<div class="flex items-start md:items-center justify-between border-b border-gray-200 px-6 py-4">
 				<div class="flex flex-col gap-3 md:flex-row md:items-center">
 					<div class="flex items-center gap-3">
 						<button aria-label="Close" on:click={() => (open = false)}>
@@ -199,7 +199,7 @@
 											<p class="">{request.attachment.size}</p>
 										</div>
 									</div>
-									<Icon icon="mdi:bin-outline" class="h-5 w-5" />
+									<Icon icon="mdi:trash-can-outline" class="h-5 w-5" />
 								</div>
 							</div>
 						</div>

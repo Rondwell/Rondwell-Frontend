@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 
 	export let open = false;
@@ -11,7 +12,7 @@
 			price: 478.8,
 			original: 478.8,
 			quantity: 20,
-			image: '/placeholder-img.svg'
+			image: '/tech-icon.svg'
 		},
 		{
 			id: 2,
@@ -19,7 +20,7 @@
 			price: 478.8,
 			original: 478.8,
 			quantity: 20,
-			image: '/placeholder-img.svg'
+			image: '/tech-icon.svg'
 		},
 		{
 			id: 3,
@@ -27,7 +28,7 @@
 			price: 478.8,
 			original: 478.8,
 			quantity: 20,
-			image: '/placeholder-img.svg'
+			image: '/tech-icon.svg'
 		}
 	];
 
@@ -51,6 +52,21 @@
 	};
 
 	const totalAmount = () => items.reduce((sum, i) => sum + i.price * i.quantity, 0).toFixed(2);
+
+	let buttonOpen = false;
+
+	// ✅ Payment Method Options
+	let paymentOptions = [
+		{ id: 'paystack', label: 'Paystack', icon: '/paystack.svg', enabled: false },
+		{ id: 'flutterwave', label: 'Flutterwave', icon: '/Logo_Flutterwave Logo.svg', enabled: false },
+		{ id: 'stripe', label: 'Stripe', icon: '/Stripe.svg', enabled: false }
+	];
+
+	const toggleOption = (id: string) => {
+		paymentOptions = paymentOptions.map((option) =>
+			option.id === id ? { ...option, enabled: !option.enabled } : option
+		);
+	};
 </script>
 
 {#if open}
@@ -64,7 +80,9 @@
 			on:click|stopPropagation
 		>
 			<!-- Header -->
-			<div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+			<div
+				class="flex items-start justify-between border-b border-gray-200 px-6 py-4 md:items-center"
+			>
 				<div class="flex flex-col gap-3 md:flex-row md:items-center">
 					<div class="flex items-center gap-3">
 						<button aria-label="Close" on:click={() => (open = false)}>
@@ -162,126 +180,141 @@
 
 			<!-- Body -->
 			<div
-				class="custom-scrollbar bg-[#F4F5F6] h-134 space-y-8 overflow-hidden overflow-y-auto px-5 py-6 text-gray-700"
+				class="custom-scrollbar h-134 space-y-8 overflow-hidden overflow-y-auto bg-[#F4F5F6] px-5 py-6 text-gray-700"
 			>
 				<!-- Title -->
 				<h2 class="text-2xl font-semibold text-gray-900">Order Summary</h2>
-				<!-- ITEMS LIST -->
-				<div class="space-y-5">
-					{#each items as item}
-						<div class="flex items-start justify-between rounded-xl bg-white p-4">
-							<div class="flex gap-3">
-								<img src={item.image} class="h-14 w-14 rounded-lg bg-gray-200" />
 
-								<div>
-									<p class="font-medium">{item.name}</p>
-									<div class="mt-1 flex items-center gap-2 text-sm">
-										<span class="font-semibold text-gray-800">${item.price}</span>
-										<span class="text-gray-400 line-through">${item.original}</span>
+				<div class="rounded-2xl bg-white p-4">
+					<!-- ITEMS LIST -->
+					<div class="space-y-3">
+						{#each items as item}
+							<div class="flex items-start justify-between px-2 py-4 md:px-4">
+								<div class="flex gap-3">
+									<div class="flex h-22 w-22 items-center justify-center rounded-lg bg-gray-200">
+										<img src={item.image} class="h-12 w-12" />
 									</div>
 
-									<!-- Qty -->
-									<div class="mt-3 flex items-center gap-3">
-										<button class="rounded-md bg-gray-100 px-2" on:click={() => decrease(item.id)}
-											>–</button
+									<div>
+										<p class=" font-medium">{item.name}</p>
+										<div class="mt-1 flex items-center gap-2 text-sm">
+											<span class="font-semibold text-gray-800">${item.price}</span>
+											<span class="text-gray-400 line-through">${item.original}</span>
+										</div>
+
+										<!-- Qty -->
+										<div
+											class="mt-3 flex w-fit items-center gap-3 rounded-lg border border-gray-500 px-2 py-1.5"
 										>
-										<p>{item.quantity}</p>
-										<button class="rounded-md bg-gray-100 px-2" on:click={() => increase(item.id)}
-											>+</button
-										>
+											<button class="" on:click={() => decrease(item.id)}>–</button>
+											<p>{item.quantity}</p>
+											<button class="" on:click={() => increase(item.id)}>+</button>
+										</div>
 									</div>
 								</div>
-							</div>
 
-							<!-- Delete -->
-							<button on:click={() => removeItem(item.id)}>
-								<Icon icon="mdi:trash-can-outline" class="h-5 w-5 text-gray-400" />
+								<!-- Delete -->
+								<button on:click={() => removeItem(item.id)} class="">
+									<Icon icon="mdi:trash-can-outline" class="h-5 w-5 text-gray-400" />
+								</button>
+							</div>
+						{/each}
+					</div>
+
+					<!-- Total Amount -->
+					<div class="mt-6 border-t-3 border-dashed pt-6">
+						<p class="mb-1 text-sm text-gray-500">Total Amount</p>
+						<input
+							class="w-full rounded-lg border bg-white px-3 py-2.5"
+							value={`$${totalAmount()}`}
+							disabled
+						/>
+					</div>
+
+					<!-- Date/Time Needed -->
+					<div class="mt-5">
+						<p class="mb-1 text-sm text-gray-500">Date/Time Needed</p>
+						<input
+							type="text"
+							bind:value={dateTime}
+							class="w-full rounded-lg border bg-white px-3 py-2.5"
+						/>
+					</div>
+
+					<!-- Delivery Notes -->
+					<div class="mt-5">
+						<p class="mb-1 text-sm text-gray-500">Delivery/Logistics Notes</p>
+						<div class="relative">
+							<textarea
+								bind:value={logisticsNotes}
+								class="h-20 w-full rounded-lg border bg-white px-3 py-2"
+								maxlength={100}
+							/>
+							<p class="absolute right-2 bottom-3 mt-1 text-xs text-gray-400">
+								{logisticsNotes.length}/100
+							</p>
+						</div>
+						<p class="mb-1 text-xs text-gray-500">
+							You can describe your personal message briefly.
+						</p>
+					</div>
+
+					<!-- Payment Method Dropdown -->
+					<div class="mt-6">
+						<label class="flex text-gray-900"> Select Payment Method </label>
+
+						<div use:clickOutside={() => (buttonOpen = false)} class="relative w-full">
+							<button
+								class="mb-2 flex w-full cursor-pointer items-center justify-between rounded-lg border bg-white p-3 text-sm font-medium text-[#B3B5B7]"
+								on:click={() => (buttonOpen = !buttonOpen)}
+							>
+								<span class="flex items-center gap-1">
+									{paymentMethod ? paymentMethod : 'Select option'}
+								</span>
+								<img src="/arrow-left.svg" alt="" class="rotate-90" />
 							</button>
-						</div>
-					{/each}
-				</div>
 
-				<!-- Total Amount -->
-				<div class="mt-6">
-					<p class="mb-1 text-sm text-gray-500">Total Amount</p>
-					<input
-						class="w-full rounded-lg bg-white px-3 py-2"
-						value={`$${totalAmount()}`}
-						disabled
-					/>
-				</div>
+							{#if buttonOpen}
+								<div class="absolute left-0 z-10 w-full rounded-lg border bg-white p-2 shadow-lg">
+									<div class="flex flex-col gap-2">
+										{#each paymentOptions as option}
+											<button
+												class="flex w-full items-center justify-between rounded-sm p-2"
+												on:click={() => (paymentMethod = option.label)}
+											>
+												<div class="flex items-center gap-2">
+													<div
+														class="flex h-12 w-12 items-center justify-center rounded-full border"
+													>
+														<img src={option.icon} alt="" />
+													</div>
+													<div class="truncate rounded-2xl px-2 py-1 text-xs font-medium">
+														{option.label}
+													</div>
+													<span class="rounded-xl bg-gray-100 px-2 py-1 text-gray-300">soon</span>
+												</div>
 
-				<!-- Date/Time Needed -->
-				<div class="mt-5">
-					<p class="mb-1 text-sm text-gray-500">Date/Time Needed</p>
-					<input
-						type="datetime-local"
-						bind:value={dateTime}
-						class="w-full rounded-lg bg-white px-3 py-2"
-					/>
-				</div>
-
-				<!-- Delivery Notes -->
-				<div class="mt-5">
-					<p class="mb-1 text-sm text-gray-500">Delivery/Logistics Notes</p>
-					<textarea
-						bind:value={logisticsNotes}
-						class="h-20 w-full rounded-lg bg-white px-3 py-2"
-						maxlength={100}
-					/>
-					<p class="mt-1 text-xs text-gray-400">{logisticsNotes.length}/100</p>
-				</div>
-
-				<!-- Personal Message -->
-				<div class="mt-5">
-					<p class="mb-1 text-xs text-gray-500">You can describe your personal message briefly.</p>
-					<textarea
-						bind:value={personalMessage}
-						class="h-20 w-full rounded-lg bg-white px-3 py-2"
-					/>
-				</div>
-
-				<!-- Payment Method Dropdown -->
-				<div class="mt-5">
-					<p class="mb-1 text-sm text-gray-500">Select Payment Method</p>
-					<select bind:value={paymentMethod} class="w-full rounded-lg bg-white px-3 py-2">
-						<option>Paystack</option>
-						<option>Flutterwave</option>
-						<option>Stripe</option>
-					</select>
-				</div>
-			</div>
-
-			<!-- RIGHT PANEL PAYMENT LIST -->
-			<!-- <div class="h-fit rounded-xl bg-white p-5 shadow-sm">
-					<p class="mb-3 font-semibold">Select Payment Method</p>
-
-					<div class="space-y-3">
-						<div class="gray-50 flex items-center justify-between rounded-lg border p-3">
-							<div class="flex items-center gap-3">
-								<img src="/paystack.svg" class="h-6" />
-								<p class="text-sm font-medium">Paystack</p>
-							</div>
-							<span class="rounded-md bg-gray-200 px-2 py-1 text-xs">SOON</span>
-						</div>
-
-						<div class="gray-50 flex items-center justify-between rounded-lg border p-3">
-							<div class="flex items-center gap-3">
-								<img src="/flutterwave.svg" class="h-6" />
-								<p class="text-sm font-medium">Flutterwave</p>
-							</div>
-							<span class="rounded-md bg-gray-200 px-2 py-1 text-xs">SOON</span>
-						</div>
-
-						<div class="gray-50 flex items-center justify-between rounded-lg border p-3">
-							<div class="flex items-center gap-3">
-								<img src="/stripe.svg" class="h-6" />
-								<p class="text-sm font-medium">Stripe</p>
-							</div>
-							<span class="rounded-md bg-gray-200 px-2 py-1 text-xs">SOON</span>
+												<!-- Toggle Switch -->
+												<div
+													class="flex h-5 w-8 cursor-pointer items-center rounded-full p-1"
+													class:bg-gray-300={!option.enabled}
+													class:bg-black={option.enabled}
+													on:click|stopPropagation={() => toggleOption(option.id)}
+												>
+													<div
+														class="h-4 w-4 rounded-full bg-white shadow-md transition-all"
+														class:translate-x-2={option.enabled}
+													></div>
+												</div>
+											</button>
+										{/each}
+									</div>
+								</div>
+							{/if}
 						</div>
 					</div>
-				</div> -->
+				</div>
+			</div>
 		</div>
 	</div>
 {/if}

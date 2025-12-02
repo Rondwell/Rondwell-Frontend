@@ -132,7 +132,7 @@
 			{@const styling = getStatusStyle(request.status)}
 			<div class="mb-2 rounded-lg bg-white p-4">
 				<div class="flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
-					<div class="flex flex-wrap gap-2 md:flex-row md:items-center md:gap-5">
+					<div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-5">
 						<div class="flex items-center gap-2">
 							<img src={request.avatar} alt={request.company} class="h-8 w-8 rounded-full" />
 							<div class="font-medium">{request.company}</div>

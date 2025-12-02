@@ -8,7 +8,15 @@
 	export let participant = 'Speaker';
 	let participantLowerCase = participant.toLocaleLowerCase();
 
-	let selectedS: number | null = null;
+	let selectedS: number[] = [];
+
+	function toggleSelect(id: number) {
+		if (selectedS.includes(id)) {
+			selectedS = selectedS.filter((s) => s !== id);
+		} else {
+			selectedS = [...selectedS, id];
+		}
+	}
 
 	const tabs = [
 		{ id: 'email', label: 'Invite by Email' },
@@ -20,7 +28,9 @@
 
 {#if open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-		<div class="animate-fadeIn max-h-150 w-full max-w-3xl rounded-2xl bg-[#FDFCFB] p-6 shadow-xl">
+		<div
+			class="animate-fadeIn max-h-180 w-full max-w-2xl rounded-2xl bg-[#FDFCFB] px-4 py-6 shadow-xl md:max-h-150 md:p-6"
+		>
 			<!-- Modal Header -->
 			<div class="relative flex w-full flex-col items-center">
 				<div class="mb-3 flex h-18 w-18 items-center justify-center rounded-full bg-gray-100">
@@ -85,7 +95,7 @@
 			</div>
 
 			<!-- TAB CONTENT -->
-			<div class="custom-scrollbar mt-6 h-60 overflow-y-auto rounded-lg border p-4">
+			<div class="custom-scrollbar mt-6 max-h-80 overflow-y-auto rounded-lg border p-4 md:h-60">
 				<!-- Invite by Email -->
 				{#if activeTab === 'email'}
 					<div>
@@ -182,13 +192,14 @@
 									<div class="flex flex-col gap-2 md:flex-row md:items-center">
 										<div class="flex items-center gap-2">
 											<button
-												on:click={() => (selectedS = s)}
-												class="flex h-5 w-5 items-center justify-center rounded-full border-2 {selectedS ==
-												s
+												on:click={() => toggleSelect(s)}
+												class="flex h-5 w-5 items-center justify-center rounded-full border-2 {selectedS.includes(
+													s
+												)
 													? 'bg-black'
 													: 'border-gray-300'}"
 											>
-												{#if selectedS == s}
+												{#if selectedS.includes(s)}
 													<Icon icon="mdi:tick" class="text-2xl text-white" />
 												{/if}
 											</button>

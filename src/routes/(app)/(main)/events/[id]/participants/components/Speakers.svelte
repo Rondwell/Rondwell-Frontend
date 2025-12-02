@@ -6,23 +6,21 @@
 	import Filter from './modal/Filter.svelte';
 	import Status from './modal/Status.svelte';
 	import { clickOutside } from '$lib/utils/constant';
+	import Dropdown from './modal/Dropdown.svelte';
+	import ProfileDetail from './modal/ProfileDetail.svelte';
 
 	let searchQuery = '';
 	let showAddModal = false;
 	let showProfile = false;
 	let showFilter = false;
 	let showStatus = false;
+	let showActionModal: number | null = null;
+	let buttonEl: HTMLElement;
 
 	// Mock data for speakers
 	const eventData = {
 		title: 'Megaexe Party',
 		collection: 'John Collection',
-		tabs: [
-			{ name: 'Speakers', active: true },
-			{ name: 'Exhibitors', active: false },
-			{ name: 'Vendors', active: false },
-			{ name: 'Collaboration Request', active: false }
-		],
 		speakers: [
 			{
 				id: 1,
@@ -72,23 +70,20 @@
 		]
 	};
 
-	// Function to search speakers
-	const searchSpeakers = (event: any) => {
-		console.log('Searching speakers:', event.target.value);
-		// In a real app, this would filter the speakers list
-	};
+	function handleSaveSpeaker(speaker: string) {
+		console.log('Saved speaker:', speaker);
+		// Update your speaker data or send to API
+	}
 
-	// Function to handle actions for each speaker
-	const handleActions = (speakerId: number) => {
-		console.log('Handling actions for speaker:', speakerId);
-		// In a real app, this would open a dropdown menu with options
-	};
+	function handleSendMessage(speakerId: string) {
+		console.log('Sending message to speaker ID:', speakerId);
+		// Implement messaging functionality
+	}
 
-	// Function to change speaker status
-	const changeStatus = (speakerId: number, newStatus: string) => {
-		console.log('Changing status for speaker:', speakerId, 'to', newStatus);
-		// In a real app, this would update the speaker's status
-	};
+	function handleManageSession(sessionId: string) {
+		console.log('Managing session ID:', sessionId);
+		// Implement session management
+	}
 </script>
 
 <div class="">
@@ -143,7 +138,7 @@
 						<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
 						Status
 					</button>
-					<!-- <Status bind:open={showStatus} /> -->
+					<Status bind:open={showStatus} participant="speaker" />
 				</div>
 				<div use:clickOutside={() => (showFilter = false)} class="relative">
 					<button
@@ -153,7 +148,7 @@
 						<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
 						Has Session
 					</button>
-					<!-- <Filter bind:open={showFilter} /> -->
+					<Filter bind:open={showFilter} participant="speaker" />
 				</div>
 			</div>
 		</div>
@@ -162,94 +157,49 @@
 			<!-- Speakers List -->
 			{#each eventData.speakers as speaker}
 				{@const styling = getStatusStyle(speaker.status)}
-				<div>
-					<div class="mb-2 rounded-lg bg-white p-4">
-						<div class="flex items-start justify-between lg:items-center">
-							<button
-								class="flex flex-wrap gap-2 md:flex-row md:items-center md:gap-5"
-								on:click={() => (showProfile = true)}
+				<div class="mb-2 rounded-lg bg-white p-4">
+					<div class="flex items-start justify-between lg:items-center">
+						<button
+							class="flex flex-wrap gap-2 md:flex-row md:items-center md:gap-5"
+							on:click={() => (showProfile = true)}
+						>
+							<div class="flex items-center gap-2">
+								<img src={speaker.profile} alt={speaker.name} class="h-8 w-8 rounded-full" />
+								<div class="font-medium">{speaker.name}</div>
+							</div>
+							<div class="flex items-start flex-col gap-2 md:flex-row md:items-center">
+								<div
+									class="max-w-[200px] truncate text-sm text-[#B6B7B7] md:max-w-[150px] lg:max-w-[250px]"
+								>
+									{speaker.title}
+								</div>
+								<div class="text-sm text-gray-600">{speaker.sessions}</div>
+							</div>
+						</button>
+
+						<div class="flex flex-col items-end gap-2 lg:flex-row lg:items-center">
+							<span
+								class="rounded-[11px] px-2 py-1 text-xs"
+								style="background: {styling.bg}; color: {styling.text}"
 							>
-								<div class="flex items-center gap-2">
-									<img src={speaker.profile} alt={speaker.name} class="h-8 w-8 rounded-full" />
-									<div class="font-medium">{speaker.name}</div>
-								</div>
-								<div class="flex flex-col gap-2 md:flex-row md:items-center">
-									<div
-										class="max-w-[200px] truncate text-sm text-[#B6B7B7] md:max-w-[150px] lg:max-w-[250px]"
-									>
-										{speaker.title}
-									</div>
-									<div class="text-sm text-gray-600">{speaker.sessions}</div>
-								</div>
-							</button>
+								{speaker.status}
+							</span>
 
-							<div class="flex flex-col items-end gap-2 lg:flex-row lg:items-center">
-								<span
-									class="rounded-[11px] px-2 py-1 text-xs"
-									style="background: {styling.bg}; color: {styling.text}"
+							<div
+								class="group relative"
+								bind:this={buttonEl}
+								use:clickOutside={() => {
+									if (showActionModal === speaker.id) showActionModal = null;
+								}}
+							>
+								<button
+									on:click={() =>
+										(showActionModal = showActionModal === speaker.id ? null : speaker.id)}
+									class="rounded p-1 hover:bg-gray-100"
 								>
-									{speaker.status}
-								</span>
-
-								<div class="group relative">
-									<button
-										on:click={() => handleActions(speaker.id)}
-										class="rounded p-1 hover:bg-gray-100"
-									>
-										<Icon icon="mdi:dots-horizontal" class="h-5 w-5 text-gray-500" />
-									</button>
-
-									<!-- Actions Dropdown (hidden by default) -->
-									<!-- <div
-									class="absolute right-0 z-10 mt-1 hidden rounded-md border border-gray-200 bg-white shadow-lg group-hover:block"
-								>
-									<div class="py-1">
-										<button
-											on:click={() => changeStatus(speaker.id, 'Confirmed')}
-											class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-										>
-											Mark as Confirmed
-										</button>
-										<button
-											on:click={() => changeStatus(speaker.id, 'Invited')}
-											class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-										>
-											Mark as Invited
-										</button>
-										<button
-											on:click={() => changeStatus(speaker.id, 'Declined')}
-											class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-										>
-											Mark as Declined
-										</button>
-										<button
-											on:click={() => changeStatus(speaker.id, 'Accepted')}
-											class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-										>
-											Mark as Accepted
-										</button>
-										<button
-											on:click={() => changeStatus(speaker.id, 'Manual Add')}
-											class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-										>
-											Mark as Manual Add
-										</button>
-										<div class="my-1 border-t border-gray-200"></div>
-										<button
-											on:click={() => console.log('Edit speaker:', speaker.id)}
-											class="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-										>
-											Edit Speaker
-										</button>
-										<button
-											on:click={() => console.log('Delete speaker:', speaker.id)}
-											class="block w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50"
-										>
-											Delete Speaker
-										</button>
-									</div>
-								</div> -->
-								</div>
+									<Icon icon="mdi:dots-horizontal" class="h-5 w-5 text-gray-500" />
+								</button>
+								<Dropdown open={showActionModal === speaker.id} {buttonEl} participant="speaker" />
 							</div>
 						</div>
 					</div>
@@ -264,3 +214,12 @@
 		{/if}
 	</div>
 </div>
+
+<ProfileDetail
+	bind:open={showProfile}
+	participant="Speaker"
+	on:save={() => handleSaveSpeaker}
+	on:sendMessage={() => handleSendMessage}
+	on:manageSession={() => handleManageSession}
+	on:close={() => (showProfile = false)}
+/>

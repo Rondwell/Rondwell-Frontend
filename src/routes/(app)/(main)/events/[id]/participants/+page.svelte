@@ -110,7 +110,6 @@
 </script>
 
 <div class="max-w-6xl">
-	<!-- Event Header -->
 	<div class="mb-6">
 		<div class="mb-2 flex items-center justify-between">
 			<div class="flex items-center gap-2">
@@ -174,7 +173,6 @@
 		</div>
 		<h1 class="mb-10 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
 
-		<!-- Navigation Tabs -->
 		<Nav {tabs} bind:activeTab />
 	</div>
 	{#if activeTab === 'speakers'}

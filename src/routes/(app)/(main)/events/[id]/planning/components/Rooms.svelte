@@ -48,7 +48,7 @@
 	<div class="mb-6">
 		<!-- Section Header -->
 		<div
-			class="relative mb-6 flex flex-col justify-between gap-3 rounded-lg border-3 border-dashed p-4 lg:flex-row lg:items-center lg:pr-10"
+			class="relative mb-6 flex flex-col justify-between gap-3 rounded-lg border-3 border-dashed border-gray-300 p-4 lg:flex-row lg:items-center lg:pr-10"
 		>
 			<div class="space-y-3">
 				<h2 class="text-xl font-semibold text-gray-600">Add Room</h2>
@@ -56,7 +56,7 @@
 					Set up and manage the virtual or physical spaces where your event will take place.
 				</p>
 				<button
-					class="flex items-center gap-2 rounded-lg bg-[#EBECED] px-4 py-2 text-sm text-black"
+					class="hidden items-center gap-2 rounded-lg bg-[#EBECED] px-4 py-2 text-sm text-black lg:flex"
 				>
 					<Icon icon="mdi:plus" class="text-xl" />
 					Create New Room
@@ -64,6 +64,13 @@
 			</div>
 
 			<img src="/rooms.svg" alt="" class="w-50" />
+
+			<button
+				class="flex w-fit items-center gap-2 rounded-lg bg-[#EBECED] px-4 py-2 text-sm text-black lg:hidden"
+			>
+				<Icon icon="mdi:plus" class="text-xl" />
+				Create New Room
+			</button>
 
 			<button
 				class="absolute top-2 right-2 flex h-[29px] w-[29px] items-center justify-center rounded-full bg-[#EBECED] text-[#616265]"
@@ -93,24 +100,37 @@
 
 		<!-- Search and Filters -->
 		<div class="mb-4 flex flex-col justify-between lg:flex-row lg:items-center">
-			<div class="relative mb-4 w-full max-w-xl">
-				<input
-					type="text"
-					bind:value={searchQuery}
-					placeholder="Search room by name..."
-					class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-[#C5C6C6] focus:ring-0 focus:outline-none"
-				/>
-				<span class="absolute top-2.5 left-3 text-gray-400">
-					<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />
-				</span>
+			<div class="mb-4 flex items-center gap-2">
+				<div class="relative w-full max-w-xl">
+					<input
+						type="text"
+						bind:value={searchQuery}
+						placeholder="Search room by name..."
+						class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-[#C5C6C6] focus:ring-0 focus:outline-none"
+					/>
+					<span class="absolute top-2.5 left-3 text-gray-400">
+						<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />
+					</span>
+				</div>
+
+				<div class="flex items-center gap-1 md:hidden">
+					<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+						<img src="/download-icon.svg" alt="download icon" />
+					</div>
+					<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+						<img src="/export.svg" alt="export icon" />
+					</div>
+				</div>
 			</div>
 
 			<div class="flex items-center gap-1 md:flex-row">
-				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
-					<img src="/download-icon.svg" alt="download icon" />
-				</div>
-				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
-					<img src="/export.svg" alt="export icon" />
+				<div class="hidden items-center gap-1 md:flex">
+					<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+						<img src="/download-icon.svg" alt="download icon" />
+					</div>
+					<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+						<img src="/export.svg" alt="export icon" />
+					</div>
 				</div>
 
 				<div use:clickOutside={() => (showStatus = false)} class="relative">
@@ -167,7 +187,9 @@
 							class="mt-6 flex flex-col justify-between gap-2 border-t pt-6 md:flex-row md:items-center"
 						>
 							<!-- Access -->
-							<div class="flex items-center justify-between gap-2 text-sm text-gray-600 md:justify-normal">
+							<div
+								class="flex items-center justify-between gap-2 text-sm text-gray-600 md:justify-normal"
+							>
 								<span class="font-medium">Access:</span>
 								<div class="flex items-center gap-2 rounded-xl bg-gray-100 px-2 py-1.5">
 									<span class="flex items-center gap-1">
@@ -179,7 +201,9 @@
 							</div>
 
 							<!-- Community Chat toggle -->
-							<div class="flex items-center justify-between gap-2 text-sm text-gray-600 md:justify-normal">
+							<div
+								class="flex items-center justify-between gap-2 text-sm text-gray-600 md:justify-normal"
+							>
 								<span>Community Chat</span>
 
 								<!-- Switch -->

@@ -228,24 +228,36 @@
 
 		<!-- Search Bar -->
 		<div class="mb-4 flex flex-col justify-between lg:flex-row lg:items-center">
-			<div class="relative mb-4 w-full max-w-xl">
-				<input
-					type="text"
-					bind:value={searchQuery}
-					placeholder="Search discussions, users, or reported content..."
-					class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-gray-500 focus:ring-0 focus:outline-none"
-				/>
-				<span class="absolute top-2.5 left-3 text-gray-400">
-					<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />
-				</span>
+			<div class="mb-4 flex items-center gap-2">
+				<div class="relative w-full max-w-xl">
+					<input
+						type="text"
+						bind:value={searchQuery}
+						placeholder="Search discussions, users, or reported content..."
+						class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-gray-500 focus:ring-0 focus:outline-none"
+					/>
+					<span class="absolute top-2.5 left-3 text-gray-400">
+						<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />
+					</span>
+				</div>
+				<div class="flex items-center gap-1 md:hidden">
+					<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+						<img src="/download-icon.svg" alt="download icon" />
+					</div>
+					<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+						<img src="/export.svg" alt="export icon" />
+					</div>
+				</div>
 			</div>
 
 			<div class="flex items-center gap-1 md:flex-row">
-				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
-					<img src="/download-icon.svg" alt="download icon" />
-				</div>
-				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
-					<img src="/export.svg" alt="export icon" />
+				<div class="hidden items-center gap-1 md:flex">
+					<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+						<img src="/download-icon.svg" alt="download icon" />
+					</div>
+					<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+						<img src="/export.svg" alt="export icon" />
+					</div>
 				</div>
 
 				<div use:clickOutside={() => (showFilter = false)} class="relative">
@@ -318,7 +330,7 @@
 	<div class="mt-8">
 		<h2 class="text-lg font-semibold">Community Settings</h2>
 
-		<div class="mt-4 space-y-4 rounded-xl bg-white p-6 shadow">
+		<div class="mt-4 space-y-4 rounded-xl bg-white p-3 md:p-6 shadow">
 			<h3 class="mb-4 border-b py-3 font-semibold">General Community Settings</h3>
 
 			<!-- Toggle Settings -->

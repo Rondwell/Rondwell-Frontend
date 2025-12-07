@@ -152,13 +152,13 @@
 
 			<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
 				<button
-					class="flex items-center gap-1 rounded-md bg-gray-300 px-4 py-2 text-sm text-[#616265]"
+					class="flex items-center gap-1 rounded-md bg-[#EBECED] justify-center px-4 py-2 text-sm text-[#616265]"
 				>
 					<Icon icon="mdi:plus" class="h-4 w-4" />
 					Add New FAQ</button
 				>
 				<button
-					class="flex items-center gap-1 rounded-md bg-gray-300 px-4 py-2 text-sm text-[#616265]"
+					class="flex items-center gap-1 rounded-md bg-[#EBECED] justify-center px-4 py-2 text-sm text-[#616265]"
 				>
 					<img src="/photo-icon.svg" alt="" />
 					Generate Photo Album</button

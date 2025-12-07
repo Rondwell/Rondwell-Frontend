@@ -9,6 +9,7 @@
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 
 	export let background_color = '';
+	export let show = true;
 	let showMenu = false;
 	let activeItem = '';
 
@@ -116,7 +117,7 @@
 
 {#if isMobile}
 	<div class="z-50">
-		<div class="flex items-center justify-between px-4 py-3 md:hidden">
+		<div class="items-center justify-between px-4 py-3 md:hidden {show ? 'flex' : 'hidden'}">
 			<!-- <img src="/face-1.svg" alt="" /> -->
 			<div use:clickOutside={() => (showMenu = false)}>
 				<button

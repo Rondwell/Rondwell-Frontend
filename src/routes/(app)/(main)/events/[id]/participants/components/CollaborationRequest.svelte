@@ -73,13 +73,13 @@
 					Review and respond to all incoming proposals from Speakers, Exhibitors, and Vendors.
 				</p>
 			</div>
-			<!-- <button
+			<button
 				on:click={addCollaborationRequest}
 				class="flex w-full items-center justify-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white transition-colors hover:bg-gray-800 sm:w-fit"
 			>
 				<Icon icon="mdi:plus" class="text-xl" />
 				Add Request
-			</button> -->
+			</button>
 		</div>
 
 		<!-- Search and Filters -->
@@ -127,53 +127,61 @@
 			</div>
 		</div>
 
-		<!-- Collaboration Requests List -->
-		{#each eventData.collaborationRequests as request}
-			{@const styling = getStatusStyle(request.status)}
-			<div class="mb-2 rounded-lg bg-white p-4">
-				<div class="flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
-					<div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-5">
+		{#if eventData?.collaborationRequests?.length > 0}
+			<!-- Collaboration Requests List -->
+			{#each eventData.collaborationRequests as request}
+				{@const styling = getStatusStyle(request.status)}
+				<div class="mb-2 rounded-lg bg-white p-4">
+					<div class="flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
+						<div class="flex flex-col gap-2 md:flex-row md:items-center md:gap-5">
+							<div class="flex items-center gap-2">
+								<img src={request.avatar} alt={request.company} class="h-8 w-8 rounded-full" />
+								<div class="font-medium">{request.company}</div>
+								<span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+									{request.role}
+								</span>
+							</div>
+							<div class="flex flex-col gap-2 md:flex-row md:items-center">
+								<span
+									class="max-w-[200px] truncate text-sm text-[#B6B7B7] md:max-w-[150px] lg:max-w-[250px]"
+									>{request.description}</span
+								>
+								<div class="text-sm text-gray-600">{request.date}</div>
+							</div>
+						</div>
+
 						<div class="flex items-center gap-2">
-							<img src={request.avatar} alt={request.company} class="h-8 w-8 rounded-full" />
-							<div class="font-medium">{request.company}</div>
-							<span class="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-								{request.role}
-							</span>
-						</div>
-						<div class="flex flex-col gap-2 md:flex-row md:items-center">
 							<span
-								class="max-w-[200px] truncate text-sm text-[#B6B7B7] md:max-w-[150px] lg:max-w-[250px]"
-								>{request.description}</span
+								class="rounded-[11px] px-2 py-1 text-xs"
+								style="background: {styling.bg}; color: {styling.text}"
 							>
-							<div class="text-sm text-gray-600">{request.date}</div>
-						</div>
-					</div>
+								{request.status}
+							</span>
 
-					<div class="flex items-center gap-2">
-						<span
-							class="rounded-[11px] px-2 py-1 text-xs"
-							style="background: {styling.bg}; color: {styling.text}"
-						>
-							{request.status}
-						</span>
-
-						<div
-							class="group relative"
-							use:clickOutside={() => {
-								if (showDetail === request.id) showDetail = null;
-							}}
-						>
-							<button
-								on:click={() => (showDetail = showDetail === request.id ? null : request.id)}
-								class="rounded-md bg-gray-200 px-3 py-1 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-300"
+							<div
+								class="group relative"
+								use:clickOutside={() => {
+									if (showDetail === request.id) showDetail = null;
+								}}
 							>
-								Review & Respond
-							</button>
-							<RequestDetail open={showDetail === request.id} />
+								<button
+									on:click={() => (showDetail = showDetail === request.id ? null : request.id)}
+									class="rounded-md bg-gray-200 px-3 py-1 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-300"
+								>
+									Review & Respond
+								</button>
+								<RequestDetail open={showDetail === request.id} />
+							</div>
 						</div>
 					</div>
 				</div>
+			{/each}
+		{:else}
+			<div class="flex h-50 flex-col items-center justify-center">
+				<img src="/participants.svg" alt="" class="h-60" />
+				<p class="mt-2 font-medium text-[#A2ACB2]">No Collaboration request added, yet</p>
+				<p class="text-sm text-gray-400">Collaboration request will display when they are added</p>
 			</div>
-		{/each}
+		{/if}
 	</div>
 </div>

@@ -95,7 +95,7 @@
 	</nav>
 {:else}
 	<aside
-		class="fixed top-0 left-[117px] z-20 hidden h-screen w-[250px] flex-col items-start justify-start gap-10 border-r px-6 py-10 md:flex"
+		class="fixed top-0 left-[117px] z-10 hidden h-screen w-[250px] flex-col items-start justify-start gap-10 border-r px-6 py-10 md:flex"
 	>
 		<a href="/overview">
 			<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />

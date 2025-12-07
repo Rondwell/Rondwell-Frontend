@@ -137,7 +137,7 @@
 </script>
 
 <div
-	class="relative flex min-h-screen overflow-auto"
+	class="relative flex flex-col md:flex-row min-h-screen overflow-auto"
 	style="background-color: {selectedColor.bg}; color: {selectedColor.text}; font-family: {selectedFont}"
 >
 	<!-- Sidebar -->

@@ -380,10 +380,10 @@
 
 									{#if menuOpen === ticket.id}
 										<div
-											class="absolute right-0 z-10 mt-2 w-35 rounded-md border border-gray-200 bg-white p-1 shadow-md"
+											class="absolute right-0 z-50 mt-2 w-35 rounded-md border border-gray-200 bg-white p-1 shadow-md"
 										>
 											<div
-												class="relative w-full md:max-w-[300px]"
+												class="relative w-full"
 												use:clickOutside={() => {
 													if (showUpdateTicket === ticket.id) showUpdateTicket = null;
 												}}
@@ -530,10 +530,10 @@
 
 									{#if menuOpen === ticket.id}
 										<div
-											class="absolute right-0 z-10 mt-2 w-35 rounded-md border border-gray-200 bg-white p-1 shadow-md"
+											class="absolute right-0 z-50 mt-2 w-35 rounded-md border border-gray-200 bg-white p-1 shadow-md"
 										>
 											<div
-												class="relative w-full md:max-w-[300px]"
+												class="relative w-full"
 												use:clickOutside={() => {
 													if (showUpdateTicket === ticket.id) showUpdateTicket = null;
 												}}

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import Header from '../components/Header.svelte';
 	import Sidebar from '../components/Sidebar.svelte';
 	import SideMenu from '../components/SideMenu.svelte';
 	import { showSubMenu, subMenuItems, activeSubItem } from '$lib/stores/uiStore.js';
@@ -34,7 +33,8 @@
 	function getThemeForRoute(path: string | null): string {
 		if (!path) return themes.default;
 
-		if (path.startsWith('/events/') && path.includes('/registration')) return themes.eventRegistration;
+		if (path.startsWith('/events/') && path.includes('/registration'))
+			return themes.eventRegistration;
 		if (path.startsWith('/events/')) return themes.eventMain;
 		if (path.startsWith('/collections/')) return themes.collection;
 
@@ -59,7 +59,7 @@
 </script>
 
 <div
-	class="relative flex min-h-screen text-sm font-medium"
+	class="relative flex min-h-screen flex-col text-sm font-medium md:flex-row"
 	style="background-image: {selectedTheme};"
 >
 	<!-- Sidebar -->
@@ -73,7 +73,6 @@
 		</div>
 	{/if}
 	<main class="relative mb-[106px] flex min-h-screen w-full flex-col p-3 md:mb-0 md:p-5">
-		<Header />
 		<div class="bg flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
 			{#if isSubMenuVisible && menuItems.length > 0}
 				<div class="relative mb-6 md:hidden">

@@ -325,41 +325,7 @@
 					<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />
 				</span>
 				<span class="absolute top-2.5 right-0 border-l px-4 py-1.5 text-gray-400">
-					<svg
-						width="13"
-						height="15"
-						viewBox="0 0 13 15"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<rect x="0.00268555" y="8.99219" width="2.24766" height="5.24454" fill="#D9D9D9" />
-						<rect x="10.489" y="8.99219" width="2.24766" height="5.24454" fill="#D9D9D9" />
-						<rect y="11.9922" width="12.7367" height="2.24766" fill="#D9D9D9" />
-						<rect
-							x="1.50732"
-							y="5.78125"
-							width="2.24766"
-							height="6.73156"
-							transform="rotate(-45 1.50732 5.78125)"
-							fill="#D9D9D9"
-						/>
-						<rect
-							x="9.53809"
-							y="4.21875"
-							width="2.24766"
-							height="6.69056"
-							transform="rotate(45 9.53809 4.21875)"
-							fill="#D9D9D9"
-						/>
-						<rect
-							x="5.25342"
-							y="8.99219"
-							width="8.99063"
-							height="2.24766"
-							transform="rotate(-90 5.25342 8.99219)"
-							fill="#D9D9D9"
-						/>
-					</svg>
+					<img src="/search-download.svg" alt=""  class="w-4 h-4"/>
 				</span>
 			</div>
 

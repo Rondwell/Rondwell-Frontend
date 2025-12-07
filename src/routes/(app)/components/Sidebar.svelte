@@ -12,6 +12,13 @@
 	let showMenu = false;
 	let activeItem = '';
 
+	function goHome() {
+		goto('/overview');
+		showSubMenu.set(false);
+		subMenuItems.set([]);
+		activeSubItem.set('');
+	}
+
 	// Menu items
 	const menuItems = [
 		{ id: 'create', label: 'Create Event', icon: 'plus', active: true, nav: '/create-event' },
@@ -108,53 +115,72 @@
 </script>
 
 {#if isMobile}
-	<!-- Mobile Bottom Navigation -->
-	<nav
-		class="fixed right-0 bottom-0 left-0 z-50 flex h-[106px] items-end justify-around border-t py-2 md:hidden"
-		style="background-color: {background_color};"
-	>
-		<div class="flex h-full w-full items-end justify-around">
-			{#each mobileMenuItems as item}
+	<div class="z-50">
+		<div class="flex items-center justify-between px-4 py-3 md:hidden">
+			<!-- <img src="/face-1.svg" alt="" /> -->
+			<div use:clickOutside={() => (showMenu = false)}>
 				<button
-					class={`flex h-full flex-col items-center justify-center text-gray-500`}
-					aria-label={item.label}
 					on:click={() => {
-						goto(item.nav);
+						showMenu = !showMenu;
 					}}
 				>
-					{#if item.icon === 'plus'}
-						<div
-							class="flex h-[48px] w-[48px] items-center justify-center rounded-full text-white"
-							style="background: linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%);"
-							title="Create Event"
-						>
-							<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-								/>
-							</svg>
-						</div>
-					{:else}
-						<div class={activeItem === item.id ? 'selected' : ''}>
-							<p>{@html item.icon}</p>
-						</div>
-						<span
-							class="mt-1 text-xs {activeItem === item.id
-								? 'text-[#513BE2]'
-								: 'text-gray-500'} transition-colors">{item.label}</span
-						>
-					{/if}
+					<img src="/face-1.svg" alt="" />
 				</button>
-			{/each}
+				<ProfileMenu bind:showMenu className="absolute top-15 left-5 md:hidden" />
+			</div>
+			<button on:click={goHome}>
+				<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
+			</button>
+			<img src="/notification.svg" alt="" />
 		</div>
-	</nav>
+		<!-- Mobile Bottom Navigation -->
+		<nav
+			class="fixed right-0 bottom-0 left-0 z-50 flex h-[106px] items-end justify-around border-t py-2 md:hidden"
+			style="background-color: {background_color};"
+		>
+			<div class="flex h-full w-full items-end justify-around">
+				{#each mobileMenuItems as item}
+					<button
+						class={`flex h-full flex-col items-center justify-center text-gray-500`}
+						aria-label={item.label}
+						on:click={() => {
+							goto(item.nav);
+						}}
+					>
+						{#if item.icon === 'plus'}
+							<div
+								class="flex h-[48px] w-[48px] items-center justify-center rounded-full text-white"
+								style="background: linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%);"
+								title="Create Event"
+							>
+								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+									/>
+								</svg>
+							</div>
+						{:else}
+							<div class={activeItem === item.id ? 'selected' : ''}>
+								<p>{@html item.icon}</p>
+							</div>
+							<span
+								class="mt-1 text-xs {activeItem === item.id
+									? 'text-[#513BE2]'
+									: 'text-gray-500'} transition-colors">{item.label}</span
+							>
+						{/if}
+					</button>
+				{/each}
+			</div>
+		</nav>
+	</div>
 {:else}
 	<!-- Desktop Sidebar -->
 	<aside
-		class="fixed top-0 left-0 z-40 hidden h-screen w-[117px] flex-col items-center justify-evenly gap-10 border-r py-10 md:flex"
+		class="fixed top-0 left-0 z-10 hidden h-screen w-[117px] flex-col items-center justify-evenly gap-10 border-r py-10 md:flex"
 	>
 		<div class="flex flex-col items-center space-y-10">
 			<!-- Hamburger Menu -->

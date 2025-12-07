@@ -49,7 +49,7 @@
 
 {#if showMenu}
 	<div
-		class="triangle bg custom-scrollbar z-50 max-h-[540px] w-83 overflow-y-auto rounded-xl p-6 text-sm md:w-90 {className}"
+		class="triangle bg custom-scrollbar z-30 max-h-[540px] w-83 overflow-y-auto rounded-xl p-6 text-sm md:w-90 {className}"
 	>
 		<!-- Active Profile -->
 		<div class="flex items-center space-x-3">

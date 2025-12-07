@@ -17,7 +17,7 @@
 <div class="relative flex min-h-screen bg-[#F4F5F6] text-sm font-medium">
 	<!-- Sidebar -->
 	<div class="relative md:min-w-[117px] {show ? '' : 'hidden'}">
-		<Sidebar background_color="#F4F5F6" />
+		<Sidebar background_color="#F4F5F6" show={false} />
 		<!-- <SideMenu /> -->
 	</div>
 	<main class="relative h-full w-full {show ? 'mb-[106px] md:mb-0' : ''}">

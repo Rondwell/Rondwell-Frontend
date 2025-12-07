@@ -19,7 +19,7 @@
 		{#each tabs as tab}
 			<button
 				on:click|preventDefault={() => setTab(tab.id)}
-				class="flex w-fit min-w-33 flex-shrink-0 items-center justify-center gap-2 border-b-2 pb-3 font-medium transition-colors duration-300 sm:w-full sm:max-w-50 md:min-w-auto {tabs.length <=
+				class="flex w-fit min-w-30 sm:min-w-33 flex-shrink-0 items-center justify-center gap-2 border-b-2 pb-3 font-medium transition-colors duration-300 sm:w-full sm:max-w-50 md:min-w-auto {tabs.length <=
 				4
 					? 'lg:max-w-none lg:flex-shrink'
 					: ''}

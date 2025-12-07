@@ -265,7 +265,7 @@
 				/>
 				<button
 					on:click={updatePublicUrl}
-					class="w-fit rounded-md bg-[#939596] px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-gray-700 ml-2 sm:w-auto sm:text-sm"
+					class="w-fit rounded-md bg-[#939596] px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-gray-700 ml-1 sm:w-auto sm:text-sm"
 				>
 					Update
 				</button>

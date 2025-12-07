@@ -164,58 +164,66 @@
 			</div>
 		</div>
 
-		<!-- Exhibitors List -->
-		{#each eventData.exhibitors as exhibitor}
-			{@const styling = getStatusStyle(exhibitor.status)}
-			<div class="mb-2 rounded-lg bg-white p-4">
-				<div class="flex items-end justify-between md:items-start lg:items-center">
-					<button
-						class="flex flex-wrap gap-2 md:flex-row md:items-center md:gap-5"
-						on:click={() => (showProfile = true)}
-					>
-						<div class="flex items-center gap-2">
-							<img src={exhibitor.avatar} alt={exhibitor.company} class="h-8 w-8 rounded-full" />
-							<div class="font-medium">{exhibitor.company}</div>
-						</div>
-
-						<div class="flex items-center gap-2">
-							<div class="text-sm text-[#B6B7B7]">{exhibitor.packageName}</div>
-							<div class="text-sm text-gray-600">{exhibitor.setupStatus}</div>
-						</div>
-					</button>
-
-					<div class="flex flex-col items-end gap-2 lg:flex-row lg:items-center">
-						<span
-							class="rounded-[11px] px-2 py-1 text-xs"
-							style="background: {styling.bg}; color: {styling.text}"
+		{#if eventData?.exhibitors?.length > 0}
+			<!-- Exhibitors List -->
+			{#each eventData.exhibitors as exhibitor}
+				{@const styling = getStatusStyle(exhibitor.status)}
+				<div class="mb-2 rounded-lg bg-white p-4">
+					<div class="flex items-end justify-between md:items-start lg:items-center">
+						<button
+							class="flex flex-wrap gap-2 md:flex-row md:items-center md:gap-5"
+							on:click={() => (showProfile = true)}
 						>
-							{exhibitor.status}
-						</span>
+							<div class="flex items-center gap-2">
+								<img src={exhibitor.avatar} alt={exhibitor.company} class="h-8 w-8 rounded-full" />
+								<div class="font-medium">{exhibitor.company}</div>
+							</div>
 
-						<div
-							class="group relative"
-							use:clickOutside={() => {
-								if (showActionModal === exhibitor.id) showActionModal = null;
-							}}
-						>
-							<button
-								bind:this={buttonEl}
-								on:click={() =>
-									(showActionModal = showActionModal === exhibitor.id ? null : exhibitor.id)}
-								class="rounded p-1 hover:bg-gray-100"
+							<div class="flex items-center gap-2">
+								<div class="text-sm text-[#B6B7B7]">{exhibitor.packageName}</div>
+								<div class="text-sm text-gray-600">{exhibitor.setupStatus}</div>
+							</div>
+						</button>
+
+						<div class="flex flex-col items-end gap-2 lg:flex-row lg:items-center">
+							<span
+								class="rounded-[11px] px-2 py-1 text-xs"
+								style="background: {styling.bg}; color: {styling.text}"
 							>
-								<Icon icon="mdi:dots-horizontal" class="h-5 w-5 text-gray-500" />
-							</button>
-							<Dropdown
-								open={showActionModal === exhibitor.id}
-								{buttonEl}
-								participant="exhibitor"
-							/>
+								{exhibitor.status}
+							</span>
+
+							<div
+								class="group relative"
+								use:clickOutside={() => {
+									if (showActionModal === exhibitor.id) showActionModal = null;
+								}}
+							>
+								<button
+									bind:this={buttonEl}
+									on:click={() =>
+										(showActionModal = showActionModal === exhibitor.id ? null : exhibitor.id)}
+									class="rounded p-1 hover:bg-gray-100"
+								>
+									<Icon icon="mdi:dots-horizontal" class="h-5 w-5 text-gray-500" />
+								</button>
+								<Dropdown
+									open={showActionModal === exhibitor.id}
+									{buttonEl}
+									participant="exhibitor"
+								/>
+							</div>
 						</div>
 					</div>
 				</div>
+			{/each}
+		{:else}
+			<div class="flex h-50 flex-col items-center justify-center">
+				<img src="/participants.svg" alt="" class="h-60" />
+				<p class="mt-2 font-medium text-[#A2ACB2]">No Exhibitors added, yet</p>
+				<p class="text-sm text-gray-400">Exhibitors will display when they are added</p>
 			</div>
-		{/each}
+		{/if}
 	</div>
 </div>
 

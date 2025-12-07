@@ -56,7 +56,7 @@
 			<div
 				class="custom-scrollbar relative {type === 'update'
 					? 'h-102'
-					: 'h-97'} w-[315px] max-w-lg overflow-y-auto rounded-lg bg-[#FFFCFC] p-4 shadow-lg"
+					: 'h-97'} w-[330px] max-w-lg overflow-y-auto rounded-lg bg-[#FFFCFC] p-4 shadow-lg"
 			>
 				<!-- Collapse Icon -->
 				<div class="mb-4 flex items-start justify-between">
@@ -301,7 +301,7 @@
 					class="mt-4 w-full rounded-lg bg-gray-900 py-2.5 font-medium text-white transition hover:bg-gray-800"
 					on:click={updateTicket}
 				>
-					Create Ticket Type
+					{type === 'update' ? 'Update' : 'Create'} Ticket Type
 				</button>
 			</div>
 		</div>

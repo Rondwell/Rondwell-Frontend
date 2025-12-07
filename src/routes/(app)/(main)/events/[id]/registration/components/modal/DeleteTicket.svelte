@@ -8,7 +8,10 @@
 </script>
 
 {#if open}
-	<div class="absolute -right-5 bottom-[30px] z-40 mt-2 inline-block text-left sm:right-0">
+	<div
+		id="ticket"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-2 backdrop-blur-sm"
+	>
 		<div class="relative w-[315px] max-w-lg rounded-lg bg-[#FFFCFC] p-4 shadow-lg">
 			<!-- Collapse Icon -->
 			<div

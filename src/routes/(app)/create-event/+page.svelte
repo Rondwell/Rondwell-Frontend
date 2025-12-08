@@ -18,6 +18,7 @@
 	import { onMount, tick } from 'svelte';
 	import ThemeModal from './components/ThemeModal.svelte';
 	import { colors, type Color } from '$lib/utils/colors';
+	import { goto } from '$app/navigation';
 
 	let showImageSelectorModal = false;
 	let showThemeModal = false;
@@ -1188,6 +1189,7 @@
 
 			<!-- Submit -->
 			<button
+				on:click={()=> goto('events/1')}
 				class="h-[49.5px] w-full rounded-[9.75px] py-2 font-semibold transition"
 				style="background-color: {selectedColor.button}; color: {selectedColor.buttonText}"
 			>

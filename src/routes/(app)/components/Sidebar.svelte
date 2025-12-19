@@ -74,7 +74,8 @@
 		'/overview',
 		'/settings',
 		'/events',
-		'/collection'
+		'/collection',
+		'/collection/create'
 	];
 
 	function toggleSubMenu() {
@@ -113,11 +114,13 @@
 			(activeItem && $page.url.pathname === '/overview') ||
 			(activeItem && $page.url.pathname === '/settings') ||
 			(activeItem && $page.url.pathname === '/create-event') ||
-			(activeItem && $page.url.pathname.startsWith('/discover'))
+			(activeItem && $page.url.pathname.startsWith('/discover')) ||
+			$page.url.pathname === '/collection/create'
 		) {
 			showSubMenu.set(false);
 			subMenuItems.set([]);
 			activeSubItem.set('');
+			console.log('Hiding submenu for base routes');
 		}
 	}
 </script>

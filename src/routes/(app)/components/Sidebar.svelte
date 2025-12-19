@@ -72,7 +72,7 @@
 		'/create-event',
 		'/discover',
 		'/overview',
-		'settings',
+		'/settings',
 		'/events',
 		'/collection'
 	];
@@ -107,7 +107,14 @@
 	}
 
 	$: {
-		if (activeItem) {
+		if (
+			(activeItem && $page.url.pathname === '/events') ||
+			(activeItem && $page.url.pathname === '/collection') ||
+			(activeItem && $page.url.pathname === '/overview') ||
+			(activeItem && $page.url.pathname === '/settings') ||
+			(activeItem && $page.url.pathname === '/create-event') ||
+			(activeItem && $page.url.pathname.startsWith('/discover'))
+		) {
 			showSubMenu.set(false);
 			subMenuItems.set([]);
 			activeSubItem.set('');
@@ -181,7 +188,7 @@
 {:else}
 	<!-- Desktop Sidebar -->
 	<aside
-		class="fixed top-0 left-0 z-10 hidden h-screen w-[117px] flex-col items-center justify-evenly gap-10 border-r py-10 md:flex"
+		class="fixed top-0 left-0 z-30 hidden h-screen w-[117px] flex-col items-center justify-evenly gap-10 border-r py-10 md:flex"
 	>
 		<div class="flex flex-col items-center space-y-10">
 			<!-- Hamburger Menu -->

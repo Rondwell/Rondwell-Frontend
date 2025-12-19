@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Modal from '$lib/components/ui/Modal.svelte';
+  // import Modal from '$lib/components/ui/Modal.svelte';
   
   // 1. Better Typing (Optional, but recommended)
   // interface PageData { booking: { supplies: any[], eventName: string, ... } }
@@ -76,7 +76,7 @@
   {/if}
 </div>
 
-<Modal bind:open={isAddSupplyOpen} title="Request Item">
+<!-- <Modal bind:open={isAddSupplyOpen} title="Request Item">
     <div class="space-y-4">
         <input 
             type="text" 
@@ -88,4 +88,4 @@
             Add Item
         </button>
     </div>
-</Modal>
+</Modal> -->

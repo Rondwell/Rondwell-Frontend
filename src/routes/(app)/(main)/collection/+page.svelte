@@ -1,6 +1,7 @@
 <!-- src/routes/+page.svelte -->
 <script lang="ts">
 	import CollectionCard from '$lib/components/CollectionCard.svelte';
+	import { goto } from '$app/navigation';
 
 	const collections = [
 		{
@@ -44,7 +45,7 @@
 		<div
 			class="flex h-full min-h-[181.5px] flex-col items-start gap-4 rounded-lg bg-[#FDFDFD] p-3 md:flex-row md:p-6"
 		>
-			<!-- <div class="flex h-full items-start gap-4"> -->
+			
 			<div
 				class="flex w-full items-center justify-center rounded bg-[#F4F5F6] p-5 md:h-[144px] md:max-w-[195.09px]"
 			>
@@ -86,6 +87,7 @@
 			<h2 class="text-2xl font-medium">My Collection</h2>
 
 			<button
+				on:click={() => goto('/collection/create')}
 				class="flex h-[35.75px] w-fit items-center gap-1 rounded-md bg-[#EBECED] px-3 py-1 text-lg text-[#616265]"
 			>
 				<svg

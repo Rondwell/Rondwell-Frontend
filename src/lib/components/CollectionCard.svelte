@@ -1,6 +1,9 @@
 <script lang="ts">
 	export let collection: any;
 	export let type: string = 'subscription';
+
+	$: subscribersCount = collection?.subscribers?.length ?? 0;
+	$: adminsCount = collection?.admins?.length ?? 1;
 </script>
 
 <div class="w-full rounded-md bg-[#FDFDFD] p-3 md:p-6">
@@ -13,10 +16,29 @@
 			<img
 				src={collection.image}
 				alt="Collection"
-				class=" h-16 w-20 rounded-[7.5px] object-cover md:h-20"
+				class="h-16 w-20 rounded-[7.5px] object-cover md:h-20"
 			/>
 
-			<div class="text-sm text-[#132B3C] md:w-30 md:text-xl">{collection.name}</div>
+			<div class="text-sm text-[#132B3C] md:w-30 md:text-xl">
+				{collection.name}
+			</div>
+
+			<!-- Subscribers -->
+			<div class="text-xs text-[#616265]">
+				{#if subscribersCount > 0}
+					{subscribersCount} Subscriber{subscribersCount > 1 ? 's' : ''}
+				{:else}
+					No subscribers
+				{/if}
+			</div>
+
+			<!-- Admin indicator  -->
+			{#if type === 'mine'}
+				<div class="flex items-center gap-1 text-xs text-[#616265]">
+					<img src="/face-1.svg" alt="profile icon" class="h-6 w-6" />
+					{adminsCount} Admin{adminsCount > 1 ? 's' : ''}
+				</div>
+			{/if}
 
 			{#if type !== 'mine'}
 				<span
@@ -25,6 +47,7 @@
 						: 'flex'} w-fit max-w-[182.31px] items-center gap-1 rounded-md bg-[#F4F4F4] p-2 text-sm font-medium text-[#616265] md:flex md:w-full md:justify-between"
 				>
 					Collection
+
 					<svg
 						width="12"
 						height="11"
@@ -33,7 +56,7 @@
 						xmlns="http://www.w3.org/2000/svg"
 					>
 						<path
-							d="M0.94043 0.786133C1.71239 0.144501 2.81818 0.00551646 3.7666 0.432617L10.3916 3.40234C11.1907 3.7583 11.7089 4.4709 11.709 5.27246C11.709 6.07406 11.1907 6.78658 10.3916 7.14258L3.7666 10.1113C3.39852 10.2784 3.01249 10.3574 2.62695 10.3574C2.01389 10.3574 1.41596 10.1542 0.94043 9.75977C0.160825 9.11178 -0.0374551 8.13547 0.458008 7.29102L1.38477 5.71289C1.54426 5.44096 1.54472 5.11406 1.38379 4.83594V4.83496L0.458008 3.25488C-0.0377634 2.41036 0.160768 1.43423 0.94043 0.786133ZM2.63281 1.29297C2.33057 1.29297 2.06122 1.39763 1.86133 1.53809L1.78027 1.60059C1.62681 1.72706 1.50088 1.89913 1.44727 2.09277C1.39518 2.2813 1.407 2.50214 1.54687 2.74316L2.47363 4.32129H2.47461C2.82289 4.91988 2.8228 5.6299 2.47461 6.22852L2.47363 6.22949L1.54785 7.80664V7.80762C1.40519 8.04864 1.39174 8.26871 1.44434 8.45703C1.49848 8.65053 1.6263 8.82232 1.78027 8.94922C2.09112 9.20533 2.6275 9.38993 3.21289 9.12793L9.83887 6.1582L9.98437 6.08203C10.3045 5.88946 10.4766 5.59377 10.4766 5.27734C10.4765 4.91599 10.252 4.58203 9.83887 4.39746H9.83789L3.21289 1.41797C3.01047 1.3275 2.81423 1.29303 2.63281 1.29297Z"
+							d="M0.94043 0.786133C1.71239 0.144501 2.81818 0.00551646 3.7666 0.432617L10.3916 3.40234..."
 							fill="#616265"
 							stroke="#616265"
 							stroke-width="0.375009"
@@ -86,8 +109,8 @@
 						stroke="#616265"
 						stroke-width="0.375009"
 					/>
-				</svg>
-			</span>
+				</svg></span
+			>
 		{/if}
 	</div>
 </div>

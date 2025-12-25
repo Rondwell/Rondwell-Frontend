@@ -6,6 +6,10 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 
+	// ⚠️ IF YOU HAD A HEADER OR MODALS, YOU MUST RE-IMPORT THEM HERE
+	// import Header from '../components/Header.svelte';
+	// import Modal from '../components/Modal.svelte';
+
 	const themes = {
 		default: 'linear-gradient(180deg, #d1e8f5 0%, #EAF2F5 17%, #f4f5f6 35%)',
 		eventMain: 'linear-gradient(180deg, #DBD4F1 0%, #DBE5F5 17%, #F4F5F6 35%)',
@@ -50,7 +54,10 @@
 		selectedTheme = getThemeForRoute(path);
 
 		// show submenu only for nested event subroutes (not base)
-		if (!path.startsWith('/events/') && path === '/events') {
+		if (
+			!path.startsWith('/events/') ||
+			(!path.startsWith('/collection/') && path !== '/collection/create')
+		) {
 			showSubMenu.set(false);
 			subMenuItems.set([]);
 			activeSubItem.set('');
@@ -62,7 +69,6 @@
 	class="relative flex min-h-screen flex-col text-sm font-medium md:flex-row"
 	style="background-image: {selectedTheme};"
 >
-	<!-- Sidebar -->
 	<div class="relative md:min-w-[117px]">
 		<Sidebar background_color="#f4f5f6" />
 	</div>

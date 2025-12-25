@@ -89,7 +89,7 @@
 
 		<div class="mb-6 rounded-lg bg-[#FDFDFD] p-4">
 			<h2 class="mb-3 text-2xl font-semibold">Customization</h2>
-			<div class="flex flex-col justify-between sm:flex-row">
+			<div class="flex flex-col justify-between lg:flex-row">
 				<div>
 					<!-- Tint Color -->
 					<div class="mb-4">
@@ -134,7 +134,7 @@
 							>Location</label
 						>
 
-						<div class="relative w-full overflow-hidden rounded-lg bg-white shadow-lg md:w-[600px]">
+						<div class="relative w-full overflow-hidden rounded-lg bg-white shadow-lg lg:w-[600px]">
 							<!-- Tabs -->
 							<div
 								class="mb-3 flex h-[175px] w-full flex-col justify-between gap-2 p-2"

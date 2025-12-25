@@ -45,7 +45,6 @@
 		<div
 			class="flex h-full min-h-[181.5px] flex-col items-start gap-4 rounded-lg bg-[#FDFDFD] p-3 md:flex-row md:p-6"
 		>
-			
 			<div
 				class="flex w-full items-center justify-center rounded bg-[#F4F5F6] p-5 md:h-[144px] md:max-w-[195.09px]"
 			>
@@ -131,7 +130,9 @@
 		</div>
 		<div class="mb-12 grid w-full max-w-[1020px] gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each myCollection as collection, index (index)}
-				<CollectionCard {collection} type="mine" />
+				<a href="/collection/1/events" class="w-full">
+					<CollectionCard {collection} type="mine" />
+				</a>
 			{/each}
 		</div>
 	</div>

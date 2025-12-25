@@ -106,7 +106,7 @@
 </script>
 
 <!-- Event Header Section -->
-<div class="p-6">
+<div class="">
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="flex items-center gap-2 text-xl font-semibold">
 			Events

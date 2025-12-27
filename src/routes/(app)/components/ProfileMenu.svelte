@@ -1,5 +1,10 @@
 <script lang="ts">
+<<<<<<< Updated upstream
     import Icon from '@iconify/svelte';
+=======
+	import Icon from '@iconify/svelte';
+	import { goto } from '$app/navigation';
+>>>>>>> Stashed changes
 
     export let showMenu = false;
     export let className = 'fixed bottom-10 left-30 hidden md:block';
@@ -11,6 +16,7 @@
         roleColor: 'text-purple-500'
     };
 
+<<<<<<< Updated upstream
     let profiles = [
         {
             img: '/face.svg',
@@ -40,14 +46,71 @@
             link: '#' // Placeholder
         }
     ];
+=======
+	let profiles = [
+		{
+			img: '/face.svg',
+			name: 'Innocent Tamunosiki',
+			email: 'InnocentTamunosiki@gmail.com',
+			role: 'Vendor',
+			roleColor: '#146AEB',
+			roleBgColor: '#E2E8FC'
+		},
+		{
+			img: '/face-1.svg',
+			name: 'Edima Athansius',
+			email: 'EdimaAthansius@gmail.com',
+			role: 'Exhibitor',
+			roleColor: '#3CBD2C',
+			roleBgColor: '#E3F4E1',
+			hasCompletedOnboarding: false
+		},
+		{
+			img: '/face-2.svg',
+			name: 'Emabong Ekpenyong',
+			email: 'Emabong Ekpenyong@gmail.com',
+			role: 'Speaker',
+			roleColor: '#AB46DD',
+			roleBgColor: 'rgba(171, 70, 221, 0.1)'
+		}
+	];
+>>>>>>> Stashed changes
 
     let showAll = false;
 
     $: displayedProfiles = showAll ? profiles : profiles.slice(0, 2);
 
+<<<<<<< Updated upstream
     function onClose() {
         showMenu = false;
     }
+=======
+	function onClose() {
+		showMenu = false;
+	}
+
+	function handleProfileClick(profile: any) {
+		if (profile.role === 'Exhibitor') {
+			if (profile.hasCompletedOnboarding) {
+				// Redirect to exhibitor dashboard
+				goto('/exhibitor/dashboard');
+			} else {
+				// Redirect to onboarding page
+				goto('/exhibitor/onboarding');
+			}
+		}
+		// else {
+		// 	// Handle other roles (Vendor, Speaker, etc.)
+		// 	const rolePath = profile.role.toLowerCase();
+		// 	if (profile.hasCompletedOnboarding) {
+		// 		goto(`/${rolePath}/dashboard`);
+		// 	} else {
+		// 		goto(`/${rolePath}/onboarding`);
+		// 	}
+		// }
+		onClose();
+	}
+>>>>>>> Stashed changes
 </script>
 
 {#if showMenu}
@@ -70,6 +133,7 @@
             </div>
         </div>
 
+<<<<<<< Updated upstream
         <div class="mt-4 space-y-2 rounded-md bg-[#FFFFFF] p-2 shadow-sm">
             {#each displayedProfiles as profile}
                 <a 
@@ -79,6 +143,21 @@
                 >
                     <div class="relative inline-flex items-center justify-center">
                         <img src="/arrow-round.svg" alt="arrow" class="animate-spin-once h-12 w-12" />
+=======
+		<!-- Switchable Profiles -->
+		<div class="mt-4 space-y-2 rounded-md bg-[#FFFFFF] p-2 shadow-sm">
+			{#each displayedProfiles as profile}
+				<div
+					class="selected flex cursor-pointer items-center p-2 transition"
+					on:click={() => handleProfileClick(profile)}
+					on:keydown={(e) => e.key === 'Enter' && handleProfileClick(profile)}
+					role="button"
+					tabindex="0"
+				>
+					<!-- <div class="flex items-center justify-center rounded-full">
+						<img src={profile.img} alt="profile icon" class="h-8 w-8" />
+					</div> -->
+>>>>>>> Stashed changes
 
                         <img src={profile.img} alt="profile icon" class="absolute z-10 h-8 w-8 rounded-full" />
                     </div>

@@ -48,11 +48,6 @@
 						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
 						>Privacy Policy</a
 					>
-					<a
-						href="/"
-						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
-						>Security</a
-					>
 
 					<a
 						href="/faq"

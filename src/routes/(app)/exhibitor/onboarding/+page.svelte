@@ -4,10 +4,12 @@
 	import { goto } from '$app/navigation';
 	import Icon from '@iconify/svelte';
 	import countries from '$lib/utils/countries.json';
+	import OnboardingNavbar from '../../components/OnboardingNavbar.svelte';
 
 	let selectedStyle = 'Minimal';
 	let selectedFont = 'Default';
 	let selectedColor: Color = colors[7];
+	let background_color = '#F5F6F7';
 	let showModal = false;
 	let open = false;
 	// Current step in onboarding
@@ -220,38 +222,57 @@
 		font-family: {selectedFont};
 	"
 >
+	<OnboardingNavbar {background_color} show={true} />
 	<!-- Main Content -->
 	<main class="relative mb-[106px] flex-1 px-5 md:mb-0">
 		<!-- Header -->
 		<div class="mx-auto mb-8 overflow-x-hidden">
 			<div
-				class="mx-auto mb-2 flex max-w-[1500px] items-center justify-between border-b border-[#EBEBEB] px-8 py-5"
+				class="mx-auto mb-2 hidden w-full items-center justify-between border-b border-[#EBEBEB] px-8 py-5 md:flex"
 			>
-				<!-- Logo -->
-				<a href="/" class="flex items-center gap-2">
-					<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
-				</a>
-				<div class="flex items-center gap-10 text-[15px]">
-					<ul class="flex items-center gap-10" style="color: {selectedColor.lightText}">
-						<li class="text-sm">
+				<div class="flex w-full">
+					<a href="/" class="flex items-center gap-2 mr-[20%]">
+						<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
+					</a>
+
+					<div class="flex gap-5">
+						<div class="flex items-center gap-1">
+							<img class="h-[17.13px] w-[18.3px]" alt="discovery" src="/Discovery.svg" /><span
+								class="text-[16px] font-normal text-[#909EA3]">Discover Events</span
+							>
+						</div>
+						<div class="flex items-center gap-1">
+							<img class="h-[17.13px] w-[18.3px]" alt="Verified" src="/Verified-explore.svg" /><span
+								class="text-[16px] font-normal text-[#909EA3]">Explore Experiences</span
+							>
+						</div>
+					</div>
+				</div>
+				<div class="flex items-center gap-10 text-[15px] w-[350px] justify-end">
+					<div class="flex items-center gap-10" style="color: {selectedColor.lightText}">
+						<div class="text-sm">
 							{new Date().toLocaleTimeString('en-US', {
 								hour: 'numeric',
 								minute: '2-digit',
 								hour12: true
 							})} GMT+1
-						</li>
-						<li>Create Secrets</li>
-					</ul>
-					<div
-						class="flex h-[33.75px] w-[75px] items-center justify-center rounded-[15px] bg-[#ECEDED] text-[#777779] capitalize"
-					>
-						Sign In
+						</div>
+					</div>
+
+					<div class="flex items-center gap-5">
+						<img alt="search-favourite" src="/search-favorite.svg" class="h-[18px] w-[18px]" />
+						<img
+							alt="notification-favorite"
+							src="/notification-favorite.svg"
+							class="h-[18px] w-[18px]"
+						/>
+						<img alt="face-1" src="/face-1.svg" class="h-[27px] w-[27px]" />
 					</div>
 				</div>
 			</div>
 
 			<!-- Progress Indicator -->
-			<div class="mb-8 w-full overflow-hidden border-b border-[#EBEBEB] py-3">
+			<div class="mb-8 w-full overflow-hidden border-b border-[#EBEBEB] py-3 pt-10">
 				<div
 					class="flex w-[518px] items-center justify-center gap-4 transition-transform duration-300 ease-in-out md:w-full
 		       {currentStep === 2 ? '-translate-x-[33.33%] md:translate-x-0' : ''}
@@ -692,13 +713,18 @@
 							<label class="text-sm font-medium"
 								>Website URL<span class="text-[#335CFF]">*</span></label
 							>
-							<input
-								type="url"
-								bind:value={websiteURL}
-								placeholder="sitigou.com"
-								class="w-full rounded-[10px] border border-[#EBEBEB] bg-white px-4 py-3 text-sm focus:outline-none"
+							<div
+								class="flex w-full items-center rounded-[10px] border border-[#EBEBEB] bg-white px-3 text-sm focus:outline-none"
 								style="box-shadow: 0px 1px 2px 0px #0A0D1408;"
-							/>
+							>
+								<div class="border-r py-3 pr-3 text-[#5C5C5C]">alignui.com</div>
+								<input
+									type="url"
+									bind:value={websiteURL}
+									placeholder="synergyhr"
+									class="w-full pl-3 placeholder:text-[#171717] focus:outline-none"
+								/>
+							</div>
 						</div>
 					</div>
 				</div>

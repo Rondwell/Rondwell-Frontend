@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Mail, CheckCircle } from 'lucide-svelte';
+	import { Mail } from 'lucide-svelte';
 </script>
 
 <footer class="flex min-h-[300px] w-full items-center justify-center bg-[#F4F5F6] px-4">

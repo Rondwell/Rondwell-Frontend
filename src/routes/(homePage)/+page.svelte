@@ -36,6 +36,7 @@
 			linear-gradient(0deg, rgba(251, 219, 231, 0.33), rgba(251, 219, 231, 0.33)), #ffffff;
 	}
 
+	/* highlight */
 	.highlight {
 		position: absolute;
 		border-radius: 50%;

@@ -3,6 +3,7 @@
 	import Button from '$lib/components/Button.svelte';
 	import { onDestroy } from 'svelte';
 
+	// live time
 	let now = new Date().toLocaleString('en-GB', {
 		weekday: 'short',
 		month: 'short',
@@ -37,7 +38,6 @@
 		class="mx-auto flex min-h-[70px] max-w-screen-2xl flex-col items-center justify-between rounded-[20px] bg-[#C7AFB8] px-6 py-4 md:px-10 lg:rounded-none lg:bg-transparent"
 	>
 		<div class="flex w-full items-center justify-between">
-			<!-- Logo -->
 			<div class="flex items-center gap-4">
 				<a href="/">
 					<img src="/logo.svg" alt="Rondwell" class="h-8" />

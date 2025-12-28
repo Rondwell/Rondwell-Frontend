@@ -1,8 +1,8 @@
-<!-- src/lib/components/Header.svelte -->
 <script>
 	import Button from '$lib/components/Button.svelte';
 	import { onDestroy } from 'svelte';
 
+	// live time
 	let now = new Date().toLocaleString('en-GB', {
 		weekday: 'short',
 		month: 'short',
@@ -31,10 +31,10 @@
 </script>
 
 <div
-	class="bg:shadow-sm relative z-50 h-[70px] w-full p-2 lg:border-b lg:border-[#909EA3] lg:bg-[#f5efec] lg:p-0"
+	class="bg:shadow-sm relative z-50 h-17.5 w-full p-2 lg:border-b lg:border-[#909EA3] lg:bg-[#f5efec] lg:p-0"
 >
 	<header
-		class="mx-auto flex min-h-[70px] max-w-screen-2xl flex-col items-center justify-between rounded-[20px] bg-[#C7AFB8] px-6 py-4 md:px-10 lg:rounded-none lg:bg-transparent"
+		class="mx-auto flex min-h-17.5 max-w-screen-2xl flex-col items-center justify-between rounded-[20px] bg-[#C7AFB8] px-6 py-4 md:px-10 lg:rounded-none lg:bg-transparent"
 	>
 		<div class="flex w-full items-center justify-between">
 			<!-- Logo -->
@@ -63,7 +63,7 @@
 
 				<!-- Sign in (always visible) -->
 				<Button
-					class="cursor-pointer justify-end rounded-full bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] px-4 py-2 text-white shadow-md md:hidden"
+					class="cursor-pointer justify-end rounded-full bg-linear-to-r from-[#DB3EC6] to-[#513BE2] px-4 py-2 text-white shadow-md md:hidden"
 				>
 					<a href="/auth" class="w-full"> Sign in </a>
 				</Button>
@@ -77,7 +77,7 @@
 					<img
 						src="/mobicon.svg"
 						alt="Open menu"
-						class={`h-6 w-6 transition-transform duration-300 ${isOpen ? 'rotate-[-45deg]' : ''}`}
+						class={`h-6 w-6 transition-transform duration-300 ${isOpen ? '-rotate-45' : ''}`}
 					/>
 				</button>
 			</div>

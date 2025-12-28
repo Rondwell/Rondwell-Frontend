@@ -93,4 +93,16 @@ export const colors: Color[] = [
         button: '#FDF9FF',
         buttonText: '#523619'
     }
+     ,
+    {
+        name: 'White Black',
+        bg: '#FDFCFB',
+        text: '#171717',
+        lightText: '#AAA19F',
+        cover: '#FDFCFB',
+        smallCover: '#5F452A',
+        toggle: '#7D6953',
+        button: '#FDF9FF',
+        buttonText: '#523619'
+    }
 ];

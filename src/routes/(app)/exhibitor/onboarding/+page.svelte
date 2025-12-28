@@ -4,7 +4,31 @@
 	import { goto } from '$app/navigation';
 	import Icon from '@iconify/svelte';
 	import countries from '$lib/utils/countries.json';
-	import OnboardingNavbar from '../../components/OnboardingNavbar.svelte';
+	import { onDestroy } from 'svelte';
+
+	let now = $state(formatTime());
+
+	const updateTime = () => {
+		now = formatTime();
+	};
+
+	function formatTime() {
+		let rawTime = new Date().toLocaleString('en-GB', {
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: true,
+			timeZoneName: 'short'
+		});
+
+		// Convert am/pm to AM/PM
+		return rawTime.replace(/am|pm/, (match) => match.toUpperCase());
+	}
+
+	const interval = setInterval(updateTime, 60000);
+	onDestroy(() => clearInterval(interval));
 
 	let selectedStyle = 'Minimal';
 	let selectedFont = 'Default';
@@ -210,8 +234,8 @@
 		goto('/exhibitor/dashboard');
 	}
 
-	$: canProceedStep1 = companyName && businessType && emailAddress && phoneNumber;
-	$: canProceedStep2 = pricingModel === 'free' || (basePrice && paymentMethod);
+	let canProceedStep1 = companyName && businessType && emailAddress && phoneNumber;
+	let canProceedStep2 = pricingModel === 'free' || (basePrice && paymentMethod);
 </script>
 
 <div
@@ -222,55 +246,33 @@
 		font-family: {selectedFont};
 	"
 >
-	<OnboardingNavbar {background_color} show={true} />
 	<!-- Main Content -->
 	<main class="relative mb-[106px] flex-1 px-5 md:mb-0">
 		<!-- Header -->
 		<div class="mx-auto mb-8 overflow-x-hidden">
-			<div
-				class="mx-auto mb-2 hidden w-full items-center justify-between border-b border-[#EBEBEB] px-8 py-5 md:flex"
-			>
-				<div class="flex w-full">
-					<a href="/" class="flex items-center gap-2 mr-[20%]">
+			<div class="relative w-full border-b border-[#AAA19F]">
+				<header
+					class="relative z-20 mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-3 md:px-10"
+				>
+					<a href="/" class="flex items-center gap-2">
 						<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
 					</a>
 
-					<div class="flex gap-5">
-						<div class="flex items-center gap-1">
-							<img class="h-[17.13px] w-[18.3px]" alt="discovery" src="/Discovery.svg" /><span
-								class="text-[16px] font-normal text-[#909EA3]">Discover Events</span
-							>
-						</div>
-						<div class="flex items-center gap-1">
-							<img class="h-[17.13px] w-[18.3px]" alt="Verified" src="/Verified-explore.svg" /><span
-								class="text-[16px] font-normal text-[#909EA3]">Explore Experiences</span
-							>
-						</div>
-					</div>
-				</div>
-				<div class="flex items-center gap-10 text-[15px] w-[350px] justify-end">
-					<div class="flex items-center gap-10" style="color: {selectedColor.lightText}">
-						<div class="text-sm">
-							{new Date().toLocaleTimeString('en-US', {
-								hour: 'numeric',
-								minute: '2-digit',
-								hour12: true
-							})} GMT+1
-						</div>
-					</div>
+					<div class="flex items-center gap-3 text-[#909EA3] md:gap-6">
+						<span class="hidden text-sm md:inline">{now}</span>
 
-					<div class="flex items-center gap-5">
-						<img alt="search-favourite" src="/search-favorite.svg" class="h-[18px] w-[18px]" />
-						<img
-							alt="notification-favorite"
-							src="/notification-favorite.svg"
-							class="h-[18px] w-[18px]"
-						/>
-						<img alt="face-1" src="/face-1.svg" class="h-[27px] w-[27px]" />
+						<button class="flex items-center gap-1 transition hover:text-gray-800">
+							Create Secrets
+							<Icon icon="heroicons:heart" class="h-3 w-3" />
+						</button>
+						<button
+							class="rounded-full bg-[#EBEBEB] px-5 py-2 text-gray-900 transition hover:bg-gray-200"
+						>
+							Sign In
+						</button>
 					</div>
-				</div>
+				</header>
 			</div>
-
 			<!-- Progress Indicator -->
 			<div class="mb-8 w-full overflow-hidden border-b border-[#EBEBEB] py-3 pt-10">
 				<div

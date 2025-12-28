@@ -3,7 +3,6 @@
 	import Button from '$lib/components/Button.svelte';
 	import { onDestroy } from 'svelte';
 
-	// live time
 	let now = new Date().toLocaleString('en-GB', {
 		weekday: 'short',
 		month: 'short',

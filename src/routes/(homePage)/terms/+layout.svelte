@@ -8,7 +8,6 @@
 	<main class="bg-color px-6 py-8">
 		<slot />
 
-		<!-- Contact Section -->
 		<div class="flex flex-col items-center gap-4 py-8 text-center">
 			<p class="text-2xl font-bold">Didn’t find what you are looking for?</p>
 			<a
@@ -17,7 +16,7 @@
 			>
 				<img src="/direct-normal.png" alt="icon" class="h-5 w-5" />
 				Contact Us
-		</a>
+			</a>
 		</div>
 	</main>
 </section>

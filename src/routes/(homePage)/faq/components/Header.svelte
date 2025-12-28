@@ -1,4 +1,3 @@
-
 <script>
 	import Button from '$lib/components/Button.svelte';
 	import { onDestroy } from 'svelte';

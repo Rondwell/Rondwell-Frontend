@@ -2,7 +2,7 @@
 	import Footer from './components/Footer.svelte';
 </script>
 
-<div class="flex flex-col min-h-screen">
+<div class="flex min-h-screen flex-col">
 	<main class="flex-1 bg-[#F4F5F6]">
 		<slot />
 	</main>

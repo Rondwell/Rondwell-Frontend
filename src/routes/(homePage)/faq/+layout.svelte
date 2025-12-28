@@ -17,7 +17,7 @@
 			>
 				<img src="/direct-normal.png" alt="icon" class="h-5 w-5" />
 				Contact Us
-		</a>
+			</a>
 		</div>
 	</main>
 </section>

@@ -24,6 +24,7 @@
 				'0% platform fees for paid events'
 			]
 		},
+
 		plus: {
 			name: 'Rondwell Plus',
 			monthlyPrice: '$59',

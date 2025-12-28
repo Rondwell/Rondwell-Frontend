@@ -39,20 +39,19 @@
 				</div>
 				<div class="flex flex-wrap space-x-8">
 					<a
-						href="/terms"
+						href="/"
 						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
 						>Terms</a
 					>
 					<a
-						href="/privacy"
+						href="/"
 						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
 						>Privacy Policy</a
 					>
-
 					<a
-						href="/faq"
+						href="/"
 						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
-						>FAQs</a
+						>Security</a
 					>
 
 					<a

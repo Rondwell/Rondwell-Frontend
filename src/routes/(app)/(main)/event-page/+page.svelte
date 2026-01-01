@@ -5,7 +5,7 @@
   {
     label: "Overview",
     subLabel: " ",
-    link: "/event-page/overview",
+    link: "#",
     bgColor: "#E2E8FC",
     hoverColor: "#D0EED0",
     icon: `
@@ -94,6 +94,85 @@
         </SubPageButton>
 {/each}
 	</div>
+	<div class="mt-[37px] py-4.5 flex flex-col md:flex-row gap-6 md:gap-9 justify-start">
+				<div>
+						<img src="./../src/lib/assets/images/eventpage_sample.svg" alt="Location" class="size-[378.13px] rounded-[27px]" />
+							<div class="mt-3 mb-4 rounded-lg bg-[#69737D]/13 border border-[#69737D]/13 px-3 py-2.5 sm:px-4 sm:py-3 max-w-[378.13px]">
+			<div class="mb-2 flex justify-between gap-2 sm:mb-0 sm:flex-row sm:items-center">
+				<div class="text-xs text-[#69737D] font-normal sm:text-base leading-6 max-w-[220.77px]">
+					You have organizer <br/> access for this event.
+				</div>
+				<button
+					class="flex items-center justify-center gap-1 rounded-full bg-[#69737D] px-[13px] py-[5px] text-xs font-medium text-white transition-colors hover:bg-[#69737D]/70 "
+				>
+					Organize
+					<img src="/send-3.svg" alt="icon" class="h-3 w-3 ml-[3px]" />
+				</button>
+			</div>
+		</div>
+				</div>
 
+				<div>
+					<div>
+						<h2 class="text-[55px] font-bold leading-[63.3px]">Megaexe Party, in mapi</h2>
+						<div>
+							<div class="my-5.5 space-y-3">
+							<!-- Date -->
+							<div class="flex items-center gap-2">
+								<div class="flex h-[49.45px] w-[49.45px] flex-col rounded-md border">
+									<p class="bg-[#EBECED] py-[2px] text-center text-xs text-[#C7C9CB]">Jun</p>
+									<div class="flex flex-1 items-center justify-center border-t">
+										<p class="text-sm font-medium text-gray-700">25</p>
+									</div>
+								</div>
+
+								<div>
+									<div class="text-lg font-medium text-gray-800">Wednesday, Dec 25</div>
+									<div class="text-sm text-gray-500">11:30AM - 12:30AM GMT+1</div>
+								</div>
+							</div>
+
+							<!-- Location -->
+							<div class="flex items-center gap-2">
+								<div
+									class="flex h-[49.45px] w-[49.45px] items-center justify-center rounded-md border"
+								>
+									<svg
+										width="27"
+										height="27"
+										viewBox="0 0 27 27"
+										fill="none"
+										xmlns="http://www.w3.org/2000/svg"
+									>
+										<path
+											opacity="0.4"
+											d="M23.7738 17.3967L16.7811 4.80977C15.8414 3.11622 14.5412 2.1875 13.1099 2.1875C11.6786 2.1875 10.3784 3.11622 9.43873 4.80977L2.44601 17.3967C1.561 19.0028 1.46266 20.5434 2.17286 21.7562C2.88306 22.969 4.2816 23.6355 6.11719 23.6355H20.1026C21.9382 23.6355 23.3368 22.969 24.047 21.7562C24.7571 20.5434 24.6588 18.9919 23.7738 17.3967Z"
+											fill="#B3B5B7"
+										/>
+										<path
+											d="M13.1105 16.1176C12.6625 16.1176 12.291 15.7461 12.291 15.2981V9.83508C12.291 9.38711 12.6625 9.01562 13.1105 9.01562C13.5584 9.01562 13.9299 9.38711 13.9299 9.83508V15.2981C13.9299 15.7461 13.5584 16.1176 13.1105 16.1176Z"
+											fill="#B3B5B7"
+										/>
+										<path
+											d="M13.1121 19.6723C13.0466 19.6723 12.9701 19.6614 12.8936 19.6505C12.8281 19.6396 12.7625 19.6177 12.697 19.5849C12.6314 19.5631 12.5658 19.5303 12.5003 19.4866C12.4456 19.4429 12.391 19.3992 12.3364 19.3555C12.1397 19.1479 12.0195 18.8638 12.0195 18.5797C12.0195 18.2956 12.1397 18.0116 12.3364 17.804C12.391 17.7603 12.4456 17.7166 12.5003 17.6729C12.5658 17.6291 12.6314 17.5964 12.697 17.5745C12.7625 17.5417 12.8281 17.5199 12.8936 17.509C13.0357 17.4762 13.1886 17.4762 13.3197 17.509C13.3962 17.5199 13.4618 17.5417 13.5273 17.5745C13.5929 17.5964 13.6584 17.6291 13.724 17.6729C13.7786 17.7166 13.8333 17.7603 13.8879 17.804C14.0846 18.0116 14.2048 18.2956 14.2048 18.5797C14.2048 18.8638 14.0846 19.1479 13.8879 19.3555C13.8333 19.3992 13.7786 19.4429 13.724 19.4866C13.6584 19.5303 13.5929 19.5631 13.5273 19.5849C13.4618 19.6177 13.3962 19.6396 13.3197 19.6505C13.2542 19.6614 13.1777 19.6723 13.1121 19.6723Z"
+											fill="#B3B5B7"
+										/>
+									</svg>
+								</div>
+
+								<div>
+									<div class="text-lg font-medium text-[#D79917]">
+										Location Missing
+									</div>
+									<div class="max-w-50 text-sm text-gray-500 sm:max-w-full">
+										Please enter the location of the event before it starts
+									</div>
+								</div>
+							</div>
+						</div>
+						</div>
+					</div>
+				</div>
+	</div>
 	
 </div>

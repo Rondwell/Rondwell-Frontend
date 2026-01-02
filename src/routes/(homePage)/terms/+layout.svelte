@@ -5,19 +5,19 @@
 <section>
 	<Header />
 
-	<main class="bg-color px-6 py-8">
+	<main class="bg-color px-4 py-8 sm:px-6">
 		<slot />
 
 		<!-- Contact Section -->
-		<div class="flex flex-col items-center gap-4 py-8 text-center">
-			<p class="text-2xl font-bold">Didn’t find what you are looking for?</p>
+		<div class="flex flex-col items-center gap-3 py-6 text-center sm:gap-4 sm:py-8">
+			<p class="text-xl font-bold sm:text-2xl">Didn't find what you are looking for?</p>
 			<a
-				class="flex cursor-pointer items-center gap-1 rounded-md bg-black px-6 py-2 text-white transition hover:bg-gray-800"
+				class="flex cursor-pointer items-center gap-1 rounded-md bg-black px-5 py-2 text-sm text-white transition hover:bg-gray-800 sm:px-6 sm:text-base"
 				href="/help-center"
 			>
-				<img src="/direct-normal.png" alt="icon" class="h-5 w-5" />
+				<img src="/direct-normal.png" alt="icon" class="h-4 w-4 sm:h-5 sm:w-5" />
 				Contact Us
-		</a>
+			</a>
 		</div>
 	</main>
 </section>

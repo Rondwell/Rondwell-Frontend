@@ -30,6 +30,7 @@
 				{ text: 'OTC withdrawal:', bold: '3%' }
 			]
 		},
+
 		plus: {
 			name: 'Rondwell Plus',
 			monthlyPrice: '$59',

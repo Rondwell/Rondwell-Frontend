@@ -13,7 +13,7 @@
 			<p class="text-xl font-bold sm:text-2xl">Didn't find what you are looking for?</p>
 			<a
 				class="flex cursor-pointer items-center gap-1 rounded-md bg-black px-5 py-2 text-sm text-white transition hover:bg-gray-800 sm:px-6 sm:text-base"
-				href="/help-center"
+				href="/contact"
 			>
 				<img src="/direct-normal.png" alt="icon" class="h-4 w-4 sm:h-5 sm:w-5" />
 				Contact Us

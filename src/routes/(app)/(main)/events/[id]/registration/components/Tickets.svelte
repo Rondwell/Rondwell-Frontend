@@ -347,12 +347,12 @@
 					</p>
 				</div>
 				<div class="flex w-full items-center gap-2 lg:w-fit">
-					<button
-						on:click={startSelling}
-						class="flex w-full items-center justify-center gap-1 rounded-md bg-[#EBECED] px-3 py-2 text-xs font-medium text-[#616265] transition-colors hover:bg-gray-200 md:w-fit md:text-sm"
-					>
-						Get Started
-					</button>
+				<a
+					href="/auth"
+					class="flex w-full items-center justify-center gap-1 rounded-md bg-[#EBECED] px-3 py-2 text-xs font-medium text-[#616265] transition-colors hover:bg-gray-200 md:w-fit md:text-sm"
+				>
+					Get Started
+				</a>
 					<button>
 						<Icon icon="mdi:close" class="h-4 w-4 text-gray-600" />
 					</button>

@@ -35,7 +35,7 @@
 	class="bg:shadow-sm relative z-50 h-[70px] w-full p-2 lg:border-b lg:border-[#909EA3] lg:bg-[#f5efec] lg:p-0"
 >
 	<header
-		class="mx-auto flex min-h-[70px] max-w-screen-2xl flex-col items-center justify-between rounded-[20px] bg-[#C7AFB8] px-6 py-4 md:px-10 lg:rounded-none lg:bg-transparent"
+		class="mx-auto flex min-h-[70px] max-w-screen-2xl flex-col items-center justify-between rounded-[20px] bg-[#C7AFB8] px-4 py-4 md:px-6 lg:px-10 lg:rounded-none lg:bg-transparent"
 	>
 		<div class="flex w-full items-center justify-between">
 			<div class="flex items-center gap-4">

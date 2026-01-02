@@ -1,8 +1,8 @@
-<div class="mx-auto max-w-4xl px-6 py-10">
+<div class="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8 lg:py-10">
 	<!-- Hero Section -->
-	<div class="mb-8 flex flex-col items-center gap-4 text-center">
-		<img src="/logo.svg" alt="" class="h-8" />
-		<h1 class="text-3xl font-bold">Privacy Policy</h1>
+	<div class="mb-6 md:mb-8 flex flex-col items-center gap-3 md:gap-4 text-center">
+		<img src="/logo.svg" alt="" class="h-6 md:h-8" />
+		<h1 class="text-2xl md:text-3xl font-bold">Privacy Policy</h1>
 	</div>
 
 	<p class="mb-8 w-fit rounded-full bg-[#F0E0D8] px-4 py-1.5 text-sm text-[#F77A3A]">

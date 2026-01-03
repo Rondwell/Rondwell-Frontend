@@ -50,8 +50,8 @@
 	}
 </script>
 
-<div class="min-h-screen p-8">
-	<div class="mx-auto max-w-5xl space-y-4">
+<div class="min-h-screen">
+	<div class="mx-auto  space-y-4">
 		{#each items as item, i}
 			<div class="overflow-hidden rounded-lg shadow-sm">
 				<button

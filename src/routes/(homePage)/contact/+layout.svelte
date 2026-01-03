@@ -5,7 +5,7 @@
 <section>
 	<Header />
 
-	<main class="bg-color px-4 py-6 md:px-6 md:py-8">
+	<main class="bg-color py-6 md:py-8">
 		<slot />
 
 		<!-- Contact Section -->

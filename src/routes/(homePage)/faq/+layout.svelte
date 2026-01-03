@@ -2,10 +2,13 @@
 	import Header from './components/Header.svelte';
 </script>
 
+
+
+
 <section>
 	<Header />
 
-	<main class="bg-color px-4 py-6 md:px-6 md:py-8">
+	<main class="bg-color py-6 md:py-8">
 		<slot />
 
 		<!-- Contact Section -->
@@ -17,7 +20,7 @@
 			>
 				<img src="/direct-normal.png" alt="icon" class="h-5 w-5" />
 				Contact Us
-			</a>
+		</a>
 		</div>
 	</main>
 </section>

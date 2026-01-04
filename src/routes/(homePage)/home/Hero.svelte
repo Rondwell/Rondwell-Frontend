@@ -100,7 +100,7 @@
 <!-- HERO SECTION -->
 <section class="relative overflow-hidden px-2 pt-10 pb-0 md:px-20 lg:pt-20">
 	<div class="absolute w-full">
-		<img src="/grid-bg.png" alt="" class="w-full opacity-20" />
+		<img src="/grid-bg.png" alt="" class="w-full opacity-20 " />
 	</div>
 
 	<div class="mx-auto max-w-7xl">

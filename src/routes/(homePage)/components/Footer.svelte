@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Mail, CheckCircle } from 'lucide-svelte';
+	import { Mail } from 'lucide-svelte';
 </script>
 
 <footer class="flex min-h-[300px] w-full items-center justify-center bg-[#F4F5F6] px-4">
@@ -39,19 +39,19 @@
 				</div>
 				<div class="flex flex-wrap space-x-8">
 					<a
-						href="/"
+						href="/terms"
 						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
 						>Terms</a
 					>
 					<a
-						href="/"
+						href="/privacy"
 						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
 						>Privacy Policy</a
 					>
 					<a
-						href="/"
+						href="/faq"
 						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
-						>Security</a
+						>FAQ</a
 					>
 
 					<a

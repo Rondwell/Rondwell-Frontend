@@ -12,18 +12,25 @@
 			subtitle: 'Free forever',
 			cta: 'Get Started',
 			features: [
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events'
+				{ text: 'AI Event Creation:', bold: '2 prompts/month' },
+				{ text: 'Multi-currency ticketing: USD, NGN, EUR' },
+				{ text: 'Unlimited Event collections' },
+				{ text: '3D seating & capacity', bold: '(5 events / month)' },
+				{ text: 'Community & real-time chat' },
+				{ text: 'Vendor / Speaker / Exhibitor management', bold: '(max 3 participants per event)', separator: true },
+				{ text: 'Wallets (NGN & USD)' },
+				{ text: 'Unlimited forms & tickets', highlight: true, separator: true },
+				{ text: 'Basic analytics' },
+				{ text: 'Max', bold: '3 active paid events/month' },
+				{ text: 'Emails:', bold: '250/month' },
+				{ text: 'Paid Events: NGN:', bold: '5% + gateway,', text2: 'USD/FX:', bold2: '6% + FX' },
+				{ text: 'Vendor bookings:', bold: '6%' },
+				{ text: 'FX conversion:', bold: '1–2%' },
+				{ text: 'USD wallet settlement:', bold: '1%' },
+				{ text: 'OTC withdrawal:', bold: '3%' }
 			]
 		},
+
 		plus: {
 			name: 'Rondwell Plus',
 			monthlyPrice: '$59',
@@ -32,27 +39,33 @@
 			subtitle: 'Per month, billed annually',
 			cta: 'Get Rondwell Plus',
 			features: [
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events',
-				'0% platform fees for paid events'
+				{ text: 'Everything in Free, plus:', bold: true },
+				{ text: 'Unlimited vendors / speakers / exhibitors (participants)' },
+				{ text: 'Advanced marketing tools' },
+				{ text: 'Advanced budgeting & finance tools' },
+				{ text: 'Advanced analytics & exports' },
+				{ text: 'API + Webhooks', separator: true },
+				{ text: 'Custom embeds' },
+				{ text: 'Web & Mobile SDK (white-label lite)', highlight: true, separator: true },
+				{ text: 'Priority support' },
+				{ text: 'Emails:', bold: 'Up to 10,000/month' },
+				{ text: 'Higher revenue thresholds' },
+				{ text: 'Paid Events: NGN:', bold: '2% + gateway,', text2: 'USD/FX:', bold2: '3% + FX' },
+				{ text: 'Vendor bookings:', bold: '3%' },
+				{ text: 'FX conversion:', bold: '1%' },
+				{ text: 'OTC withdrawal:', bold: '3%' },
+				{ text: 'USD wallet settlement:', bold: 'No fee' }
 			]
 		}
 	};
 
 	const addOns = [
-		{ guests: 5_000, price: '$26' },
-		{ guests: 10_000, price: '$36' },
-		{ guests: 25_000, price: '$88' },
-		{ guests: 50_000, price: '$118' },
-		{ guests: 75_000, price: '$125' },
-		{ guests: 100_000, price: '$199' }
+		{ guests: 10_000, price: 'Included' },
+		{ guests: 25_000, price: '$26' },
+		{ guests: 50_000, price: '$66' },
+		{ guests: 75_000, price: '$111' },
+		{ guests: 100_000, price: '$151' },
+		{ guests: 150_000, price: '$191' }
 	];
 </script>
 
@@ -107,21 +120,33 @@
 						</div>
 						<span class="text-gray-500">{plans.free.subtitle}</span>
 					</div>
-					<button
-						class="w-full rounded-md bg-gray-800 py-2 text-white transition hover:bg-gray-700"
-					>
-						{plans.free.cta}
-					</button>
+					<a
+				href="/auth"
+				class="block w-full rounded-md bg-gray-800 py-2 text-center text-white transition hover:bg-gray-700"
+			>
+				{plans.free.cta}
+			</a>
 					<p class="mt-3 text-sm text-gray-300">Use Rondwell for free with:</p>
 					<ul class="mt-2 space-y-3">
 						{#each plans.free.features as feature, i}
 							<li
-								class="flex items-center gap-2 text-sm
-      {i === 5 ? 'border-t border-gray-300 pt-2' : ''}
-      {i === 6 ? 'border-b border-gray-300 pb-2 text-[#F31A7C]' : ''}"
+								class="flex items-center gap-2 text-sm {feature.separator
+								? 'border-b border-gray-300 pb-3'
+								: ''} {feature.highlight ? 'text-[#F31A7C]' : ''}"
 							>
-								<img src="/tick.png" alt="tick" class="h-4 w-4 rounded-full" />
-								{feature}
+								<img src="/tick.png" alt="tick" class="h-4 w-4 flex-shrink-0 rounded-full" />
+								<span>
+									{feature.text}
+									{#if feature.bold}
+										<strong class="font-semibold">{feature.bold}</strong>
+									{/if}
+									{#if feature.text2}
+										{feature.text2}
+									{/if}
+									{#if feature.bold2}
+										<strong class="font-semibold">{feature.bold2}</strong>
+									{/if}
+								</span>
 							</li>
 						{/each}
 					</ul>
@@ -148,33 +173,45 @@
 						</div>
 						<span class="text-gray-500">{plans.plus.subtitle}</span>
 					</div>
-					<button
-						class="w-full rounded-md bg-pink-600 py-2 text-white transition hover:bg-pink-700"
-					>
-						{plans.plus.cta}
-					</button>
+					<a
+				href="/auth"
+				class="block w-full rounded-md bg-pink-600 py-2 text-center text-white transition hover:bg-pink-700"
+			>
+				{plans.plus.cta}
+			</a>
 					<p class="mt-3 text-sm text-gray-300">Per month, billed annually</p>
 
 					<ul class="mt-6 space-y-3">
 						{#each plans.plus.features as feature, i}
 							<li
-								class="flex items-center gap-2 text-sm
-      {i === 5 ? 'border-t border-gray-300 pt-2' : ''}
-      {i === 6 ? 'border-b border-gray-300 pb-2 text-[#F31A7C]' : ''}"
+								class="flex items-center gap-2 text-sm {feature.separator
+								? 'border-b border-gray-300 pb-3'
+								: ''} {feature.highlight ? 'text-[#F31A7C]' : ''}"
 							>
-								<img src="/tick.png" alt="tick" class="h-4 w-4 rounded-full" />
-								{feature}
+								<img src="/tick.png" alt="tick" class="h-4 w-4 flex-shrink-0 rounded-full" />
+								<span class="{feature.bold === true ? 'font-semibold' : ''}">
+									{feature.text}
+									{#if feature.bold && typeof feature.bold === 'string'}
+										<strong class="font-semibold">{feature.bold}</strong>
+									{/if}
+									{#if feature.text2}
+										{feature.text2}
+									{/if}
+									{#if feature.bold2}
+										<strong class="font-semibold">{feature.bold2}</strong>
+									{/if}
+								</span>
 							</li>
 						{/each}
 					</ul>
 				</div>
 			</div>
-			<div class="text-sm text-gray-300">
+			<div class="text-sm text-[#B9BABA]">
 				<p>
-					Stripe, our payment processor, charges a credit card fee (typically 2.9% + 30 cents). The
-					platform fee is on top of the Stripe fee.
+					Stripe, Flutterwave and Paystack, our payment processor, charges a credit card fee
+					(typically 2% - 5% plus caps). The platform fee is on top of the Stripe fee. Price for
+					Rondwell Plus Subscription are in US.
 				</p>
-				<p>Price for Rondwell Plus Subscription are in US dollars.</p>
 			</div>
 
 			<!-- Add-Ons Section -->
@@ -183,18 +220,18 @@
 					<!-- Left side text -->
 					<div class="relative h-full p-6">
 						<div class="flex items-start">
-							<img src="/ads-on.png" alt="" />
+							<img src="/ads-on.png" alt="" class="mr-3 mt-3 h-8 w-8 opacity-40" />
 							<div>
-								<h3 class="text-lg font-semibold">Add-Ons</h3>
-								<span class="text-sm text-gray-600">
-									Rondwell Plus comes with 5,000 invites and newsletter sends per week. Need more?
+								<h3 class="text-lg font-semibold text-[#131517]">Add-Ons</h3>
+								<span class="text-sm text-[#B0B1B1]">
+									Rondwell Plus comes with 10,000 emails and newsletters sends per week. Need even more?
 									We’ve got you covered.
 								</span>
 							</div>
 						</div>
 
 						<p class="bottom-0 mt-2 max-w-max text-center text-sm text-gray-500 md:absolute">
-							You can always send unlimited Marketing to event guests.
+							You can always send unlimited Marketings to event attendees.
 						</p>
 					</div>
 
@@ -212,7 +249,7 @@
 									<tr class="border-t border-gray-100 text-sm text-black">
 										<td class="py-2">{addOn.guests.toLocaleString()}</td>
 										<td class="py-2 text-right font-semibold">
-											{i === 0 ? 'Included' : `${addOn.price}/mo`}
+											{addOn.price === 'Included' ? addOn.price : `${addOn.price}/mo`}
 										</td>
 									</tr>
 								{/each}
@@ -241,17 +278,20 @@
 						>
 					</div>
 					<div class="flex w-full justify-end md:w-fit md:justify-start">
-						<button
-							class="flex items-start gap-1 rounded-md bg-[#939597] px-6 py-2 text-gray-300 transition hover:bg-gray-800"
+						<a
+							class="flex cursor-pointer items-center gap-1 rounded-md bg-black px-4 md:px-6 py-2 text-white transition hover:bg-gray-800"
+							href="/contact"
 						>
+							<img src="/direct-normal.png" alt="icon" class="h-5 w-5" />
 							Contact Us
-							<img src="/send-icon1.png" alt="send icon" class="h-4 w-4" />
-						</button>
+					</a>
 					</div>
 				</div>
-				<p class="mt-2 text-xs text-[#B0B1B1]">
-					Advanced Integration - Additional APIs - Custom Domain - Custom-Built Features -
-					Organization Account - Security Restrictions - Community Events - Token Support
+				<p class="mt-2 text-xs text-[#949999]">
+					Dedicated infrastructure - SLA & uptime guarantees - Advanced AI workflows - Blockchain
+					ticketing & verification- Multi-org & role management - Admin dashboards Custom
+					integrations - Dedicated account manager - Onsite QR hardware (rental) - AR / VR &
+					immersive integrations
 				</p>
 			</div>
 		</div>

@@ -1,8 +1,29 @@
 <script lang="ts">
 	import EventCard from '$lib/components/EventCard.svelte';
 	import Icon from '@iconify/svelte';
+	import AddEventCollectionModal from './AddEventCollectionModal.svelte';
+	import CreatedEventModal from '../components/CreatedEventModal.svelte';
+	import ExternalEventModal from '../components/ExternalEventModal.svelte';
 
 	let activeTab: 'Upcoming' | 'Past' = 'Upcoming';
+	type ActiveModal = 'none' | 'collection' | 'created' | 'external';
+	let activeModal: ActiveModal = 'none';
+
+	function openCollectionModal() {
+		activeModal = 'collection';
+	}
+
+	function openCreateEventModal() {
+		activeModal = 'created';
+	}
+
+	function openExternalEventModal() {
+		activeModal = 'external';
+	}
+
+	function closeAllModals() {
+		activeModal = 'none';
+	}
 
 	type EventItem = {
 		id?: number;
@@ -92,11 +113,38 @@
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="flex items-center gap-2 text-xl font-semibold">
 			Events
-			<button
-				class="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBECED] p-1 transition-colors duration-500 hover:bg-[#E8E8E8] hover:text-[#5555658]"
-			>
-				<Icon icon="mdi:plus" class="h-6 w-6 text-[#616265]" />
-			</button>
+			<div class="ml-4">
+				<button
+					on:click={openCollectionModal}
+					class="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBECED] p-1 transition-colors duration-500 hover:bg-[#E8E8E8] hover:text-[#5555658]"
+				>
+					<Icon icon="mdi:plus" class="h-6 w-6 text-[#616265]" />
+				</button>
+			</div>
+			<AddEventCollectionModal
+				open={activeModal === 'collection'}
+				on:close={closeAllModals}
+				on:createdEvent={openCreateEventModal}
+				on:externalEvent={openExternalEventModal}
+			/>
+
+			<CreatedEventModal
+				open={activeModal === 'created'}
+				on:close={closeAllModals}
+				on:submit={(e) => {
+					console.log(e.detail);
+					closeAllModals();
+				}}
+			/>
+
+			<ExternalEventModal
+				open={activeModal === 'external'}
+				on:close={closeAllModals}
+				on:submit={(e) => {
+					console.log(e.detail);
+					closeAllModals();
+				}}
+			/>
 		</h1>
 
 		<div class="h-[40px] w-fit rounded bg-[#EBECED] p-1 text-[#A1A2A2]">
@@ -128,10 +176,14 @@
 				<p class="max-w-md text-center text-[#A2ACB2]">
 					This calendar has no {activeTab.toLowerCase()} events.
 				</p>
-
-				<div class="flex items-center rounded-2xl bg-[#EFEFEF] px-1 py-0.5 text-[#A0A1A3]">
-					<Icon icon="mdi:plus" class="text-xl" />
-					Add Event
+				<div class="">
+					<button
+						on:click={openCollectionModal}
+						class="flex items-center rounded-2xl bg-[#EFEFEF] px-1 py-0.5 text-[#A0A1A3]"
+					>
+						<Icon icon="mdi:plus" class="text-xl" />
+						Add Event
+					</button>
 				</div>
 			</div>
 		{:else}

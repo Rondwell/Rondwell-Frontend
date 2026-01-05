@@ -1,22 +1,30 @@
-<script lang="ts">
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+<!-- src/lib/components/Sidebar.svelte -->
+<script>
+	import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
 	import ProfileMenu from './ProfileMenu.svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { clickOutside } from '$lib/utils/constant';
+	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 
-	export let background_color = '#FFFFFF';
+	export let background_color = '';
 	export let show = true;
+	export let selectedColor = { lightText: '#909EA3' }; // Add default color
 
 	let showMenu = false;
 	let activeItem = '';
 
 	function goHome() {
 		goto('/overview');
+		showSubMenu.set(false);
+		subMenuItems.set([]);
+		activeSubItem.set('');
 	}
 
 	// Menu items
 	const menuItems = [
-		{ id: 'create', label: 'Create Event', icon: 'plus', nav: '/create-event' },
+		{ id: 'create', label: 'Create Event', icon: 'plus', active: true, nav: '/create-event' },
 		{
 			id: 'event',
 			label: 'Events',
@@ -54,14 +62,27 @@
 			<path d="M8.38086 11.9981L10.7909 14.4181L15.6209 9.57812" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 			<path d="M10.7509 2.45031C11.4409 1.86031 12.5709 1.86031 13.2709 2.45031L14.8509 3.81031C15.1509 4.07031 15.7109 4.28031 16.1109 4.28031H17.8109C18.8709 4.28031 19.7409 5.15031 19.7409 6.21031V7.91031C19.7409 8.30031 19.9509 8.87031 20.2109 9.17031L21.5709 10.7503C22.1609 11.4403 22.1609 12.5703 21.5709 13.2703L20.2109 14.8503C19.9509 15.1503 19.7409 15.7103 19.7409 16.1103V17.8103C19.7409 18.8703 18.8709 19.7403 17.8109 19.7403H16.1109C15.7209 19.7403 15.1509 19.9503 14.8509 20.2103L13.2709 21.5703C12.5809 22.1603 11.4509 22.1603 10.7509 21.5703L9.17086 20.2103C8.87086 19.9503 8.31086 19.7403 7.91086 19.7403H6.18086C5.12086 19.7403 4.25086 18.8703 4.25086 17.8103V16.1003C4.25086 15.7103 4.04086 15.1503 3.79086 14.8503L2.44086 13.2603C1.86086 12.5703 1.86086 11.4503 2.44086 10.7603L3.79086 9.17031C4.04086 8.87031 4.25086 8.31031 4.25086 7.92031V6.20031C4.25086 5.14031 5.12086 4.27031 6.18086 4.27031H7.91086C8.30086 4.27031 8.87086 4.06031 9.17086 3.80031L10.7509 2.45031Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 			</svg>`,
-			nav: ''
+			nav: '/experience'
 		}
 	];
 
-	// Reorder for mobile: Events, Collections, Create (center), Discover, Experience
 	$: mobileMenuItems = [...menuItems.slice(1, 3), menuItems[0], ...menuItems.slice(3)];
 
-	// Track active item based on current route
+	// Reactive mobile detection
+	let isMobile = false;
+
+	function checkScreenSize() {
+		if (browser) {
+			isMobile = window.innerWidth < 768;
+		}
+	}
+
+	onMount(() => {
+		checkScreenSize();
+		window.addEventListener('resize', checkScreenSize);
+		return () => window.removeEventListener('resize', checkScreenSize);
+	});
+
 	$: if ($page && $page.url) {
 		let path = $page.url.pathname;
 		if (path === '/discover') {
@@ -70,70 +91,143 @@
 		const match = menuItems.find((item) => path.startsWith(item.nav));
 		activeItem = match ? match.id : '';
 	}
+
+	$: {
+		if (
+			(activeItem && $page.url.pathname === '/events') ||
+			(activeItem && $page.url.pathname === '/collection') ||
+			(activeItem && $page.url.pathname === '/overview') ||
+			(activeItem && $page.url.pathname === '/settings') ||
+			(activeItem && $page.url.pathname === '/create-event') ||
+			(activeItem && $page.url.pathname.startsWith('/discover')) ||
+			(activeItem && $page.url.pathname === '/experience') ||
+			$page.url.pathname === '/collection/create'
+		) {
+			showSubMenu.set(false);
+			subMenuItems.set([]);
+			activeSubItem.set('');
+		}
+	}
 </script>
 
+{#if isMobile}
+	<!-- ================= MOBILE HEADER ================= -->
+	<div class="z-50">
+		<div class="items-center justify-between px-4 py-3 md:hidden {show ? 'flex' : 'hidden'}">
+			<div use:clickOutside={() => (showMenu = false)}>
+				<button onclick={() => (showMenu = !showMenu)}>
+					<img src="/face-1.svg" alt="Profile" />
+				</button>
+				<ProfileMenu bind:showMenu className="absolute top-15 left-5 md:hidden" />
+			</div>
 
-<!-- Mobile Header -->
-<div class="items-center justify-between px-4 py-3 md:hidden {show ? 'flex' : 'hidden'}">
-	<div use:clickOutside={() => (showMenu = false)}>
-		<button
-			on:click={() => {
-				showMenu = !showMenu;
-			}}
-		>
-			<img src="/face-1.svg" alt="Profile" />
-		</button>
-		<ProfileMenu bind:showMenu className="absolute top-15 left-5 md:hidden" />
-	</div>
-	<button on:click={goHome}>
-		<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
-	</button>
-	<img src="/notification.svg" alt="Notifications" />
-</div>
-
-<!-- Mobile Bottom Navigation -->
-<nav
-	class="fixed right-0 bottom-0 left-0 z-50 flex h-[106px] items-end justify-around border-t bg-white py-2 md:hidden"
-	style="background-color: {background_color};"
->
-	<div class="flex h-full w-full items-end justify-around">
-		{#each mobileMenuItems as item}
-			<button
-				class="flex h-full flex-col items-center justify-center text-gray-500"
-				aria-label={item.label}
-				on:click={() => goto(item.nav)}
-			>
-				{#if item.icon === 'plus'}
-					<div
-						class="flex h-[48px] w-[48px] items-center justify-center rounded-full text-white"
-						style="background: linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%);"
-						title="Create Event"
-					>
-						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-							/>
-						</svg>
-					</div>
-				{:else}
-					<div class={activeItem === item.id ? 'selected' : ''}>
-						<p>{@html item.icon}</p>
-					</div>
-					<span
-						class="mt-1 text-xs {activeItem === item.id
-							? 'text-[#513BE2]'
-							: 'text-gray-500'} transition-colors"
-					>
-						{item.label}
-					</span>
-				{/if}
+			<button onclick={goHome}>
+				<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
 			</button>
-		{/each}
+
+			<img src="/notification.svg" alt="Notifications" />
+		</div>
+
+		<!-- ================= MOBILE BOTTOM NAV ================= -->
+		<nav
+			class="fixed right-0 bottom-0 left-0 z-50 flex h-[106px] items-end justify-around border-t py-2 md:hidden bg-[#F5F6F7]"
+		>
+			<div class="flex h-full w-full items-end justify-around">
+				{#each mobileMenuItems as item}
+					<button
+						class="flex h-full flex-col items-center justify-center text-gray-500"
+						aria-label={item.label}
+						onclick={() => goto(item.nav)}
+					>
+						{#if item.icon === 'plus'}
+							<div
+								class="flex h-[48px] w-[48px] items-center justify-center rounded-full text-white"
+								style="background: linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%);"
+								title="Create Event"
+							>
+								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+									/>
+								</svg>
+							</div>
+						{:else}
+							<div class={activeItem === item.id ? 'selected' : ''}>
+								<p>{@html item.icon}</p>
+							</div>
+							<span
+								class="mt-1 text-xs {activeItem === item.id
+									? 'text-[#513BE2]'
+									: 'text-gray-500'} transition-colors">{item.label}</span
+							>
+						{/if}
+					</button>
+				{/each}
+			</div>
+		</nav>
 	</div>
-</nav>
+{:else}
+	<!-- ================= DESKTOP HEADER ================= -->
+	<div
+		class="mx-auto mb-2 hidden w-full items-center justify-between border-b border-[#EBEBEB] px-8 py-5 md:flex"
+	>
+		<div class="flex w-full">
+			<a href="/" class="mr-[20%] flex items-center gap-2">
+				<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
+			</a>
+
+			<div class="flex gap-5">
+				<button
+					class="flex items-center gap-1 text-[#909EA3] transition-colors hover:text-[#513BE2]"
+					onclick={() => goto('/events')}
+				>
+					<img class="h-[17px] w-[18px]" src="/Discovery.svg" alt="discover" />
+					<span class="text-[16px]">Discover Events</span>
+				</button>
+
+				<button
+					class="flex items-center gap-1 text-[#909EA3] transition-colors hover:text-[#513BE2]"
+					onclick={() => goto('/discover?show=true')}
+				>
+					<img class="h-[17px] w-[18px]" src="/Verified-explore.svg" alt="explore" />
+					<span class="text-[16px]">Explore Experiences</span>
+				</button>
+			</div>
+		</div>
+
+		<div class="flex w-[350px] items-center justify-end gap-10">
+			<div class="text-sm" style="color: {selectedColor.lightText}">
+				{new Date().toLocaleTimeString('en-US', {
+					hour: 'numeric',
+					minute: '2-digit',
+					hour12: true
+				})} GMT+1
+			</div>
+
+			<div class="flex items-center gap-5">
+				<img src="/search-favorite.svg" class="h-[18px] w-[18px]" alt="search" />
+				<img src="/notification-favorite.svg" class="h-[18px] w-[18px]" alt="notification" />
+
+				<div use:clickOutside={() => (showMenu = false)} class="relative">
+					<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
+					<img
+						src="/face-1.svg"
+						alt="profile"
+						class="h-[27px] w-[27px] cursor-pointer"
+						onclick={() => (showMenu = !showMenu)}
+						onkeydown={(e) => e.key === 'Enter' && (showMenu = !showMenu)}
+						role="button"
+						tabindex="0"
+					/>
+					<ProfileMenu bind:showMenu className="absolute right-0 top-10" />
+				</div>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	button {
@@ -144,7 +238,7 @@
 		position: relative;
 		display: flex;
 		align-items: center;
-		justify-content: center;
+		justify-center: center;
 		width: 48px;
 		height: 48px;
 		border-radius: 12px;
@@ -181,5 +275,14 @@
 
 	.selected::before {
 		opacity: 1;
+	}
+
+	.gradient-text {
+		background: linear-gradient(90deg, #db3ec6 0%, #963dd4 50%, #513be2 100%);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		color: transparent;
+		transition: all 0.3s ease;
 	}
 </style>

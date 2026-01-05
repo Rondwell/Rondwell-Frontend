@@ -2,61 +2,129 @@
 	import { clickOutside } from '$lib/utils/constant';
 	import { colors, type Color } from '$lib/utils/colors';
 	import { goto } from '$app/navigation';
-	import Icon from '@iconify/svelte';
 	import countries from '$lib/utils/countries.json';
+	import { onDestroy } from 'svelte';
 	import OnboardingNavbar from '../../components/OnboardingNavbar.svelte';
 
-	let selectedStyle = 'Minimal';
-	let selectedFont = 'Default';
-	let selectedColor: Color = colors[7];
-	let background_color = '#F5F6F7';
-	let showModal = false;
-	let open = false;
-	// Current step in onboarding
-	let currentStep = 1;
+	// ============================================
+	// INTERFACES
+	// ============================================
+
+	interface BusinessType {
+		label: string;
+		icon: string;
+	}
+
+	// ============================================
+	// REACTIVE STATE - All UI state using $state()
+	// ============================================
+
+	let now = $state(formatTime());
+	let selectedStyle = $state('Minimal');
+	let selectedFont = $state('Default');
+	let selectedColor = $state<Color>(colors[7]);
+	let background_color = $state('#F5F6F7');
+	let showModal = $state(false);
+	let open = $state(false);
+	let currentStep = $state(1);
+	let isDropdownOpen = $state(false);
+	let isCurrencyDropdownOpen = $state(false);
+
+	// ============================================
+	// STEP 1: EXHIBITOR DETAILS STATE
+	// ============================================
+
+	let businessLogo = $state<File | null>(null);
+	let businessLogoPreview = $state('');
+	let coverImage = $state<File | null>(null);
+	let coverImagePreview = $state('');
+	let companyName = $state('');
+	let selectedBusinessType = $state<BusinessType | null>(null);
+	let companyDescription = $state('');
+	let businessLocation = $state('');
+	let phoneNumber = $state('');
+	let emailAddress = $state('');
+	let websiteURL = $state('');
+	let tempLocation = $state('');
+	let error = $state('');
+	let selectedCountry = $state(countries[0]);
+
+	// Business type dropdown state
+	let showBusinessTypeDropdown = $state(false);
+	let otherBusinessType = $state('');
+
+	// ============================================
+	// STEP 2: PAYMENT & PRICING STATE
+	// ============================================
+
+	let pricingModel = $state('free');
+	let basePrice = $state('');
+	let paymentMethods = $state<string[]>(['paystack']);
+	let showTaxModal = $state(false);
+	let taxRate = $state(0);
+	let tempTaxRate = $state(0);
+	let currencies = $state<string[]>(['NGN']);
+
+	// ============================================
+	// CONSTANTS (don't need $state)
+	// ============================================
+
 	const totalSteps = 3;
-
-	let steps = ['Exhibitor Details', 'Payment & Pricing Setup', 'Summary'];
-	let isDropdownOpen = false;
-	let isCurrencyDropdownOpen = false;
-
-	// Step 1: Exhibitor Details
-	let businessLogo: File | null = null;
-	let businessLogoPreview = '';
-	let coverImage: File | null = null;
-	let coverImagePreview: string = '';
-	let companyName = '';
-	let businessType = '';
-	let companyDescription = '';
-	let businessLocation = '';
-	let phoneNumber = '';
-	let emailAddress = '';
-	let websiteURL = '';
-	let tempLocation = '';
-	let error = '';
-	let selectedCountry = countries[0];
-
-	// Step 2: Payment & Pricing Setup
-	let pricingModel = 'free'; // free, paid, tiered
-	let basePrice = '';
-	let currency = 'NGN';
-	let paymentMethod = 'paystack';
-	let showTaxModal = false;
-	let taxRate = 0;
-	let tempTaxRate = 0;
-
-	// Step 3: Summary
-
-	let businessTypes = [
-		'Technology',
-		'Healthcare',
-		'Finance',
-		'Education',
-		'Retail',
-		'Manufacturing',
-		'Services',
-		'Other'
+	const steps = ['Exhibitor Details', 'Payment & Pricing Setup', 'Summary'];
+	const businessTypes: BusinessType[] = [
+		{ label: 'Technology & Software', icon: '/technology.svg' },
+		{ label: 'Financial Services', icon: '/finance.svg' },
+		{ label: 'Healthcare & Wellness', icon: '/healthcare.svg' },
+		{ label: 'Education & Training', icon: '/education.svg' },
+		{ label: 'Entertainment', icon: '/entertainment.svg' },
+		{ label: 'Manufacturing', icon: '/manufacturing.svg' },
+		{ label: 'Retail & E-commerce', icon: '/retail.svg' },
+		{ label: 'Marketing & Advertising', icon: '/marketing.svg' },
+		{ label: 'Professional Services', icon: '/professional-service.svg' },
+		{ label: 'Transportation & Mobility', icon: '/transportation.svg' },
+		{ label: 'Food & Hospitality', icon: '/food.svg' },
+		{ label: 'Other', icon: '/other.svg' }
 	];
+
+	// ============================================
+	// DERIVED STATE - Computed values using $derived
+	// ============================================
+
+	let canProceedStep1 = $derived(
+		!!(companyName && selectedBusinessType && emailAddress && phoneNumber)
+	);
+
+	let canProceedStep2 = $derived(
+		pricingModel === 'free' || !!(basePrice && paymentMethods.length > 0)
+	);
+
+	// ============================================
+	// TIME UPDATE LOGIC
+	// ============================================
+
+	function formatTime() {
+		let rawTime = new Date().toLocaleString('en-GB', {
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: true,
+			timeZoneName: 'short'
+		});
+		return rawTime.replace(/am|pm/, (match) => match.toUpperCase());
+	}
+
+	const updateTime = () => {
+		now = formatTime();
+	};
+
+	const interval = setInterval(updateTime, 60000);
+	onDestroy(() => clearInterval(interval));
+
+	// ============================================
+	// FILE UPLOAD HANDLERS
+	// ============================================
 
 	function handleLogoUpload(event: Event) {
 		const target = event.target as HTMLInputElement;
@@ -76,29 +144,25 @@
 		const file = target.files?.[0];
 		if (!file) return;
 
-		// Validate file type
 		const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
 		const validExtensions = ['.jpeg', '.jpg', '.png', '.pdf', '.afra'];
 		const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
 
 		if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
 			alert('Please upload a valid file: JPEG, PNG, PDF, or AFRA format');
-			target.value = ''; // Reset input
+			target.value = '';
 			return;
 		}
 
-		// Validate file size (50MB)
-		const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+		const maxSize = 50 * 1024 * 1024;
 		if (file.size > maxSize) {
 			alert('File size must be less than 50MB');
-			target.value = ''; // Reset input
+			target.value = '';
 			return;
 		}
 
-		// Store the file
 		coverImage = file;
 
-		// Create preview for images only
 		if (file.type.startsWith('image/')) {
 			const reader = new FileReader();
 			reader.onload = (e) => {
@@ -109,11 +173,9 @@
 			};
 			reader.readAsDataURL(file);
 		} else if (file.type === 'application/pdf') {
-			// For PDFs, show a PDF icon or placeholder
-			coverImagePreview = '/pdf-placeholder.svg'; // Add your PDF icon
+			coverImagePreview = '/pdf-placeholder.svg';
 		} else {
-			// For AFRA or other formats
-			coverImagePreview = '/file-placeholder.svg'; // Add your file icon
+			coverImagePreview = '/file-placeholder.svg';
 		}
 	}
 
@@ -124,10 +186,23 @@
 		if (input) input.value = '';
 	}
 
+	// ============================================
+	// MODAL HANDLERS
+	// ============================================
+
 	function openModal() {
 		tempLocation = businessLocation;
 		error = '';
 		showModal = true;
+	}
+
+	function saveLocation() {
+		if (tempLocation.trim().length < 5) {
+			error = 'Please enter a valid location';
+			return;
+		}
+		businessLocation = tempLocation;
+		showModal = false;
 	}
 
 	function openTaxModal() {
@@ -144,15 +219,10 @@
 		showTaxModal = false;
 	}
 
-	function saveLocation() {
-		if (tempLocation.trim().length < 5) {
-			error = 'Please enter a valid location';
-			return;
-		}
+	// ============================================
+	// NAVIGATION HANDLERS
+	// ============================================
 
-		businessLocation = tempLocation;
-		showModal = false;
-	}
 	function nextStep() {
 		if (currentStep < totalSteps) {
 			currentStep++;
@@ -165,37 +235,99 @@
 		}
 	}
 
-	// Function to handle payment method selection
-	function selectPaymentMethod(method: string) {
-		// If clicking the currently selected method, do nothing
-		if (paymentMethod === method) {
-			return;
-		}
-		// Set the new payment method
-		paymentMethod = method;
-	}
-
-	// Function to handle currency selection
-	function selectCurrency(curr: string) {
-		// If clicking the currently selected currency, do nothing
-		if (currency === curr) {
-			return;
-		}
-		// Set the new currency
-		currency = curr;
-	}
-
-	//  function to handle editing
 	function editField(step: number) {
-		currentStep = step;
+		// Allow navigation to any completed step or current step
+		if (step <= currentStep) {
+			currentStep = step;
+		}
 	}
+
+	// ============================================
+	// SELECTION HANDLERS
+	// ============================================
+
+	function togglePaymentMethod(method: string) {
+		const index = paymentMethods.indexOf(method);
+		if (index > -1) {
+			if (paymentMethods.length > 1) {
+				paymentMethods = paymentMethods.filter((m) => m !== method);
+			}
+		} else {
+			paymentMethods = [...paymentMethods, method];
+		}
+	}
+
+	function toggleCurrency(curr: string) {
+		const index = currencies.indexOf(curr);
+		if (index > -1) {
+			if (currencies.length > 1) {
+				currencies = currencies.filter((c) => c !== curr);
+			}
+		} else {
+			currencies = [...currencies, curr];
+		}
+	}
+
+	function selectBusinessType(type: BusinessType) {
+		selectedBusinessType = type;
+		showBusinessTypeDropdown = false;
+		if (type.label !== 'Other') {
+			otherBusinessType = '';
+		}
+	}
+
+	function confirmOther() {
+		if (otherBusinessType.trim()) {
+			selectedBusinessType = { label: otherBusinessType, icon: '/other.svg' };
+			showBusinessTypeDropdown = false;
+		}
+	}
+
+	function selectCountry(country: (typeof countries)[0]) {
+		selectedCountry = country;
+		open = false;
+	}
+
+	function getPaymentMethodDisplay() {
+		return paymentMethods
+			.map((method) => {
+				if (method === 'paystack') return 'Paystack';
+				if (method === 'flutterwave') return 'Flutterwave';
+				if (method === 'stripe') return 'Stripe';
+				return method;
+			})
+			.join(', ');
+	}
+
+	function getCurrencyDisplay() {
+		return currencies
+			.map((curr) => {
+				if (curr === 'NGN') return 'NGN';
+				if (curr === 'USD') return 'USD';
+				if (curr === 'EUR') return 'EUR';
+				if (curr === 'GBP') return 'GBP';
+				return curr;
+			})
+			.join(', ');
+	}
+
+	// Function to handle horizontal scrolling
+	function handleHorizontalScroll(event: WheelEvent) {
+    const container = event.currentTarget as HTMLElement;
+    event.preventDefault();
+    container.scrollLeft += event.deltaY;
+}
+
+	// ============================================
+	// FORM SUBMISSION
+	// ============================================
 
 	function submitOnboarding() {
 		console.log('Onboarding data:', {
 			businessLogo,
 			coverImage,
 			companyName,
-			businessType,
+			businessType: selectedBusinessType?.label,
 			companyDescription,
 			businessLocation,
 			phoneNumber,
@@ -203,141 +335,82 @@
 			websiteURL,
 			pricingModel,
 			basePrice,
-			currency,
-			paymentMethod
+			currencies,
+			paymentMethods
 		});
-		// Redirect to exhibitor dashboard
-		goto('/exhibitor/dashboard');
+		goto('/exhibitor');
 	}
-
-	$: canProceedStep1 = companyName && businessType && emailAddress && phoneNumber;
-	$: canProceedStep2 = pricingModel === 'free' || (basePrice && paymentMethod);
 </script>
 
 <div
-	class="relative flex min-h-screen flex-col overflow-auto bg-cover bg-center bg-no-repeat md:flex-row"
+	class="relative flex min-h-screen flex-col overflow-auto bg-cover bg-center bg-no-repeat"
 	style="
 		background-image: url('/exhibitor-bg.png');
 		color: {selectedColor.text};
 		font-family: {selectedFont};
 	"
 >
-	<OnboardingNavbar {background_color} show={true} />
+	<OnboardingNavbar />
 	<!-- Main Content -->
 	<main class="relative mb-[106px] flex-1 px-5 md:mb-0">
 		<!-- Header -->
 		<div class="mx-auto mb-8 overflow-x-hidden">
-			<div
-				class="mx-auto mb-2 hidden w-full items-center justify-between border-b border-[#EBEBEB] px-8 py-5 md:flex"
-			>
-				<div class="flex w-full">
-					<a href="/" class="flex items-center gap-2 mr-[20%]">
-						<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
-					</a>
-
-					<div class="flex gap-5">
-						<div class="flex items-center gap-1">
-							<img class="h-[17.13px] w-[18.3px]" alt="discovery" src="/Discovery.svg" /><span
-								class="text-[16px] font-normal text-[#909EA3]">Discover Events</span
-							>
-						</div>
-						<div class="flex items-center gap-1">
-							<img class="h-[17.13px] w-[18.3px]" alt="Verified" src="/Verified-explore.svg" /><span
-								class="text-[16px] font-normal text-[#909EA3]">Explore Experiences</span
-							>
-						</div>
-					</div>
-				</div>
-				<div class="flex items-center gap-10 text-[15px] w-[350px] justify-end">
-					<div class="flex items-center gap-10" style="color: {selectedColor.lightText}">
-						<div class="text-sm">
-							{new Date().toLocaleTimeString('en-US', {
-								hour: 'numeric',
-								minute: '2-digit',
-								hour12: true
-							})} GMT+1
-						</div>
-					</div>
-
-					<div class="flex items-center gap-5">
-						<img alt="search-favourite" src="/search-favorite.svg" class="h-[18px] w-[18px]" />
-						<img
-							alt="notification-favorite"
-							src="/notification-favorite.svg"
-							class="h-[18px] w-[18px]"
-						/>
-						<img alt="face-1" src="/face-1.svg" class="h-[27px] w-[27px]" />
-					</div>
-				</div>
-			</div>
-
-			<!-- Progress Indicator -->
-			<div class="mb-8 w-full overflow-hidden border-b border-[#EBEBEB] py-3 pt-10">
+			<!-- Progress Indicator - SCROLLABLE -->
+			<div class="mb-8  w-full border-b border-[#EBEBEB] py-3 pt-10 md:mx-auto md:w-[518px]">
 				<div
-					class="flex w-[518px] items-center justify-center gap-4 transition-transform duration-300 ease-in-out md:w-full
-		       {currentStep === 2 ? '-translate-x-[33.33%] md:translate-x-0' : ''}
-		       {currentStep === 3 ? 'ml-[33.33%] -translate-x-[66.66%] md:ml-0 md:translate-x-0' : ''}"
+					class="custom-scrollbar overflow-x-auto overflow-y-hidden scroll-smooth cursor-grab active:cursor-grabbing"
+					 onwheel={handleHorizontalScroll}
 				>
-					{#each Array(totalSteps) as _, index}
-						<div class="flex items-center">
-							<div
-								class="mr-2 flex h-6 w-5 items-center justify-center rounded-full text-sm font-normal transition-all"
-								style="background: {currentStep > index
-									? 'linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%)'
-									: '#FFFFFF'}; color: {currentStep > index ? '#FFFFFF' : '#5C5C5C'}"
+					<div class="flex min-w-max items-center justify-start gap-4 px-4 md:px-0">
+						{#each Array(totalSteps) as _, index}
+							<button
+								type="button"
+								class="flex cursor-pointer items-center focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 md:mx-auto"
+								onclick={() => editField(index + 1)}
+								disabled={index + 1 > currentStep}
 							>
-								{index + 1}
-							</div>
-							<!-- Step Text -->
-							<span
-								class="text-sm font-normal whitespace-nowrap transition-all"
-								style="color: {currentStep > index ? '#171717' : '#5C5C5C'}"
-							>
-								{steps[index]}
-							</span>
-							{#if index < totalSteps - 1}
-								<div class="ml-2">
-									<img src="/arrow-right-s-line.svg" alt="arrow" class="h-5 w-5" />
+								<div
+									class="mr-2 flex h-6 w-5 items-center justify-center rounded-full text-sm font-normal transition-all"
+									style="background: {currentStep > index
+										? 'linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%)'
+										: '#FFFFFF'}; color: {currentStep > index ? '#FFFFFF' : '#5C5C5C'}"
+								>
+									{index + 1}
 								</div>
-							{/if}
-						</div>
-					{/each}
+								<!-- Step Text -->
+								<span
+									class="text-sm font-normal whitespace-nowrap transition-all"
+									style="color: {currentStep > index ? '#171717' : '#5C5C5C'}"
+								>
+									{steps[index]}
+								</span>
+								{#if index < totalSteps - 1}
+									<div class="ml-2">
+										<img src="/arrow-right-s-line.svg" alt="arrow" class="h-5 w-5" />
+									</div>
+								{/if}
+							</button>
+						{/each}
+					</div>
 				</div>
 			</div>
 		</div>
 
 		<!-- Step Content -->
 		<div
-			class="mx-auto mb-20 w-full rounded-[16px] p-6 md:max-w-[716px]"
+			class="mx-auto mb-20 w-full rounded-[16px] p-3 md:max-w-[716px]"
 			style="background-color: {selectedColor.cover}; box-shadow: 0px 1px 2px 0px #0A0D1408;"
 		>
 			{#if currentStep === 1}
 				<!-- Step 1: Exhibitor Details -->
 				<div class="space-y-6 rounded-xl">
 					<div class="mb-6 text-center">
-						<!-- <div class="text-sm" style="color: {selectedColor.lightText}">
-							Step {currentStep} of {totalSteps}
-						</div> -->
 						<div class="mx-auto h-[96px] w-[96px]">
 							<img src="/detail-icon.svg" alt="detail-icon" class="h-full w-full" />
 						</div>
-						<div class=" text-[24px] font-semibold text-[#171717]">
-							{#if currentStep === 1}
-								Exhibitor Details
-							{:else if currentStep === 2}
-								Payment & Pricing Setup
-							{:else}
-								Summary
-							{/if}
-						</div>
+						<div class=" text-[24px] font-semibold text-[#171717]">Exhibitor Details</div>
 						<p class=" mt-1 text-sm text-[#5C5C5C]">
-							{#if currentStep === 1}
-								Provide essential Exhibitor Details to proceed.
-							{:else if currentStep === 2}
-								Set up your pricing and payment options.
-							{:else}
-								Review and complete your account setup.
-							{/if}
+							Provide essential Exhibitor Details to proceed.
 						</p>
 					</div>
 
@@ -353,8 +426,8 @@
 							<div
 								class="hover:border-opacity-50 flex h-40 cursor-pointer flex-col items-center justify-center space-y-2 rounded-[10px] transition-colors"
 								style="border-color: {selectedColor.lightText}"
-								on:click={() => document.getElementById('logoInput')?.click()}
-								on:keydown={(e) =>
+								onclick={() => document.getElementById('logoInput')?.click()}
+								onkeydown={(e) =>
 									e.key === 'Enter' && document.getElementById('logoInput')?.click()}
 								role="button"
 								tabindex="0"
@@ -383,7 +456,7 @@
 								type="file"
 								accept="image/*"
 								class="hidden"
-								on:change={handleLogoUpload}
+								onchange={handleLogoUpload}
 							/>
 						</div>
 
@@ -393,9 +466,8 @@
 							<div
 								class="hover:border-opacity-50 relative flex h-40 cursor-pointer flex-col items-center justify-around rounded-[10px]"
 								style="border: 1px dashed #D1D1D1; border-spacing: 5px;"
-								on:click={() =>
-									!coverImagePreview && document.getElementById('coverInput')?.click()}
-								on:keydown={(e) =>
+								onclick={() => !coverImagePreview && document.getElementById('coverInput')?.click()}
+								onkeydown={(e) =>
 									e.key === 'Enter' &&
 									!coverImagePreview &&
 									document.getElementById('coverInput')?.click()}
@@ -408,22 +480,26 @@
 										alt="Cover"
 										class="h-full w-full rounded-[10px] object-cover"
 									/>
-									<!-- Remove/Change buttons overlay -->
 									<div
 										class="absolute inset-0 flex items-center justify-center gap-3 rounded-[10px] bg-black/40 opacity-0 transition-opacity hover:opacity-100"
 									>
 										<button
 											type="button"
 											class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-[#171717] hover:bg-gray-100"
-											on:click|stopPropagation={() =>
-												document.getElementById('coverInput')?.click()}
+											onclick={(e) => {
+												e.stopPropagation();
+												document.getElementById('coverInput')?.click();
+											}}
 										>
 											Change
 										</button>
 										<button
 											type="button"
 											class="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-red-600"
-											on:click|stopPropagation={removeCoverImage}
+											onclick={(e) => {
+												e.stopPropagation();
+												removeCoverImage();
+											}}
 										>
 											Remove
 										</button>
@@ -439,7 +515,10 @@
 									<button
 										type="button"
 										class="mx-auto flex h-[32px] items-center rounded-[10px] border px-6 text-sm font-medium text-[#5C5C5C] hover:bg-gray-50"
-										on:click|stopPropagation={() => document.getElementById('coverInput')?.click()}
+										onclick={(e) => {
+											e.stopPropagation();
+											document.getElementById('coverInput')?.click();
+										}}
 									>
 										Browse File
 									</button>
@@ -450,7 +529,7 @@
 								type="file"
 								accept="image/jpeg,image/jpg,image/png,application/pdf,.afra"
 								class="hidden"
-								on:change={handleCoverUpload}
+								onchange={handleCoverUpload}
 							/>
 
 							{#if coverImage}
@@ -464,7 +543,6 @@
 					<!-- Company Information -->
 					<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 						<div class="space-y-2 md:col-span-1">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium"
 								>Company Name <span class="text-[#335CFF]">*</span></label
 							>
@@ -478,38 +556,86 @@
 						</div>
 
 						<div class="relative space-y-2">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium">
 								Business Type/Category <span class="text-[#335CFF]">*</span>
 							</label>
 
-							<select
-								bind:value={businessType}
-								class="h-[40px] w-full appearance-none rounded-[10px] border border-[#EBEBEB] bg-white px-4 pr-10 text-sm focus:outline-none"
+							<!-- Dropdown button -->
+							<button
+								type="button"
+								class="h-[40px] w-full appearance-none rounded-[10px] border border-[#EBEBEB] bg-white px-4 pr-10 text-left text-sm focus:outline-none"
 								style="
-												box-shadow: 0px 1px 2px 0px #0A0D1408;
-												background-image: url('/arrow-dropdown.svg');
-												background-repeat: no-repeat;
-												background-position: right 12px center;
-												background-size: 14px;
-												"
+									box-shadow: 0px 1px 2px 0px #0A0D1408;
+									background-image: url('/arrow-dropdown.svg');
+									background-repeat: no-repeat;
+									background-position: right 12px center;
+									background-size: 14px;
+								"
+								onclick={() => (showBusinessTypeDropdown = !showBusinessTypeDropdown)}
 							>
-								<!-- Placeholder -->
-								<option value="" disabled selected class="text-[#A3A3A3]"> James Brown </option>
+								{#if selectedBusinessType}
+									<div class="flex items-center gap-2">
+										<img src={selectedBusinessType.icon} alt="icon" class="h-5 w-5" />
+										<span>{selectedBusinessType.label}</span>
+									</div>
+								{:else}
+									<span class="text-[#A3A3A3]">Select business type</span>
+								{/if}
+							</button>
 
-								{#each businessTypes as type}
-									<option value={type} class="border-white bg-white shadow-lg">{type}</option>
-								{/each}
-							</select>
+							<!-- Dropdown options -->
+							{#if showBusinessTypeDropdown}
+								<div
+									class="absolute top-full left-0 z-50 mt-1 max-h-64 w-full overflow-auto rounded-lg border bg-white p-2 shadow-lg"
+									style="box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.1);"
+								>
+									{#each businessTypes as type}
+										{#if type.label !== 'Other'}
+											<button
+												type="button"
+												class="flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm transition-colors hover:bg-gray-100 {selectedBusinessType?.label ===
+												type.label
+													? 'bg-blue-50'
+													: ''}"
+												onclick={() => selectBusinessType(type)}
+											>
+												<img src={type.icon} alt={type.label} class="h-5 w-5" />
+												<span>{type.label}</span>
+											</button>
+										{/if}
+									{/each}
+
+									<!-- Other input inside dropdown -->
+									<div class="mt-1 flex items-center gap-2 border-t px-4 py-2 pt-3">
+										<img src="/other.svg" alt="other" class="h-5 w-5" />
+										<input
+											type="text"
+											bind:value={otherBusinessType}
+											placeholder="Other business type..."
+											class="w-full rounded border border-[#EBEBEB] px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
+											onclick={(e) => e.stopPropagation()}
+											onkeydown={(e) => {
+												e.stopPropagation();
+												if (e.key === 'Enter') confirmOther();
+											}}
+										/>
+										<button
+											type="button"
+											class="rounded bg-blue-500 px-3 py-1 text-sm font-medium whitespace-nowrap text-white hover:bg-blue-600"
+											onclick={confirmOther}
+										>
+											Add
+										</button>
+									</div>
+								</div>
+							{/if}
 						</div>
 
 						<div class="space-y-2 md:col-span-2">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium"
 								>Company Description<span class="text-[#335CFF]">*</span>
 								<span class="font-normal text-[#5C5C5C]"> (Optional)</span></label
 							>
-							<!-- svelte-ignore element_invalid_self_closing_tag -->
 							<div class="relative w-full">
 								<textarea
 									bind:value={companyDescription}
@@ -520,7 +646,6 @@
 									style="box-shadow: 0px 1px 2px 0px #0A0D1408;"
 								/>
 
-								<!-- Character Counter INSIDE textarea -->
 								<span
 									class="pointer-events-none absolute right-5 bottom-3 text-xs"
 									style="color: {selectedColor.lightText}"
@@ -538,15 +663,13 @@
 
 					<!-- Business Location -->
 					<div class="space-y-2">
-						<!-- svelte-ignore a11y_label_has_associated_control -->
 						<label class="text-sm font-medium">
 							Business Location/Service Area <span class="text-[#335CFF]">*</span>
 						</label>
 
-						<!-- Button to open modal -->
 						<button
 							class="flex h-14 w-full items-start gap-2 rounded-[10px] border border-[#EBEBEB] bg-white px-4 py-3 text-left shadow-[0_1px_2px_0_#0A0D1408]"
-							on:click={openModal}
+							onclick={openModal}
 						>
 							<img src="/location-add.svg" alt="location-add-icon" class="h-4 w-4" />
 
@@ -588,14 +711,14 @@
 								<div class="mt-6 flex justify-end gap-3">
 									<button
 										class="rounded-lg px-4 py-2 text-sm text-gray-600"
-										on:click={() => (showModal = false)}
+										onclick={() => (showModal = false)}
 									>
 										Cancel
 									</button>
 
 									<button
 										class="rounded-lg bg-[#335CFF] px-4 py-2 text-sm text-white"
-										on:click={saveLocation}
+										onclick={saveLocation}
 									>
 										Save Location
 									</button>
@@ -603,22 +726,19 @@
 							</div>
 						</div>
 					{/if}
-
 					<!-- Contact Information -->
 					<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
 						<div class="space-y-2">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium">
 								Phone Number <span class="text-[#335CFF]">*</span>
 							</label>
 
 							<div class="relative flex rounded-[10px] border border-[#EBEBEB] bg-white text-sm">
-								<!-- Country picker -->
 								<button
 									type="button"
 									class="flex w-[96px] items-center gap-2 border-r border-[#EBEBEB] px-2 py-3"
 									style="box-shadow: 0px 1px 2px 0px #0A0D1408;"
-									on:click={() => (open = !open)}
+									onclick={() => (open = !open)}
 								>
 									<img
 										src={selectedCountry.flag}
@@ -628,7 +748,6 @@
 
 									<span class="text-xs">{selectedCountry.dial_code}</span>
 
-									<!-- Dropdown icon -->
 									<svg
 										class="ml-auto h-4 w-4 text-gray-500 transition-transform duration-200"
 										class:rotate-180={open}
@@ -643,34 +762,31 @@
 									</svg>
 								</button>
 
-								<!-- Phone input -->
 								<input
 									type="tel"
 									bind:value={phoneNumber}
 									placeholder="(555) 000-0000"
 									class="w-full flex-1 px-4 py-3 text-sm placeholder:text-[#A3A3A3] focus:outline-none"
 									style="box-shadow: 0px 1px 2px 0px #0A0D1408;"
-									on:input={(e) => {
+									oninput={(e) => {
 										const target = e.target as HTMLInputElement;
 										target.value = target.value.replace(/[^0-9]/g, '');
 										phoneNumber = target.value;
 									}}
 								/>
 
-								<!-- Dropdown -->
 								{#if open}
 									<ul
 										class="absolute top-full left-0 z-50 mt-1 max-h-64 w-72 overflow-auto rounded-lg border bg-white shadow-lg"
 									>
 										{#each countries as country}
-											<!-- svelte-ignore a11y_click_events_have_key_events -->
-											<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 											<li
 												class="flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-gray-100"
-												on:click={() => {
-													selectedCountry = country;
-													open = false;
-												}}
+												onclick={() => selectCountry(country)}
+												onkeydown={(e) => e.key === 'Enter' && selectCountry(country)}
+												role="option"
+												tabindex="0"
+												aria-selected={selectedCountry === country}
 											>
 												<img
 													src={country.flag}
@@ -689,7 +805,6 @@
 						</div>
 
 						<div class="space-y-2">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium"
 								>Email Address <span class="text-[#335CFF]">*</span></label
 							>
@@ -709,7 +824,6 @@
 						</div>
 
 						<div class="space-y-2">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium"
 								>Website URL<span class="text-[#335CFF]">*</span></label
 							>
@@ -732,25 +846,12 @@
 				<!-- Step 2: Payment & Pricing Setup -->
 				<div class="space-y-6 rounded-xl">
 					<div class="mb-6 text-center">
-						<!-- <div class="text-sm" style="color: {selectedColor.lightText}">
-							Step {currentStep} of {totalSteps}
-						</div> -->
 						<div class="mx-auto h-[96px] w-[96px]">
 							<img src="/payment-Icon.svg" alt="detail-icon" class="h-full w-full" />
 						</div>
-						<div class=" text-[24px] font-[500] text-[#171717]">
-							{#if currentStep === 2}
-								Payment & Pricing Setup
-							{:else}
-								Summary
-							{/if}
-						</div>
+						<div class=" text-[24px] font-[500] text-[#171717]">Payment & Pricing Setup</div>
 						<p class=" mt-1 text-[16px] text-[#5C5C5C]">
-							{#if currentStep === 2}
-								Select a payment method and setup products pricing.
-							{:else}
-								Review your information and complete setup.
-							{/if}
+							Select a payment method and setup products pricing.
 						</p>
 					</div>
 					<div class="my-8 h-[1px] w-full bg-[#EBEBEB]"></div>
@@ -759,7 +860,7 @@
 						class=" flex flex-col gap-5 rounded-2xl border bg-white px-4 py-6 md:grid md:grid-cols-2"
 						style="box-shadow: 0px 1px 2px 0px #0A0D1408;"
 					>
-						<div class="space-y-4 rounded-2xl">
+						<div class="relative space-y-4 rounded-2xl">
 							<div class="flex items-center gap-0">
 								<!-- svelte-ignore a11y_label_has_associated_control -->
 								<label class="text-sm font-medium text-[#1A1A1A]">Select Payment Method</label>
@@ -767,19 +868,12 @@
 							</div>
 
 							<div class="relative">
-								<!-- Custom Select Button -->
 								<button
 									type="button"
-									on:click={() => (isDropdownOpen = !isDropdownOpen)}
+									onclick={() => (isDropdownOpen = !isDropdownOpen)}
 									class="focus:ring-none w-full appearance-none rounded-[10px] border border-[#E5E7EB] bg-white px-4 py-3 pr-10 text-left text-sm focus:ring-0 focus:outline-none"
 								>
-									{#if paymentMethod === 'paystack'}
-										Paystack
-									{:else if paymentMethod === 'flutterwave'}
-										Flutterwave
-									{:else if paymentMethod === 'stripe'}
-										Stripe
-									{/if}
+									{getPaymentMethodDisplay()}
 								</button>
 
 								<img
@@ -791,19 +885,19 @@
 								/>
 							</div>
 
-							<!-- Payment Method Options (Dropdown) -->
 							{#if isDropdownOpen}
 								<div
-									class="mt-2 w-full space-y-2 rounded-[12px] border bg-white md:w-[310px]"
-									style="box-shadow: 0px 1px 2px 0px #0A0D1408;"
+									class="absolute z-10 mt-1 w-full space-y-2 rounded-[12px] border bg-white md:w-[310px]"
+									style="box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.1);"
 								>
 									<button
 										type="button"
-										class="flex w-full items-center justify-between border-b px-2 py-3 transition-colors hover:bg-gray-50 {paymentMethod ===
-										'paystack'
+										class="flex w-full items-center justify-between border-b px-2 py-3 transition-colors hover:bg-gray-50 {paymentMethods.includes(
+											'paystack'
+										)
 											? 'bg-blue-50'
 											: ''}"
-										on:click={() => selectPaymentMethod('paystack')}
+										onclick={() => togglePaymentMethod('paystack')}
 									>
 										<div class="flex items-center gap-3">
 											<div
@@ -822,16 +916,17 @@
 											</div>
 										</div>
 
-										<!-- Toggle Switch -->
 										<div
-											class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {paymentMethod ===
-											'paystack'
+											class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {paymentMethods.includes(
+												'paystack'
+											)
 												? 'bg-[#00C3F7]'
 												: 'bg-gray-300'}"
 										>
 											<span
-												class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {paymentMethod ===
-												'paystack'
+												class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {paymentMethods.includes(
+													'paystack'
+												)
 													? 'translate-x-6'
 													: 'translate-x-1'}"
 											></span>
@@ -840,11 +935,12 @@
 
 									<button
 										type="button"
-										class="flex w-full items-center justify-between border-b px-2 py-3 transition-colors hover:bg-gray-50 {paymentMethod ===
-										'flutterwave'
+										class="flex w-full items-center justify-between border-b px-2 py-3 transition-colors hover:bg-gray-50 {paymentMethods.includes(
+											'flutterwave'
+										)
 											? 'bg-orange-50'
 											: ''}"
-										on:click={() => selectPaymentMethod('flutterwave')}
+										onclick={() => togglePaymentMethod('flutterwave')}
 									>
 										<div class="flex items-center gap-3">
 											<div
@@ -863,16 +959,17 @@
 											</div>
 										</div>
 
-										<!-- Toggle Switch -->
 										<div
-											class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {paymentMethod ===
-											'flutterwave'
+											class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {paymentMethods.includes(
+												'flutterwave'
+											)
 												? 'bg-[#F5A623]'
 												: 'bg-gray-300'}"
 										>
 											<span
-												class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {paymentMethod ===
-												'flutterwave'
+												class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {paymentMethods.includes(
+													'flutterwave'
+												)
 													? 'translate-x-6'
 													: 'translate-x-1'}"
 											></span>
@@ -881,11 +978,12 @@
 
 									<button
 										type="button"
-										class="flex w-full items-center justify-between px-2 py-3 transition-colors hover:bg-gray-50 {paymentMethod ===
-										'stripe'
+										class="flex w-full items-center justify-between px-2 py-3 transition-colors hover:bg-gray-50 {paymentMethods.includes(
+											'stripe'
+										)
 											? 'bg-purple-50'
 											: ''}"
-										on:click={() => selectPaymentMethod('stripe')}
+										onclick={() => togglePaymentMethod('stripe')}
 									>
 										<div class="flex items-center gap-3">
 											<div
@@ -904,16 +1002,17 @@
 											</div>
 										</div>
 
-										<!-- Toggle Switch -->
 										<div
-											class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {paymentMethod ===
-											'stripe'
+											class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {paymentMethods.includes(
+												'stripe'
+											)
 												? 'bg-[#635BFF]'
 												: 'bg-gray-300'}"
 										>
 											<span
-												class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {paymentMethod ===
-												'stripe'
+												class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {paymentMethods.includes(
+													'stripe'
+												)
 													? 'translate-x-6'
 													: 'translate-x-1'}"
 											></span>
@@ -924,7 +1023,7 @@
 						</div>
 
 						<!-- Currency Section -->
-						<div class="space-y-4">
+						<div class="relative space-y-4">
 							<div class="flex items-center gap-0">
 								<!-- svelte-ignore a11y_label_has_associated_control -->
 								<label class="text-sm font-medium text-[#1A1A1A]">Select Proffered Currency</label>
@@ -932,21 +1031,12 @@
 							</div>
 
 							<div class="relative">
-								<!-- Custom Select Button -->
 								<button
 									type="button"
-									on:click={() => (isCurrencyDropdownOpen = !isCurrencyDropdownOpen)}
+									onclick={() => (isCurrencyDropdownOpen = !isCurrencyDropdownOpen)}
 									class="focus:ring-none w-full appearance-none rounded-[10px] border border-[#E5E7EB] bg-white px-4 py-3 pr-10 text-left text-sm focus:ring-0 focus:outline-none"
 								>
-									{#if currency === 'NGN'}
-										Naira (₦)
-									{:else if currency === 'USD'}
-										US Dollar ($)
-									{:else if currency === 'EUR'}
-										Euro (€)
-									{:else if currency === 'GBP'}
-										British Pound (£)
-									{/if}
+									{getCurrencyDisplay()}
 								</button>
 
 								<img
@@ -958,19 +1048,19 @@
 								/>
 							</div>
 
-							<!-- Currency Options (Dropdown) -->
 							{#if isCurrencyDropdownOpen}
 								<div
-									class="mt-2 w-full space-y-2 rounded-[12px] border bg-white md:w-[310px]"
-									style="box-shadow: 0px 1px 2px 0px #0A0D1408;"
+									class="absolute z-50 mt-1 w-full space-y-2 rounded-[12px] border bg-white md:w-[310px]"
+									style="box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.1);"
 								>
 									<button
 										type="button"
-										class="flex w-full items-center justify-between border-b px-2 py-3 transition-colors hover:bg-gray-50 {currency ===
-										'NGN'
+										class="flex w-full items-center justify-between border-b px-2 py-3 transition-colors hover:bg-gray-50 {currencies.includes(
+											'NGN'
+										)
 											? 'bg-green-50'
 											: ''}"
-										on:click={() => selectCurrency('NGN')}
+										onclick={() => toggleCurrency('NGN')}
 									>
 										<div class="flex items-center gap-3">
 											<div class="text-left">
@@ -983,16 +1073,17 @@
 											</div>
 										</div>
 
-										<!-- Toggle Switch -->
 										<div
-											class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {currency ===
-											'NGN'
+											class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {currencies.includes(
+												'NGN'
+											)
 												? 'bg-[#22C55E]'
 												: 'bg-gray-300'}"
 										>
 											<span
-												class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {currency ===
-												'NGN'
+												class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {currencies.includes(
+													'NGN'
+												)
 													? 'translate-x-6'
 													: 'translate-x-1'}"
 											></span>
@@ -1001,11 +1092,12 @@
 
 									<button
 										type="button"
-										class="flex w-full items-center justify-between px-2 py-3 transition-colors hover:bg-gray-50 {currency ===
-										'USD'
+										class="flex w-full items-center justify-between px-2 py-3 transition-colors hover:bg-gray-50 {currencies.includes(
+											'USD'
+										)
 											? 'bg-blue-50'
 											: ''}"
-										on:click={() => selectCurrency('USD')}
+										onclick={() => toggleCurrency('USD')}
 									>
 										<div class="flex items-center gap-3">
 											<div class="text-left">
@@ -1018,16 +1110,17 @@
 											</div>
 										</div>
 
-										<!-- Toggle Switch -->
 										<div
-											class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {currency ===
-											'USD'
+											class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {currencies.includes(
+												'USD'
+											)
 												? 'bg-[#3B82F6]'
 												: 'bg-gray-300'}"
 										>
 											<span
-												class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {currency ===
-												'USD'
+												class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {currencies.includes(
+													'USD'
+												)
 													? 'translate-x-6'
 													: 'translate-x-1'}"
 											></span>
@@ -1040,7 +1133,7 @@
 						<!-- Tax Information Section -->
 						<div class="col-span-2 space-y-4 rounded-2xl">
 							<div class="flex items-center justify-between gap-1">
-								<div class="flex items-center gap-3">
+								<div class="flex items-center gap-1">
 									<img
 										src="/bank-line.svg"
 										alt="bank-line"
@@ -1059,8 +1152,8 @@
 									</div>
 								</div>
 								<button
-									on:click={openTaxModal}
-									class="min-h-[30px] min-w-[106px] rounded-lg bg-black text-xs font-medium text-white transition-colors hover:bg-gray-800"
+									onclick={openTaxModal}
+									class="min-h-[30px] rounded-lg bg-black p-2 text-xs font-medium text-white transition-colors hover:bg-gray-800"
 								>
 									{taxRate > 0 ? 'Edit Tax Rate' : 'Enter Tax Rate'}
 								</button>
@@ -1069,15 +1162,19 @@
 
 						<!-- Tax Rate Modal -->
 						{#if showTaxModal}
-							<!-- svelte-ignore a11y_click_events_have_key_events -->
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div
 								class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-5"
-								on:click={cancelTaxModal}
+								onclick={cancelTaxModal}
+								onkeydown={(e) => e.key === 'Escape' && cancelTaxModal()}
+								role="button"
+								tabindex="0"
 							>
 								<div
 									class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
-									on:click|stopPropagation
+									onclick={(e) => e.stopPropagation()}
+									onkeydown={(e) => e.stopPropagation()}
+									role="dialog"
+									tabindex="0"
 								>
 									<div class="mb-4">
 										<h3 class="text-lg font-semibold text-[#1A1A1A]">Set Tax Rate</h3>
@@ -1107,13 +1204,13 @@
 
 									<div class="flex gap-3">
 										<button
-											on:click={cancelTaxModal}
+											onclick={cancelTaxModal}
 											class="flex-1 rounded-lg border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm font-medium text-[#1A1A1A] transition-colors hover:bg-gray-50"
 										>
 											Cancel
 										</button>
 										<button
-											on:click={saveTaxRate}
+											onclick={saveTaxRate}
 											class="flex-1 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
 										>
 											Save Tax Rate
@@ -1128,13 +1225,8 @@
 				<!-- Step 3: Summary -->
 				<div class="space-y-6">
 					<div class="text-center">
-						<div
-							class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
-							style="background-color: {selectedColor.button}"
-						>
-							<div class="mx-auto h-[96px] w-[96px]">
-								<img src="/summary-icon.svg" alt="sumamry-icon" class="h-full w-full" />
-							</div>
+						<div class="mx-auto h-[96px] w-[96px]">
+							<img src="/summary-icon.svg" alt="summary-icon" class="h-full w-full" />
 						</div>
 						<h3 class="mb-2 text-2xl font-medium">Onboarding Summary</h3>
 						<p class="-mt-2 text-[16px] text-[#5C5C5C]">Review and complete your account setup.</p>
@@ -1162,7 +1254,7 @@
 							</div>
 							<button
 								class="text-gray-400 transition-colors hover:text-gray-600"
-								on:click={() => editField(1)}
+								onclick={() => editField(1)}
 							>
 								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
@@ -1179,13 +1271,19 @@
 										Business Type/Category
 									</div>
 									<div class="text-sm font-medium text-[#171717]">
-										{businessType || 'Not selected'}
+										{#if otherBusinessType}
+											{otherBusinessType}
+										{:else if selectedBusinessType}
+											{selectedBusinessType.label}
+										{:else}
+											Not selected
+										{/if}
 									</div>
 								</div>
 							</div>
 							<button
 								class="text-gray-400 transition-colors hover:text-gray-600"
-								on:click={() => editField(1)}
+								onclick={() => editField(1)}
 							>
 								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
@@ -1206,7 +1304,7 @@
 							</div>
 							<button
 								class="text-gray-400 transition-colors hover:text-gray-600"
-								on:click={() => editField(1)}
+								onclick={() => editField(1)}
 							>
 								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
@@ -1227,7 +1325,7 @@
 							</div>
 							<button
 								class="text-gray-400 transition-colors hover:text-gray-600"
-								on:click={() => editField(1)}
+								onclick={() => editField(1)}
 							>
 								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
@@ -1247,7 +1345,7 @@
 								</div>
 								<button
 									class="text-gray-400 transition-colors hover:text-gray-600"
-									on:click={() => editField(1)}
+									onclick={() => editField(1)}
 								>
 									<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 								</button>
@@ -1265,13 +1363,13 @@
 										Select Payment Method
 									</div>
 									<div class="text-sm font-medium text-[#171717] capitalize">
-										{paymentMethod?.replace('_', ' ') || 'Not selected'}
+										{getPaymentMethodDisplay() || 'Not selected'}
 									</div>
 								</div>
 							</div>
 							<button
 								class="text-gray-400 transition-colors hover:text-gray-600"
-								on:click={() => editField(2)}
+								onclick={() => editField(2)}
 							>
 								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
@@ -1288,19 +1386,13 @@
 										Select Proffered Currency
 									</div>
 									<div class="text-sm font-medium text-[#171717]">
-										{#if currency === 'NGN'}
-											Naira (₦)
-										{:else if currency === 'USD'}
-											US Dollar ($)
-										{:else}
-											Not selected
-										{/if}
+										{getCurrencyDisplay() || 'Not selected'}
 									</div>
 								</div>
 							</div>
 							<button
 								class="text-gray-400 transition-colors hover:text-gray-600"
-								on:click={() => editField(2)}
+								onclick={() => editField(2)}
 							>
 								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
@@ -1313,7 +1405,7 @@
 			<div class="mt-8 flex gap-4">
 				{#if currentStep === 2}
 					<button
-						on:click={prevStep}
+						onclick={prevStep}
 						class="h-[40px] flex-1 rounded-[10px] py-2 font-medium transition"
 						style="background-color: {selectedColor.cover}; color: {selectedColor.text}"
 					>
@@ -1323,7 +1415,7 @@
 
 				{#if currentStep < totalSteps}
 					<button
-						on:click={nextStep}
+						onclick={nextStep}
 						disabled={currentStep === 1
 							? !canProceedStep1
 							: currentStep === 2
@@ -1335,7 +1427,7 @@
 					</button>
 				{:else}
 					<button
-						on:click={submitOnboarding}
+						onclick={submitOnboarding}
 						class="h-[40px] flex-1 rounded-[10px] bg-black py-2 font-medium text-white transition disabled:opacity-50"
 					>
 						Complete Registration
@@ -1347,7 +1439,6 @@
 </div>
 
 <style>
-	/* Custom scrollbar */
 	:global(.custom-scrollbar::-webkit-scrollbar) {
 		width: 6px;
 		height: 6px;

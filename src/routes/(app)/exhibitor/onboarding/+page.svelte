@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { clickOutside } from '$lib/utils/constant';
+	import { colors, type Color } from '$lib/utils/colors';
 	import { goto } from '$app/navigation';
 	import countries from '$lib/utils/countries.json';
 	import { onDestroy } from 'svelte';
@@ -350,7 +352,7 @@
 >
 	<OnboardingNavbar />
 	<!-- Main Content -->
-	<main class="relative flex-1 px-5">
+	<main class="relative mb-[106px] flex-1 px-5 md:mb-0">
 		<!-- Header -->
 		<div class="mx-auto mb-8 overflow-x-hidden">
 			<!-- Progress Indicator - SCROLLABLE -->
@@ -440,9 +442,12 @@
 									<img src="/avatar.svg" alt="avatar" />
 									<div class="text-sm font-medium">Business Logo</div>
 
-									<span class="mt-1 text-xs text-[#AAA19F]">Max file size: 1MB</span>
-									<button class="h-[32px] rounded-[10px] border px-6 text-sm text-[#AAA19F]"
-										>Add Image</button
+									<span class="mt-1 text-xs" style="color: {selectedColor.lightText}"
+										>Max file size: 1MB</span
+									>
+									<button
+										class="h-[32px] rounded-[10px] border px-6 text-sm"
+										style="color: {selectedColor.lightText}">Add Image</button
 									>
 								{/if}
 							</div>
@@ -503,7 +508,7 @@
 									<img src="/upload.svg" alt="upload-icon" />
 									<div class="px-4 text-center">
 										<p class="text-sm">Choose a file or drag & drop it here.</p>
-										<p class="mt-1 text-xs text-[#AAA19F]">
+										<p class="mt-1 text-xs" style="color: {selectedColor.lightText}">
 											JPEG, PNG, PDF, and AFRA formats, up to 50 MB
 										</p>
 									</div>
@@ -632,7 +637,6 @@
 								<span class="font-normal text-[#5C5C5C]"> (Optional)</span></label
 							>
 							<div class="relative w-full">
-								<!-- svelte-ignore element_invalid_self_closing_tag -->
 								<textarea
 									bind:value={companyDescription}
 									placeholder="Describe your company..."

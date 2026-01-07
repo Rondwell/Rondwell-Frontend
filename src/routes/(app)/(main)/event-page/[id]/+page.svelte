@@ -10,7 +10,7 @@
 </script>
 
 <div class="w-full">
-	<div class="mt-[37px] flex flex-col justify-start gap-6 py-4.5 md:flex-row md:gap-9">
+	<div class="flex flex-col justify-start gap-6 py-4.5 md:flex-row md:gap-9">
 		<!-- Left Column -->
 		<div class="max-w-[378.13px]">
 			<!-- Event Image -->

@@ -1,3 +1,7 @@
+<script>
+    	import Media from './components/Media.svelte';
+</script>
+
 <div>
-    <h2 class="text-[55px] font-bold leading-[63.3px]">media</h2>
+    <Media />
 </div>

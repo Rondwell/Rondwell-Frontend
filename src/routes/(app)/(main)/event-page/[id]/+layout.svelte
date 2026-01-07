@@ -83,7 +83,7 @@
 
 </script>
 
-	<div class=" w-full grid  grid-cols-2 gap-[6px]  md:grid-cols-5 md:gap-[13px]">
+	<div class=" w-full grid  grid-cols-2 gap-[6px]  md:grid-cols-5 md:gap-[13px] mb-[37px]">
 
 {#each eventPageNav as item}
   <SubPageButton pageName= {item.label} pageText={item.subLabel} link={item.link}  >

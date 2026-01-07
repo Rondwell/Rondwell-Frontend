@@ -1,3 +1,6 @@
+<script lang="ts">
+	import Agenda from './components/Agenda.svelte';
+  </script>
 <div>
-    <h2 class="text-[55px] font-bold leading-[63.3px]">agenda</h2>
+    <Agenda />
 </div>

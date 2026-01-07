@@ -330,7 +330,7 @@
 				</div>
 			{:else}
 				<div class="flex h-50 flex-col items-center justify-center">
-					<img src="/profile-2user.svg" alt="">
+					<img src="/profile-2user.svg" alt="" />
 					<p class="text-[#646568]">No Guests Found</p>
 					<p class="text-sm text-gray-500">Try searching for something else</p>
 				</div>

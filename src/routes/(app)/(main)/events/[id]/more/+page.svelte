@@ -1,6 +1,7 @@
 <!-- src/routes/event/more/+page.svelte -->
 <script lang="ts">
 	import Icon from '@iconify/svelte';
+	import { goto } from '$app/navigation';
 
 	// Mock data for the event
 	const eventData = {
@@ -135,6 +136,7 @@
 				</svg>
 			</div>
 			<button
+				on:click={()=> goto('/event-page/1')}
 				class="flex w-full items-center justify-center gap-1 rounded-md bg-[#DCE4EE] px-3 py-2 text-xs font-medium text-[#5D646F] transition-colors hover:bg-[#ccd6e0] sm:w-auto sm:justify-start sm:text-sm"
 			>
 				Event Page

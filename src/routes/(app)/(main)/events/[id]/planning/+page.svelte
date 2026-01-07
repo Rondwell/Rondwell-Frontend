@@ -7,6 +7,7 @@
 	import Rooms from './components/Rooms.svelte';
 	import Sessions from './components/Sessions.svelte';
 	import Surveys from './components/Surveys.svelte';
+	import { goto } from '$app/navigation';
 
 	const tabs = [
 		{
@@ -123,6 +124,7 @@
 				</svg>
 			</div>
 			<button
+				on:click={()=> goto('/event-page/1')}
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
 			>
 				Event Page

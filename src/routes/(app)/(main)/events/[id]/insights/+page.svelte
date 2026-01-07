@@ -2,6 +2,7 @@
 	import { StackedAreaChart, DonutChart } from '@carbon/charts-svelte';
 	import '@carbon/charts-svelte/styles.css';
 	import Icon from '@iconify/svelte';
+	import { goto } from '$app/navigation';
 
 	const eventData = {
 		title: 'Megaexe Party',
@@ -137,6 +138,7 @@
 				</svg>
 			</div>
 			<button
+				on:click={()=> goto('/event-page/1')}
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
 			>
 				Event Page

@@ -1,8 +1,29 @@
 <script lang="ts">
 	import EventCard from '$lib/components/EventCard.svelte';
 	import Icon from '@iconify/svelte';
+	import AddEventCollectionModal from './AddEventCollectionModal.svelte';
+	import CreatedEventModal from '../components/CreatedEventModal.svelte';
+	import ExternalEventModal from '../components/ExternalEventModal.svelte';
 
 	let activeTab: 'Upcoming' | 'Past' = 'Upcoming';
+	type ActiveModal = 'none' | 'collection' | 'created' | 'external';
+	let activeModal: ActiveModal = 'none';
+
+	function openCollectionModal() {
+		activeModal = 'collection';
+	}
+
+	function openCreateEventModal() {
+		activeModal = 'created';
+	}
+
+	function openExternalEventModal() {
+		activeModal = 'external';
+	}
+
+	function closeAllModals() {
+		activeModal = 'none';
+	}
 
 	type EventItem = {
 		id?: number;
@@ -50,24 +71,6 @@
 		}
 	];
 
-	//Testing Adding New Event UI
-	function addEvent() {
-		events = [
-			...events,
-			{
-				id: events.length + 1,
-				title: `New Event ${events.length + 1}`,
-				date: '2026-06-05',
-				day: 'Monday',
-				time: '9:00 PM',
-				locationIcon: '/location.svg',
-				location: 'To be announced',
-				guests: 0,
-				image: '/Megaexe-party.png'
-			}
-		];
-	}
-
 	function formatDate(dateStr: string) {
 		const date = new Date(dateStr);
 		return {
@@ -110,12 +113,38 @@
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="flex items-center gap-2 text-xl font-semibold">
 			Events
-			<button
-				on:click={addEvent}
-				class="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBECED] p-1 transition-colors duration-500 hover:bg-[#E8E8E8] hover:text-[#5555658]"
-			>
-				<Icon icon="mdi:plus" class="h-6 w-6 text-[#616265]" />
-			</button>
+			<div class="ml-4">
+				<button
+					on:click={openCollectionModal}
+					class="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBECED] p-1 transition-colors duration-500 hover:bg-[#E8E8E8] hover:text-[#5555658]"
+				>
+					<Icon icon="mdi:plus" class="h-6 w-6 text-[#616265]" />
+				</button>
+			</div>
+			<AddEventCollectionModal
+				open={activeModal === 'collection'}
+				on:close={closeAllModals}
+				on:createdEvent={openCreateEventModal}
+				on:externalEvent={openExternalEventModal}
+			/>
+
+			<CreatedEventModal
+				open={activeModal === 'created'}
+				on:close={closeAllModals}
+				on:submit={(e) => {
+					console.log(e.detail);
+					closeAllModals();
+				}}
+			/>
+
+			<ExternalEventModal
+				open={activeModal === 'external'}
+				on:close={closeAllModals}
+				on:submit={(e) => {
+					console.log(e.detail);
+					closeAllModals();
+				}}
+			/>
 		</h1>
 
 		<div class="h-[40px] w-fit rounded bg-[#EBECED] p-1 text-[#A1A2A2]">
@@ -140,26 +169,45 @@
 
 	<!-- Event List Section -->
 	<div class="mb-12 w-full space-y-10">
-		{#each Array.from(groupedEvents) as [date, dayEvents]}
-			<!-- Date Label -->
-			<div class="flex flex-col items-stretch gap-4 md:flex-row">
-				<div class="flex w-full max-w-[120px] justify-between">
-					<div>
-						<div class="text-lg">{formatDate(date).formatted}</div>
-						<div class="text-lg text-[#B9BABA]">{formatDate(date).weekday}</div>
-					</div>
-					<div class="hidden w-[11.75px] flex-col items-center justify-center gap-1 md:flex">
-						<span class="h-[11.75px] w-[11.75px] rounded-full bg-[#D9D9D9]"></span>
-						<span class="ml-1 h-full border-2 border-dashed border-[#D9D9D9]"></span>
-					</div>
-				</div>
-
-				<div class="flex w-full max-w-[687px] flex-col gap-4">
-					{#each dayEvents as event, index (index)}
-						<EventCard {event} {type} />
-					{/each}
+		{#if groupedEvents.size === 0}
+			<div class="mt-20 flex flex-col items-center justify-center gap-4">
+				<img src="/noEvent.svg" alt="No Events" class="ml-4 h-60 w-60" />
+				<h2 class="text-lg font-semibold text-[#646568]">No Events, yet</h2>
+				<p class="max-w-md text-center text-[#A2ACB2]">
+					This calendar has no {activeTab.toLowerCase()} events.
+				</p>
+				<div class="">
+					<button
+						on:click={openCollectionModal}
+						class="flex items-center rounded-2xl bg-[#EFEFEF] px-1 py-0.5 text-[#A0A1A3]"
+					>
+						<Icon icon="mdi:plus" class="text-xl" />
+						Add Event
+					</button>
 				</div>
 			</div>
-		{/each}
+		{:else}
+			{#each Array.from(groupedEvents) as [date, dayEvents]}
+				<!-- Date Label -->
+				<div class="flex flex-col items-stretch gap-4 md:flex-row">
+					<div class="flex w-full max-w-[120px] justify-between">
+						<div>
+							<div class="text-lg">{formatDate(date).formatted}</div>
+							<div class="text-lg text-[#B9BABA]">{formatDate(date).weekday}</div>
+						</div>
+						<div class="hidden w-[11.75px] flex-col items-center justify-center gap-1 md:flex">
+							<span class="h-[11.75px] w-[11.75px] rounded-full bg-[#D9D9D9]"></span>
+							<span class="ml-1 h-full border-2 border-dashed border-[#D9D9D9]"></span>
+						</div>
+					</div>
+
+					<div class="flex w-full max-w-[687px] flex-col gap-4">
+						{#each dayEvents as event, index (index)}
+							<EventCard {event} {type} />
+						{/each}
+					</div>
+				</div>
+			{/each}
+		{/if}
 	</div>
 </div>

@@ -543,7 +543,6 @@
 					<!-- Company Information -->
 					<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 						<div class="space-y-2 md:col-span-1">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium"
 								>Company Name <span class="text-[#335CFF]">*</span></label
 							>
@@ -557,7 +556,6 @@
 						</div>
 
 						<div class="relative space-y-2">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium">
 								Business Type/Category <span class="text-[#335CFF]">*</span>
 							</label>
@@ -634,7 +632,6 @@
 						</div>
 
 						<div class="space-y-2 md:col-span-2">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium"
 								>Company Description<span class="text-[#335CFF]">*</span>
 								<span class="font-normal text-[#5C5C5C]"> (Optional)</span></label
@@ -667,7 +664,6 @@
 
 					<!-- Business Location -->
 					<div class="space-y-2">
-						<!-- svelte-ignore a11y_label_has_associated_control -->
 						<label class="text-sm font-medium">
 							Business Location/Service Area <span class="text-[#335CFF]">*</span>
 						</label>
@@ -734,7 +730,6 @@
 					<!-- Contact Information -->
 					<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
 						<div class="space-y-2">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium">
 								Phone Number <span class="text-[#335CFF]">*</span>
 							</label>
@@ -811,7 +806,6 @@
 						</div>
 
 						<div class="space-y-2">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium"
 								>Email Address <span class="text-[#335CFF]">*</span></label
 							>
@@ -831,7 +825,6 @@
 						</div>
 
 						<div class="space-y-2">
-							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="text-sm font-medium"
 								>Website URL<span class="text-[#335CFF]">*</span></label
 							>

@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { clickOutside } from '$lib/utils/constant';
-	import { colors, type Color } from '$lib/utils/colors';
 	import { goto } from '$app/navigation';
 	import countries from '$lib/utils/countries.json';
 	import { onDestroy } from 'svelte';
-	import OnboardingNavbar from '../../components/OnboardingNavbar.svelte';
+	import Icon from '@iconify/svelte';
 
 	// ============================================
 	// INTERFACES
@@ -20,10 +18,6 @@
 	// ============================================
 
 	let now = $state(formatTime());
-	let selectedStyle = $state('Minimal');
-	let selectedFont = $state('Default');
-	let selectedColor = $state<Color>(colors[7]);
-	let background_color = $state('#F5F6F7');
 	let showModal = $state(false);
 	let open = $state(false);
 	let currentStep = $state(1);
@@ -342,24 +336,40 @@
 	}
 </script>
 
-<div
-	class="relative flex min-h-screen flex-col overflow-auto bg-cover bg-center bg-no-repeat"
-	style="
-		background-image: url('/exhibitor-bg.png');
-		color: {selectedColor.text};
-		font-family: {selectedFont};
-	"
->
-	<OnboardingNavbar />
+<div class="bg relative min-h-screen overflow-hidden font-sans">
+	<div class="relative w-full border-b border-[#1815151A]">
+		<header
+			class="relative z-20 mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-3 md:px-10"
+		>
+			<a href="/" class="flex items-center gap-2">
+				<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
+			</a>
+
+			<div class="flex items-center gap-3 text-[#909EA3] md:gap-6">
+				<span class="hidden text-sm md:inline">{now}</span>
+
+				<button class="flex items-center gap-1 transition hover:text-gray-800">
+					Create Secrets
+					<Icon icon="heroicons:heart" class="h-3 w-3" />
+				</button>
+				<button
+					class="rounded-full bg-[#EBEBEB] px-5 py-2 text-gray-900 transition hover:bg-gray-200"
+				>
+					Sign In
+				</button>
+			</div>
+		</header>
+	</div>
+
 	<!-- Main Content -->
-	<main class="relative mb-[106px] flex-1 px-5 md:mb-0">
+	<main class="relative flex-1 px-5">
 		<!-- Header -->
 		<div class="mx-auto mb-8 overflow-x-hidden">
 			<!-- Progress Indicator - SCROLLABLE -->
-			<div class="mb-8  w-full border-b border-[#EBEBEB] py-3 pt-10 md:mx-auto md:w-[518px]">
+			<div class="mb-8 w-full py-3 pt-10 md:mx-auto md:w-[518px]">
 				<div
-					class="custom-scrollbar overflow-x-auto overflow-y-hidden scroll-smooth cursor-grab active:cursor-grabbing"
-					 onwheel={handleHorizontalScroll}
+					class="custom-scrollbar cursor-grab overflow-x-auto overflow-y-hidden scroll-smooth active:cursor-grabbing"
+					onwheel={handleHorizontalScroll}
 				>
 					<div class="flex min-w-max items-center justify-start gap-4 px-4 md:px-0">
 						{#each Array(totalSteps) as _, index}
@@ -398,8 +408,7 @@
 
 		<!-- Step Content -->
 		<div
-			class="mx-auto mb-20 w-full rounded-[16px] p-3 md:max-w-[716px]"
-			style="background-color: {selectedColor.cover}; box-shadow: 0px 1px 2px 0px #0A0D1408;"
+			class="mx-auto mb-20 w-full rounded-[16px] bg-[#FDFCFB] p-3 shadow-[0px_1px_2px_0px_#0A0D1408] md:max-w-[716px]"
 		>
 			{#if currentStep === 1}
 				<!-- Step 1: Exhibitor Details -->
@@ -424,8 +433,7 @@
 						<!-- Business Logo -->
 						<div class="col-span-1 space-y-2 md:border-r-1">
 							<div
-								class="hover:border-opacity-50 flex h-40 cursor-pointer flex-col items-center justify-center space-y-2 rounded-[10px] transition-colors"
-								style="border-color: {selectedColor.lightText}"
+								class="hover:border-opacity-50 flex h-40 cursor-pointer flex-col items-center justify-center space-y-2 rounded-[10px] border-[#AAA19F] transition-colors"
 								onclick={() => document.getElementById('logoInput')?.click()}
 								onkeydown={(e) =>
 									e.key === 'Enter' && document.getElementById('logoInput')?.click()}
@@ -442,12 +450,9 @@
 									<img src="/avatar.svg" alt="avatar" />
 									<div class="text-sm font-medium">Business Logo</div>
 
-									<span class="mt-1 text-xs" style="color: {selectedColor.lightText}"
-										>Max file size: 1MB</span
-									>
-									<button
-										class="h-[32px] rounded-[10px] border px-6 text-sm"
-										style="color: {selectedColor.lightText}">Add Image</button
+									<span class="mt-1 text-xs text-[#AAA19F]">Max file size: 1MB</span>
+									<button class="h-[32px] rounded-[10px] border px-6 text-sm text-[#AAA19F]"
+										>Add Image</button
 									>
 								{/if}
 							</div>
@@ -508,7 +513,7 @@
 									<img src="/upload.svg" alt="upload-icon" />
 									<div class="px-4 text-center">
 										<p class="text-sm">Choose a file or drag & drop it here.</p>
-										<p class="mt-1 text-xs" style="color: {selectedColor.lightText}">
+										<p class="mt-1 text-xs text-[#AAA19F]">
 											JPEG, PNG, PDF, and AFRA formats, up to 50 MB
 										</p>
 									</div>
@@ -647,10 +652,7 @@
 									style="box-shadow: 0px 1px 2px 0px #0A0D1408;"
 								/>
 
-								<span
-									class="pointer-events-none absolute right-5 bottom-3 text-xs"
-									style="color: {selectedColor.lightText}"
-								>
+								<span class="pointer-events-none absolute right-5 bottom-3 text-xs text-[#AAA19F]">
 									{companyDescription.length}/200
 								</span>
 							</div>
@@ -1407,8 +1409,7 @@
 				{#if currentStep === 2}
 					<button
 						onclick={prevStep}
-						class="h-[40px] flex-1 rounded-[10px] py-2 font-medium transition"
-						style="background-color: {selectedColor.cover}; color: {selectedColor.text}"
+						class="h-[40px] flex-1 rounded-[10px] bg-[#FDFCFB] py-2 font-medium text-[#AAA19F] transition"
 					>
 						Back
 					</button>
@@ -1440,6 +1441,21 @@
 </div>
 
 <style>
+	.bg {
+		background: conic-gradient(
+			from 10.7deg at 50.03% 44.27%,
+			rgba(242, 243, 246, 0.923391) -135.02deg,
+			rgba(240, 245, 245, 0.985181) 34.46deg,
+			#f0f5f5 75.11deg,
+			#fae9fa 134.76deg,
+			#ffefec 175.96deg,
+			#fbebf6 184.8deg,
+			rgba(250, 233, 250, 0.36) 203.89deg,
+			rgba(242, 243, 246, 0.923391) 224.98deg,
+			rgba(240, 245, 245, 0.985181) 394.46deg
+		);
+	}
+
 	:global(.custom-scrollbar::-webkit-scrollbar) {
 		width: 6px;
 		height: 6px;

@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import countries from '$lib/utils/countries.json';
 	import { onDestroy } from 'svelte';
-	import Icon from '@iconify/svelte';
+	import OnboardingNavbar from '../../components/OnboardingNavbar.svelte';
 
 	// ============================================
 	// INTERFACES
@@ -18,6 +18,10 @@
 	// ============================================
 
 	let now = $state(formatTime());
+	let selectedStyle = $state('Minimal');
+	let selectedFont = $state('Default');
+	let selectedColor = $state<Color>(colors[7]);
+	let background_color = $state('#F5F6F7');
 	let showModal = $state(false);
 	let open = $state(false);
 	let currentStep = $state(1);
@@ -336,6 +340,7 @@
 	}
 </script>
 
+<<<<<<< HEAD
 <div class="bg relative min-h-screen overflow-hidden font-sans">
 	<div class="relative w-full border-b border-[#1815151A]">
 		<header
@@ -361,15 +366,33 @@
 		</header>
 	</div>
 
+=======
+<div
+	class="relative flex min-h-screen flex-col overflow-auto bg-cover bg-center bg-no-repeat"
+	style="
+		background-image: url('/exhibitor-bg.png');
+		color: {selectedColor.text};
+		font-family: {selectedFont};
+	"
+>
+	<OnboardingNavbar />
+>>>>>>> 536a0a2 (update onboarding page)
 	<!-- Main Content -->
 	<main class="relative flex-1 px-5">
 		<!-- Header -->
 		<div class="mx-auto mb-8 overflow-x-hidden">
 			<!-- Progress Indicator - SCROLLABLE -->
+<<<<<<< HEAD
 			<div class="mb-8 w-full py-3 pt-10 md:mx-auto md:w-[518px]">
 				<div
 					class="custom-scrollbar cursor-grab overflow-x-auto overflow-y-hidden scroll-smooth active:cursor-grabbing"
 					onwheel={handleHorizontalScroll}
+=======
+			<div class="mb-8  w-full border-b border-[#EBEBEB] py-3 pt-10 md:mx-auto md:w-[518px]">
+				<div
+					class="custom-scrollbar overflow-x-auto overflow-y-hidden scroll-smooth cursor-grab active:cursor-grabbing"
+					 onwheel={handleHorizontalScroll}
+>>>>>>> 536a0a2 (update onboarding page)
 				>
 					<div class="flex min-w-max items-center justify-start gap-4 px-4 md:px-0">
 						{#each Array(totalSteps) as _, index}
@@ -408,7 +431,12 @@
 
 		<!-- Step Content -->
 		<div
+<<<<<<< HEAD
 			class="mx-auto mb-20 w-full rounded-[16px] bg-[#FDFCFB] p-3 shadow-[0px_1px_2px_0px_#0A0D1408] md:max-w-[716px]"
+=======
+			class="mx-auto mb-20 w-full rounded-[16px] p-3 md:max-w-[716px]"
+			style="background-color: {selectedColor.cover}; box-shadow: 0px 1px 2px 0px #0A0D1408;"
+>>>>>>> 536a0a2 (update onboarding page)
 		>
 			{#if currentStep === 1}
 				<!-- Step 1: Exhibitor Details -->
@@ -433,7 +461,12 @@
 						<!-- Business Logo -->
 						<div class="col-span-1 space-y-2 md:border-r-1">
 							<div
+<<<<<<< HEAD
 								class="hover:border-opacity-50 flex h-40 cursor-pointer flex-col items-center justify-center space-y-2 rounded-[10px] border-[#AAA19F] transition-colors"
+=======
+								class="hover:border-opacity-50 flex h-40 cursor-pointer flex-col items-center justify-center space-y-2 rounded-[10px] transition-colors"
+								style="border-color: {selectedColor.lightText}"
+>>>>>>> 536a0a2 (update onboarding page)
 								onclick={() => document.getElementById('logoInput')?.click()}
 								onkeydown={(e) =>
 									e.key === 'Enter' && document.getElementById('logoInput')?.click()}
@@ -652,7 +685,14 @@
 									style="box-shadow: 0px 1px 2px 0px #0A0D1408;"
 								/>
 
+<<<<<<< HEAD
 								<span class="pointer-events-none absolute right-5 bottom-3 text-xs text-[#AAA19F]">
+=======
+								<span
+									class="pointer-events-none absolute right-5 bottom-3 text-xs"
+									style="color: {selectedColor.lightText}"
+								>
+>>>>>>> 536a0a2 (update onboarding page)
 									{companyDescription.length}/200
 								</span>
 							</div>
@@ -1409,7 +1449,12 @@
 				{#if currentStep === 2}
 					<button
 						onclick={prevStep}
+<<<<<<< HEAD
 						class="h-[40px] flex-1 rounded-[10px] bg-[#FDFCFB] py-2 font-medium text-[#AAA19F] transition"
+=======
+						class="h-[40px] flex-1 rounded-[10px] py-2 font-medium transition"
+						style="background-color: {selectedColor.cover}; color: {selectedColor.text}"
+>>>>>>> 536a0a2 (update onboarding page)
 					>
 						Back
 					</button>
@@ -1441,6 +1486,7 @@
 </div>
 
 <style>
+<<<<<<< HEAD
 	.bg {
 		background: conic-gradient(
 			from 10.7deg at 50.03% 44.27%,
@@ -1456,6 +1502,8 @@
 		);
 	}
 
+=======
+>>>>>>> 536a0a2 (update onboarding page)
 	:global(.custom-scrollbar::-webkit-scrollbar) {
 		width: 6px;
 		height: 6px;

@@ -55,7 +55,7 @@
 		const rolePath = profile.role.toLowerCase();
 
 		if (profile.hasCompletedOnboarding) {
-			goto(`/${rolePath}/dashboard`);
+			goto(`/${rolePath}`);
 		} else {
 			goto(`/${rolePath}/onboarding`);
 		}

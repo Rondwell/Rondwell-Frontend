@@ -169,12 +169,6 @@
 {/if}
 
 <style>
-	.input {
-		@apply w-full rounded-lg border px-3 py-2 text-sm;
-	}
-	.btn {
-		@apply rounded-lg bg-black px-4 py-2 text-sm text-white hover:bg-gray-900;
-	}
 	.animate-fadeIn {
 		animation: fade 0.15s ease-out;
 	}

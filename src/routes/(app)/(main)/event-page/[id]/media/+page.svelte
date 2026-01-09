@@ -1,5 +1,6 @@
 <script>
-    	import Media from './components/Media.svelte';
+	import Media from "../../../events/[id]/planning/components/Media.svelte";
+
 </script>
 
 <div>

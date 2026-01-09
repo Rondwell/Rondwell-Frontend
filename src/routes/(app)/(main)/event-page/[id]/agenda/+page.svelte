@@ -1,6 +1,8 @@
 <script lang="ts">
-	import Agenda from './components/Agenda.svelte';
-  </script>
+	import Agenda from "../../../events/[id]/planning/components/Agenda.svelte";
+
+</script>
+
 <div>
-    <Agenda />
+	<Agenda />
 </div>

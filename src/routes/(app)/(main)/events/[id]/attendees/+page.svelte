@@ -3,6 +3,7 @@
 	import AttendeeDetailModal from '../components/AttendeeDetailModal.svelte';
 	import InviteGuestsModal from '../components/InviteGuestsModal.svelte';
 	import ShowAttendeeList from './components/ShowAttendeeList.svelte';
+	import { goto } from '$app/navigation';
 
 	let searchQuery = '';
 	let showModal = false;
@@ -76,6 +77,7 @@
 				</svg>
 			</div>
 			<button
+					on:click={()=> goto('/event-page/1')}
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
 			>
 				Event Page

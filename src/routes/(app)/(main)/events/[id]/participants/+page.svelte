@@ -4,6 +4,7 @@
 	import Exhibitors from './components/Exhibitors.svelte';
 	import Speakers from './components/Speakers.svelte';
 	import Vendors from './components/Vendors.svelte';
+	import { goto } from '$app/navigation';
 
 	let eventData = {
 		title: 'Megaexe Party',
@@ -141,6 +142,7 @@
 				</svg>
 			</div>
 			<button
+				on:click={()=> goto('events/1')}
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
 			>
 				Event Page

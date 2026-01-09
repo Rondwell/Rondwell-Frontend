@@ -5,7 +5,9 @@
 	import { clickOutside } from '$lib/utils/constant';
 	import InviteGuestsModal from './components/InviteGuestsModal.svelte';
 
+
 	const eventData = {
+		id: 'event-123',
 		title: "Faithful's Graduating Party",
 		collection: 'John Collection',
 		date: 'Wednesday, Dec 25',
@@ -125,6 +127,7 @@
 			</div>
 			<button
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
+					on:click={()=> goto('/event-page/1')}
 			>
 				Event Page
 				<svg

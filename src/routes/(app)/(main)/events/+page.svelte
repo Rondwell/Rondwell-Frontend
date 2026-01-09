@@ -97,7 +97,7 @@
 
 <div class="w-full">
 	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-2xl md:text-3xl font-medium">Events</h2>
+		<h2 class="text-2xl font-medium md:text-3xl">Events</h2>
 
 		<div class="h-[50px] w-fit rounded bg-[#E0E9EC] p-1 text-[#98A1A4]">
 			<button
@@ -137,7 +137,7 @@
 
 				<div class="flex w-full max-w-[687px] flex-col gap-4">
 					{#each dayEvents as event, index (index)}
-						<a href="/events/1">
+						<a href={type === 'mine' ? '/events/1' : '/event-page/1'}>
 							<EventCard {event} {type} />
 						</a>
 					{/each}

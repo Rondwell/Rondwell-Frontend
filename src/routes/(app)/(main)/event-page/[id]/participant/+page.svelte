@@ -1,3 +1,6 @@
+<script>
+    	import Participant from './components/Participant.svelte';
+</script>
 <div>
-    <h2 class="text-[55px] font-bold leading-[63.3px]">participant</h2>
+    <Participant />
 </div>

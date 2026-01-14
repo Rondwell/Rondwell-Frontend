@@ -5,9 +5,11 @@
 	import DatePickerModal from '../../../../create-event/components/DatePickerModal.svelte';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
+	import TagNameModal from './TagNameModal.svelte';
 
 	const dispatch = createEventDispatcher<{
 		close: void;
+		collection: void;
 		submit: {
 			url: string;
 			startDate: Date;
@@ -20,7 +22,7 @@
 	}>();
 
 	let openStartDatePickerModal = false;
-
+	let showModal = false;
 	let openStartTimeModal = false;
 	let openEndTimeModal = false;
 	let startTime = '1:30 AM';
@@ -31,8 +33,6 @@
 	let timezone = '';
 
 	function submitEvent() {
-		if (!isValidUrl) return;
-
 		dispatch('submit', {
 			url: eventUrl,
 			startDate,
@@ -46,20 +46,7 @@
 
 	// Url State
 	let eventUrl = '';
-	let urlTouched = false;
 
-	function isValidHttpUrl(value: string): boolean {
-		try {
-			const url = new URL(value);
-			return url.protocol === 'http:' || url.protocol === 'https:';
-		} catch {
-			return false;
-		}
-	}
-
-	$: isValidUrl = isValidHttpUrl(eventUrl);
-
-	
 	function formatDate(date: Date) {
 		return date.toLocaleDateString('en-US', {
 			weekday: 'short', // "Sat"
@@ -200,230 +187,229 @@
 			</div>
 
 			<!-- Existing Event section -->
-
-			<div class="flex items-center px-2 py-3">
-				<div class="ml-2 flex">
-					<svg
-						width="38"
-						height="38"
-						viewBox="0 0 38 38"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<circle cx="18.5474" cy="18.5474" r="18.5474" fill="#EFEFF0" />
-						<path
-							d="M23.875 24.2969C23.0553 25.0968 21.8691 25.2746 20.8516 24.7363H20.8525L13.8154 21.0332L13.6592 20.9443C12.8966 20.4757 12.4287 19.6446 12.4287 18.7393C12.4288 17.7736 12.9609 16.8923 13.8154 16.4453L13.8164 16.4463L20.8525 12.7432L20.8516 12.7422C21.2445 12.5327 21.6588 12.4336 22.0732 12.4336C22.7333 12.4336 23.3717 12.6924 23.875 13.1826C24.6953 13.9834 24.8926 15.1688 24.3809 16.1924L23.3975 18.1602C23.2192 18.5168 23.2182 18.9493 23.3975 19.3135L24.3809 21.2861C24.8927 22.3098 24.6955 23.496 23.875 24.2969ZM22.0674 23.7393C22.4245 23.7392 22.7417 23.5732 22.9619 23.3584V23.3574C23.2913 23.0387 23.5193 22.4797 23.2139 21.8633H23.2148L22.2305 19.8965V19.8955C21.8692 19.1664 21.8692 18.3063 22.2305 17.5771V17.5762L23.2148 15.6094V15.6084C23.5247 14.9937 23.2924 14.4351 22.9619 14.1152C22.6294 13.7934 22.0703 13.5722 21.4609 13.8926L14.4238 17.5967L14.2695 17.6904C13.9302 17.9305 13.7344 18.3091 13.7344 18.7334C13.7344 19.1575 13.9305 19.5353 14.2695 19.7754L14.4238 19.8701L21.4609 23.5859C21.674 23.6978 21.8792 23.7393 22.0674 23.7393Z"
-							fill="#616365"
-							stroke="#616365"
-							stroke-width="0.394627"
-						/>
-						<rect
-							x="18.6542"
-							y="18.0449"
-							width="4.13627"
-							height="1.33004"
-							rx="0.665018"
-							fill="#616365"
-							stroke="#616365"
-							stroke-width="0.394627"
-						/>
-					</svg>
-
-					<p class=" ml-3 py-2 text-[16px]">Existing Rondwell Event</p>
-				</div>
-			</div>
-			<!-- URL SECTION (NEW & CLEAN) -->
-			<div class="px-6 pt-5">
-				<label class="mb-1 block text-sm font-medium text-[#666769]">
-					Event Page URL <span>*</span>
-				</label>
-
-				<input
-					type="url"
-					class="placeholder-opacity-30 w-full rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-2 focus:ring-black/40"
-					placeholder="https://eventbrite.com/e/some-event"
-					bind:value={eventUrl}
-					on:blur={() => (urlTouched = true)}
-				/>
-
-				{#if urlTouched && !isValidUrl}
-					<p class="mt-4 text-xs text-red-500">Please enter a valid event URL</p>
-				{/if}
-			</div>
-
-<!-- Event Time -->
-			<label class="mb-1 block px-6 pt-5 text-sm font-medium text-[#666769]"> Event Time </label>
-				<div class="flex w-full gap-4 bg-[#F8F9F9]">
-					<div class=" w-full">
-						<div
-							class="mt-2 ml-6 flex w-full flex-col rounded-t-[9.75px] bg-[#fff] px-4 py-3 sm:max-w-[300px]"
+			<div class="flex flex-col px-4">
+				<div class="flex items-center py-2">
+					<div class="flex cursor-pointer" on:click={() => dispatch('collection')}>
+						<svg
+							width="38"
+							height="38"
+							viewBox="0 0 38 38"
+							fill="none"
+							xmlns="http://www.w3.org/2000/svg"
 						>
+							<circle cx="18.5474" cy="18.5474" r="18.5474" fill="#EFEFF0" />
+							<path
+								d="M23.875 24.2969C23.0553 25.0968 21.8691 25.2746 20.8516 24.7363H20.8525L13.8154 21.0332L13.6592 20.9443C12.8966 20.4757 12.4287 19.6446 12.4287 18.7393C12.4288 17.7736 12.9609 16.8923 13.8154 16.4453L13.8164 16.4463L20.8525 12.7432L20.8516 12.7422C21.2445 12.5327 21.6588 12.4336 22.0732 12.4336C22.7333 12.4336 23.3717 12.6924 23.875 13.1826C24.6953 13.9834 24.8926 15.1688 24.3809 16.1924L23.3975 18.1602C23.2192 18.5168 23.2182 18.9493 23.3975 19.3135L24.3809 21.2861C24.8927 22.3098 24.6955 23.496 23.875 24.2969ZM22.0674 23.7393C22.4245 23.7392 22.7417 23.5732 22.9619 23.3584V23.3574C23.2913 23.0387 23.5193 22.4797 23.2139 21.8633H23.2148L22.2305 19.8965V19.8955C21.8692 19.1664 21.8692 18.3063 22.2305 17.5771V17.5762L23.2148 15.6094V15.6084C23.5247 14.9937 23.2924 14.4351 22.9619 14.1152C22.6294 13.7934 22.0703 13.5722 21.4609 13.8926L14.4238 17.5967L14.2695 17.6904C13.9302 17.9305 13.7344 18.3091 13.7344 18.7334C13.7344 19.1575 13.9305 19.5353 14.2695 19.7754L14.4238 19.8701L21.4609 23.5859C21.674 23.6978 21.8792 23.7393 22.0674 23.7393Z"
+								fill="#616365"
+								stroke="#616365"
+								stroke-width="0.394627"
+							/>
+							<rect
+								x="18.6542"
+								y="18.0449"
+								width="4.13627"
+								height="1.33004"
+								rx="0.665018"
+								fill="#616365"
+								stroke="#616365"
+								stroke-width="0.394627"
+							/>
+						</svg>
+
+						<p class=" ml-3 pt-2 text-[16px]">Existing Rondwell Event</p>
+					</div>
+				</div>
+				<!-- URL SECTION  -->
+				<div class="pt-2">
+					<label class="mb-1 block text-sm font-medium text-[#666769]">
+						Event Page URL <span>*</span>
+					</label>
+
+					<input
+						type="url"
+						class="placeholder-opacity-30 w-full rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-0 focus:ring-black"
+						placeholder="https://eventbrite.com/e/some-event"
+						bind:value={eventUrl}
+					/>
+				</div>
+
+				<label class="mb-1 block pt-5 text-sm font-medium text-[#666769]"> Event Time </label>
+				<div class="flex w-full rounded-sm border-[#EBECEC] bg-[#F8F9F9]">
+					<div class=" w-full">
+						<div class="flex w-full flex-col rounded-[9.75px] bg-[#fff] sm:max-w-[280px]">
 							<!-- start Date, Time & Location Pickers -->
 							<div class="flex w-full flex-col items-center">
 								<!-- Date Picker -->
-								<div
-									class="relative w-full"
-									use:clickOutside={() => (openStartDatePickerModal = false)}
-								>
-									<button
-										on:click={async () => {
-											openStartDatePickerModal = !openStartDatePickerModal;
-											await tick();
-											scrollToId('date');
-										}}
-										class="rounded-t-r w-full p-2 text-sm font-semibold"
-										style=" border-top-left-radius: 9.75px;"
-										><p class="mr-auto w-fit">{formatDate(startDate)}</p></button
-									>
-									<DatePickerModal open={openStartDatePickerModal} bind:selectedDate={startDate} />
-								</div>
-<!-- Time Picker -->
-								<div class=" flex w-full gap-3">
+								<div class=" min-h-[96px] w-full flex-col">
 									<div
-										class="relative w-full"
-										use:clickOutside={() => (openStartTimeModal = false)}
+										class="relative w-full pt-1 pl-3"
+										use:clickOutside={() => (openStartDatePickerModal = false)}
 									>
 										<button
 											on:click={async () => {
-												openStartTimeModal = !openStartTimeModal;
+												openStartDatePickerModal = !openStartDatePickerModal;
 												await tick();
-												scrollToId('time');
+												scrollToId('date');
 											}}
-											class="w-full pr-12 text-[17px] font-semibold"
-											style=" border-top-right-radius: 9.75px;"
-											><p class="ml-auto w-fit">{startTime}</p></button
+											class="h-[32.36px] w-[115px] rounded-sm p-1 text-sm transition hover:bg-[#E4E5E5]"
+											><p class="mr-auto w-fit">{formatDate(startDate)}</p></button
 										>
-										<TimeModal open={openStartTimeModal} bind:selectedTime={startTime} />
-									</div>
-
-									<span class="mt-2 text-gray-200">
-										<svg
-											width="9"
-											height="15"
-											viewBox="0 0 9 15"
-											fill="none"
-											xmlns="http://www.w3.org/2000/svg"
-										>
-											<rect
-												y="12.8203"
-												width="9.9258"
-												height="1.96151"
-												rx="0.980754"
-												transform="rotate(-45 0 12.8203)"
-												fill="#B3B5B7"
-											/>
-											<rect
-												x="1.39062"
-												width="10.0318"
-												height="1.96151"
-												rx="0.980754"
-												transform="rotate(45 1.39062 0)"
-												fill="#B3B5B7"
-											/>
-										</svg>
-									</span>
-									<div class="relative w-full" use:clickOutside={() => (openEndTimeModal = false)}>
-										<button
-											on:click={async () => {
-												openEndTimeModal = !openEndTimeModal;
-												await tick();
-												scrollToId('time');
-											}}
-											class="w-full p-1 text-[17px] font-semibold"
-											style="border-bottom-right-radius: 9.75px;"
-											><p class="ml-auto w-fit">{endTime}</p></button
-										>
-										<TimeModal
-											open={openEndTimeModal}
-											bind:selectedTime={endTime}
-											referenceTime={startTime}
+										<DatePickerModal
+											open={openStartDatePickerModal}
+											bind:selectedDate={startDate}
 										/>
 									</div>
-								</div>
-
-<!-- Location  -->
-								<div
-									class="flex w-full gap-2 rounded-b-[9.75px] border-t-1 border-t-[#868789]/10 p-4 font-medium text-[#636466]"
-								>
-									<div>
-										<svg
-											width="19"
-											height="18"
-											viewBox="0 0 19 18"
-											fill="none"
-											xmlns="http://www.w3.org/2000/svg"
+									<!-- Time Picker -->
+									<div class=" mt-3 flex w-full pl-3">
+										<div
+											class="relative mb-2 w-full text-sm"
+											use:clickOutside={() => (openStartTimeModal = false)}
 										>
-											<path
-												d="M9.25 16.5C13.3921 16.5 16.75 13.1421 16.75 9C16.75 4.85786 13.3921 1.5 9.25 1.5C5.10786 1.5 1.75 4.85786 1.75 9C1.75 13.1421 5.10786 16.5 9.25 16.5Z"
-												stroke="currentColor"
-												stroke-width="1.125"
-												stroke-linecap="round"
-												stroke-linejoin="round"
+											<button
+												on:click={async () => {
+													openStartTimeModal = !openStartTimeModal;
+													await tick();
+													scrollToId('time');
+												}}
+												class="w-full text-sm font-semibold"
+												style=" border-top-right-radius: 9.75px;"
+												><p class="w-fit px-1">{startTime}</p></button
+											>
+											<TimeModal open={openStartTimeModal} bind:selectedTime={startTime} />
+										</div>
+
+										<span class="mb-2 text-sm text-gray-200">
+											<svg
+												width="9"
+												height="15"
+												viewBox="0 0 9 15"
+												fill="none"
+												xmlns="http://www.w3.org/2000/svg"
+											>
+												<rect
+													y="12.8203"
+													width="9.9258"
+													height="1.96151"
+													rx="0.980754"
+													transform="rotate(-45 0 12.8203)"
+													fill="#B3B5B7"
+												/>
+												<rect
+													x="1.39062"
+													width="10.0318"
+													height="1.96151"
+													rx="0.980754"
+													transform="rotate(45 1.39062 0)"
+													fill="#B3B5B7"
+												/>
+											</svg>
+										</span>
+										<div
+											class="relative mb-2 w-full text-sm"
+											use:clickOutside={() => (openEndTimeModal = false)}
+										>
+											<button
+												on:click={async () => {
+													openEndTimeModal = !openEndTimeModal;
+													await tick();
+													scrollToId('time');
+												}}
+												class="w-full pr-4 text-sm font-semibold"
+												style="border-bottom-right-radius: 9.75px;"
+												><p class="ml-auto w-fit">{endTime}</p></button
+											>
+											<TimeModal
+												open={openEndTimeModal}
+												bind:selectedTime={endTime}
+												referenceTime={startTime}
 											/>
-											<path
-												d="M6.24922 2.25H6.99922C5.53672 6.63 5.53672 11.37 6.99922 15.75H6.24922"
-												stroke="currentColor"
-												stroke-width="1.125"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											/>
-											<path
-												d="M11.5 2.25C12.9625 6.63 12.9625 11.37 11.5 15.75"
-												stroke="currentColor"
-												stroke-width="1.125"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											/>
-											<path
-												d="M2.5 12V11.25C6.88 12.7125 11.62 12.7125 16 11.25V12"
-												stroke="currentColor"
-												stroke-width="1.125"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											/>
-											<path
-												d="M2.5 6.75313C6.88 5.29063 11.62 5.29063 16 6.75313"
-												stroke="currentColor"
-												stroke-width="1.125"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											/>
-										</svg>
+										</div>
 									</div>
-									<div class="flex">
-										<span>{timezone}</span>
-										<span>{locationName}</span>
+									<!-- Location  -->
+									<div
+										class="align-center flex w-full gap-2 rounded-b-[9.75px] border-t-1 border-t-[#868789]/30 px-1 py-4 pl-3 text-xs text-[#636466]"
+									>
+										<div>
+											<svg
+												width="19"
+												height="18"
+												viewBox="0 0 19 18"
+												fill="none"
+												xmlns="http://www.w3.org/2000/svg"
+											>
+												<path
+													d="M9.25 16.5C13.3921 16.5 16.75 13.1421 16.75 9C16.75 4.85786 13.3921 1.5 9.25 1.5C5.10786 1.5 1.75 4.85786 1.75 9C1.75 13.1421 5.10786 16.5 9.25 16.5Z"
+													stroke="currentColor"
+													stroke-width="1.125"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												/>
+												<path
+													d="M6.24922 2.25H6.99922C5.53672 6.63 5.53672 11.37 6.99922 15.75H6.24922"
+													stroke="currentColor"
+													stroke-width="1.125"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												/>
+												<path
+													d="M11.5 2.25C12.9625 6.63 12.9625 11.37 11.5 15.75"
+													stroke="currentColor"
+													stroke-width="1.125"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												/>
+												<path
+													d="M2.5 12V11.25C6.88 12.7125 11.62 12.7125 16 11.25V12"
+													stroke="currentColor"
+													stroke-width="1.125"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												/>
+												<path
+													d="M2.5 6.75313C6.88 5.29063 11.62 5.29063 16 6.75313"
+													stroke="currentColor"
+													stroke-width="1.125"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												/>
+											</svg>
+										</div>
+										<div class="flex pt-0.5 text-xs">
+											<span>{timezone}</span>
+											<span class="ml-1">{locationName}</span>
+										</div>
 									</div>
 								</div>
-							</div>
-							<!-- Add Tags button -->
-						</div>
-						<div class="flex w-[160px] flex-col items-center gap-2 px-6 pt-5">
-							<p class="w-full text-sm font-semibold text-[#666769]">Apply Tags</p>
-							<div
-								class=" mr-5 flex w-[90px] rounded-2xl bg-[#939597] px-1 py-0.5 text-sm text-[#FFFFFF]"
-							>
-								<Icon icon="mdi:plus" class="text-x mt-0.5" />
-								<span>Add Tag</span>
 							</div>
 						</div>
 					</div>
 				</div>
+				<!-- Add Tags button -->
+				<div class="relative flex w-[300px] flex-col items-center justify-start gap-2 pt-5">
+					<label class="w-full text-sm font-semibold text-[#666769]">Apply Tags</label>
 
-			<!-- Event Creation buttons -->
+					<div class="flex w-full justify-start" use:clickOutside={() => (showModal = false)}>
+						<div
+							on:click={() => (showModal = !showModal)}
+							class="flex w-[90px] cursor-pointer justify-start rounded-2xl bg-[#939597] px-1 py-0.5 text-sm text-[#FFFFFF]"
+						>
+							<Icon icon="mdi:plus" class="text-x mt-0.5" />
+							<span>Add Tag</span>
+						</div>
+					</div>
 
-			<div class="mt-3 px-6 pb-4">
-				<button
-					class="w-full rounded-md bg-[#333537] py-3 text-sm text-white"
-					on:click={submitEvent}
-					disabled={!isValidUrl}
-				>
-					Submit
-				</button>
-				<p class="w-full px-5 py-2 text-center text-sm text-[#666769]/40">
-					Events that you added from external platform are saved as draft. Can edit and publish from
-					the event management page.
-				</p>
+					<TagNameModal bind:open={showModal} on:submit={(e) => console.log(e.detail)} />
+				</div>
+				<!-- Event Creation buttons -->
+
+				<div class="mt-3 pb-4">
+					<button
+						class="w-full rounded-md bg-[#333537] py-3 text-sm text-white"
+						on:click={submitEvent}
+					>
+						Submit
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>

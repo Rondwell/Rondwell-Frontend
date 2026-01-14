@@ -101,7 +101,6 @@
 	// ============================================
 	// TIME UPDATE LOGIC
 	// ============================================
-
 	function formatTime() {
 		let rawTime = new Date().toLocaleString('en-GB', {
 			weekday: 'short',
@@ -652,11 +651,6 @@
 								>
 									{companyDescription.length}/200
 								</span>
-							</div>
-
-							<div class="-mt-3 flex items-center gap-1 text-xs text-[#5C5C5C]">
-								<img src="/information-fill.svg" alt="information-fill" class="h-4 w-4" />
-								<span>You can describe your company briefly.</span>
 							</div>
 						</div>
 					</div>
@@ -1366,7 +1360,7 @@
 										{getPaymentMethodDisplay() || 'Not selected'}
 									</div>
 								</div>
-							</div>
+							</div>b                             
 							<button
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(2)}

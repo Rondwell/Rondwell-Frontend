@@ -3,6 +3,7 @@
 	import EventForm from './components/EventForm.svelte';
 	import SeatCapacity from './components/SeatCapacity.svelte';
 	import Tickets from './components/Tickets.svelte';
+	import { goto } from '$app/navigation';
 
 	let eventData = {
 		title: 'Megaexe Party',
@@ -130,6 +131,7 @@
 				</svg>
 			</div>
 			<button
+				on:click={()=> goto('/event-page/1')}
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
 			>
 				Event Page

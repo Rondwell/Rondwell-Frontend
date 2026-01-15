@@ -1,9 +1,10 @@
 	<script lang="ts">
+	import { handleStatus } from '$lib/utils/handleParticipantStatus';
 	import Icon from '@iconify/svelte';
 
 	let searchQuery = '';
 
-export const speakers  = [
+export const exhibitors  = [
 		{
 			id: 1,
 			name: 'Sleekwaresandslides',
@@ -52,45 +53,6 @@ export const speakers  = [
 			status: 'live'
 		}
 	];
-
-		const handleStatus: any = {
-		confirm: {
-			label: 'Confirm',
-			color: 'bg-green-100 text-green-700'
-		},
-        approved: {
-			label: 'Approved',
-			color: 'bg-green-100 text-green-700'
-		},
-		invited: {
-			label: 'Invited',
-			color: 'bg-blue-100 text-blue-700'
-		},
-		decline: {
-			label: 'Decline',
-			color: 'bg-red-100 text-red-700'
-		},
-		applied:{
-			label: 'Applied',
-			color: 'bg-orange-100 text-orange-700'
-		},
-		live:{
-			label: 'Live',
-			color: 'bg-cyan-100 text-cyan-700'
-		},
-		pending:{
-			label: 'Pending',
-			color: 'bg-yellow-100 text-yellow-700'
-		},
-		accepted: {
-			label: 'Accepted',
-			color: 'bg-amber-100 text-amber-700'
-		},
-		manual: {
-			label: 'Manual Add',
-			color: 'bg-gray-100 text-gray-700'
-		}
-	};
 
 	
 </script>
@@ -154,9 +116,9 @@ export const speakers  = [
 		</div>
 
 		<div class="overflow-hidden">
-			{#if speakers.length > 0}
+			{#if exhibitors.length > 0}
 			<div class="overflow-hidden">
-				{#each speakers as s}
+				{#each exhibitors as s}
 					<div
 						class="flex flex-col justify-between gap-3 border-[0.75px] mb-[11px] px-4 py-3 lg:flex-row lg:items-center rounded-xl bg-white"
 					>

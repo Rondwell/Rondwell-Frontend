@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
+	import { goto } from '$app/navigation';
 
 	export let event: any;
 	export let type: string = 'attending';
@@ -84,6 +85,7 @@
 
 			{#if type === 'mine'}
 				<button
+					on:click={() => goto('/events/1')}
 					class="flex w-35 items-center gap-1 rounded-sm bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-[#616265]"
 				>
 					<p>Manage Event</p>

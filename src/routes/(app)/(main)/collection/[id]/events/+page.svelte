@@ -135,6 +135,7 @@
 					console.log(e.detail);
 					closeAllModals();
 				}}
+				on:collection={openCollectionModal}
 			/>
 
 			<ExternalEventModal
@@ -144,6 +145,7 @@
 					console.log(e.detail);
 					closeAllModals();
 				}}
+				on:collection={openCollectionModal}
 			/>
 		</h1>
 

@@ -55,7 +55,7 @@
 ];
 </script>
 
-<aside class="col-span-1 mt-35">
+<aside class="col-span-1 mt-35 hidden md:flex">
   <nav aria-label="Sidebar navigation" class="">
     <ul class="space-y-1">
       {#each sidebarItems as item}
@@ -75,7 +75,7 @@
                 
 <span class='flex gap-[6px] items-center justify-center'>
     <img src={item.img} alt="filter icon" class="h-7 w-7" />
-              <span>{item.label}</span>
+              <span class="text-xs xl:text-sm">{item.label}</span>
 </span>
               {#if item.count}
                 <span

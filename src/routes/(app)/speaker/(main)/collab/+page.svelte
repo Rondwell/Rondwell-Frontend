@@ -1,15 +1,17 @@
 <script lang="ts">
-	import Account from './Components/Account.svelte';
-	import Preferences from './Components/Preferences.svelte';
-	import Payment from './Components/Payment.svelte';
-	import Nav from '../../components/Nav.svelte';
+	import Invitation from './Components/Invite.svelte';
+	import Application from './Components/Application.svelte';
+	import Enagagement from './Components/Enagagement.svelte';
+    import Collab from './Components/Collab.svelte';
+	import Nav from '../../../components/Nav.svelte';
 
-	let activeTab = 'account';
+
+	let activeTab = 'invitations';
 
 	const tabs = [
 		{
-			id: 'Profile',
-			label: 'Account',
+			id: 'invitations',
+			label: 'Invitations',
 			icon: `				<svg
 					width="20"
 					height="20"
@@ -33,9 +35,35 @@
 				</svg>`
 		},
 		{
-			id: 'preferences',
-			label: 'Preferences',
-			icon: `<svg
+	id: 'application',
+	label: 'Applications',
+	icon: `<svg
+		width="20"
+		height="20"
+		viewBox="0 0 24 24"
+		fill="none"
+		xmlns="http://www.w3.org/2000/svg"
+	>
+		<path
+			d="M12 2v20"
+			stroke="currentColor"
+			stroke-width="1.8"
+			stroke-linecap="round"
+		/>
+		<path
+			d="M17 7.5c0-2.2-2.2-4-5-4s-5 1.8-5 4 2 4 5 4 5 1.8 5 4-2.2 4-5 4-5-1.8-5-4"
+			stroke="currentColor"
+			stroke-width="1.8"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		/>
+	</svg>`
+},
+		
+{
+	id: 'enagagement',
+	label: 'Enagagement',
+	icon: `<svg
 					width="20"
 					height="20"
 					viewBox="0 0 20 20"
@@ -79,50 +107,72 @@
 						fill="currentColor"
 					/>
 				</svg>`
-		},
-		{
-			id: 'payment',
-			label: 'Payment',
-			icon: `<svg
-					width="20"
-					height="23"
-					viewBox="0 0 20 23"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M5.83496 6.28906H14.168C14.3543 6.28906 14.5809 6.29756 14.8076 6.33691L14.8291 6.34082C16.9837 6.61672 18.4598 8.42615 18.46 11.1123V15.7422C18.4599 17.2348 18.0097 18.439 17.2676 19.2637C16.5295 20.0837 15.4698 20.5654 14.168 20.5654H5.83496C4.5331 20.5654 3.47346 20.0837 2.73535 19.2637C1.99313 18.439 1.54301 17.2349 1.54297 15.7422V11.1123C1.54312 8.45453 2.99398 6.64966 5.15332 6.34863V6.34961L5.16309 6.34766C5.37967 6.31328 5.61081 6.28906 5.83496 6.28906ZM5.49805 6.69238L5.17969 6.72949C4.13969 6.87695 3.28011 7.37667 2.68652 8.15723C2.0969 8.93263 1.79304 9.953 1.79297 11.1123V15.7422C1.79301 17.0317 2.16951 18.1436 2.88574 18.9395C3.60695 19.7407 4.63343 20.1768 5.83496 20.1768H14.168C15.3694 20.1768 16.395 19.7407 17.1162 18.9395C17.8326 18.1436 18.2099 17.0318 18.21 15.7422V11.1123C18.2099 9.94351 17.9014 8.91579 17.3047 8.1377C16.7034 7.35378 15.8327 6.85544 14.7822 6.71875H14.7812C14.5421 6.67734 14.3341 6.67773 14.168 6.67773H5.83496C5.71939 6.67773 5.60707 6.68327 5.49805 6.69238Z"
-						fill="currentColor"
-						stroke="currentColor"
-					/>
-					<path
-						d="M8.28125 2.63477C9.4651 1.32941 11.3682 1.32968 12.5527 2.63379V2.63477L14.0117 4.27344L14.0156 4.27734C14.4844 4.7911 14.7964 5.46445 14.8916 6.19336L14.9189 6.50879C14.9217 6.59498 14.8903 6.65613 14.8604 6.68555C14.8217 6.72346 14.7928 6.71892 14.792 6.71875L14.7842 6.7168L14.7754 6.71582C14.5718 6.6819 14.3667 6.67188 14.168 6.67188H5.83496C5.60394 6.67188 5.38692 6.6936 5.17969 6.72363L5.15723 6.72656C5.14521 6.72617 5.13448 6.72415 5.12305 6.71777C5.11017 6.71054 5.08965 6.69464 5.06738 6.66211C5.02661 6.59975 5.01812 6.509 5.05469 6.43066L5.05762 6.42383C5.17669 6.15924 5.34607 5.89916 5.56738 5.66113L5.57422 5.6543L8.28223 2.63574L8.28125 2.63477ZM12.3008 2.8291C11.2023 1.73857 9.479 1.7774 8.41602 2.93652L8.41113 2.94141L6.17773 5.45117L5.4375 6.2832H14.7188L14.4912 5.62012C14.3919 5.33177 14.2476 5.06625 14.0664 4.82324L13.873 4.58789L12.4082 2.94141L12.4053 2.9375L12.3008 2.8291Z"
-						fill="#2A2D32"
-						stroke="currentColor"
-					/>
-					<path
-						d="M15.835 11.375H18.335C18.3468 11.3751 18.3727 11.3802 18.4033 11.4141C18.4347 11.4489 18.4599 11.5038 18.46 11.5693C18.46 11.6349 18.4347 11.6898 18.4033 11.7246C18.3727 11.7585 18.3468 11.7636 18.335 11.7637H15.835C14.9357 11.7637 14.2931 12.5568 14.293 13.4209C14.293 14.2851 14.9356 15.0781 15.835 15.0781H18.335C18.3468 15.0782 18.3726 15.084 18.4033 15.1182C18.4346 15.1529 18.4599 15.2071 18.46 15.2725C18.46 15.3381 18.4347 15.3929 18.4033 15.4277C18.3726 15.4618 18.3468 15.4667 18.335 15.4668H15.835C14.8927 15.4668 14.043 14.6029 14.043 13.4209C14.0431 12.239 14.8927 11.375 15.835 11.375Z"
-						fill="#2A2D32"
-						stroke="currentColor"
-					/>
-				</svg>`
-		}
+		},{
+  id: 'collaboration',
+  label: 'Collaboration',
+  icon: `<svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <!-- Person -->
+    <path
+      d="M12 12a4 4 0 100-8 4 4 0 000 8Z"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M4 20c0-3.3137 3.5817-6 8-6"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+
+    <!-- Circular Settings Gear -->
+    <circle
+      cx="17.5"
+      cy="16.5"
+      r="3"
+      stroke="currentColor"
+      stroke-width="1.5"
+    />
+    <path
+      d="M17.5 14.5v1M17.5 17.5v1M15.5 16.5h1M18.5 16.5h1"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+    />
+  </svg>`
+}
+
+
 	];
+    const vendorName = 'Innocent James';
 </script>
 
 <div class="w-full max-w-4xl">
 	<!-- Page Header -->
-	<h1 class="mb-12 text-3xl font-bold">Settings</h1>
+	<div class="mb-8 flex items-center gap-3">
+		<img src="/edit-cover-photo.svg" alt="logo" class="h-8 w-8 rounded-lg object-cover" />
+		<h1 class="text-2xl font-bold">{vendorName}</h1>
+	</div>
 
 	<!-- Navigation Tabs -->
 	<Nav {tabs} bind:activeTab />
 
 	<!-- Content Area -->
-	{#if activeTab === 'account'}
-		<Account />
-	{:else if activeTab === 'preferences'}
-		<Preferences />
-	{:else if activeTab === 'payment'}
-		<Payment />
+	{#if activeTab === 'invitations'}
+		<Invitation />
+	{:else if activeTab === 'application'}
+		<Application />
+	{:else if activeTab === 'enagagement'}
+		<Enagagement />
+    {:else if activeTab === 'collaboration'}
+        <Collab />
 	{/if}
 </div>

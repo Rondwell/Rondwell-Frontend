@@ -15,7 +15,7 @@
 	>
 		<!-- Panel -->
 		<div
-			class="flex max-h-150 max-h-[90vh] w-full max-w-lg flex-col rounded-md bg-[#F8F9F9] shadow-lg lg:w-lg lg:max-w-none lg:shadow-none"
+			class="flex max-h-[90vh] w-full max-w-lg flex-col rounded-md bg-[#F8F9F9] shadow-lg lg:w-lg lg:max-w-none lg:shadow-none"
 			use:clickOutside={() => dispatch('close')}
 			on:click|stopPropagation
 		>

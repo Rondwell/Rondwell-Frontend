@@ -4,7 +4,7 @@
 
 	let searchQuery = '';
 
-export const exhibitors  = [
+ 	const exhibitors  = [
 		{
 			id: 1,
 			name: 'Sleekwaresandslides',

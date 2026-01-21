@@ -3,6 +3,27 @@
 
 	let selectedTicket = 'standard';
 
+	const organizer  = [
+		{
+			id: 1,
+			name: 'JOHN EMINEM ODO',
+			avatar: '/john-avatar.svg',
+			social: true
+		},
+				{
+			id: 2,
+			name: 'Sam Adekunle',
+			avatar: '/user1-icon.svg',
+			social: true
+		},
+				{
+			id: 1,
+			name: 'Africa Startup Festival',
+			avatar: '/user3-icon.svg',
+			social: false
+		},
+	]
+
 	function handleRequestGetIn() {
 		console.log('Request to get in with ticket type:', selectedTicket);
 		// Add your logic here
@@ -15,14 +36,14 @@
 		<div class="max-w-[378.13px]">
 			<!-- Event Image -->
 			<img
-				src="./../src/lib/assets/images/eventpage_sample.svg"
+				src="/eventpage_sample.svg"
 				alt="Location"
 				class="size-[378.13px] rounded-[27px]"
 			/>
 
 			<!-- Organizer Access Card -->
 			<div
-				class="mb-4 mt-3 max-w-[378.13px] rounded-lg border border-[#69737D]/13 bg-[#69737D]/13 px-3 py-2.5 sm:px-4 sm:py-3"
+				class="mb-6 mt-6.5 max-w-[378.13px] rounded-lg border border-[#69737D]/13 bg-[#69737D]/13 px-3 py-2.5 sm:px-4 sm:py-3"
 			>
 				<div class="mb-2 flex justify-between gap-2 sm:mb-0 sm:flex-row sm:items-center">
 					<div class="max-w-[220.77px] text-xs font-normal leading-6 text-[#69737D] sm:text-base">
@@ -32,7 +53,7 @@
 						class="flex items-center justify-center gap-1 rounded-full bg-[#69737D] px-3.5 py-2 text-base font-medium text-white transition-colors hover:bg-[#69737D]/70"
 					>
 						Organize
-						<img src="/send-3.svg" alt="icon" class="ml-[3px] h-3 w-3" />
+						<img src="/send-white.svg" alt="icon" class="ml-[3px] size-5" />
 					</button>
 				</div>
 			</div>
@@ -40,9 +61,12 @@
 			<!-- Desktop Only Sections -->
 			<div class="hidden md:block">
 				<!-- Presented By Section -->
-				<div class="flex justify-between gap-3">
+				<div class='bg-white p-[20px_7px_15px_19px] rounded-2xl'>
+					<div class="flex justify-between items-center gap-3">
 					<div class="flex gap-3">
-						<div class="size-9 rounded-[9px] bg-green-300"></div>
+						
+							<img src='/present.svg' alt='host-pic' class="size-9 rounded-[9px]"  />
+						
 						<div>
 							<p>Presented by</p>
 							<h2 class="flex">
@@ -76,35 +100,38 @@
 						</div>
 					</div>
 					<button
-						class="rounded-full bg-[#511A00]/6 px-3.5 py-2.5 text-base font-normal leading-4 text-[#480000]"
+						class="rounded-full bg-[#511A00]/4 px-[13px] py-2.5 min-h-8.5 text-base leading-0 font-normal text-[#42494F]/64"
 					>
 						Subscribe
 					</button>
 				</div>
 
-				<p class="mt-3.5 text-[15px] font-light leading-6 text-[#AA644B]">
+				<p class="mt-3.5 text-[15px] font-light leading-6 text-[#666C71] max-w-[324px]">
 					Empowering transformational change in entrepreneurs and driven professionals through
 					compassionate coaching. Are you ready to steDanielp
 				</p>
+				</div>
 
 				<!-- Organized By Section -->
-				<div class="mt-14.5 flex flex-col">
+				<div class='bg-white p-[7px_22px_24px_15px] rounded-[16px] mt-[25px]'>
+					<div class=" flex flex-col">
 					<h3
-						class="mb-[19px] border-b border-[#7F2400]/8 pb-[9px] text-base font-normal text-[#7F2400]/80"
+						class="mb-[19px] border-b border-[#7F2400]/8 pb-[9px] text-base font-normal text-[#42494F]/80"
 					>
 						Organized By
 					</h3>
-					<div class="space-y-[15px]">
-						<OrganiserList organizerName="Darrel Fratter" />
-						<OrganiserList organizerName="Darrel Fratter" />
-						<OrganiserList organizerName="Darrel Fratter" />
+					<div class="space-y-3">
+						{#each organizer as or}
+						<OrganiserList organizerName={or.name} organizerAvatar={or.avatar} organizerSocial={or.social}  />
+				{/each}
+
 					</div>
 				</div>
 
 				<!-- Attending Section -->
 				<div class="mt-6.5 flex flex-col">
 					<h3
-						class="mb-[19px] border-b border-[#7F2400]/8 pb-[9px] text-base font-normal text-[#7F2400]/80"
+						class="mb-[19px] border-b border-[#7F2400]/8 pb-[9px] text-base font-normal text-[#666C71]/80"
 					>
 						119 Attending
 					</h3>
@@ -116,20 +143,22 @@
 								>+59</span
 							>
 						</div>
-						<p class="max-w-[334px] text-[15px] text-[#7F2400]/80">
+						<p class="max-w-[334px] text-[15px] text-[#666C71]/80">
 							Tucker Cohen, Gabriel Funsho, Bbloloa, and 116 others
 						</p>
 					</div>
 				</div>
 
 				<!-- Footer Links -->
-				<div class="mt-7 flex flex-col space-y-[10px]">
-					<a href="#" class="text-[15px] font-normal leading-3.5 text-[#480000]/36">
+				<div class="mt-7 flex flex-col space-y-3.5 mb-6">
+					<a href="#" class="text-[15px] font-normal leading-3.5 text-[#0D151C]/36">
 						Contact the Organizer
 					</a>
-					<a href="#" class="text-[15px] font-normal leading-3.5 text-[#480000]/36">
+					<a href="#" class="text-[15px] font-normal leading-3.5 text-[#0D151C]/36">
 						Report Event
 					</a>
+				</div>
+				<div class='w-fit rounded-full border border-[#0D151C]/8 text-[#0D151C]/36 px-[8.4px] py-[2.6px]'> <span class='mr-[3px]'>#</span>AI</div>
 				</div>
 			</div>
 		</div>
@@ -138,13 +167,14 @@
 		<div>
 			<div>
 				<!-- Event Title -->
-				<h2 class="text-[55px] font-bold leading-[63.3px]">Megaexe Party, in mapi</h2>
-
+				
 				<div>
-					<div class="my-5.5 space-y-3">
+					<div class="mb-5.5 space-y-3">
+						<div class='bg-white rounded-[16px] flex flex-col gap-[19px] p-[24px_33px_19px_22px]'>
+							<h2 class="text-[55px] font-bold leading-[63.3px] max-w-[597px]">Megaexe Party, in mapi</h2>
 						<!-- Date -->
-						<div class="flex items-center gap-2">
-							<div class="flex h-[49.45px] w-[49.45px] flex-col rounded-md border">
+						<div class="flex items-center gap-4.5">
+							<div class="flex h-[49.45px] w-[44.31px] flex-col rounded-md border">
 								<p class="bg-[#EBECED] py-[2px] text-center text-xs text-[#C7C9CB]">Jun</p>
 								<div class="flex flex-1 items-center justify-center border-t">
 									<p class="text-sm font-medium text-gray-700">25</p>
@@ -157,43 +187,26 @@
 						</div>
 
 						<!-- Location -->
-						<div class="flex items-center gap-2">
+						<div class="flex items-center gap-4.5">
 							<div
-								class="flex h-[49.45px] w-[49.45px] items-center justify-center rounded-md border"
+								class="flex w-[44.31px] items-center justify-center rounded-md border py-[11px]"
 							>
-								<svg
-									width="27"
-									height="27"
-									viewBox="0 0 27 27"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
-								>
-									<path
-										opacity="0.4"
-										d="M23.7738 17.3967L16.7811 4.80977C15.8414 3.11622 14.5412 2.1875 13.1099 2.1875C11.6786 2.1875 10.3784 3.11622 9.43873 4.80977L2.44601 17.3967C1.561 19.0028 1.46266 20.5434 2.17286 21.7562C2.88306 22.969 4.2816 23.6355 6.11719 23.6355H20.1026C21.9382 23.6355 23.3368 22.969 24.047 21.7562C24.7571 20.5434 24.6588 18.9919 23.7738 17.3967Z"
-										fill="#B3B5B7"
-									/>
-									<path
-										d="M13.1105 16.1176C12.6625 16.1176 12.291 15.7461 12.291 15.2981V9.83508C12.291 9.38711 12.6625 9.01562 13.1105 9.01562C13.5584 9.01562 13.9299 9.38711 13.9299 9.83508V15.2981C13.9299 15.7461 13.5584 16.1176 13.1105 16.1176Z"
-										fill="#B3B5B7"
-									/>
-									<path
-										d="M13.1121 19.6723C13.0466 19.6723 12.9701 19.6614 12.8936 19.6505C12.8281 19.6396 12.7625 19.6177 12.697 19.5849C12.6314 19.5631 12.5658 19.5303 12.5003 19.4866C12.4456 19.4429 12.391 19.3992 12.3364 19.3555C12.1397 19.1479 12.0195 18.8638 12.0195 18.5797C12.0195 18.2956 12.1397 18.0116 12.3364 17.804C12.391 17.7603 12.4456 17.7166 12.5003 17.6729C12.5658 17.6291 12.6314 17.5964 12.697 17.5745C12.7625 17.5417 12.8281 17.5199 12.8936 17.509C13.0357 17.4762 13.1886 17.4762 13.3197 17.509C13.3962 17.5199 13.4618 17.5417 13.5273 17.5745C13.5929 17.5964 13.6584 17.6291 13.724 17.6729C13.7786 17.7166 13.8333 17.7603 13.8879 17.804C14.0846 18.0116 14.2048 18.2956 14.2048 18.5797C14.2048 18.8638 14.0846 19.1479 13.8879 19.3555C13.8333 19.3992 13.7786 19.4429 13.724 19.4866C13.6584 19.5303 13.5929 19.5631 13.5273 19.5849C13.4618 19.6177 13.3962 19.6396 13.3197 19.6505C13.2542 19.6614 13.1777 19.6723 13.1121 19.6723Z"
-										fill="#B3B5B7"
-									/>
-								</svg>
+								<svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M2.86182 9.81725C2.86182 15.7842 10.0806 21.4847 11.4556 21.4847C12.8306 21.4847 20.0493 15.7842 20.0493 9.81725C20.0493 5.18665 16.2022 1.43262 11.4556 1.43262C6.70895 1.43262 2.86182 5.18522 2.86182 9.81725Z" stroke="#42494F" stroke-opacity="0.8" stroke-width="2.14844" stroke-linecap="round" stroke-linejoin="round"/>
+<path fill-rule="evenodd" clip-rule="evenodd" d="M13.6035 9.31055C13.6035 9.88035 13.3772 10.4268 12.9743 10.8297C12.5713 11.2326 12.0249 11.459 11.4551 11.459C10.8853 11.459 10.3388 11.2326 9.9359 10.8297C9.53299 10.4268 9.30664 9.88035 9.30664 9.31055C9.30664 8.74075 9.53299 8.19428 9.9359 7.79137C10.3388 7.38846 10.8853 7.16211 11.4551 7.16211C12.0249 7.16211 12.5713 7.38846 12.9743 7.79137C13.3772 8.19428 13.6035 8.74075 13.6035 9.31055Z" stroke="#42494F" stroke-opacity="0.8" stroke-width="2.14844" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+
 							</div>
 							<div>
-								<div class="text-lg font-medium text-[#D79917]">Location Missing</div>
-								<div class="max-w-50 text-sm text-gray-500 sm:max-w-full">
-									Please enter the location of the event before it starts
-								</div>
+								<div class="text-lg font-medium text-[#0D151C]">Register to See Address</div>
+							
 							</div>
+						</div>
 						</div>
 
 						<!-- Registration Section -->
 						<div
-							class="my-[29px] flex max-w-2xl flex-col rounded-2xl border-[1.2px] border-white bg-white"
+							class="mt-[21px] mb-[17px] flex max-w-2xl flex-col rounded-2xl border-[1.2px] border-white bg-white"
 						>
 							<h2 class="rounded-t-2xl bg-[#2A2E33]/4 px-5 py-2 text-lg font-normal text-gray-600">
 								Registration
@@ -277,7 +290,7 @@
 										<span class="text-sm text-gray-600">Free</span>
 									</div>
 									<p class="mt-2 pl-8 text-xs text-gray-500">
-										● Sales ended Oct 22, 2024, 11:59 PM
+										<span class='size-[10px] bg-[#0D151C]/20 rounded-full'></span> Sales ended Oct 22, 2024, 11:59 PM
 									</p>
 								</div>
 							</div>
@@ -285,7 +298,7 @@
 							<!-- Sign-in Section -->
 							<div class="mb-4 flex items-center gap-3 rounded-lg bg-white px-5 py-3">
 								<div>
-									<span class="block size-[23px] rounded-full bg-amber-400"></span>
+									<img src='/john-avatar.svg' alt='avatar' class="size-[23px] rounded-full" />
 								</div>
 								<span class="text-sm text-gray-600"
 									><strong class="mr-2 text-gray-800">SIGN-IN</strong> For one-click registration</span
@@ -295,7 +308,7 @@
 							<!-- Request Button -->
 							<div class="px-5 pb-5">
 								<button
-									class="w-full cursor-pointer rounded-lg bg-[#B93800] px-4 py-3.5 text-base font-medium text-white transition-colors hover:bg-[#B93800]/80 active:bg-orange-950"
+									class="w-full cursor-pointer rounded-lg bg-[#69737D] px-4 py-3.5 text-base font-medium text-white transition-colors hover:bg-[#69737D]/70 active:bg-[#69737D]/70"
 									on:click={handleRequestGetIn}
 								>
 									Request to Get In
@@ -308,46 +321,13 @@
 							<!-- Header with icon -->
 							<div class="mb-6 flex items-center gap-2 border-b p-6">
 								<span>
-									<svg
-										width="17"
-										height="19"
-										viewBox="0 0 17 19"
-										fill="none"
-										xmlns="http://www.w3.org/2000/svg"
-									>
-										<path
-											d="M10.0557 0C10.379 0 10.6475 0.30076 10.6475 0.663086C10.6473 1.02528 10.3789 1.3252 10.0557 1.3252H6.1123C2.47655 1.32523 1.18266 2.77488 1.18262 6.84863V12.1514C1.18266 16.2251 2.47655 17.6748 6.1123 17.6748H10.8447C14.4805 17.6748 15.7744 16.2251 15.7744 12.1514V7.73242C15.7745 7.37026 16.042 7.0695 16.3652 7.06934C16.6886 7.06934 16.957 7.37016 16.957 7.73242V12.1514C16.957 16.9498 15.1272 19 10.8447 19H6.1123C1.82981 19 5.18816e-05 16.9498 0 12.1514V6.84863C5.20014e-05 2.05022 1.82981 3.62207e-05 6.1123 0H10.0557Z"
-											fill="#686D72"
-										/>
-										<path
-											d="M10.0557 0C10.379 0 10.6475 0.30076 10.6475 0.663086C10.6473 1.02528 10.3789 1.3252 10.0557 1.3252H6.1123C2.47655 1.32523 1.18266 2.77488 1.18262 6.84863V12.1514C1.18266 16.2251 2.47655 17.6748 6.1123 17.6748H10.8447C14.4805 17.6748 15.7744 16.2251 15.7744 12.1514V7.73242C15.7745 7.37026 16.042 7.0695 16.3652 7.06934C16.6886 7.06934 16.957 7.37016 16.957 7.73242V12.1514C16.957 16.9498 15.1272 19 10.8447 19H6.1123C1.82981 19 5.18816e-05 16.9498 0 12.1514V6.84863C5.20014e-05 2.05022 1.82981 3.62207e-05 6.1123 0H10.0557Z"
-											stroke="black"
-										/>
-										<path
-											d="M9.82617 0.0527344C10.0469 -0.0530623 10.2992 0.00885952 10.4727 0.194336L16.7822 7.26367C16.9478 7.4492 17.0027 7.74088 16.9082 7.98828C16.8136 8.23564 16.6008 8.3954 16.3643 8.39551H13.209C10.5118 8.39544 9.46289 7.21951 9.46289 4.19727V0.662109C9.46302 0.397127 9.60543 0.1499 9.82617 0.0527344ZM10.6455 4.19727C10.6455 6.47718 11.1743 7.06929 13.209 7.06934H14.9365L10.6455 2.26172V4.19727Z"
-											fill="#686D72"
-										/>
-										<path
-											d="M9.82617 0.0527344C10.0469 -0.0530623 10.2992 0.00885952 10.4727 0.194336L16.7822 7.26367C16.9478 7.4492 17.0027 7.74088 16.9082 7.98828C16.8136 8.23564 16.6008 8.3954 16.3643 8.39551H13.209C10.5118 8.39544 9.46289 7.21951 9.46289 4.19727V0.662109C9.46302 0.397127 9.60543 0.1499 9.82617 0.0527344ZM10.6455 4.19727C10.6455 6.47718 11.1743 7.06929 13.209 7.06934H14.9365L10.6455 2.26172V4.19727Z"
-											stroke="black"
-										/>
-										<path
-											d="M9.26416 9.7207C9.58753 9.7207 9.85596 10.0215 9.85596 10.3838C9.85581 10.746 9.58744 11.0459 9.26416 11.0459H4.53271C4.20944 11.0459 3.94106 10.746 3.94092 10.3838C3.94092 10.0215 4.20935 9.7207 4.53271 9.7207H9.26416Z"
-											fill="#686D72"
-										/>
-										<path
-											d="M9.26416 9.7207C9.58753 9.7207 9.85596 10.0215 9.85596 10.3838C9.85581 10.746 9.58744 11.0459 9.26416 11.0459H4.53271C4.20944 11.0459 3.94106 10.746 3.94092 10.3838C3.94092 10.0215 4.20935 9.7207 4.53271 9.7207H9.26416Z"
-											stroke="black"
-										/>
-										<path
-											d="M7.68701 13.2559C8.01038 13.2559 8.27881 13.5566 8.27881 13.9189C8.27866 14.2811 8.01029 14.5811 7.68701 14.5811H4.53271C4.20944 14.5811 3.94106 14.2811 3.94092 13.9189C3.94092 13.5566 4.20935 13.2559 4.53271 13.2559H7.68701Z"
-											fill="#686D72"
-										/>
-										<path
-											d="M7.68701 13.2559C8.01038 13.2559 8.27881 13.5566 8.27881 13.9189C8.27866 14.2811 8.01029 14.5811 7.68701 14.5811H4.53271C4.20944 14.5811 3.94106 14.2811 3.94092 13.9189C3.94092 13.5566 4.20935 13.2559 4.53271 13.2559H7.68701Z"
-											stroke="black"
-										/>
-									</svg>
+									<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M10.8446 19H6.11242C1.82978 19 0 16.9498 0 12.1512V6.84884C0 2.05023 1.82978 0 6.11242 0H10.0559C10.3793 0 10.6474 0.300465 10.6474 0.662791C10.6474 1.02512 10.3793 1.32558 10.0559 1.32558H6.11242C2.47652 1.32558 1.18305 2.77488 1.18305 6.84884V12.1512C1.18305 16.2251 2.47652 17.6744 6.11242 17.6744H10.8446C14.4805 17.6744 15.774 16.2251 15.774 12.1512V7.73256C15.774 7.37023 16.0421 7.06977 16.3655 7.06977C16.6889 7.06977 16.957 7.37023 16.957 7.73256V12.1512C16.957 16.9498 15.1272 19 10.8446 19Z" fill="#686D72"/>
+<path d="M16.364 8.39502H13.2092C10.5119 8.39502 9.46289 7.21967 9.46289 4.19735V0.662463C9.46289 0.397346 9.60486 0.149905 9.82569 0.0526953C10.0465 -0.0533512 10.2989 0.00850933 10.4724 0.194091L16.782 7.26386C16.9476 7.44944 17.0029 7.74107 16.9082 7.98851C16.8136 8.23595 16.6006 8.39502 16.364 8.39502ZM10.6459 2.262V4.19735C10.6459 6.47735 11.1744 7.06944 13.2092 7.06944H14.9365L10.6459 2.262Z" fill="#686D72"/>
+<path d="M9.26464 11.0463H4.53244C4.20908 11.0463 3.94092 10.7458 3.94092 10.3835C3.94092 10.0212 4.20908 9.7207 4.53244 9.7207H9.26464C9.588 9.7207 9.85616 10.0212 9.85616 10.3835C9.85616 10.7458 9.588 11.0463 9.26464 11.0463Z" fill="#686D72"/>
+<path d="M7.68724 14.5814H4.53244C4.20908 14.5814 3.94092 14.281 3.94092 13.9187C3.94092 13.5563 4.20908 13.2559 4.53244 13.2559H7.68724C8.01061 13.2559 8.27876 13.5563 8.27876 13.9187C8.27876 14.281 8.01061 14.5814 7.68724 14.5814Z" fill="#686D72"/>
+</svg>
+
 								</span>
 								<h2 class="text-lg font-semibold text-[#0D151C]">About Event</h2>
 							</div>

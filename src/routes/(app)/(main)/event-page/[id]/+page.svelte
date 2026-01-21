@@ -38,7 +38,7 @@
 			<img
 				src="/eventpage_sample.svg"
 				alt="Location"
-				class="size-[378.13px] rounded-[27px]"
+				class="size-[378.13px] aspect-square rounded-[27px]"
 			/>
 
 			<!-- Organizer Access Card -->
@@ -171,7 +171,7 @@
 				<div>
 					<div class="mb-5.5 space-y-3">
 						<div class='bg-white rounded-[16px] flex flex-col gap-[19px] p-[24px_33px_19px_22px]'>
-							<h2 class="text-[55px] font-bold leading-[63.3px] max-w-[597px]">Megaexe Party, in mapi</h2>
+							<h2 class="text-3xl md:text-[55px] font-bold md:leading-[63.3px] max-w-[597px]">Megaexe Party, in mapi</h2>
 						<!-- Date -->
 						<div class="flex items-center gap-4.5">
 							<div class="flex h-[49.45px] w-[44.31px] flex-col rounded-md border">

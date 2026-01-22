@@ -1,14 +1,16 @@
 <script lang="ts">
 	export let open: boolean = false;
-	import { createEventDispatcher, onMount, tick } from 'svelte';
+	import { createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import TimeModal from '../../../../create-event/components/TimeModal.svelte';
 	import DatePickerModal from '../../../../create-event/components/DatePickerModal.svelte';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import EventLocationModal from '../../../../create-event/components/EventLocationModal.svelte';
+	import TagNameModal from './TagNameModal.svelte';
 
 	const dispatch = createEventDispatcher<{
 		close: void;
+		collection: void;
 		submit: {
 			url: string;
 			startDate: Date;
@@ -23,7 +25,11 @@
 			location: string;
 		};
 	}>();
+	let previousOverflow: string;
+	let scrollContainer: HTMLDivElement;
+	const SCROLL_STEP = 120;
 
+	let showModal = false;
 	let openEventLocationModal = false;
 	let openStartDatePickerModal = false;
 	let openStartTimeModal = false;
@@ -35,9 +41,18 @@
 	let locationName = '...';
 	let timezone = '';
 
-	function submitEvent() {
-		if (!isValidUrl) return;
+	$: if (open) {
+		previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+	} else {
+		document.body.style.overflow = previousOverflow || '';
+	}
 
+	onDestroy(() => {
+		document.body.style.overflow = previousOverflow || '';
+	});
+
+	function submitEvent() {
 		dispatch('submit', {
 			url: eventUrl,
 			startDate,
@@ -58,21 +73,6 @@
 	let eventOrganizer = '';
 	// Url State
 	let eventUrl = '';
-	let urlTouched = false;
-
-	function isValidHttpUrl(value: string): boolean {
-		try {
-			const url = new URL(value);
-			return url.protocol === 'http:' || url.protocol === 'https:';
-		} catch {
-			return false;
-		}
-	}
-	let isValidUrl = false;
-
-	$: isValidUrl = isValidHttpUrl(eventUrl);
-
-	$: isValidUrl = isValidHttpUrl(eventUrl);
 
 	function scrollToId(id: string, options?: { behavior?: ScrollBehavior }) {
 		const el = document.getElementById(id);
@@ -101,6 +101,25 @@
 			});
 		}
 	}
+
+	function scrollUp() {
+		if (!scrollContainer) return;
+
+		scrollContainer.scrollBy({
+			top: -SCROLL_STEP,
+			behavior: 'smooth'
+		});
+	}
+
+	function scrollDown() {
+		if (!scrollContainer) return;
+
+		scrollContainer.scrollBy({
+			top: SCROLL_STEP,
+			behavior: 'smooth'
+		});
+	}
+
 	function formatDate(date: Date) {
 		return date.toLocaleDateString('en-US', {
 			weekday: 'short', // "Sat"
@@ -157,6 +176,7 @@
 			on:click|stopPropagation
 		>
 			<!-- Header -->
+
 			<div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
 				<div class="flex items-center justify-between">
 					<button aria-label="Close" on:click={() => dispatch('close')}>
@@ -210,6 +230,7 @@
 					<button
 						aria-label="revert"
 						class="bg-[#F5F5F5] p-1 text-[#68696B] transition-transform duration-300"
+						on:click={scrollDown}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -223,6 +244,7 @@
 						</svg>
 					</button>
 					<button
+						on:click={scrollUp}
 						aria-label="forward"
 						class="bg-[#F5F5F5] p-1 text-[#68696B] transition-transform duration-300"
 					>
@@ -241,10 +263,10 @@
 			</div>
 
 			<!-- Existing Event section -->
-			<div class="flex flex-1 flex-col overflow-hidden">
-				<div class="flex-1 overflow-y-auto">
-					<div class="flex items-center px-2 pt-3">
-						<div class="ml-2 flex">
+			<div class="flex flex-col pr-4 pl-4 md:pr-0">
+				<div class="flex flex-1 flex-col overflow-hidden">
+					<div class="flex items-center py-2">
+						<div class="flex cursor-pointer" on:click={() => dispatch('collection')}>
 							<svg
 								width="38"
 								height="38"
@@ -271,308 +293,313 @@
 								/>
 							</svg>
 
-							<p class=" ml-3 py-2 text-[16px]">Add Event from External Platform</p>
+							<p class=" ml-3 pt-2 text-[16px]">Existing Rondwell Event</p>
 						</div>
 					</div>
 					<!-- URL SECTION  -->
-					<div class="px-6 pt-5">
+					<div class=" pt-2 md:pr-4">
 						<label class="mb-1 block text-sm font-medium text-[#666769]">
 							Event Page URL <span>*</span>
 						</label>
 
 						<input
 							type="url"
-							class="placeholder-opacity-30 w-full rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-2 focus:ring-black/40"
+							class="placeholder-opacity-30 w-full rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-0 focus:ring-black"
 							placeholder="https://eventbrite.com/e/some-event"
 							bind:value={eventUrl}
-							on:blur={() => (urlTouched = true)}
 						/>
-
-						{#if urlTouched && !isValidUrl}
-							<p class="mt-4 text-xs text-red-500">Please enter a valid event URL</p>
-						{/if}
 					</div>
 
 					<!-- Event Name Section-->
-					<div class="px-6 pt-5">
+					<div class="pt-5 md:mr-4">
 						<label class="mb-1 block text-sm font-medium text-[#666769]">
 							Event Name <span>*</span>
 						</label>
 
 						<input
 							type="text"
-							class="placeholder-opacity-30 w-full rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-2 focus:ring-black/40"
+							class="placeholder-opacity-30 w-full rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-0 focus:ring-black"
 							placeholder="Happy Hour Drinks"
 							bind:value={eventName}
 						/>
 					</div>
 
-					<!-- Event Location -->
+					<!-- SCROLLABLE SECTION -->
+					<div
+						bind:this={scrollContainer}
+						class="custom-scrollbar overflow-visible md:overflow-y-auto"
+						style="max-height: calc(80vh - 250px);"
+					>
+						<!-- Event Location -->
 
-					<div class="px-6 pt-5">
-						<label class="mb-1 block text-sm font-medium text-[#666769]">
-							Event Location <span>*</span>
-						</label>
+						<div class=" pt-5">
+							<label class="mb-1 block text-sm font-medium text-[#666769]">
+								Event Location (Virtual/Physical)<span>*</span>
+							</label>
 
-						<div class="relative" use:clickOutside={() => (openEventLocationModal = false)}>
+							<div class="relative" use:clickOutside={() => (openEventLocationModal = false)}>
+								<input
+									type="text"
+									readonly
+									class="w-full cursor-pointer rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-0 focus:ring-black"
+									value={location || ''}
+								/>
+								<button
+									type="button"
+									class="absolute inset-0"
+									on:click={async () => {
+										openEventLocationModal = true;
+										await tick();
+										scrollToId('location');
+									}}
+									aria-label="Open event location modal"
+								/>
+								{#if !location}
+									<div
+										class="pointer-events-none absolute top-1/2 left-3 flex -translate-y-1/2 items-center gap-2 text-[#C8C9C9]"
+									>
+										<svg
+											width="18"
+											height="19"
+											viewBox="0 0 18 19"
+											fill="none"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<path
+												d="M11.0625 8.25C11.4736 8.25 11.8125 8.58895 11.8125 9C11.8125 9.41105 11.4736 9.75 11.0625 9.75H6.9375C6.52645 9.75 6.1875 9.41105 6.1875 9C6.1875 8.58895 6.52645 8.25 6.9375 8.25H11.0625Z"
+												fill="currentColor"
+												stroke="currentColor"
+												stroke-width="0.375"
+											/>
+											<path
+												d="M9 6.1875C9.41105 6.1875 9.75 6.52645 9.75 6.9375V11.0625C9.75 11.4736 9.41105 11.8125 9 11.8125C8.58895 11.8125 8.25 11.4736 8.25 11.0625V6.9375C8.25 6.52645 8.58895 6.1875 9 6.1875Z"
+												fill="currentColor"
+												stroke="currentColor"
+												stroke-width="0.375"
+											/>
+											<path
+												d="M9.00684 1.5C11.8694 1.50002 15.166 3.18327 16.0225 6.96387C16.9602 11.1074 14.45 14.5616 12.2266 16.7021V16.7031C11.3209 17.5697 10.1563 18.0078 8.99902 18.0078C7.84198 18.0077 6.67802 17.5695 5.77246 16.7031L5.77148 16.7021C3.54798 14.5614 1.03891 11.0996 1.98438 6.95605C2.84085 3.18304 6.13666 1.5001 8.99902 1.5H9.00684ZM8.99902 3C6.87258 3.00009 4.16913 4.12935 3.45215 7.28613V7.28711C2.71515 10.5016 4.56012 13.3211 6.44238 15.2422L6.81934 15.6143V15.6152C8.04416 16.7976 9.96167 16.7975 11.1865 15.6152C13.1801 13.6963 15.3328 10.7164 14.5615 7.28711L14.4883 6.99707C13.669 4.06002 11.0594 3 8.99902 3Z"
+												fill="currentColor"
+												stroke="currentColor"
+												stroke-width="0.375"
+											/>
+										</svg>
+
+										<span class="text-sm">What is the address? </span>
+									</div>
+								{/if}
+
+								<EventLocationModal open={openEventLocationModal} bind:link={location} />
+							</div>
+						</div>
+
+						<!-- Organizer -->
+						<div class="pt-5">
+							<label class="mb-1 block text-sm font-medium text-[#666769]">
+								Organizer <span>*</span>
+							</label>
+
 							<input
 								type="text"
-								readonly
-								class="w-full cursor-pointer rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-2 focus:ring-black/40"
-								value={location || ''}
+								class="placeholder-opacity-30 w-full rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-0 focus:ring-black"
+								placeholder="John Nebraska"
+								bind:value={eventOrganizer}
 							/>
-							<button
-								type="button"
-								class="absolute inset-0"
-								on:click={async () => {
-									openEventLocationModal = true;
-									await tick();
-									scrollToId('location');
-								}}
-								aria-label="Open event location modal"
-							/>
-							{#if !location}
-								<div
-									class="pointer-events-none absolute top-1/2 left-3 flex -translate-y-1/2 items-center gap-2 text-[#C8C9C9]"
-								>
-									<svg
-										width="18"
-										height="19"
-										viewBox="0 0 18 19"
-										fill="none"
-										xmlns="http://www.w3.org/2000/svg"
-									>
-										<path
-											d="M11.0625 8.25C11.4736 8.25 11.8125 8.58895 11.8125 9C11.8125 9.41105 11.4736 9.75 11.0625 9.75H6.9375C6.52645 9.75 6.1875 9.41105 6.1875 9C6.1875 8.58895 6.52645 8.25 6.9375 8.25H11.0625Z"
-											fill="currentColor"
-											stroke="currentColor"
-											stroke-width="0.375"
-										/>
-										<path
-											d="M9 6.1875C9.41105 6.1875 9.75 6.52645 9.75 6.9375V11.0625C9.75 11.4736 9.41105 11.8125 9 11.8125C8.58895 11.8125 8.25 11.4736 8.25 11.0625V6.9375C8.25 6.52645 8.58895 6.1875 9 6.1875Z"
-											fill="currentColor"
-											stroke="currentColor"
-											stroke-width="0.375"
-										/>
-										<path
-											d="M9.00684 1.5C11.8694 1.50002 15.166 3.18327 16.0225 6.96387C16.9602 11.1074 14.45 14.5616 12.2266 16.7021V16.7031C11.3209 17.5697 10.1563 18.0078 8.99902 18.0078C7.84198 18.0077 6.67802 17.5695 5.77246 16.7031L5.77148 16.7021C3.54798 14.5614 1.03891 11.0996 1.98438 6.95605C2.84085 3.18304 6.13666 1.5001 8.99902 1.5H9.00684ZM8.99902 3C6.87258 3.00009 4.16913 4.12935 3.45215 7.28613V7.28711C2.71515 10.5016 4.56012 13.3211 6.44238 15.2422L6.81934 15.6143V15.6152C8.04416 16.7976 9.96167 16.7975 11.1865 15.6152C13.1801 13.6963 15.3328 10.7164 14.5615 7.28711L14.4883 6.99707C13.669 4.06002 11.0594 3 8.99902 3Z"
-											fill="currentColor"
-											stroke="currentColor"
-											stroke-width="0.375"
-										/>
-									</svg>
-
-									<span class="text-sm">What is the address? </span>
-								</div>
-							{/if}
-
-							<EventLocationModal open={openEventLocationModal} bind:link={location} />
 						</div>
-					</div>
 
-					<!-- Organizer -->
-					<div class="px-6 pt-5">
-						<label class="mb-1 block text-sm font-medium text-[#666769]">
-							Organizer <span>*</span>
-						</label>
-
-						<input
-							type="text"
-							class="placeholder-opacity-30 w-full rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-2 focus:ring-black/40"
-							placeholder="John Nebraska"
-							bind:value={eventOrganizer}
-						/>
-					</div>
-
-					<!-- Event Time -->
-					<label class="mb-1 block px-6 pt-5 text-sm font-medium text-[#666769]">
-						Event Time
-					</label>
-					<div class="flex w-full gap-4 bg-[#F8F9F9]">
-						<div class=" w-full">
-							<!-- Event Time -->
-							<div
-								class="mt-2 ml-6 flex w-full flex-col rounded-t-[9.75px] bg-[#fff] px-4 py-3 sm:max-w-[300px]"
-							>
-								<!-- start Date, Time & Location Pickers -->
-								<div class="flex w-full flex-col items-center">
-									<!-- Event Calendar -->
-									<div
-										class="relative w-full"
-										use:clickOutside={() => (openStartDatePickerModal = false)}
-									>
-										<button
-											on:click={async () => {
-												openStartDatePickerModal = !openStartDatePickerModal;
-												await tick();
-												scrollToId('date');
-											}}
-											class="rounded-t-r w-full p-2 text-sm font-semibold"
-											style=" border-top-left-radius: 9.75px;"
-											><p class="mr-auto w-fit">{formatDate(startDate)}</p></button
-										>
-										<DatePickerModal
-											open={openStartDatePickerModal}
-											bind:selectedDate={startDate}
-										/>
-									</div>
-
-									<div class=" flex w-full gap-3">
-										<div
-											class="relative w-full"
-											use:clickOutside={() => (openStartTimeModal = false)}
-										>
-											<button
-												on:click={async () => {
-													openStartTimeModal = !openStartTimeModal;
-													await tick();
-													scrollToId('time');
-												}}
-												class="w-full pr-12 text-[17px] font-semibold"
-												style=" border-top-right-radius: 9.75px;"
-												><p class="ml-auto w-fit">{startTime}</p></button
+						<!-- Event Time -->
+						<label class="mb-1 block pt-5 text-sm font-medium text-[#666769]"> Event Time </label>
+						<div class="flex w-full rounded-sm border-[#EBECEC] bg-[#F8F9F9]">
+							<div class=" w-full">
+								<div class="flex w-full flex-col rounded-[9.75px] bg-[#fff] sm:max-w-[280px]">
+									<!-- start Date, Time & Location Pickers -->
+									<div class="flex w-full flex-col items-center">
+										<!-- Date Picker -->
+										<div class=" min-h-[96px] w-full flex-col">
+											<div
+												class="relative w-full pt-1 pl-3"
+												use:clickOutside={() => (openStartDatePickerModal = false)}
 											>
-											<TimeModal open={openStartTimeModal} bind:selectedTime={startTime} />
-										</div>
+												<button
+													on:click={async () => {
+														openStartDatePickerModal = !openStartDatePickerModal;
+														await tick();
+														scrollToId('date');
+													}}
+													class="h-[32.36px] w-[115px] rounded-sm p-1 text-sm transition hover:bg-[#E4E5E5]"
+													><p class="mr-auto w-fit">{formatDate(startDate)}</p></button
+												>
+												<DatePickerModal
+													open={openStartDatePickerModal}
+													bind:selectedDate={startDate}
+												/>
+											</div>
+											<!-- Time Picker -->
+											<div class=" mt-3 flex w-full pl-3">
+												<div
+													class="relative mb-2 w-full text-sm"
+													use:clickOutside={() => (openStartTimeModal = false)}
+												>
+													<button
+														on:click={async () => {
+															openStartTimeModal = !openStartTimeModal;
+															await tick();
+															scrollToId('time');
+														}}
+														class="w-full text-sm font-semibold"
+														style=" border-top-right-radius: 9.75px;"
+														><p class="w-fit px-1">{startTime}</p></button
+													>
+													<TimeModal open={openStartTimeModal} bind:selectedTime={startTime} />
+												</div>
 
-										<span class="mt-2 text-gray-200">
-											<svg
-												width="9"
-												height="15"
-												viewBox="0 0 9 15"
-												fill="none"
-												xmlns="http://www.w3.org/2000/svg"
+												<span class="mb-2 text-sm text-gray-200">
+													<svg
+														width="9"
+														height="15"
+														viewBox="0 0 9 15"
+														fill="none"
+														xmlns="http://www.w3.org/2000/svg"
+													>
+														<rect
+															y="12.8203"
+															width="9.9258"
+															height="1.96151"
+															rx="0.980754"
+															transform="rotate(-45 0 12.8203)"
+															fill="#B3B5B7"
+														/>
+														<rect
+															x="1.39062"
+															width="10.0318"
+															height="1.96151"
+															rx="0.980754"
+															transform="rotate(45 1.39062 0)"
+															fill="#B3B5B7"
+														/>
+													</svg>
+												</span>
+												<div
+													class="relative mb-2 w-full text-sm"
+													use:clickOutside={() => (openEndTimeModal = false)}
+												>
+													<button
+														on:click={async () => {
+															openEndTimeModal = !openEndTimeModal;
+															await tick();
+															scrollToId('time');
+														}}
+														class="w-full pr-4 text-sm font-semibold"
+														style="border-bottom-right-radius: 9.75px;"
+														><p class="ml-auto w-fit">{endTime}</p></button
+													>
+													<TimeModal
+														open={openEndTimeModal}
+														bind:selectedTime={endTime}
+														referenceTime={startTime}
+													/>
+												</div>
+											</div>
+											<!-- Location  -->
+											<div
+												class="align-center flex w-full gap-2 rounded-b-[9.75px] border-t-1 border-t-[#868789]/30 px-1 py-4 pl-3 text-xs text-[#636466]"
 											>
-												<rect
-													y="12.8203"
-													width="9.9258"
-													height="1.96151"
-													rx="0.980754"
-													transform="rotate(-45 0 12.8203)"
-													fill="#B3B5B7"
-												/>
-												<rect
-													x="1.39062"
-													width="10.0318"
-													height="1.96151"
-													rx="0.980754"
-													transform="rotate(45 1.39062 0)"
-													fill="#B3B5B7"
-												/>
-											</svg>
-										</span>
-										<div
-											class="relative w-full"
-											use:clickOutside={() => (openEndTimeModal = false)}
-										>
-											<button
-												on:click={async () => {
-													openEndTimeModal = !openEndTimeModal;
-													await tick();
-													scrollToId('time');
-												}}
-												class="w-full p-1 text-[17px] font-semibold"
-												style="border-bottom-right-radius: 9.75px;"
-												><p class="ml-auto w-fit">{endTime}</p></button
-											>
-											<TimeModal
-												open={openEndTimeModal}
-												bind:selectedTime={endTime}
-												referenceTime={startTime}
-											/>
-										</div>
-									</div>
-
-									<div
-										class="flex w-full gap-2 rounded-b-[9.75px] border-t-1 border-t-[#868789]/10 p-4 font-medium text-[#636466]"
-									>
-										<div>
-											<svg
-												width="19"
-												height="18"
-												viewBox="0 0 19 18"
-												fill="none"
-												xmlns="http://www.w3.org/2000/svg"
-											>
-												<path
-													d="M9.25 16.5C13.3921 16.5 16.75 13.1421 16.75 9C16.75 4.85786 13.3921 1.5 9.25 1.5C5.10786 1.5 1.75 4.85786 1.75 9C1.75 13.1421 5.10786 16.5 9.25 16.5Z"
-													stroke="currentColor"
-													stroke-width="1.125"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												/>
-												<path
-													d="M6.24922 2.25H6.99922C5.53672 6.63 5.53672 11.37 6.99922 15.75H6.24922"
-													stroke="currentColor"
-													stroke-width="1.125"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												/>
-												<path
-													d="M11.5 2.25C12.9625 6.63 12.9625 11.37 11.5 15.75"
-													stroke="currentColor"
-													stroke-width="1.125"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												/>
-												<path
-													d="M2.5 12V11.25C6.88 12.7125 11.62 12.7125 16 11.25V12"
-													stroke="currentColor"
-													stroke-width="1.125"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												/>
-												<path
-													d="M2.5 6.75313C6.88 5.29063 11.62 5.29063 16 6.75313"
-													stroke="currentColor"
-													stroke-width="1.125"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												/>
-											</svg>
-										</div>
-										<div class="flex">
-											<span>{timezone}</span>
-											<span>{locationName}</span>
+												<div>
+													<svg
+														width="19"
+														height="18"
+														viewBox="0 0 19 18"
+														fill="none"
+														xmlns="http://www.w3.org/2000/svg"
+													>
+														<path
+															d="M9.25 16.5C13.3921 16.5 16.75 13.1421 16.75 9C16.75 4.85786 13.3921 1.5 9.25 1.5C5.10786 1.5 1.75 4.85786 1.75 9C1.75 13.1421 5.10786 16.5 9.25 16.5Z"
+															stroke="currentColor"
+															stroke-width="1.125"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														/>
+														<path
+															d="M6.24922 2.25H6.99922C5.53672 6.63 5.53672 11.37 6.99922 15.75H6.24922"
+															stroke="currentColor"
+															stroke-width="1.125"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														/>
+														<path
+															d="M11.5 2.25C12.9625 6.63 12.9625 11.37 11.5 15.75"
+															stroke="currentColor"
+															stroke-width="1.125"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														/>
+														<path
+															d="M2.5 12V11.25C6.88 12.7125 11.62 12.7125 16 11.25V12"
+															stroke="currentColor"
+															stroke-width="1.125"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														/>
+														<path
+															d="M2.5 6.75313C6.88 5.29063 11.62 5.29063 16 6.75313"
+															stroke="currentColor"
+															stroke-width="1.125"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														/>
+													</svg>
+												</div>
+												<div class="flex pt-0.5 text-xs">
+													<span>{timezone}</span>
+													<span class="ml-1">{locationName}</span>
+												</div>
+											</div>
 										</div>
 									</div>
 								</div>
-								<!-- Add Tags button -->
 							</div>
-							<div class="flex w-[160px] flex-col items-center gap-2 px-6 pt-5">
-								<p class="w-full text-sm font-semibold text-[#666769]">Apply Tags</p>
+						</div>
+
+						<!-- Add Tags button -->
+						<div class="relative flex w-[300px] flex-col items-center justify-start gap-2 pt-5">
+							<label class="w-full text-sm font-semibold text-[#666769]">Apply Tags</label>
+
+							<div class="flex w-full justify-start" use:clickOutside={() => (showModal = false)}>
 								<div
-									class=" mr-5 flex w-[90px] rounded-2xl bg-[#939597] px-1 py-0.5 text-sm text-[#FFFFFF]"
+									on:click={() => (showModal = !showModal)}
+									class="flex w-[90px] cursor-pointer justify-start rounded-2xl bg-[#939597] px-1 py-0.5 text-sm text-[#FFFFFF]"
 								>
 									<Icon icon="mdi:plus" class="text-x mt-0.5" />
 									<span>Add Tag</span>
 								</div>
 							</div>
+
+							<TagNameModal bind:open={showModal} on:submit={(e) => console.log(e.detail)} />
+						</div>
+
+						<!-- Event Creation buttons -->
+
+						<div class="mt-3 pb-4">
+							<button
+								class="w-full rounded-md bg-[#333537] py-3 text-sm text-white"
+								on:click={submitEvent}
+							>
+								Submit
+							</button>
+							<p class="w-full px-5 py-2 text-center text-sm text-[#666769]/40">
+								Events that you added from external platform are saved as draft. Can edit and
+								publish from the event management page.
+							</p>
 						</div>
 					</div>
-
-					<!-- Event Creation buttons -->
-
-					<div class="mt-3 gap-2 px-6 pb-4">
-						<button
-							class="w-full rounded-md bg-[#333537] py-3 text-sm text-white"
-							on:click={submitEvent}
-							disabled={!isValidUrl}
-						>
-							Submit
-						</button>
-
-						<p class="w-full px-5 py-2 text-center text-sm text-[#666769]/40">
-							Events that you added from external platform are saved as draft. Can edit and publish
-							from the event management page.
-						</p>
-					</div>
+					<!-- END SCROLLABLE SECTION -->
 				</div>
 			</div>
 		</div>
 	</div>
 {/if}
 
+<!-- -->
 <style>
 	/* optional fade transition */
 	:global(.fade-enter-active),
@@ -585,18 +612,37 @@
 	}
 
 	/* Custom Scrollbar Styles */
+	/* Webkit (Chrome, Edge, Safari) */
+
+	/* Hide scrollbar arrows (WebKit) */
+	.custom-scrollbar::-webkit-scrollbar-button {
+		display: none;
+		width: 0;
+		height: 0;
+	}
+
 	.custom-scrollbar::-webkit-scrollbar {
-		width: 6px;
+		width: 10px;
 	}
+
 	.custom-scrollbar::-webkit-scrollbar-track {
-		background: #f0f0f0;
-		border-radius: 4px;
+		background: #e6e7e8;
+		border-radius: 10px;
 	}
+
 	.custom-scrollbar::-webkit-scrollbar-thumb {
-		background-color: #c8c9c9;
-		border-radius: 4px;
+		background-color: #9ea0a3;
+		border-radius: 10px;
+		border: 2px solid #e6e7e8;
 	}
+
 	.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-		background-color: #c8c9c9;
+		background-color: #7d8084;
+	}
+
+	/* Firefox */
+	.custom-scrollbar {
+		scrollbar-width: thin;
+		scrollbar-color: #9ea0a3 #e6e7e8;
 	}
 </style>

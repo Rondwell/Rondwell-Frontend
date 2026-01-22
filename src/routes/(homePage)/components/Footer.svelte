@@ -64,6 +64,27 @@
 			<div class="flex w-full flex-col gap-2 md:w-auto md:items-end md:gap-1">
 				<div class="flex w-full flex-row gap-5 md:w-auto">
 					<a
+						href="tel:+ +2349165904428"
+						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"
+						aria-label="Phone"
+					>
+						<svg
+							width="21"
+							height="21"
+							viewBox="0 0 21 21"
+							fill="none"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path
+								d="M13.85 12.94C13.27 12.82 12.69 13.01 12.27 13.43L11.37 14.33C9.77 13.46 8.45 12.14 7.58 10.54L8.49 9.63C8.91 9.21 9.1 8.63 8.98 8.05L8.46 5.92C8.32 5.33 7.8 4.92 7.19 4.92H5.78C4.66 4.92 3.74 5.84 3.8 6.96C4.25 14.1 9.9 19.75 17.04 20.2C18.16 20.26 19.08 19.34 19.08 18.22V16.81C19.08 16.2 18.67 15.68 18.08 15.54L15.95 15.02Z"
+								stroke="#AEA3C8"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					</a>
+					<a
 						href="https://www.linkedin.com/company/rondwell"
 						target="_blank"
 						rel="noopener noreferrer"

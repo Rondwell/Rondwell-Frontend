@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { handleStatus } from '$lib/utils/handleParticipantStatus';
 	import Icon from '@iconify/svelte';
+	import AddParticipant from '../../../../events/[id]/participants/components/modal/AddParticipant.svelte';
 
 	let searchQuery = '';
+	let showAddModal = false;
 
 	export const speakers = [
 		{
 			id: 1,
-			name: 'John Odoemenem',
+			name: 'Dr. Bellamy N',
 			avatar: '/user1-icon.svg',
 			role: 'Speaker',
 			sessionNum: 3,
@@ -15,7 +17,7 @@
 		},
 		{
 			id: 2,
-			name: 'Edima Atahnasius',
+			name: 'Dr. Bellamy N',
 			avatar: '/user2-icon.svg',
 			role: 'speaker',
 			sessionNum: 2,
@@ -49,7 +51,7 @@
 </script>
 
 <!-- Speaker Section -->
-<div class="mt-6">
+<div class="mt-6 min-w-0">
 	<div class="mb-8 flex flex-wrap items-center justify-between gap-4 md:flex-row">
 		<div>
 			<h2 class="mb-1 text-xl font-semibold">
@@ -62,11 +64,14 @@
 
 		<div>
 			<button
+				on:click={() => (showAddModal = true)}
 				class="flex w-full items-center justify-center gap-2 rounded-md bg-black px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 sm:w-fit"
 			>
 				<Icon icon="mdi:plus" class="text-xl" />
 				Add Speaker
 			</button>
+			<AddParticipant bind:open={showAddModal} participant="Speaker" />
+
 		</div>
 	</div>
 
@@ -113,44 +118,48 @@
 		</div>
 	</div>
 
-	<div class="overflow-x-auto w-full flex flex-1">
-		{#if speakers.length > 0}
-			<div class="overflow-x-auto grid grid-flow-col w-full grid-rows-2 gap-5 md:flex md:flex-row">
-				{#each speakers as s}
-					<div
-						class="flex flex-col justify-center items-center gap-[19px] rounded-[20px] border border-[#EBECED] bg-white py-5 px-3 w-full min-w-[160.92px]"
-					>
-							<img
-								src={s.avatar}
-								alt="{s.name} avatar"
-								class="size-19.5 rounded-full aspect-square"
-							/>
+	<!-- Speakers Grid -->
+	{#if speakers.length > 0}
+		<div
+			class="grid grid-flow-col auto-cols-[minmax(160.92px,max-content)] gap-5 overflow-x-auto grid-rows-2 md:grid-rows-1 custom-scrollbar min-w-0"
+		>
+			{#each speakers as s}
+				<div
+					class="flex flex-col items-center justify-center gap-[19px] rounded-[20px] border border-[#EBECED] bg-white py-5 px-3 min-w-[160.92px]"
+				> 
+					<img
+						src={s.avatar}
+						alt="{s.name} avatar"
+						class="size-19.5 rounded-full aspect-square"
+					/>
 
-						<div class="text-center flex flex-col justify-center items-center gap-[5px]">
-							<h2 class='text-[#222B45] text-base font-normal'>{s.name}</h2>
-							<p class="text-[#6B779A] text-xs font-normal capitalize">{s.role}</p>
+					<div class="text-center flex flex-col items-center gap-[5px]">
+						<h2 class="text-[#222B45] text-base font-normal">
+							{s.name}
+						</h2>
+						<p class="text-[#6B779A] text-xs font-normal capitalize">
+							{s.role}
+						</p>
 
-							<div class="inline-flex justify-center items-center gap-1 font-normal text-[#6B779A] text-[10px]">
-								<span>
-								{s.roomNum} Rooms 
-								</span>{"  "}|{"  "}
-								<span>{s.sessionNum} Session</span>
-							</div>
-						</div> 
+						<div class="inline-flex items-center gap-1 text-[10px] font-normal text-[#6B779A]">
+							<span>{s.roomNum} Rooms</span>
+							<span>|</span>
+							<span>{s.sessionNum} Session</span>
+						</div>
 					</div>
-				{/each}
-			</div>
-		{:else}
-			<!-- Empty state -->
-			<div class="flex h-70 flex-col items-center justify-center">
-				<img src="/planning.svg" alt="" class="h-40" />
-				<p class="mt-2 text-lg font-medium text-[#A2ACB2]">
-					No Speaker added, yet
-				</p>
-				<p class="mt-1 text-sm text-gray-400">
-					Speakers will display when they are added
-				</p>
-			</div>
-		{/if}
-	</div>
+				</div>
+			{/each}
+		</div>
+	{:else}
+		<!-- Empty state -->
+		<div class="flex h-70 flex-col items-center justify-center">
+			<img src="/planning.svg" alt="" class="h-40" />
+			<p class="mt-2 text-lg font-medium text-[#A2ACB2]">
+				No Speaker added, yet
+			</p>
+			<p class="mt-1 text-sm text-gray-400">
+				Speakers will display when they are added
+			</p>
+		</div>
+	{/if}
 </div>

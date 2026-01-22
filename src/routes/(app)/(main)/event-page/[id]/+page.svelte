@@ -1,7 +1,9 @@
 <script lang="ts">
+	import RegistrationModal from '../components/modal/RegistrationModal.svelte';
 	import OrganiserList from '../components/OrganiserList.svelte';
 
 	let selectedTicket = 'standard';
+	let showAddModal = false
 
 	const organizer  = [
 		{
@@ -24,29 +26,33 @@
 		},
 	]
 
-	function handleRequestGetIn() {
-		console.log('Request to get in with ticket type:', selectedTicket);
-		// Add your logic here
-	}
+	// 	  $: {
+    // 	if (showAddModal) {
+    //   	document.body.style.overflow = 'hidden';
+    // 	} else {
+    //   	document.body.style.overflow = '';
+    // 	}
+  	// }
+
 </script>
 
 <div class="w-full">
 	<div class="flex flex-col justify-start gap-6 py-4.5 md:flex-row md:gap-9">
 		<!-- Left Column -->
-		<div class="max-w-[378.13px]">
+		<div class="w-full md:max-w-[378.13px]">
 			<!-- Event Image -->
 			<img
 				src="/eventpage_sample.svg"
 				alt="Location"
-				class="size-[378.13px] aspect-square rounded-[27px]"
+				class=" w-full md:size-[378.13px] aspect-square rounded-[27px]"
 			/>
 
 			<!-- Organizer Access Card -->
 			<div
-				class="mb-6 mt-6.5 max-w-[378.13px] rounded-lg border border-[#69737D]/13 bg-[#69737D]/13 px-3 py-2.5 sm:px-4 sm:py-3"
+				class="mb-6 mt-6.5 w-full md:max-w-[378.13px] rounded-lg border border-[#69737D]/13 bg-[#69737D]/13 px-3 py-2.5 sm:px-4 sm:py-3"
 			>
-				<div class="mb-2 flex justify-between gap-2 sm:mb-0 sm:flex-row sm:items-center">
-					<div class="max-w-[220.77px] text-xs font-normal leading-6 text-[#69737D] sm:text-base">
+				<div class="flex justify-between items-center gap-2 ">
+					<div class="max-w-[220.77px] font-normal leading-6 text-[#69737D] text-base">
 						You have organizer <br /> access for this event.
 					</div>
 					<button
@@ -171,7 +177,19 @@
 				<div>
 					<div class="mb-5.5 space-y-3">
 						<div class='bg-white rounded-[16px] flex flex-col gap-[19px] p-[24px_33px_19px_22px]'>
-							<h2 class="text-3xl md:text-[55px] font-bold md:leading-[63.3px] max-w-[597px]">Megaexe Party, in mapi</h2>
+							<div>
+								<h2 class="text-3xl md:text-[55px] font-bold md:leading-[63.3px] max-w-[597px]">Megaexe Party, in mapi</h2>
+								<div class="flex items-center mt-2 md:hidden">
+									<img src='/tech-icon.svg' alt='calender icon' class="size-4 border border-[#0D151C]/8 mr-2 rounded-[4px]" /> 
+									<p class="text-[#42494F]/80 text-[13.43px]">John Calendar</p>
+									<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+										<g opacity="0.5">
+										<path d="M5.75488 11.5072L9.59151 7.67061L5.75488 3.83398" stroke="#42494F" stroke-opacity="0.8" stroke-width="1.27887" stroke-linecap="round" stroke-linejoin="round"/>
+										</g>
+									</svg>
+								</div>
+							</div>
+
 						<!-- Date -->
 						<div class="flex items-center gap-4.5">
 							<div class="flex h-[49.45px] w-[44.31px] flex-col rounded-md border">
@@ -260,17 +278,17 @@
 										? 'border-gray-800'
 										: 'border-gray-300 hover:border-gray-400'}"
 								>
-									<div class="relative flex items-center justify-between pl-8">
-										<div class="flex items-center gap-2">
+									<div class="relative flex items-start justify-between pl-5">
+										<div class="flex flex-col lg:flex-row items-start lg:items-start gap-2">
 											<span class="text-sm font-medium text-gray-800">Salesperson Interview</span>
 											<span
-												class="rounded-full bg-[#D69712]/13 px-2 py-0.5 text-xs font-medium text-[#D69712]"
+												class="min-w-fit rounded-full bg-[#D69712]/13 px-2 py-0.5 text-xs font-medium text-[#D69712]"
 												>Require Approval</span
 											>
 										</div>
 										<span class="text-sm text-gray-600">Free</span>
 									</div>
-									<div class="mt-3 pl-8">
+									<div class="mt-3 pl-5">
 										<p class="mb-1 text-sm text-gray-600">Registration Emails</p>
 										<p class="text-xs leading-relaxed text-gray-600">
 											Customize the emails sent when a guest registers for the event and for when
@@ -283,13 +301,13 @@
 								<div
 									class="relative block cursor-not-allowed rounded-lg border-2 border-gray-300 bg-white p-4 opacity-60"
 								>
-									<div class="relative flex items-center justify-between pl-8">
+									<div class="relative flex items-center justify-between pl-5">
 										<div class="flex items-center gap-2">
 											<span class="text-sm font-medium text-gray-800">Admin Module</span>
 										</div>
 										<span class="text-sm text-gray-600">Free</span>
 									</div>
-									<p class="mt-2 pl-8 text-xs text-gray-500">
+									<p class="mt-2 pl-5 text-xs text-gray-500">
 										<span class='size-[10px] bg-[#0D151C]/20 rounded-full'></span> Sales ended Oct 22, 2024, 11:59 PM
 									</p>
 								</div>
@@ -308,26 +326,26 @@
 							<!-- Request Button -->
 							<div class="px-5 pb-5">
 								<button
-									class="w-full cursor-pointer rounded-lg bg-[#69737D] px-4 py-3.5 text-base font-medium text-white transition-colors hover:bg-[#69737D]/70 active:bg-[#69737D]/70"
-									on:click={handleRequestGetIn}
+									class="w-full cursor-pointer rounded-lg bg-[#69737D] px-4 py-[9.5px] text-base font-medium text-white transition-colors hover:bg-[#69737D]/70 active:bg-[#69737D]/70"
+									on:click={() => (showAddModal = true)}
 								>
 									Request to Get In
 								</button>
+								<RegistrationModal bind:open={showAddModal} />
 							</div>
 						</div>
 
 						<!-- About Event Section -->
-						<div class="max-w-2xl rounded-2xl bg-white">
+						<div class="max-w-2xl rounded-2xl bg-white mb-6">
 							<!-- Header with icon -->
 							<div class="mb-6 flex items-center gap-2 border-b p-6">
 								<span>
 									<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M10.8446 19H6.11242C1.82978 19 0 16.9498 0 12.1512V6.84884C0 2.05023 1.82978 0 6.11242 0H10.0559C10.3793 0 10.6474 0.300465 10.6474 0.662791C10.6474 1.02512 10.3793 1.32558 10.0559 1.32558H6.11242C2.47652 1.32558 1.18305 2.77488 1.18305 6.84884V12.1512C1.18305 16.2251 2.47652 17.6744 6.11242 17.6744H10.8446C14.4805 17.6744 15.774 16.2251 15.774 12.1512V7.73256C15.774 7.37023 16.0421 7.06977 16.3655 7.06977C16.6889 7.06977 16.957 7.37023 16.957 7.73256V12.1512C16.957 16.9498 15.1272 19 10.8446 19Z" fill="#686D72"/>
-<path d="M16.364 8.39502H13.2092C10.5119 8.39502 9.46289 7.21967 9.46289 4.19735V0.662463C9.46289 0.397346 9.60486 0.149905 9.82569 0.0526953C10.0465 -0.0533512 10.2989 0.00850933 10.4724 0.194091L16.782 7.26386C16.9476 7.44944 17.0029 7.74107 16.9082 7.98851C16.8136 8.23595 16.6006 8.39502 16.364 8.39502ZM10.6459 2.262V4.19735C10.6459 6.47735 11.1744 7.06944 13.2092 7.06944H14.9365L10.6459 2.262Z" fill="#686D72"/>
-<path d="M9.26464 11.0463H4.53244C4.20908 11.0463 3.94092 10.7458 3.94092 10.3835C3.94092 10.0212 4.20908 9.7207 4.53244 9.7207H9.26464C9.588 9.7207 9.85616 10.0212 9.85616 10.3835C9.85616 10.7458 9.588 11.0463 9.26464 11.0463Z" fill="#686D72"/>
-<path d="M7.68724 14.5814H4.53244C4.20908 14.5814 3.94092 14.281 3.94092 13.9187C3.94092 13.5563 4.20908 13.2559 4.53244 13.2559H7.68724C8.01061 13.2559 8.27876 13.5563 8.27876 13.9187C8.27876 14.281 8.01061 14.5814 7.68724 14.5814Z" fill="#686D72"/>
-</svg>
-
+										<path d="M10.8446 19H6.11242C1.82978 19 0 16.9498 0 12.1512V6.84884C0 2.05023 1.82978 0 6.11242 0H10.0559C10.3793 0 10.6474 0.300465 10.6474 0.662791C10.6474 1.02512 10.3793 1.32558 10.0559 1.32558H6.11242C2.47652 1.32558 1.18305 2.77488 1.18305 6.84884V12.1512C1.18305 16.2251 2.47652 17.6744 6.11242 17.6744H10.8446C14.4805 17.6744 15.774 16.2251 15.774 12.1512V7.73256C15.774 7.37023 16.0421 7.06977 16.3655 7.06977C16.6889 7.06977 16.957 7.37023 16.957 7.73256V12.1512C16.957 16.9498 15.1272 19 10.8446 19Z" fill="#686D72"/>
+										<path d="M16.364 8.39502H13.2092C10.5119 8.39502 9.46289 7.21967 9.46289 4.19735V0.662463C9.46289 0.397346 9.60486 0.149905 9.82569 0.0526953C10.0465 -0.0533512 10.2989 0.00850933 10.4724 0.194091L16.782 7.26386C16.9476 7.44944 17.0029 7.74107 16.9082 7.98851C16.8136 8.23595 16.6006 8.39502 16.364 8.39502ZM10.6459 2.262V4.19735C10.6459 6.47735 11.1744 7.06944 13.2092 7.06944H14.9365L10.6459 2.262Z" fill="#686D72"/>
+										<path d="M9.26464 11.0463H4.53244C4.20908 11.0463 3.94092 10.7458 3.94092 10.3835C3.94092 10.0212 4.20908 9.7207 4.53244 9.7207H9.26464C9.588 9.7207 9.85616 10.0212 9.85616 10.3835C9.85616 10.7458 9.588 11.0463 9.26464 11.0463Z" fill="#686D72"/>
+										<path d="M7.68724 14.5814H4.53244C4.20908 14.5814 3.94092 14.281 3.94092 13.9187C3.94092 13.5563 4.20908 13.2559 4.53244 13.2559H7.68724C8.01061 13.2559 8.27876 13.5563 8.27876 13.9187C8.27876 14.281 8.01061 14.5814 7.68724 14.5814Z" fill="#686D72"/>
+									</svg>
 								</span>
 								<h2 class="text-lg font-semibold text-[#0D151C]">About Event</h2>
 							</div>
@@ -355,6 +373,104 @@
 								</p>
 							</div>
 						</div>
+
+
+						<div class="md:hidden block">
+						<!-- Presented By Section -->
+							<div class='bg-white p-[20px_7px_15px_19px] rounded-2xl'>
+								<div class="flex justify-between items-center gap-3">
+									<div class="flex gap-3">
+										<img src='/present.svg' alt='host-pic' class="size-9 rounded-[9px]"  />
+										<div>
+											<p>Presented by</p>
+											<h2 class="flex">
+												💰 Get Funded! Offi...
+												<span>
+													<svg
+														width="17"
+														height="16"
+														viewBox="0 0 17 16"
+														fill="none"
+														xmlns="http://www.w3.org/2000/svg"
+													>
+														<g clip-path="url(#clip0_1_8843)">
+															<path
+																d="M7 12L11 8L7 4"
+																stroke="#480000"
+																stroke-opacity="0.36"
+																stroke-width="1.33333"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+															/>
+														</g>
+														<defs>
+															<clipPath id="clip0_1_8843">
+																<rect width="16" height="16" fill="white" transform="translate(1)" />
+															</clipPath>
+														</defs>
+													</svg>
+												</span>
+											</h2>
+										</div>
+									</div>
+										<button
+											class="rounded-full bg-[#511A00]/4 px-[13px] py-2.5 min-h-8.5 text-base leading-0 font-normal text-[#42494F]/64">
+											Subscribe
+										</button>
+									</div>
+
+									<p class="mt-3.5 text-[15px] font-light leading-6 text-[#666C71] max-w-[324px]">
+									Empowering transformational change in entrepreneurs and driven professionals through
+									compassionate coaching. Are you ready to steDanielp
+									</p>
+								</div>
+							
+								<!-- Organized By Section -->
+								<div class='bg-white p-[7px_22px_24px_15px] rounded-[16px] mt-[25px]'>
+									<div class=" flex flex-col">
+										<h3 class="mb-[19px] border-b border-[#7F2400]/8 pb-[9px] text-base font-normal text-[#42494F]/80">
+											Organized By
+										</h3>
+										<div class="space-y-3">
+											{#each organizer as or}
+												<OrganiserList organizerName={or.name} organizerAvatar={or.avatar} organizerSocial={or.social}  />
+											{/each}
+										</div>
+									</div>
+
+				<!-- Attending Section -->
+				<div class="mt-6.5 flex flex-col">
+					<h3
+						class="mb-[19px] border-b border-[#7F2400]/8 pb-[9px] text-base font-normal text-[#666C71]/80"
+					>
+						119 Attending
+					</h3>
+					<div class="space-y-[10px]">
+						<div class="relative flex items-center gap-1 text-sm text-gray-600">
+							<img src="/ppp.svg" alt="Featured" class="h-auto w-auto" />
+							<span
+								class="absolute left-10 top-0 rounded-[11.2503px] border border-[#FFF0E6] bg-[#F4F4F4] px-2 py-1 text-xs text-[#7F7F81]"
+								>+59</span
+							>
+						</div>
+						<p class="max-w-[334px] text-[15px] text-[#666C71]/80">
+							Tucker Cohen, Gabriel Funsho, Bbloloa, and 116 others
+						</p>
+					</div>
+				</div>
+
+				<!-- Footer Links -->
+				<div class="mt-7 flex flex-col space-y-3.5 mb-6">
+					<a href="#" class="text-[15px] font-normal leading-3.5 text-[#0D151C]/36">
+						Contact the Organizer
+					</a>
+					<a href="#" class="text-[15px] font-normal leading-3.5 text-[#0D151C]/36">
+						Report Event
+					</a>
+				</div>
+				<div class='w-fit rounded-full border border-[#0D151C]/8 text-[#0D151C]/36 px-[8.4px] py-[2.6px]'> <span class='mr-[3px]'>#</span>AI</div>
+				</div>
+			</div>
 					</div>
 				</div>
 			</div>

@@ -81,7 +81,7 @@
 
 </script>
 
-	<div class=" w-full grid  grid-cols-2 gap-[6px]  md:grid-cols-5 md:gap-[13px] mb-[37px]">
+	<div class="grid grid-flow-col auto-cols-[minmax(213px,max-content)] gap-[13px] overflow-x-auto grid-rows-2 md:grid-rows-1 custom-scrollbar min-w-0  w-full mb-[37px]">
 
 {#each eventPageNav as item}
   <SubPageButton pageName= {item.label}  link={item.link}  >

@@ -4,7 +4,7 @@
 	import Vendors from './components/Vendors.svelte';
 </script>
 
-<div class="">
+<div class="overflow-hidden">
 
 	<Speakers />
 	<Exhibitors />

@@ -170,6 +170,7 @@
 				</div>
 
 				<button
+					on:click={() => goto(`/events/${1}/check-in`)}
 					class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium sm:min-w-70 md:w-fit"
 				>
 					<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E3F4E1]">
@@ -200,7 +201,7 @@
 							/>
 						</svg>
 					</div>
-					Check In Guest
+					Check In Attendee
 				</button>
 
 				<div
@@ -245,7 +246,7 @@
 						</div>
 						<div>
 							<p>Attendees List</p>
-							<p class="text-xs text-[#B8BABA]">Shown to guests</p>
+							<p class="text-xs text-[#B8BABA]">Shown to Attendees</p>
 						</div>
 					</button>
 					<ShowAttendeeList bind:open={openShowAttendeeList} />

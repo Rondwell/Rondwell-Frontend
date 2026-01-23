@@ -236,14 +236,18 @@
 
 							<div class="mb-5 flex flex-col gap-3 px-5">
 								<!-- Standard Ticket -->
-								<div
+								<button
 									class="relative block cursor-pointer rounded-lg border-2 bg-white p-4 transition-colors {selectedTicket ===
 									'standard'
 										? 'border-gray-800'
 										: 'border-gray-300 hover:border-gray-400'}"
+										on:click={() => (selectedTicket = 'standard')}
 								>
-									<div class="relative flex items-center justify-between pl-8">
-										<div class="absolute left-0 top-0 flex h-5 w-5 items-center justify-center">
+									<div class="relative flex items-center justify-between pl-5">
+										<div class="absolute -left-2 top-0 flex h-5 w-5 items-center justify-center {selectedTicket ===
+									'standard'
+										? 'opacity-100'
+										: 'opacity-0'}">
 											<svg
 												width="19"
 												height="19"
@@ -269,16 +273,37 @@
 										</div>
 										<span class="text-sm text-gray-600">Free</span>
 									</div>
-								</div>
+								</button>
 
 								<!-- Salesperson Interview Ticket -->
-								<div
+								<button
 									class="relative block cursor-pointer rounded-lg border-2 bg-white p-4 transition-colors {selectedTicket ===
 									'salesperson'
 										? 'border-gray-800'
 										: 'border-gray-300 hover:border-gray-400'}"
+										on:click={() => (selectedTicket = 'salesperson')}
 								>
+								
 									<div class="relative flex items-start justify-between pl-5">
+										<div class="absolute -left-2 top-0 flex h-5 w-5 items-center justify-center {selectedTicket ===
+									'salesperson'
+										? 'opacity-100'
+										: 'opacity-0'}">
+											<svg
+												width="19"
+												height="19"
+												viewBox="0 0 19 19"
+												fill="none"
+												xmlns="http://www.w3.org/2000/svg"
+											>
+												<path
+													fill-rule="evenodd"
+													clip-rule="evenodd"
+													d="M8.55643 0.0191306C7.24211 0.109731 5.96257 0.481523 4.80435 1.10936C3.64613 1.7372 2.63625 2.60644 1.84299 3.6583C0.916016 4.8809 0.339661 6.27538 0.0841406 7.91278C-0.00981771 8.51205 -0.00981771 9.82059 0.0841406 10.4199C0.476016 12.9338 1.69174 14.9975 3.66143 16.4916C4.87831 17.4152 6.28081 17.995 7.91362 18.2493C8.51289 18.3433 9.82143 18.3433 10.4207 18.2493C12.6482 17.9022 14.5411 16.8984 15.962 15.3103C17.2224 13.902 17.95 12.346 18.2502 10.4199C18.3441 9.82059 18.3441 8.51205 18.2502 7.91278C17.9958 6.27996 17.416 4.87746 16.4925 3.66059C15.7549 2.67976 14.8279 1.85701 13.7664 1.24114C12.7049 0.625272 11.5306 0.228814 10.313 0.0752764C9.72909 0.0220065 9.14255 0.00325863 8.55643 0.0191306ZM12.8155 5.18111C12.5796 5.24141 12.3653 5.36643 12.1967 5.54205C12.1131 5.62684 11.1139 6.80017 9.97383 8.14767C9.28502 8.97268 8.58717 9.79009 7.88039 10.5998C7.86664 10.5998 7.45185 10.1781 6.96029 9.66476C5.64945 8.29434 5.59674 8.2508 5.17508 8.17632C4.91447 8.13677 4.64799 8.17296 4.40737 8.28059C4.12069 8.43042 3.90186 8.68385 3.79543 8.98932C3.689 9.29478 3.70295 9.62932 3.83445 9.92486C3.91466 10.1048 4.07393 10.2801 5.73081 12.0034C6.48706 12.7894 7.17685 13.4815 7.26508 13.5388C7.43237 13.6534 7.74174 13.7497 7.93997 13.7497C8.13935 13.7497 8.43727 13.6545 8.62174 13.5319C8.75581 13.4437 9.40549 12.6966 11.4611 10.2663C13.2509 8.15111 14.1584 7.05569 14.2226 6.92507C14.3108 6.75319 14.3234 6.6959 14.3246 6.43236C14.3246 6.0359 14.2512 5.83194 14.014 5.57528C13.8651 5.41192 13.6765 5.28979 13.4665 5.22073C13.2566 5.15167 13.0323 5.13803 12.8155 5.18111Z"
+													fill="#42494F"
+												/>
+											</svg>
+										</div>
 										<div class="flex flex-col lg:flex-row items-start lg:items-start gap-2">
 											<span class="text-sm font-medium text-gray-800">Salesperson Interview</span>
 											<span
@@ -288,29 +313,52 @@
 										</div>
 										<span class="text-sm text-gray-600">Free</span>
 									</div>
-									<div class="mt-3 pl-5">
+									<div class="mt-3 pl-5 text-left">
 										<p class="mb-1 text-sm text-gray-600">Registration Emails</p>
 										<p class="text-xs leading-relaxed text-gray-600">
 											Customize the emails sent when a guest registers for the event and for when
 											your approve or decline their registration.
 										</p>
 									</div>
-								</div>
+								</button>
 
 								<!-- Admin Module -->
-								<div
-									class="relative block cursor-not-allowed rounded-lg border-2 border-gray-300 bg-white p-4 opacity-60"
+								<button
+									class="relative block cursor-not-allowed rounded-lg border-2 border-gray-300 bg-white p-4 opacity-100 {selectedTicket ===
+									'admin'
+										? 'border-gray-800'
+										: 'border-gray-300 hover:border-gray-400'}"
+										on:click={() => (selectedTicket = 'admin')}
 								>
 									<div class="relative flex items-center justify-between pl-5">
+										<div class="absolute -left-2 top-0 flex h-5 w-5 items-center justify-center {selectedTicket ===
+									'admin'
+										? 'opacity-100'
+										: 'opacity-0'}">
+											<svg
+												width="19"
+												height="19"
+												viewBox="0 0 19 19"
+												fill="none"
+												xmlns="http://www.w3.org/2000/svg"
+											>
+												<path
+													fill-rule="evenodd"
+													clip-rule="evenodd"
+													d="M8.55643 0.0191306C7.24211 0.109731 5.96257 0.481523 4.80435 1.10936C3.64613 1.7372 2.63625 2.60644 1.84299 3.6583C0.916016 4.8809 0.339661 6.27538 0.0841406 7.91278C-0.00981771 8.51205 -0.00981771 9.82059 0.0841406 10.4199C0.476016 12.9338 1.69174 14.9975 3.66143 16.4916C4.87831 17.4152 6.28081 17.995 7.91362 18.2493C8.51289 18.3433 9.82143 18.3433 10.4207 18.2493C12.6482 17.9022 14.5411 16.8984 15.962 15.3103C17.2224 13.902 17.95 12.346 18.2502 10.4199C18.3441 9.82059 18.3441 8.51205 18.2502 7.91278C17.9958 6.27996 17.416 4.87746 16.4925 3.66059C15.7549 2.67976 14.8279 1.85701 13.7664 1.24114C12.7049 0.625272 11.5306 0.228814 10.313 0.0752764C9.72909 0.0220065 9.14255 0.00325863 8.55643 0.0191306ZM12.8155 5.18111C12.5796 5.24141 12.3653 5.36643 12.1967 5.54205C12.1131 5.62684 11.1139 6.80017 9.97383 8.14767C9.28502 8.97268 8.58717 9.79009 7.88039 10.5998C7.86664 10.5998 7.45185 10.1781 6.96029 9.66476C5.64945 8.29434 5.59674 8.2508 5.17508 8.17632C4.91447 8.13677 4.64799 8.17296 4.40737 8.28059C4.12069 8.43042 3.90186 8.68385 3.79543 8.98932C3.689 9.29478 3.70295 9.62932 3.83445 9.92486C3.91466 10.1048 4.07393 10.2801 5.73081 12.0034C6.48706 12.7894 7.17685 13.4815 7.26508 13.5388C7.43237 13.6534 7.74174 13.7497 7.93997 13.7497C8.13935 13.7497 8.43727 13.6545 8.62174 13.5319C8.75581 13.4437 9.40549 12.6966 11.4611 10.2663C13.2509 8.15111 14.1584 7.05569 14.2226 6.92507C14.3108 6.75319 14.3234 6.6959 14.3246 6.43236C14.3246 6.0359 14.2512 5.83194 14.014 5.57528C13.8651 5.41192 13.6765 5.28979 13.4665 5.22073C13.2566 5.15167 13.0323 5.13803 12.8155 5.18111Z"
+													fill="#42494F"
+												/>
+											</svg>
+										</div>
 										<div class="flex items-center gap-2">
 											<span class="text-sm font-medium text-gray-800">Admin Module</span>
 										</div>
 										<span class="text-sm text-gray-600">Free</span>
 									</div>
-									<p class="mt-2 pl-5 text-xs text-gray-500">
+									<p class="mt-2 pl-5 text-left text-xs text-gray-500">
 										<span class='size-[10px] bg-[#0D151C]/20 rounded-full'></span> Sales ended Oct 22, 2024, 11:59 PM
 									</p>
-								</div>
+								</button>
 							</div>
 
 							<!-- Sign-in Section -->
@@ -347,7 +395,7 @@
 										<path d="M7.68724 14.5814H4.53244C4.20908 14.5814 3.94092 14.281 3.94092 13.9187C3.94092 13.5563 4.20908 13.2559 4.53244 13.2559H7.68724C8.01061 13.2559 8.27876 13.5563 8.27876 13.9187C8.27876 14.281 8.01061 14.5814 7.68724 14.5814Z" fill="#686D72"/>
 									</svg>
 								</span>
-								<h2 class="text-lg font-semibold text-[#0D151C]">About Event</h2>
+								<h2 class="text-xl font-medium text-[#0D151C]">About Event</h2>
 							</div>
 
 							<!-- Send Newsletters Section -->
@@ -372,6 +420,33 @@
 									This is a perfect way to highlight events that are created by your community.
 								</p>
 							</div>
+						</div>
+
+						<div class="max-w-2xl rounded-2xl bg-white pb-8 mb-6">
+							<h2 class=" mb-3 border-b px-6 py-3.5 text-xl font-medium text-[#0D151C]">Location</h2>
+
+							<div class="px-6">
+								<h3 class="text-base font-medium text-[#0D151C] mb-0.5">Workstation</h3>
+								<p class="text-sm font-normal text-[#42494F]/80">
+									7 Ibiyinka Olorunbe, Victoria Island, Lagos 101241, Lagos, Nigeria
+								</p>
+							</div>
+							<!-- map section -->
+							<div class="mt-3 px-6 h-50 w-full max-w-146.5">
+								
+									<iframe
+							title="map location"
+								 src="https://www.google.com/maps?q=7%20Ibiyinka%20Olorunbe,%20Victoria%20Island,%20Lagos,%20Nigeria&output=embed&z=14"
+								 width="100%"
+								 height="100%"
+								 style="border:0; border-radius: 12px;"
+								 allowfullscreen= {true}
+								 loading="lazy"
+								 referrerpolicy="no-referrer-when-downgrade">
+								
+							</iframe>
+	
+							</div>						
 						</div>
 
 

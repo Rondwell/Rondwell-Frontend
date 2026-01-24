@@ -99,7 +99,8 @@
 			{#each collaborations as collab}
 				{@const styling = getStatusStyle(collab.status)}
 				<div class="mb-2 rounded-lg bg-white p-4">
-					<div class="grid grid-cols-12 items-center gap-3">
+					<!-- Desktop Layout -->
+					<div class="hidden md:grid md:grid-cols-12 md:items-center md:gap-3">
 						<!-- Organizer Name & Email - 2 cols -->
 						<div class="col-span-2 flex items-center gap-2">
 							<img src="/face-1.svg" alt={collab.organizerName} class="h-8 w-8 flex-shrink-0 rounded-full" />
@@ -194,6 +195,94 @@
 									</div>
 								{/if}
 							</div>
+						</div>
+					</div>
+
+					<!-- Mobile Layout -->
+					<div class="flex flex-col gap-3 md:hidden">
+						<!-- Organizer Info -->
+						<div class="flex items-start justify-between">
+							<div class="flex items-center gap-2">
+								<img src="/face-1.svg" alt={collab.organizerName} class="h-8 w-8 flex-shrink-0 rounded-full" />
+								<div class="min-w-0">
+									<div class="font-medium">{collab.organizerName}</div>
+									<div class="text-xs text-gray-500">{collab.organizerEmail}</div>
+								</div>
+							</div>
+							<div
+								class="group relative flex-shrink-0"
+								use:clickOutside={() => {
+									if (showActionModal === collab.id) showActionModal = null;
+								}}
+							>
+								<button
+									on:click={() =>
+										(showActionModal = showActionModal === collab.id ? null : collab.id)}
+									class="rounded p-1 hover:bg-gray-100"
+								>
+									<Icon icon="mdi:dots-horizontal" class="h-5 w-5 text-gray-500" />
+								</button>
+
+								{#if showActionModal === collab.id}
+									<div
+										class="absolute top-8 right-0 z-10 w-48 rounded-md border bg-white py-1 shadow-lg"
+									>
+										<button
+											class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-gray-100"
+										>
+											<Icon icon="mdi:eye" class="text-blue-600" />
+											View Details
+										</button>
+										<button
+											class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-gray-100"
+										>
+											<Icon icon="mdi:message" class="text-gray-600" />
+											Message Organizer
+										</button>
+										<button
+											class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-gray-100"
+										>
+											<Icon icon="mdi:check-circle" class="text-green-600" />
+											Mark as Fulfilled
+										</button>
+										<button
+											class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-gray-100"
+										>
+											<Icon icon="mdi:cancel" class="text-red-600" />
+											Cancel Collaboration
+										</button>
+									</div>
+								{/if}
+							</div>
+						</div>
+
+						<!-- Event Name -->
+						<div class="text-sm font-medium text-gray-900">{collab.eventName}</div>
+
+						<!-- Sale Info -->
+						<div class="flex items-center justify-between">
+							<span class="text-xs text-gray-500">Sale</span>
+							<span class="text-sm font-medium text-green-600">{collab.agreedPrice}</span>
+							<span class="text-xs text-gray-400">{collab.startDate}</span>
+							<span class="text-xs text-gray-400">{collab.endDate}</span>
+						</div>
+
+						<!-- Service -->
+						<div class="text-sm text-gray-600">{collab.serviceProduct}</div>
+
+						<!-- Status & Action Button -->
+						<div class="flex items-center justify-between">
+							<span
+								class="rounded-[11px] px-2 py-1 text-xs"
+								style="background: {styling.bg}; color: {styling.text}"
+							>
+								{collab.status}
+							</span>
+							<button
+								class="rounded-md bg-[#EBECED] px-3 py-1 text-xs text-[#616265] hover:bg-gray-300"
+							>
+								View Details
+							</button>
 						</div>
 					</div>
 				</div>

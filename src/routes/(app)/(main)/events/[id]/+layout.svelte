@@ -98,7 +98,18 @@
 
 			// Find matching submenu item
 			const currentMenu = get(subMenuItems);
-			const active = currentMenu.find((item) => path === item.nav)?.label || 'Overview'; // default for /events/[id]
+			let active = currentMenu.find((item) => path === item.nav)?.label;
+			
+			// Special case: check-in page should highlight Attendees menu
+			if (!active && path.includes('/check-in')) {
+				active = 'Attendees';
+			}
+			
+			// Default to Overview if no match
+			if (!active) {
+				active = 'Overview';
+			}
+			
 			activeSubItem.set(active);
 			showSubMenu.set(true);
 		} else {

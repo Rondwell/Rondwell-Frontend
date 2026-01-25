@@ -94,16 +94,16 @@
 {#if open}
 	<!-- Container -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 backdrop-blur-sm lg:inset-y-0 lg:p-0 lg:pr-10"
+		class="md:item-center fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-3 pt-10 backdrop-blur-sm lg:inset-y-0 lg:p-0 lg:pr-10"
 		on:click={() => dispatch('close')}
 	>
 		<!-- Panel -->
 		<div
-			class="flex h-full max-h-150 w-full max-w-lg flex-col rounded-md bg-[#F8F9F9] shadow-lg lg:w-lg lg:max-w-none lg:shadow-none"
+			class="flex h-full max-h-140 w-full max-w-lg flex-col rounded-md bg-[#F8F9F9] shadow-lg lg:w-lg lg:max-w-none lg:shadow-none"
 			on:click|stopPropagation
 		>
 			<!-- Header -->
-			<div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+			<div class="flex items-center justify-between border-b border-gray-200 px-4 py-4">
 				<div class="flex items-center justify-between">
 					<button aria-label="Close" on:click={() => dispatch('close')}>
 						<svg
@@ -187,7 +187,7 @@
 			</div>
 
 			<!-- Existing Event section -->
-			<div class="flex flex-col px-4">
+			<div class="custom-scrollbar overflow-y-auto px-3 pb-10 md:pb-4" style="max-height: 70vh;">
 				<div class="flex items-center py-2">
 					<div class="flex cursor-pointer" on:click={() => dispatch('collection')}>
 						<svg
@@ -227,7 +227,7 @@
 
 					<input
 						type="url"
-						class="placeholder-opacity-30 w-full rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9] focus:ring-0 focus:ring-black"
+						class="placeholder-opacity-30 w-full rounded-md border px-3 py-2 text-sm placeholder-[#C8C9C9]"
 						placeholder="https://eventbrite.com/e/some-event"
 						bind:value={eventUrl}
 					/>

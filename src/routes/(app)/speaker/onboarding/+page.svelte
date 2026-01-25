@@ -419,7 +419,18 @@ let isCurrencyDropdownOpen = $state(false);
 		<div class="mx-auto h-[96px] w-[96px]">
 							<img src="/detail-icon.svg" alt="detail-icon" class="h-full w-full" />
 						</div>
-		<h2 class="text-[24px] font-semibold text-[#171717]">Speaker Details</h2>
+		<h2 class="teoverflow-auto bg-cover bg-center bg-no-repeat"
+	style="
+		background-image: url('/exhibitor-bg.png');
+		color: {selectedColor.text};
+		font-family: {selectedFont};
+	"
+>
+<OnboardingNavbar />
+<!-- Main Content -->
+	<main class="relative mb-[106px] flex-1 px-5 md:mb-0">
+		<!-- Header -->
+		<div class="mx-auto mb-8 overflow-x-hiddxt-[24px] font-semibold text-[#171717]">Speaker Details</h2>
 		<p class="mt-1 text-sm text-[#5C5C5C]">
 			Provide essential speaker information
 		</p>

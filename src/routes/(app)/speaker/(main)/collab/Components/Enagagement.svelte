@@ -38,7 +38,7 @@
   ];
 </script>
 
-<div class="min-h-screen bg-gray-50 p-6">
+<div class="min-h-screen p-6">
   <!-- HEADER -->
   <div class="flex items-center justify-between mb-6">
     <!-- Left -->
@@ -72,94 +72,121 @@
     </div>
   </div>
 
-  <!-- APPLICATION LIST -->
-  <div class="space-y-3">
+ <!-- APPLICATION LIST -->
+<div class="space-y-4">
   {#each enagagement as app}
-    <div
-      class="flex items-center justify-between bg-white rounded-xl px-5 py-4 shadow-sm"
-    >
-      <!-- LEFT CONTENT (ONE LINE) -->
-      <div class="flex items-center gap-4 flex-nowrap whitespace-nowrap overflow-hidden">
-        
-        <!-- Event -->
-        <span class="font-medium text-gray-900 truncate max-w-[220px]">
-          {app.event}
-        </span>
+    <div class="bg-white rounded-xl px-4 py-4 shadow-sm">
 
-        <!-- Info Icon -->
-        <img
-										src="/edit-cover-photo.svg"
-										alt="avatar"
-										class="h-10 w-10 shrink-0 rounded-full bg-gray-200"
-									/>
+      <!-- MOBILE VIEW -->
+      <div class="flex flex-col gap-3 md:hidden">
+
+        <!-- Top row -->
+        <div class="flex items-center justify-between">
+          <h3 class="font-semibold text-gray-900 text-sm">
+            {app.event}
+          </h3>
+
+          <span class={`text-xs font-medium px-3 py-1 rounded-full ${app.statusClass}`}>
+            {app.status}
+          </span>
+        </div>
 
         <!-- Speaker -->
-        <span class="text-gray-700 truncate max-w-[160px]">
-          {app.speaker}
-        </span>
-
-        <!-- Date -->
-        <span class="text-sm text-gray-400 shrink-0">
-          {app.date}
-        </span>
+        <div class="flex items-center gap-3">
+          <img
+            src="/Profile Gravater.svg"
+            alt="avatar"
+            class="h-8 w-8 rounded-full bg-gray-200"
+          />
+          <span class="text-sm text-gray-700">
+            {app.speaker}
+          </span>
+        </div>
 
         <!-- Topic -->
-        <span class="text-gray-800 font-medium truncate max-w-[260px]">
+        <p class="text-sm text-gray-600">
           {app.topic}
-        </span>
+        </p>
+
+        <!-- Bottom row -->
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-gray-400">
+            {app.date}
+          </span>
+
+          <div class="flex items-center gap-3">
+            <button class="text-sm text-gray-700">
+              View
+            </button>
+
+            <button
+              class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                <circle cx="10" cy="4" r="1.5" />
+                <circle cx="10" cy="10" r="1.5" />
+                <circle cx="10" cy="16" r="1.5" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- RIGHT CONTENT (ONE LINE) -->
-      <div class="flex items-center gap-4 flex-nowrap whitespace-nowrap shrink-0">
-        
-        <!-- Status -->
-        <span
-          class={`text-xs font-medium px-3 py-1 rounded-full ${app.statusClass}`}
-        >
-          {app.status}
-        </span>
+      <!-- DESKTOP VIEW -->
+      <div class="hidden md:flex items-center justify-between">
 
-        <!-- View Details -->
-        <button class="text-sm text-gray-700 hover:text-gray-900">
-          View Details
-        </button>
+        <!-- LEFT CONTENT -->
+        <div class="flex items-center gap-4 flex-nowrap whitespace-nowrap overflow-hidden">
 
-        <!-- Three Dots Menu -->
-<div class="relative">
-  <button
-    class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      class="w-5 h-5"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-    >
-      <circle cx="10" cy="4" r="1.5" />
-      <circle cx="10" cy="10" r="1.5" />
-      <circle cx="10" cy="16" r="1.5" />
-    </svg>
-  </button>
+          <span class="font-medium text-gray-900 truncate max-w-[220px]">
+            {app.event}
+          </span>
 
-  <!-- Dropdown -->
-  <div
-    class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-100 hidden group-hover:block"
-  >
-    <button class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
-      View Details
-    </button>
-    <button class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
-      Withdraw
-    </button>
-    <button class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-      Delete
-    </button>
-  </div>
-</div>
+          <img
+            src="/Profile Gravater.svg"
+            alt="avatar"
+            class="h-10 w-10 shrink-0 rounded-full bg-gray-200"
+          />
 
+          <span class="text-gray-700 truncate max-w-[160px]">
+            {app.speaker}
+          </span>
+
+          <span class="text-sm text-gray-400 shrink-0">
+            {app.date}
+          </span>
+
+          <span class="text-gray-800 font-medium truncate max-w-[260px]">
+            {app.topic}
+          </span>
+        </div>
+
+        <!-- RIGHT CONTENT -->
+        <div class="flex items-center gap-4 shrink-0">
+
+          <span class={`text-xs font-medium px-3 py-1 rounded-full ${app.statusClass}`}>
+            {app.status}
+          </span>
+
+          <button class="text-sm text-gray-700 hover:text-gray-900">
+            View Details
+          </button>
+
+          <button
+            class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+              <circle cx="10" cy="4" r="1.5" />
+              <circle cx="10" cy="10" r="1.5" />
+              <circle cx="10" cy="16" r="1.5" />
+            </svg>
+          </button>
+        </div>
       </div>
+
     </div>
   {/each}
 </div>
+
 
 </div>

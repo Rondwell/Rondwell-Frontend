@@ -10,7 +10,7 @@
 {#if open}
 	<!-- Container -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 backdrop-blur-sm lg:inset-y-0 lg:p-0 lg:pr-10"
+		class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-3 pt-[40px] backdrop-blur-sm sm:items-center sm:pt-[0px] lg:inset-y-0 lg:p-0 lg:pr-10"
 		on:click={() => dispatch('close')}
 	>
 		<!-- Panel -->
@@ -104,7 +104,10 @@
 				<div class="mb-4 flex w-full flex-wrap gap-4 p-6">
 					<div class="relative w-full lg:mb-5">
 						<button
-							on:click={() => goto('/create-event')}
+							on:click={() => {
+								dispatch('close');
+								goto('/create-event');
+							}}
 							class="button-purple-hover flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm"
 						>
 							<div
@@ -273,7 +276,7 @@
 								/>
 							</svg>
 						</div>
-						<div>Add Event from External Platform</div>
+						<div class="truncate">Add Event from External Platform</div>
 					</button>
 				</div>
 			</div>

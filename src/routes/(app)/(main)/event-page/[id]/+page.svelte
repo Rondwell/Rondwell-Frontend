@@ -49,10 +49,10 @@
 
 			<!-- Organizer Access Card -->
 			<div
-				class="mb-6 mt-6.5 w-full md:max-w-[378.13px] rounded-lg border border-[#69737D]/13 bg-[#69737D]/13 px-3 py-2.5 sm:px-4 sm:py-3"
+				class="mt-3 mb-4 max-w-[378.13px] rounded-lg border border-[#69737D]/13 bg-[#69737D]/13 px-3 py-2.5 sm:px-4 sm:py-3"
 			>
-				<div class="flex justify-between items-center gap-2 ">
-					<div class="max-w-[220.77px] font-normal leading-6 text-[#69737D] text-base">
+				<div class="mb-2 flex justify-between gap-2 sm:mb-0 sm:flex-row sm:items-center">
+					<div class="max-w-[220.77px] text-xs leading-6 font-normal text-[#69737D] sm:text-base">
 						You have organizer <br /> access for this event.
 					</div>
 					<button
@@ -106,13 +106,13 @@
 						</div>
 					</div>
 					<button
-						class="rounded-full bg-[#511A00]/4 px-[13px] py-2.5 min-h-8.5 text-base leading-0 font-normal text-[#42494F]/64"
+						class="rounded-full bg-[#511A00]/6 px-3.5 py-2.5 text-base leading-4 font-normal text-[#480000]"
 					>
 						Subscribe
 					</button>
 				</div>
 
-				<p class="mt-3.5 text-[15px] font-light leading-6 text-[#666C71] max-w-[324px]">
+				<p class="mt-3.5 text-[15px] leading-6 font-light text-[#AA644B]">
 					Empowering transformational change in entrepreneurs and driven professionals through
 					compassionate coaching. Are you ready to steDanielp
 				</p>
@@ -145,7 +145,7 @@
 						<div class="relative flex items-center gap-1 text-sm text-gray-600">
 							<img src="/ppp.svg" alt="Featured" class="h-auto w-auto" />
 							<span
-								class="absolute left-10 top-0 rounded-[11.2503px] border border-[#FFF0E6] bg-[#F4F4F4] px-2 py-1 text-xs text-[#7F7F81]"
+								class="absolute top-0 left-10 rounded-[11.2503px] border border-[#FFF0E6] bg-[#F4F4F4] px-2 py-1 text-xs text-[#7F7F81]"
 								>+59</span
 							>
 						</div>
@@ -156,11 +156,11 @@
 				</div>
 
 				<!-- Footer Links -->
-				<div class="mt-7 flex flex-col space-y-3.5 mb-6">
-					<a href="#" class="text-[15px] font-normal leading-3.5 text-[#0D151C]/36">
+				<div class="mt-7 flex flex-col space-y-[10px]">
+					<a href="#" class="text-[15px] leading-3.5 font-normal text-[#480000]/36">
 						Contact the Organizer
 					</a>
-					<a href="#" class="text-[15px] font-normal leading-3.5 text-[#0D151C]/36">
+					<a href="#" class="text-[15px] leading-3.5 font-normal text-[#480000]/36">
 						Report Event
 					</a>
 				</div>
@@ -173,7 +173,8 @@
 		<div>
 			<div>
 				<!-- Event Title -->
-				
+				<h2 class="text-[55px] leading-[63.3px] font-bold">Megaexe Party, in mapi</h2>
+
 				<div>
 					<div class="mb-5.5 space-y-3">
 						<div class='bg-white rounded-[16px] flex flex-col gap-[19px] p-[24px_33px_19px_22px]'>
@@ -243,11 +244,8 @@
 										: 'border-gray-300 hover:border-gray-400'}"
 										on:click={() => (selectedTicket = 'standard')}
 								>
-									<div class="relative flex items-center justify-between pl-5">
-										<div class="absolute -left-2 top-0 flex h-5 w-5 items-center justify-center {selectedTicket ===
-									'standard'
-										? 'opacity-100'
-										: 'opacity-0'}">
+									<div class="relative flex items-center justify-between pl-8">
+										<div class="absolute top-0 left-0 flex h-5 w-5 items-center justify-center">
 											<svg
 												width="19"
 												height="19"

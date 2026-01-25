@@ -240,7 +240,7 @@
 					class="h-[43px] w-full rounded-lg border border-gray-300 py-2 pr-4 pl-10 focus:ring-2 focus:ring-purple-500 focus:outline-none"
 				/>
 				<span class="absolute top-2.5 left-3 text-gray-400">
-					<img src="/search.png" alt="search icon" class="h-5 w-5" />
+					<img src="/search-com-icon.svg" alt="search icon" class="h-5 w-5" />
 				</span>
 				<span class="absolute top-2 right-3 bg-[#eeeeef] p-1 text-sm text-gray-500">⌘K</span>
 			</div>

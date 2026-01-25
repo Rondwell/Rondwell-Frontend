@@ -27,7 +27,7 @@
 					? 'border-[#DB3EC6] text-[#DB3EC6]'
 					: 'border-transparent text-gray-500 hover:text-gray-700'}"
 			>
-				<p>{@html tab.icon}</p>
+				<span class="flex items-center justify-center">{@html tab.icon}</span>
 				{tab.label}
 			</button>
 		{/each}

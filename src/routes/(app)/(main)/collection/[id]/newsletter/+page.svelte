@@ -18,7 +18,7 @@
 		</div>
 
 		<button
-			class="mt-2 flex w-[145px] items-center gap-2 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm text-[#5D646F] sm:mt-0"
+			class="mt-2 flex w-[145px] items-center gap-2 rounded-md bg-[#EBECED] px-3 py-1 text-sm text-[#5D646F] sm:mt-0"
 		>
 			Calendar Page
 			<svg

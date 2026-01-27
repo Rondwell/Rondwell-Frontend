@@ -1,6 +1,5 @@
 <script lang="ts">
 	export let pageName: string;
-	export let pageText: string;
 	export let link: string;
 </script>
 
@@ -8,9 +7,5 @@
 	  <slot />
 <h2 class="merriweather-sans text-xs md:text-sm font-medium inline-flex flex-col  items-start gap-1">
     {pageName}
-
-{#if pageText}
-    <span class="text-[10px] md:text-xs font-normal text-[#B8BABA]">{pageText}</span>
-{/if}
 </h2>
 </a>

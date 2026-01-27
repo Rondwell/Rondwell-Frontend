@@ -50,7 +50,6 @@
   },
     {
     label: "Media / FAQs",
-    subLabel: "Shown to guests",
     link: `/event-page/${eventId}/media`,
     bgColor: "#F2E4F8",
     hoverColor: "#FFE6C7",
@@ -66,7 +65,6 @@
   },
     {
     label: "Community",
-    subLabel: "Shown to guests",
     link: `/event-page/${eventId}/community`,
     bgColor: "#F8E8E0",
     hoverColor: "#FFE6C7",
@@ -83,10 +81,10 @@
 
 </script>
 
-	<div class=" w-full grid  grid-cols-2 gap-[6px]  md:grid-cols-5 md:gap-[13px] mb-[37px]">
+	<div class="grid grid-flow-col auto-cols-[minmax(213px,max-content)] gap-[13px] overflow-x-auto grid-rows-2 md:grid-rows-1 custom-scrollbar min-w-0  w-full mb-[37px]">
 
 {#each eventPageNav as item}
-  <SubPageButton pageName= {item.label} pageText={item.subLabel} link={item.link}  >
+  <SubPageButton pageName= {item.label}  link={item.link}  >
             <div class="flex h-11 w-11 items-center justify-center rounded-sm" style="background:{item.bgColor}" >
         	 {@html item.icon}
 

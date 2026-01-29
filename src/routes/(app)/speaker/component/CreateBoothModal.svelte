@@ -1,8 +1,47 @@
 <script lang="ts">
-	import {Plus } from 'lucide-svelte';
+	import { Plus, Minus } from 'lucide-svelte';
 	import { createEventDispatcher } from 'svelte';
+	import DatePickerModal from '../../create-event/components/DatePickerModal.svelte';
+	import { colors, type Color } from '$lib/utils/colors';
 
 	export let show = false;
+	let openStartDatePickerModal = false;
+	let startDate = new Date(2025, 10, 25);
+	function scrollToId(id: string, options?: { behavior?: ScrollBehavior }) {
+		const el = document.getElementById(id);
+		if (!el) return;
+
+		const isMobile = window.innerWidth <= 768;
+		const rect = el.getBoundingClientRect();
+		const viewHeight = window.innerHeight - (isMobile ? 100 : 0);
+
+		let scrollAmount = 0;
+
+		// If top of element is above the viewport
+		if (rect.top < 0) {
+			scrollAmount = rect.top - 16; // add small padding
+		}
+		// If bottom of element is below the viewport
+		else if (rect.bottom > viewHeight) {
+			scrollAmount = rect.bottom - viewHeight + 16; // add small padding
+		}
+
+		if (scrollAmount !== 0) {
+			window.scrollBy({
+				top: scrollAmount,
+				left: 0,
+				behavior: options?.behavior ?? 'smooth'
+			});
+		}
+	}
+	function formatDate(date: Date) {
+		return date.toLocaleDateString('en-US', {
+			weekday: 'short', // "Sat"
+			month: 'short', // "Sep"
+			day: 'numeric' // "14"
+		});
+	}
+	let selectedColor: Color = colors[0];
 
 	const dispatch = createEventDispatcher();
 
@@ -17,6 +56,9 @@
 		productShowcase: false,
 		callToActions: false
 	};
+	// true if ANY accordion is open
+$: isAnyAccordionOpen = Object.values(accordionStates).some(Boolean);
+
 
 	function toggleAccordion(section: AccordionKeys) {
 		accordionStates[section] = !accordionStates[section];
@@ -70,14 +112,15 @@
 	<div class="fixed inset-0 z-40 bg-black/30" on:click={closeModal} />
 
 	<!-- Modal Wrapper -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
 		on:click={handleBackdropClick}
 	>
 		<div
-			class="relative w-full max-w-md h-[92vh] bg-gray-100 rounded-2xl overflow-hidden shadow-2xl"
-			on:click={handleBackdropClick}
-		>
+  class="relative w-full max-w-4xl h-[92vh] rounded-2xl bg-[#FDFCFB] shadow-xl overflow-hidden"
+>
+
 			
 			<!-- Scroll Area -->
 			<div class="h-full overflow-y-auto px-3 py-4">
@@ -91,44 +134,63 @@
 						</div>
 
 						<div class="flex items-center gap-2">
-							<button class="px-3 py-1 text-xs rounded-full bg-gray-200" on:click={handleContinue}>
-								Publish
-							</button>
-							<button class="px-3 py-1 text-xs rounded-full bg-gray-200"  on:click={handleBackdropClick}>
-								Cancel
-							</button>
-							<button class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center">
-								⋯
-							</button>
-							<button class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center">
-								⌃
-							</button>
-							<button class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center">
-								⌄
-							</button>
-						</div>
+							<div class="flex gap-2 mr-20">
+  {#if !isAnyAccordionOpen}
+   <button
+
+
+  class="flex items-center gap-1 px-3 py-1 text-xs rounded-md bg-gray-200"
+  on:click={handleContinue}
+>
+  <span class="p-1">Publish</span>
+  <img src="/arrow-up-right.svg" alt="arrow-up-right" />
+</button>
+
+<button
+  class="flex items-center gap-1 px-3 py-1 text-xs rounded-md bg-gray-200"
+  on:click={handleBackdropClick}
+>
+  <span class="p-1">Cancel</span>
+  <img src="/arrow-up-right.svg" alt="arrow-up-right" />
+</button>
+
+  {/if}
+</div>
+
+  <button class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center">
+    <img src="/Group 35151.svg" alt="up-icon"/>
+  </button>
+  <button class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center">
+    <img src="/arrow.svg" alt="up-icon"/>
+  </button>
+</div>
+
 					</div>
 
 					<!-- Image -->
-					<div class="bg-white rounded-xl p-3 mb-6">
-						<div class="relative overflow-hidden rounded-lg">
-							<img
-								src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"
-								class="w-full h-64 object-cover"
-								alt="cover"
-							/>
-							<button
-								class="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-white shadow flex items-center justify-center text-xs"
-							>
-								▢
-							</button>
-						</div>
-					</div>
+<div class="mb-6 flex justify-center">
+  <div class="w-full max-w-xl rounded-xl p-3">
+    <div class="relative overflow-hidden rounded-lg">
+      <img
+        src="/events.png"
+        class="h-full w-full object-cover"
+        alt="cover"
+      />
+      <button
+        class="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs shadow"
+      >
+        ▢
+      </button>
+    </div>
+  </div>
+</div>
 
-					<div class="flex max-h-[90vh] w-full max-w-[1100px] flex-col overflow-hidden rounded-2xl bg-[#FDFCFB]">
+
+					<div class="flex h-full w-full flex-col">
+
 			
 			<!-- Modal Body - Scrollable -->
-			<div class="flex-1 overflow-y-auto md:px-8 px-4 py-6 custom-scrollbar">
+			<div class="flex-1 overflow-y-auto px-6 md:px-10 py-6 custom-scrollbar">
 				<div class="space-y-3">
 					<!-- Booth Info Accordion -->
 					<button
@@ -139,7 +201,12 @@
 							<img src="/question-line.svg" alt="question-line" class="w-5 h-5">
 							<span class="font-medium text-[#171717] text-[14px]">Details</span>
 						</div>
-						<Plus class="h-4 w-4 text-[#5C5C5C]" />
+						{#if accordionStates.Details}
+  <Minus class="h-4 w-4 text-[#5C5C5C]" />
+{:else}
+  <Plus class="h-4 w-4 text-[#5C5C5C]" />
+{/if}
+
 					</button>
 
 					{#if accordionStates.Details}
@@ -147,11 +214,11 @@
 
 	<!-- Title -->
 	<div class="space-y-1">
-		<div class="flex items-center gap-2 text-sm text-gray-500">
+		<div class="flex items-center gap-1 text-sm text-black-500">
 			<span>Title of Session / Talk</span>
-			<span class="w-4 h-4 flex items-center justify-center rounded-full border text-xs">i</span>
+			<span class="w-6 h-6 flex items-center justify-center text-xs"><img src="/info-itallic.svg" alt="info" /></span>
 		</div>
-		<h3 class="text-xl font-semibold text-gray-900">
+		<h3 class="text-xl font-semibold text-gray-500">
 			The Future of AI in Business
 		</h3>
 	</div>
@@ -160,7 +227,7 @@
 
 	<!-- Original Event Name -->
 	<div class="space-y-1">
-		<label class="text-sm font-medium text-gray-700">
+		<label class="text-sm font-medium text-black-700">
 			Original Event Name <span class="text-blue-600">*</span>
 		</label>
 		<input
@@ -175,10 +242,22 @@
 		<label class="text-sm font-medium text-gray-700">
 			Original Event Date <span class="text-blue-600">*</span>
 		</label>
-		<input
-			type="date"
-			class="w-full rounded-lg border px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
-		/>
+		<div
+									class="relative w-full"
+									use:clickOutside={() => (openStartDatePickerModal = false)}
+								>
+									<button
+										on:click={async () => {
+											openStartDatePickerModal = !openStartDatePickerModal;
+											await tick();
+											scrollToId('date');
+										}}
+										class="rounded-t-r w-full p-2 text-sm font-semibold"
+										style="background-color: {selectedColor.smallCover}; border-top-left-radius: 9.75px;"
+										><p class="mr-auto w-fit">{formatDate(startDate)}</p></button
+									>
+									<DatePickerModal open={openStartDatePickerModal} bind:selectedDate={startDate} />
+								</div>
 	</div>
 
 	<!-- Description -->
@@ -197,8 +276,8 @@
 			></textarea>
 
 			<!-- Counter inside textarea -->
-			<span class="absolute bottom-2 right-3 text-xs text-gray-400">
-				0 / 200
+			<span class="flex absolute bottom-2 gap-2  right-3 text-xs text-gray-400">
+				0 / 200 <img src="/Resize.svg " alt="resize-icon"/>
 			</span>
 		</div>
 
@@ -225,42 +304,63 @@
 		</div>
 
 		<!-- Table -->
-		<div class="overflow-hidden rounded-lg border">
-			<table class="w-full text-sm">
-				<thead class="bg-gray-100 text-gray-600">
-					<tr>
-						<th class="px-4 py-2 text-left">
-							Learning Outcome ▲▼
-						</th>
-						<th class="px-4 py-2 text-right">
-							Action ▲▼
-						</th>
-					</tr>
-				</thead>
+<div class="overflow-hidden rounded-lg border">
+  <table class="w-full table-fixed text-sm">
+    
+    <!-- HEADER -->
+    <thead class="bg-gray-100 text-gray-600">
+      <tr>
+        <!-- Learning Outcome -->
+        <th class="px-4 py-2 text-left">
+          <div class="flex items-center gap-1">
+            Learning Outcome
+            <img src="/Sorting Icons [1.1].svg" alt="resize-icon" />
+          </div>
+        </th>
 
-				<tbody>
-					<tr class="border-t">
-						<td class="px-4 py-3">
-							Understand the basics of quantum computing
-						</td>
-						<td class="px-4 py-3 flex justify-end gap-3 text-gray-500">
-							<button>🗑</button>
-							<button>⋮</button>
-						</td>
-					</tr>
+        <!-- Trash action -->
+        <th class="px-4 py-2 text-right w-20">
+          <div class="flex items-center justify-end gap-1 pr-2">
+            Action
+            <img src="/Sorting Icons [1.1].svg" alt="resize-icon" />
+          </div>
+        </th>
 
-					<tr class="border-t">
-						<td class="px-4 py-3">
-							Explain the role of entanglement in computation
-						</td>
-						<td class="px-4 py-3 flex justify-end gap-3 text-gray-500">
-							<button>🗑</button>
-							<button>⋮</button>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-		</div>
+        <!-- More menu -->
+        <th class="px-4 py-2 w-12"></th>
+      </tr>
+    </thead>
+
+    <!-- BODY -->
+    <tbody>
+      {#each [1,2,3] as _}
+      <tr class="border-t">
+        <!-- Text -->
+        <td class="px-4 py-3">
+          Understand the basics of quantum computing
+        </td>
+
+        <!-- Trash -->
+        <td class="px-4 py-3 text-right">
+          <div class="flex justify-end pr-2 text-gray-500">
+            <button>
+              <img src="/trash.svg" alt="trash icon" />
+            </button>
+          </div>
+        </td>
+
+        <!-- More -->
+        <td class="px-4 py-3 text-center">
+          <button class="text-gray-500">⋮</button>
+        </td>
+      </tr>
+      {/each}
+    </tbody>
+
+  </table>
+</div>
+
+
 	</div>
 
 	<!-- Audience Engagement Style -->
@@ -303,7 +403,12 @@
 							<img src="/question-line.svg" alt="question-line" class="w-5 h-5">
 							<span class="font-medium text-[#171717] text-[14px]">Media</span>
 						</div>
-						<Plus class="h-4 w-4 text-[#5C5C5C]" />
+						{#if accordionStates.Media}
+  <Minus class="h-4 w-4 text-[#5C5C5C]" />
+{:else}
+  <Plus class="h-4 w-4 text-[#5C5C5C]" />
+{/if}
+
 					</button>
 
 					{#if accordionStates.Media}
@@ -337,8 +442,8 @@
 	<div class="rounded-lg border border-gray-200 p-4 space-y-2">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-3">
-				<span class="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-600">
-					PDF
+				<span class="rounded px-2 py-1 text-xs font-semibold text-red-600">
+					<img src="/pdf-format.svg" alt="PDF Icon" />
 				</span>
 
 				<div>
@@ -363,7 +468,7 @@
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-3">
 				<span class="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-600">
-					PDF
+					<img src="/pdf-format.svg" alt="PDF Icon" />
 				</span>
 
 				<div>
@@ -376,7 +481,7 @@
 				</div>
 			</div>
 
-			<button class="text-gray-400 hover:text-red-600">🗑</button>
+			<button class="text-gray-400 hover:text-red-600"> <img src="/trash.svg" alt="trash icon" /></button>
 		</div>
 	</div>
 
@@ -430,7 +535,12 @@
 							<img src="/question-line.svg" alt="question-line" class="w-5 h-5">
 							<span class="font-medium text-[#171717] text-[14px]">References & Testimonials</span>
 						</div>
-						<Plus class="h-4 w-4 text-[#5C5C5C]" />
+						{#if accordionStates['References & Testimonials']}
+  <Minus class="h-4 w-4 text-[#5C5C5C]" />
+{:else}
+  <Plus class="h-4 w-4 text-[#5C5C5C]" />
+{/if}
+
 					</button>
 
 					{#if accordionStates['References & Testimonials']}
@@ -507,7 +617,8 @@
 
 			<p class="flex items-center gap-2 text-xs text-gray-400">
 				<span class="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px]">
-					i
+					i Edit Product Details
+cover
 				</span>
 				You can describe your product briefly.
 			</p>
@@ -520,16 +631,17 @@
 			<thead class="bg-gray-100 text-gray-600">
 				<tr>
 					<th class="px-4 py-3 text-left">
-						Testimonial <span>⇅</span>
+						<div class="flex ">
+						Testimonial <span> <img src="/Sorting Icons [1.1].svg" alt="resize-icon" /></span></div>
 					</th>
 					<th class="px-4 py-3 text-left">
-						Event Name <span>⇅</span>
+						Event Name <span><img src="/Sorting Icons [1.1].svg" alt="resize-icon" /></span>
 					</th>
 					<th class="px-4 py-3 text-left">
-						Organizers Name <span>⇅</span>
+						Organizers Name <span><img src="/Sorting Icons [1.1].svg" alt="resize-icon" /></span>
 					</th>
 					<th class="px-4 py-3 text-center">
-						Action <span>⇅</span>
+						Action <span> <img src="/Sorting Icons [1.1].svg" alt="resize-icon" /></span>
 					</th>
 				</tr>
 			</thead>
@@ -546,7 +658,7 @@
 						Understand...
 					</td>
 					<td class="px-4 py-3 text-center">
-						<button class="text-gray-400 hover:text-red-600">🗑</button>
+						<button class="text-gray-400 hover:text-red-600"> <img src="/trash.svg" alt="trash icon" /></button>
 					</td>
 				</tr>
 
@@ -555,7 +667,7 @@
 					<td class="px-4 py-3 truncate">Explain the role of entan...</td>
 					<td class="px-4 py-3 truncate">Explain the r...</td>
 					<td class="px-4 py-3 text-center">
-						<button class="text-gray-400 hover:text-red-600">🗑</button>
+						<button class="text-gray-400 hover:text-red-600"> <img src="/trash.svg" alt="trash icon" /></button>
 					</td>
 				</tr>
 
@@ -564,7 +676,7 @@
 					<td class="px-4 py-3 truncate">Explain the role of entan...</td>
 					<td class="px-4 py-3 truncate">Explain the r...</td>
 					<td class="px-4 py-3 text-center">
-						<button class="text-gray-400 hover:text-red-600">🗑</button>
+						<button class="text-gray-400 hover:text-red-600"> <img src="/trash.svg" alt="trash icon" /></button>
 					</td>
 				</tr>
 			</tbody>
@@ -591,7 +703,12 @@
 							<img src="/question-line.svg" alt="question-line" class="w-5 h-5">
 							<span class="font-medium text-[#171717] text-[14px]">Available & Fees</span>
 						</div>
-						<Plus class="h-4 w-4 text-[#5C5C5C]" />
+						{#if accordionStates['Available & Fees']}
+  <Minus class="h-4 w-4 text-[#5C5C5C]" />
+{:else}
+  <Plus class="h-4 w-4 text-[#5C5C5C]" />
+{/if}
+
 					</button>
 
 					{#if accordionStates['Available & Fees']}

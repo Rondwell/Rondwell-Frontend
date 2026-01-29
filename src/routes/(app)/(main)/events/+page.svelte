@@ -94,7 +94,7 @@
 		return map;
 	})();
 </script>
-
+<!-- EventCard component is commented out -->
 <div class="w-full">
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-2xl font-medium md:text-3xl">Events</h2>

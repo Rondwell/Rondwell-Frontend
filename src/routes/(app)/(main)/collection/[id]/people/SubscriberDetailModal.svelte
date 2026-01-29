@@ -30,7 +30,7 @@
 
 <!-- Overlay -->
 <div
-	class="item-start fixed inset-0 z-50 flex justify-center bg-black/50 px-3 pt-[30px] backdrop-blur-sm sm:items-center sm:pt-0 lg:inset-y-0 lg:justify-end lg:p-0 lg:pr-10"
+	class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 backdrop-blur-sm lg:inset-y-0 lg:justify-end lg:pr-10"
 	on:click={() => dispatch('close')}
 >
 	<!-- Modal -->

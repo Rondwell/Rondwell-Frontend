@@ -1,12 +1,17 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-	import {X,Plus} from 'svelte-iconify';
-	import Plus from '@iconify/svelte';
+	import { createEventDispatcher, onDestroy } from 'svelte';
+import  Icon  from '@iconify/svelte';
 
 
+
+onDestroy(() => {
+	portfolioFiles.forEach((item) => {
+		URL.revokeObjectURL(item.preview);
+	});
+});
 	let openSection: string | null = null;
 
-	function toggle(section: string) {
+	function toggle(section: Section) {
 		openSection = openSection === section ? null : section;
 	}
 
@@ -81,11 +86,9 @@
 
 {#if show}
 	<!-- BACKDROP -->
-	<div class="fixed inset-0 z-40 bg-black/30" />
-
 	<!-- MODAL -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center p-4"
+		class="fixed inset-0 z-40 flex items-center justify-center  bg-black/30 p-4"
 		on:click={handleBackdropClick}
 	>
 		<div
@@ -94,8 +97,8 @@
 	<!-- HEADER -->
 <div class="relative flex flex-col items-center gap-1 px-6 pt-6">
 	<!-- CIRCLE ICON -->
-	<div class="mx-auto h-[96px] w-[96px]">
-							<img src="/detail-icon.svg" alt="detail-icon" class="h-full w-full" />
+	<div class="mx-auto ">
+							<img src="/NDB.svg" alt="detail-icon" class="h-full w-full" />
 						</div>
 
 	<h2 class="text-lg font-semibold text-gray-900">
@@ -110,7 +113,7 @@
 		on:click={closeModal}
 		class="absolute right-4 top-4 rounded-full p-1 hover:bg-gray-100"
 	>
-		<X class="h-4 w-4 text-gray-500" />
+		<Icon icon="heroicons:x-mark" class="h-4 w-4 text-gray-500" />
 	</button>
 </div>
 
@@ -213,7 +216,8 @@
 	>
 		Basic Information
 
-		<Plus
+		<Icon
+		icon="heroicons:plus"		
 			class={`h-4 w-4 transition-transform ${
 				openSection === 'basic' ? 'rotate-45' : ''
 			}`}
@@ -244,12 +248,12 @@
 						class="flex w-full items-center justify-between rounded-xl bg-gray-100 px-4 py-3 text-sm font-medium"
 					>
 						Pricing & Availability
-						<Plus
-  class={`h-4 w-4 transition-transform ${
-    openSection === 'pricing' ? 'rotate-45' : ''
-  }`}
-/>
-
+						<Icon
+		icon="heroicons:plus"		
+			class={`h-4 w-4 transition-transform ${
+				openSection === 'basic' ? 'rotate-45' : ''
+			}`}
+		/>
 					</button>
 
 					<!-- ADDITIONAL -->
@@ -258,13 +262,20 @@
 						class="flex w-full items-center justify-between rounded-xl bg-gray-100 px-4 py-3 text-sm font-medium"
 					>
 						Additional Details
-						<Plus
-  class={`h-4 w-4 transition-transform ${
-    openSection === 'additional' ? 'rotate-45' : ''
-  }`}
-/>
+						<Icon
+		icon="heroicons:plus"		
+			class={`h-4 w-4 transition-transform ${
+				openSection === 'basic' ? 'rotate-45' : ''
+			}`}
+		/>
 
-					</button>
+					</button>{#if openSection === 'pricing'}
+		<div
+			class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm text-gray-600 shadow-sm"
+		>
+			Pricing details go here.
+		</div>
+	{/if}
 				</div>
 			</div>
 

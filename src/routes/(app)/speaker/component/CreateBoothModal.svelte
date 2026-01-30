@@ -421,7 +421,7 @@ $: isAnyAccordionOpen = Object.values(accordionStates).some(Boolean);
 	<div
 		class="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 py-10 text-center"
 	>
-		<div class="text-gray-400 text-2xl">☁️</div>
+		<div class="text-gray-400 text-2xl"><img src="/upload.svg" alt="Upload Icon" /></div>
 
 		<p class="text-sm text-gray-700">
 			Choose a file or drag & drop it here.

@@ -430,7 +430,7 @@ let isCurrencyDropdownOpen = $state(false);
 <!-- Main Content -->
 	<main class="relative mb-[106px] flex-1 px-5 md:mb-0">
 		<!-- Header -->
-		<div class="mx-auto mb-8 overflow-x-hiddxt-[24px] font-semibold text-[#171717]">Speaker Details</h2>
+		<div class="mx-auto  mb-8 overflow-x-hiddxt-[24px] font-semibold text-[#171717]">Speaker Details</h2>
 		<p class="mt-1 text-sm text-[#5C5C5C]">
 			Provide essential speaker information
 		</p>

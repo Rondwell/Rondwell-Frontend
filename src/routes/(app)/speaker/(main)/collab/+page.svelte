@@ -158,7 +158,7 @@
 <div class="w-full max-w-4xl">
 	<!-- Page Header -->
 	<div class="mb-8 flex items-center gap-3">
-		<img src="/edit-cover-photo.svg" alt="logo" class="h-8 w-8 rounded-lg object-cover" />
+		<img src="/tech-icon.svg" alt="logo" class="h-8 w-8 rounded-lg object-cover" />
 		<h1 class="text-2xl font-bold">{vendorName}</h1>
 	</div>
 

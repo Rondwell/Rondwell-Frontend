@@ -21,7 +21,7 @@
 		},
 		{
 			id: '2',
-			name: 'Bright Okafor',
+			name: 'Joe Ken',
 			payment: '',
 			events: [
 				{

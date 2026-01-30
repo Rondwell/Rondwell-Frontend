@@ -1,16 +1,23 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import { clickOutside } from '$lib/utils/constant';
 
 	export let open: boolean = false;
 	const dispatch = createEventDispatcher();
+	onMount(() => {
+		document.body.style.overflow = 'hidden';
+
+		return () => {
+			document.body.style.overflow = '';
+		};
+	});
 </script>
 
 {#if open}
 	<!-- Container -->
 	<div
-		class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-3 pt-[40px] backdrop-blur-sm sm:items-center sm:pt-[0px] lg:inset-y-0 lg:p-0 lg:pr-10"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 pt-[40px] backdrop-blur-sm lg:inset-y-0 lg:p-0 lg:pr-10"
 		on:click={() => dispatch('close')}
 	>
 		<!-- Panel -->

@@ -173,7 +173,6 @@
 		<div>
 			<div>
 				<!-- Event Title -->
-				<h2 class="text-[55px] leading-[63.3px] font-bold">Megaexe Party, in mapi</h2>
 
 				<div>
 					<div class="mb-5.5 space-y-3">

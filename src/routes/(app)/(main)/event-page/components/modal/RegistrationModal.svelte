@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
+	import Dropdown from '../Dropdown.svelte';
 
 	export let open = false;
 
@@ -10,6 +11,11 @@
     { value: 'student', label: 'Student' },
     { value: 'other', label: 'Other' }
   ];
+
+  const defaultSelectOption = [
+	{ value: 'yes', label: 'Yes' },
+	{ value: 'no', label: 'No' }
+  ]
 
 	let form = {
 		name: '',
@@ -57,6 +63,21 @@
 		if (!validate()) return;
 
 		console.log('Form Data:', form);
+
+		// clear form data after submission 
+		form = {
+			name: '',
+			email: '',
+			company: '',
+			website: '',
+			location: '',
+			pitchSession1: false,
+			pitchSession2: false,
+			profileType: '',
+			invest: '',
+			attend: '',
+		};
+
 
 		// Close modal (optional)
 		open = false;
@@ -229,21 +250,16 @@
 				  </label>
 			  
 				   <div class="relative mt-2 ">
-					<select
-				      bind:value={form.profileType}
-				      class="w-full appearance-none rounded-[9px] bg-[#EBEBEC] border border-[#ECEDED] px-5 py-3 pr-12 text-sm text-[#3C3D3F] focus:outline-none focus:ring-0"
-				    >
-				      <option value="" disabled selected>Select an option</option>
-  					  {#each profileOptions as option}
-  					    <option class="py-3 h-10 bg-white" value={option.value}>
-  					      {option.label}
-  					    </option>
-  					  {/each}
-					</select>
-					<svg class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#696B6D]" width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
-					  <path d="M9.64673 0.779297C10.2857 1.434 10.4282 2.38163 9.99829 3.19434V3.19336L7.02954 8.83594V8.83496C6.67257 9.5174 5.96877 9.94333 5.19751 9.94336C4.42623 9.94336 3.72344 9.51741 3.36646 8.83496L3.36548 8.83594L0.395752 3.19336L0.396729 3.19238C0.229793 2.87882 0.149658 2.54839 0.149658 2.21777C0.149783 1.69095 0.355805 1.18125 0.747314 0.779297C1.38686 0.124028 2.33407 -0.0336343 3.15161 0.375L4.72876 1.16406C4.98125 1.29031 5.2809 1.30613 5.54907 1.21094L5.66138 1.16406L7.24341 0.375C8.06077 -0.0334866 9.00722 0.124375 9.64673 0.779297ZM9.21411 2.22266C9.21398 1.97004 9.11179 1.74227 8.96997 1.57031L8.90649 1.5C8.64907 1.23399 8.19657 1.04922 7.69849 1.2959L6.12134 2.08496H6.12036C5.61103 2.3372 5.02177 2.36885 4.49243 2.17969L4.2688 2.08496L2.69165 1.2959H2.69067C2.19381 1.04545 1.74196 1.23307 1.48364 1.5C1.22394 1.76844 1.04521 2.2205 1.30396 2.71289L4.27368 8.35547C4.45721 8.70546 4.80075 8.91309 5.19263 8.91309C5.58448 8.91307 5.92805 8.70544 6.11157 8.35547L9.09106 2.71289H9.09009C9.18044 2.54077 9.21411 2.37483 9.21411 2.22266Z" fill="#A9AAAA" stroke="#A9AAAA" stroke-width="0.3"/>
-					</svg>
+
+					
+				  <Dropdown
+  options={profileOptions}
+  value={form.profileType}
+  placeholder="Select an option"
+  on:change ={(e) => form.profileType = e.detail.value || ''}
+/>
 				   </div>
+
 
 				  {#if errors.profileType}
 				    <p class="mt-1 text-sm text-red-500">{errors.profileType}</p>
@@ -255,22 +271,14 @@
 				   Are you interested in investing with us? *
 				  </label>
 			  
-				   <div class="relative mt-2 ">
-					<select
-				      bind:value={form.invest}
-				      class="w-full appearance-none rounded-[9px] bg-[#EBEBEC] border border-[#ECEDED] px-5 py-3 pr-12 text-sm text-[#3C3D3F] focus:outline-none focus:ring-0"
-				    >
-				      <option value="" disabled selected>Select an option</option>
-  					    <option class="py-3 h-10 bg-white" value='yes'>
-  					      Yes
-  					    </option>
-						<option class="py-3 h-10 bg-white" value='no'>
-  					      No
-  					    </option>
-					</select>
-					<svg class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#696B6D]" width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
-					  <path d="M9.64673 0.779297C10.2857 1.434 10.4282 2.38163 9.99829 3.19434V3.19336L7.02954 8.83594V8.83496C6.67257 9.5174 5.96877 9.94333 5.19751 9.94336C4.42623 9.94336 3.72344 9.51741 3.36646 8.83496L3.36548 8.83594L0.395752 3.19336L0.396729 3.19238C0.229793 2.87882 0.149658 2.54839 0.149658 2.21777C0.149783 1.69095 0.355805 1.18125 0.747314 0.779297C1.38686 0.124028 2.33407 -0.0336343 3.15161 0.375L4.72876 1.16406C4.98125 1.29031 5.2809 1.30613 5.54907 1.21094L5.66138 1.16406L7.24341 0.375C8.06077 -0.0334866 9.00722 0.124375 9.64673 0.779297ZM9.21411 2.22266C9.21398 1.97004 9.11179 1.74227 8.96997 1.57031L8.90649 1.5C8.64907 1.23399 8.19657 1.04922 7.69849 1.2959L6.12134 2.08496H6.12036C5.61103 2.3372 5.02177 2.36885 4.49243 2.17969L4.2688 2.08496L2.69165 1.2959H2.69067C2.19381 1.04545 1.74196 1.23307 1.48364 1.5C1.22394 1.76844 1.04521 2.2205 1.30396 2.71289L4.27368 8.35547C4.45721 8.70546 4.80075 8.91309 5.19263 8.91309C5.58448 8.91307 5.92805 8.70544 6.11157 8.35547L9.09106 2.71289H9.09009C9.18044 2.54077 9.21411 2.37483 9.21411 2.22266Z" fill="#A9AAAA" stroke="#A9AAAA" stroke-width="0.3"/>
-					</svg>
+				   <div class="mt-2 ">
+									  <Dropdown
+  options={defaultSelectOption}
+  value={form.invest}
+  placeholder="Select an option"
+  on:change ={(e) => form.invest = defaultSelectOption.find(opt => opt.value === e.detail.value)?.value || ''}
+/>
+					
 				   </div>
 
 				  {#if errors.invest}
@@ -284,23 +292,12 @@
 				  </label>
 			  
 				   <div class="relative mt-2 ">
-					<select
-				      bind:value={form.attend}
-				      class="w-full appearance-none rounded-[9px] bg-[#EBEBEC] border border-[#ECEDED] px-5 py-3 pr-12 text-sm text-[#3C3D3F] focus:outline-none focus:ring-0"
-				    >
-				      <option value="" disabled selected>Select an option</option>
-  					  
-  					    <option class="bg-white" value='yes'>
-  					      Yes
-  					    </option>
-						<option class="bg-white" value='no'>
-  					      No
-  					    </option>
-  					
-					</select>
-					<svg class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#696B6D]" width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
-					  <path d="M9.64673 0.779297C10.2857 1.434 10.4282 2.38163 9.99829 3.19434V3.19336L7.02954 8.83594V8.83496C6.67257 9.5174 5.96877 9.94333 5.19751 9.94336C4.42623 9.94336 3.72344 9.51741 3.36646 8.83496L3.36548 8.83594L0.395752 3.19336L0.396729 3.19238C0.229793 2.87882 0.149658 2.54839 0.149658 2.21777C0.149783 1.69095 0.355805 1.18125 0.747314 0.779297C1.38686 0.124028 2.33407 -0.0336343 3.15161 0.375L4.72876 1.16406C4.98125 1.29031 5.2809 1.30613 5.54907 1.21094L5.66138 1.16406L7.24341 0.375C8.06077 -0.0334866 9.00722 0.124375 9.64673 0.779297ZM9.21411 2.22266C9.21398 1.97004 9.11179 1.74227 8.96997 1.57031L8.90649 1.5C8.64907 1.23399 8.19657 1.04922 7.69849 1.2959L6.12134 2.08496H6.12036C5.61103 2.3372 5.02177 2.36885 4.49243 2.17969L4.2688 2.08496L2.69165 1.2959H2.69067C2.19381 1.04545 1.74196 1.23307 1.48364 1.5C1.22394 1.76844 1.04521 2.2205 1.30396 2.71289L4.27368 8.35547C4.45721 8.70546 4.80075 8.91309 5.19263 8.91309C5.58448 8.91307 5.92805 8.70544 6.11157 8.35547L9.09106 2.71289H9.09009C9.18044 2.54077 9.21411 2.37483 9.21411 2.22266Z" fill="#A9AAAA" stroke="#A9AAAA" stroke-width="0.3"/>
-					</svg>
+									  <Dropdown
+  options={defaultSelectOption}
+  value={form.attend}
+  placeholder="Select an option"
+  on:change ={(e) => form.attend = defaultSelectOption.find(opt => opt.value === e.detail.value)?.value || ''}
+/>
 				   </div>
 
 				  {#if errors.attend}

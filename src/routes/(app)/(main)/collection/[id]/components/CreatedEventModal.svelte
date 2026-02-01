@@ -94,7 +94,7 @@
 {#if open}
 	<!-- Container -->
 	<div
-		class="md:item-center fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-3 pt-10 backdrop-blur-sm lg:inset-y-0 lg:p-0 lg:pr-10"
+		class="md:item-center fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 backdrop-blur-sm lg:inset-y-0 lg:p-0 lg:pr-10"
 		on:click={() => dispatch('close')}
 	>
 		<!-- Panel -->
@@ -187,9 +187,12 @@
 			</div>
 
 			<!-- Existing Event section -->
-			<div class="custom-scrollbar overflow-y-auto px-3 pb-10 md:pb-4" style="max-height: 70vh;">
-				<div class="flex items-center py-2">
-					<div class="flex cursor-pointer" on:click={() => dispatch('collection')}>
+			<div
+				class="max-h-[70vh] overflow-y-auto px-3 pb-10
+         md:max-h-full md:overflow-visible md:pb-4"
+			>
+				<div class="flex items-center gap-2 py-2">
+					<div class=" cursor-pointer" on:click={() => dispatch('collection')}>
 						<svg
 							width="38"
 							height="38"
@@ -215,9 +218,8 @@
 								stroke-width="0.394627"
 							/>
 						</svg>
-
-						<p class=" ml-3 pt-2 text-[16px]">Existing Rondwell Event</p>
 					</div>
+					<p class="text-[16px]">Existing Rondwell Event</p>
 				</div>
 				<!-- URL SECTION  -->
 				<div class="pt-2">

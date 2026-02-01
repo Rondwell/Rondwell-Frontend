@@ -9,9 +9,9 @@
 	};
 
 	let collaborationRequests = [
-		{ id: 1, from: 'John Odoemenem', for: 'Megaexe award ce...' },
-		{ id: 2, from: 'John Odoemenem', for: 'Megaexe Induction c...' },
-		{ id: 3, from: 'John Odoemenem', for: 'Megaexe award ce...' }
+		{ id: 1, from: 'John Odoemenem', for: 'Megaexe award ceremony' },
+		{ id: 2, from: 'John Odoemenem', for: 'Megaexe Induction ceremony' },
+		{ id: 3, from: 'John Odoemenem', for: 'Megaexe award ceremonydnsfdjnfsjfndfsl' }
 	];
 
 	let booths = [
@@ -46,7 +46,7 @@
 				<h1 class="text-[24px] font-normal text-gray-900 xl:text-[35.25px]">Sleekwareandslides</h1>
 			</div>
 			<p
-				class="mt-5 flex flex-wrap items-center text-[18px] text-[#00000080] md:mt-20 xl:text-[29.48px]"
+				class="mt-5 flex flex-wrap items-center text-[18px] text-[#00000080] md:mt-10 xl:text-[29.48px]"
 			>
 				Welcome Back <span class="font-semibold text-[#171717] ml-1"> Megaexe Limited</span>
 				<span class="text-text-[29.48px]">👋🏻</span>
@@ -98,7 +98,7 @@
 			{/each}
 		</div>
 
-		<div class="my-15 h-[1px] w-full bg-[#E2E4E5]"></div>
+		<div class="my-10 h-[1px] w-full bg-[#E2E4E5]"></div>
 
 		<!-- Recent Collaboration Requests -->
 		<div class="mb-8 rounded-xl xl:p-5">
@@ -162,23 +162,24 @@
 
 					{#each collaborationRequests as request}
 						<div
-							class="flex w-full flex-col gap-3 border-b-[1.23px] border-[#EAEBEB] px-5 py-2 last:border-0 xl:flex-row xl:items-center"
+							class="flex w-full  flex-col gap-3 border-b-[1.23px] border-[#EAEBEB] px-5 py-2 last:border-0 xl:flex-row xl:items-center"
 						>
 							<span class="text-[19.65px] text-[#808080]">Invitation from</span>
-							<div class="flex gap-3">
+							<div class="flex gap-3" >
 								<div class="flex w-[33.34px] items-center justify-center">
 									<img src="Profile Gravater.svg" alt="Profile Gravater" class="h-full w-full" />
 								</div>
-								<span class="text-[19.65px] text-[#131517]">{request.from}</span>
+								<span class="text-[18.65px] text-[#131517]" >{request.from}</span>
 							</div>
-							<span class="text-[19.65px] text-[#808080]">for {request.for}</span>
+							<span class="text-[18.65px] text-[#808080] flex-1 w-60 truncate bg-blue-50" >for {request.for}</span>
+							
 						</div>
 					{/each}
 				</div>
 			</div>
 		</div>
 
-		<div class="my-15 h-[1px] w-full bg-[#E2E4E5]"></div>
+		<div class="my-10 h-[1px] w-full bg-[#E2E4E5]"></div>
 
 		<!-- My Latest Booths and Stands -->
 		<div class="mb-8 xl:p-5">
@@ -230,7 +231,7 @@
 			</div>
 		</div>
 
-		<div class="my-15 h-[1px] w-full bg-[#E2E4E5]"></div>
+		<div class="my-10 h-[1px] w-full bg-[#E2E4E5]"></div>
 
 		<!-- Recent Transaction History -->
 		<div class="xl:p-5">

@@ -1,9 +1,18 @@
 <script lang="ts">
+	
 	import { page } from '$app/stores';
-	import { showSubMenu, subMenuItems, activeSubItem } from '$lib/stores/uiStore.js';
+	import {
+	showSubMenu,
+	subMenuItems,
+	activeSubItem,
+	showSettingsSubMenu,
+	settingsSubMenuItems,
+	activeSettingsItem
+} from '$lib/stores/uiStore';
+
 	import { get } from 'svelte/store';
 
-	// Fake icons – replace later
+	
 	const collectionIcon = {
 		eventIcon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M13.9081 18.9584H6.09144C2.61644 18.9584 1.55811 17.9 1.55811 14.425V14.0417C1.55811 13.7 1.84144 13.4167 2.18311 13.4167C2.91644 13.4167 3.51644 12.8167 3.51644 12.0834C3.51644 11.35 2.91644 10.75 2.18311 10.75C1.84144 10.75 1.55811 10.4667 1.55811 10.125V9.74171C1.55811 6.26671 2.61644 5.20837 6.09144 5.20837H13.9081C17.3831 5.20837 18.4414 6.26671 18.4414 9.74171V10.525C18.4414 10.8667 18.1581 11.15 17.8164 11.15C17.0831 11.15 16.4831 11.75 16.4831 12.4834C16.4831 13.2167 17.0831 13.8084 17.8164 13.8084C18.1581 13.8084 18.4414 14.0917 18.4414 14.4334C18.4331 17.9 17.3748 18.9584 13.9081 18.9584ZM2.81644 14.5917C2.83311 17.2417 3.35811 17.7084 6.09977 17.7084H13.9164C16.5164 17.7084 17.1164 17.2834 17.1914 14.975C16.0748 14.6917 15.2414 13.6834 15.2414 12.475C15.2414 11.2667 16.0748 10.25 17.1998 9.96671V9.73337C17.1998 6.94171 16.7081 6.45004 13.9164 6.45004H6.09144C3.35811 6.45004 2.83311 6.92504 2.80811 9.56671C3.93311 9.85004 4.76644 10.8667 4.76644 12.075C4.76644 13.2834 3.93311 14.3084 2.81644 14.5917Z" fill="currentColor"/>
@@ -89,31 +98,74 @@
 		]);
 	}
 
+	function updateSettingsSubMenu(collectionId: string) {
+	settingsSubMenuItems.set([
+		{ label: 'Display',
+		icon: collectionIcon.eventIcon, nav: `/collection/${collectionId}/settings/display` },
+		{ label: 'Payment', 
+		icon: collectionIcon.eventIcon, nav: `/collection/${collectionId}/settings/payment` },
+		{ label: 'Options',
+		icon: collectionIcon.eventIcon, nav: `/collection/${collectionId}/settings/options` },
+		{ label: 'Admins', 
+		icon: collectionIcon.eventIcon, nav: `/collection/${collectionId}/settings/admins` },
+		{ label: 'Tags',
+		icon: collectionIcon.eventIcon, 
+		 nav: `/collection/${collectionId}/settings/tags` },
+		{ label: 'Embed',
+		icon: collectionIcon.eventIcon, nav: `/collection/${collectionId}/settings/embed` },
+		{ label: 'Send limit',
+		icon: collectionIcon.eventIcon, nav: `/collection/${collectionId}/settings/send-limit` },
+		{ label: 'Rondwell Plus',
+		icon: collectionIcon.eventIcon, nav: `/collection/${collectionId}/settings/plus` }
+
+	]);
+}
+
+
 	$: {
-		const path = $page.url.pathname;
+	const path = $page.url.pathname;
 
-		// This handles collection routes
-		const collectionMatch = path.match(/^\/collection\/([^/]+)/);
+	const collectionMatch = path.match(/^\/collection\/([^/]+)/);
 
-		if (collectionMatch) {
-			const collectionId = collectionMatch[1];
+	if (collectionMatch) {
+		const collectionId = collectionMatch[1];
 
-			// This builds submenu dynamically
-			updateCollectionSubMenu(collectionId);
+		// ---- Level 1 submenu (Events, People, Settings...)
+		updateCollectionSubMenu(collectionId);
+		const currentMenu = get(subMenuItems);
+		const active = currentMenu.find((item) => path.startsWith(item.nav))?.label || 'Events';
+		activeSubItem.set(active);
+		showSubMenu.set(true);
 
-			// Sets active submenu
-			const currentMenu = get(subMenuItems);
-			const active = currentMenu.find((item) => path.startsWith(item.nav))?.label || 'Events';
+		// ---- Level 2 submenu (ONLY when in settings)
+		if (path.startsWith(`/collection/${collectionId}/settings`)) {
+			updateSettingsSubMenu(collectionId);
+			showSettingsSubMenu.set(true);
+			// goto(`/collection/${collectionId}/settings/display`, { replaceState: true });
 
-			activeSubItem.set(active);
-			showSubMenu.set(true);
+			const settingsMenu = get(settingsSubMenuItems);
+			const activeSettings =
+				settingsMenu.find((item) => path.startsWith(item.nav))?.label || 'Display';
+
+			activeSettingsItem.set(activeSettings);
 		} else {
-			// Resets submenu outside collection routes
-			showSubMenu.set(false);
-			subMenuItems.set([]);
-			activeSubItem.set('');
+			showSettingsSubMenu.set(false);
+			settingsSubMenuItems.set([]);
+			activeSettingsItem.set('');
 		}
+
+	} else {
+		// Outside collection routes
+		showSubMenu.set(false);
+		subMenuItems.set([]);
+		activeSubItem.set('');
+
+		showSettingsSubMenu.set(false);
+		settingsSubMenuItems.set([]);
+		activeSettingsItem.set('');
 	}
+}
+
 </script>
 
 <slot />

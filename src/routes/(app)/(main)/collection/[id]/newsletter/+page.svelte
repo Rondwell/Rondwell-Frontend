@@ -8,19 +8,18 @@
 	$: peopleCount = published.length;
 </script>
 
-<section class="px-4 py-2">
+<section class="p-4 ">
 	<!-- Header -->
 
-	<div class="mb-6 flex flex-col justify-between sm:flex-row md:mb-10">
-		<div class="flex items-center">
-			<img src="/tech-icon.svg" alt="icon" class="hidden h-7 w-7 md:block" />
-			<h1 class="text-2xl">Business Collection</h1>
+	<div class="mb-6 flex flex-col justify-between sm:flex-row md:mb-6">
+		<div class="flex items-center justify-between">
+			<img src="/tech-icon.svg" alt="icon" class="h-7 w-7" />
+			<h1 class="ml-2 lg:text-2xl text-md">Business Collection</h1>
 		</div>
-
 		<button
-			class="mt-2 flex w-[145px] items-center gap-2 rounded-md bg-[#EBECED] px-3 py-1 text-sm text-[#5D646F] sm:mt-0"
+			class="flex items-center gap-2 w-fit rounded-md bg-[#DCE4EE] px-3 whitespace-nowrap md:text-sm text-[#5D646F]"
 		>
-			Calendar Page
+			<span class="md:text-sm">Calendar Page</span>
 			<svg
 				width="16"
 				height="16"

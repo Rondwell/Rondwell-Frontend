@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
     import Icon from '@iconify/svelte';
 	import { colors } from '$lib/utils/colors';
 type SocialLinkKey = 'instagram' | 'x' | 'youtube' | 'tiktok' | 'linkedin' | 'website';
@@ -471,4 +471,4 @@ type SocialLinkKey = 'instagram' | 'x' | 'youtube' | 'tiktok' | 'linkedin' | 'we
 		</button>
 	</div>
 	</div>
-</div>
+</div> -->

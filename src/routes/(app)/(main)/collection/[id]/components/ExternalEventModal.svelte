@@ -39,12 +39,7 @@
 	let locationName = '...';
 	let timezone = '';
 
-	$: if (open) {
-		previousOverflow = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
-	} else {
-		document.body.style.overflow = previousOverflow || '';
-	}
+	
 
 	function submitEvent() {
 		dispatch('submit', {

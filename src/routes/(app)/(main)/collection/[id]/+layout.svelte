@@ -8,9 +8,11 @@
 	showSettingsSubMenu,
 	settingsSubMenuItems,
 	activeSettingsItem
+
 } from '$lib/stores/uiStore';
 
 	import { get } from 'svelte/store';
+	
 
 	
 	const collectionIcon = {
@@ -73,7 +75,7 @@
 			{
 				label: 'Events',
 				icon: collectionIcon.eventIcon,
-				nav: `/collection/${collectionId}/events`
+				nav: `/collection/${collectionId}`
 			},
 			{
 				label: 'People',
@@ -101,7 +103,7 @@
 	function updateSettingsSubMenu(collectionId: string) {
 	settingsSubMenuItems.set([
 		{ label: 'Display',
-		icon: collectionIcon.eventIcon, nav: `/collection/${collectionId}/settings/display` },
+		icon: collectionIcon.eventIcon, nav: `/collection/${collectionId}/settings` },
 		{ label: 'Payment', 
 		icon: collectionIcon.eventIcon, nav: `/collection/${collectionId}/settings/payment` },
 		{ label: 'Options',
@@ -148,6 +150,8 @@
 				settingsMenu.find((item) => path.startsWith(item.nav))?.label || 'Display';
 
 			activeSettingsItem.set(activeSettings);
+
+
 		} else {
 			showSettingsSubMenu.set(false);
 			settingsSubMenuItems.set([]);

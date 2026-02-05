@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@carbon/charts-svelte": "^1.22.18",
-    "@iconify/svelte": "^5.0.2",
+    "@iconify/svelte": "^5.2.1",
     "@sveltejs/adapter-netlify": "^5.0.2",
     "bits-ui": "^0.21.2",
     "carbon-components": "^10.59.2",

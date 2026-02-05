@@ -2,15 +2,16 @@
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
     import { onDestroy } from 'svelte';
+	import OnboardingNavbar from '../../components/OnboardingNavbar.svelte';
 
     // live time
-    let now = $state(formatTime());
+   /* let now = $state(formatTime());
 
     const updateTime = () => {
         now = formatTime();
     };
 
-    function formatTime() {
+   // function formatTime() {
         let rawTime = new Date().toLocaleString('en-GB', {
             weekday: 'short',
             month: 'short',
@@ -27,6 +28,10 @@
 
     const interval = setInterval(updateTime, 60000);
     onDestroy(() => clearInterval(interval));
+	const now = new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit'
+  }) + ' GMT+1';*/
 
     // ==========================================
     // 1. APP STATE
@@ -125,12 +130,13 @@
         description: ''
     });
 
-    let steps = [
+    /*let steps = [
         { number: 1, title: 'Business Details' },
         { number: 2, title: 'Payment & Pricing Setup' },
         { number: 3, title: 'Your First Listing' },
         { number: 4, title: 'Summary' }
-    ];
+    ];*/
+	const steps = ['Business Details', 'Payment & Pricing Setup','Your First Listing', 'Summary'];
 
     let currencySymbol = $derived(formData.currency.includes('Naira') ? '₦' : '$');
     let displayCategory = $derived(
@@ -226,58 +232,70 @@
         currentStep = stepNumber;
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+	function editField(step: number) {
+		// Allow navigation to any completed step or current step
+		if (step <= currentStep) {
+			currentStep = step;
+		}
+	}
+	function handleHorizontalScroll(event: WheelEvent) {
+    const container = event.currentTarget as HTMLElement;
+    event.preventDefault();
+    container.scrollLeft += event.deltaY;
+}
+	const totalSteps = 4;
 </script>
 
-<div class="bg relative min-h-screen overflow-hidden font-sans">
-	<div class="relative w-full border-b border-[#1815151A]">
-		<header
-			class="relative z-20 mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-3 md:px-10"
-		>
-			<a href="/" class="flex items-center gap-2">
-				<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
-			</a>
-
-			<div class="flex items-center gap-3 text-[#909EA3] md:gap-6">
-				<span class="hidden text-sm md:inline">{now}</span>
-
-				<button class="flex items-center gap-1 transition hover:text-gray-800">
-					Create Secrets
-					<Icon icon="heroicons:heart" class="h-3 w-3" />
-				</button>
-				<button
-					class="rounded-full bg-[#EBEBEB] px-5 py-2 text-gray-900 transition hover:bg-gray-200"
-				>
-					Sign In
-				</button>
-			</div>
-		</header>
-	</div>
-
+<div class="bg relative min-h-screen overflow-hidden font-sans pb-28 md:pb-0">
+	<OnboardingNavbar />
+	<!-- Background Decorations -->
 	<div class="mx-auto my-10 flex max-w-5xl items-center justify-center">
-		<div
-			class="flex w-fit flex-wrap items-center justify-center gap-4 text-sm text-gray-400 sm:justify-between sm:gap-8"
-		>
-			<div class="flex items-center gap-6 overflow-x-auto pb-2 sm:pb-0">
-				{#each steps as step}
-					<div
-						class="flex items-center gap-2 whitespace-nowrap {currentStep === step.number
-							? 'font-semibold text-purple-600'
-							: ''}"
-					>
-						<span
-							class="flex h-6 w-6 items-center justify-center rounded-full text-xs {currentStep >=
-							step.number
-								? 'bg-purple-600 text-white'
-								: 'bg-gray-200 text-gray-500'}">{step.number}</span
-						>
-						<span class={currentStep >= step.number ? 'text-gray-900' : ''}>{step.title}</span>
-					</div>
-					{#if step.number !== 4}
-						<Icon icon="heroicons:chevron-right" class="h-4 w-4 text-gray-300" />
-					{/if}
-				{/each}
-			</div>
-		</div>
+		<!-- Progress Indicator - ALL STEPS VISIBLE -->
+<div class="mb-8 w-full border-b border-[#EBEBEB] py-3 pt-3">
+  <div class="flex w-full items-center justify-between px-4 md:px-0">
+
+    {#each steps as step, index}
+      <button
+        type="button"
+        class="flex items-center gap-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        onclick={() => editField(index + 1)}
+        disabled={index + 1 > currentStep}
+      >
+        <!-- STEP NUMBER -->
+        <div
+          class="flex h-6 w-6 items-center justify-center rounded-full text-sm font-normal transition-all"
+          style="
+            background: {currentStep > index
+              ? 'linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%)'
+              : '#FFFFFF'};
+            color: {currentStep > index ? '#FFFFFF' : '#5C5C5C'};
+          "
+        >
+          {index + 1}
+        </div>
+
+        <!-- STEP LABEL -->
+        <span
+          class="text-sm font-normal whitespace-nowrap transition-all"
+          style="color: {currentStep > index ? '#171717' : '#5C5C5C'}"
+        >
+          {step}
+        </span>
+
+        <!-- ARROW (except last) -->
+        {#if index < steps.length - 1}
+          <img
+            src="/arrow-right-s-line.svg"
+            alt="arrow"
+            class="h-4 w-4 text-gray-400"
+          />
+        {/if}
+      </button>
+    {/each}
+
+  </div>
+</div>
+
 	</div>
 
 	<div

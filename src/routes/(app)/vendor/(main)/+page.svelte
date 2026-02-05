@@ -16,7 +16,7 @@
 		{
 			title: 'Active Listings',
 			count: '8',
-			icon: 'heroicons:cube',
+			icon: '/brand3.svg',
 			color: 'text-green-500',
 			bg: 'bg-green-50',
 			btn: 'View All Listings'
@@ -24,7 +24,7 @@
 		{
 			title: 'Pending Orders',
 			count: '12',
-			icon: 'heroicons:clock',
+			icon: '/brand4.svg',
 			color: 'text-purple-500',
 			bg: 'bg-purple-50',
 			btn: 'Review Orders'
@@ -32,7 +32,7 @@
 		{
 			title: 'Accepted Orders',
 			count: '24',
-			icon: 'heroicons:cube',
+			icon: '/brand2.svg',
 			color: 'text-blue-500',
 			bg: 'bg-blue-50',
 			btn: 'View Accepted'
@@ -43,7 +43,7 @@
 		{
 			title: 'Total Revenue',
 			value: '₦1,250,000',
-			icon: 'heroicons:banknotes',
+			icon: '/brand5.svg',
 			color: 'text-pink-500',
 			bg: 'bg-pink-50',
 			type: 'revenue',
@@ -52,7 +52,7 @@
 		{
 			title: 'Profile Views',
 			value: '1.2k',
-			icon: 'heroicons:user',
+			icon: '/brand6.svg',
 			color: 'text-yellow-500',
 			bg: 'bg-yellow-50',
 			type: 'chart',
@@ -62,7 +62,7 @@
 		{
 			title: 'Order Conversion Rate',
 			value: '4.5%',
-			icon: 'heroicons:arrow-path',
+			icon: 'brand.svg',
 			color: 'text-teal-500',
 			bg: 'bg-teal-50',
 			type: 'chart',
@@ -77,14 +77,14 @@
 			email: 'john.odoe...gmail.com',
 			event: 'Megaexe Award Ceremony',
 			time: '12 Minutes Ago',
-			avatar: '/face.svg'
+			avatar: '/Profile Gravater.svg'
 		},
 		{
 			name: 'John Innocent Tamunosiki',
 			email: 'tamunosiki...gmail.com',
 			event: 'Megaexe Award Ceremony',
 			time: '13 Minutes Ago',
-			avatar: '/face-1.svg'
+			avatar: '/face-2.svg'
 		}
 	];
 
@@ -95,7 +95,7 @@
 			name: 'Event Management',
 			sub: 'Event Venue',
 			price: '₦1,250,000',
-			date: 'Jan 25',
+			date: 'January 25',
 			day: 'Monday',
 			type: 'Custom Quote',
 			status: 'Active',
@@ -156,7 +156,7 @@
 
 <div class="min-h-screen w-full text-[#101828]">
 	<div class="mb-8 flex items-center gap-3">
-		<img src="/edit-cover-photo.svg" alt="logo" class="h-8 w-8 rounded-lg object-cover" />
+		<img src="/loader.svg" alt="logo" class="h-8 w-8 rounded-lg object-cover" />
 		<h1 class="text-2xl font-bold">{vendorName}</h1>
 	</div>
 
@@ -168,7 +168,7 @@
 				>
 					<div class="mb-1">
 						<div class={`mb-3 flex h-10 w-10 items-center justify-center rounded-full ${stat.bg}`}>
-							<Icon icon={stat.icon} class={`h-5 w-5 ${stat.color}`} />
+							<img src={stat.icon} class={`h-10 w-10`} />
 						</div>
 						<div class="mb-1 text-3xl font-bold">{val(stat.count)}</div>
 						<div class="text-xs text-gray-500">{stat.title}</div>
@@ -189,7 +189,7 @@
 					<div class="mb-1 w-full">
 						<div class="mb-3 flex items-start justify-between">
 							<div class={`flex h-10 w-10 items-center justify-center rounded-full ${stat.bg}`}>
-								<Icon icon={stat.icon} class={`h-5 w-5 ${stat.color}`} />
+								<img src={stat.icon} class={`h-10 w-10`} />
 							</div>
 							{#if stat.type === 'revenue'}
 								<button
@@ -227,7 +227,7 @@
 		</div>
 
 		<div
-			class="flex min-h-[300px] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+			class="flex min-h-[300px] flex-col overflow-hidden rounded-2xl border border-gray-100 "
 		>
 			<div class="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 p-5">
 				<h2 class="font-bold text-gray-900">Collaboration Request</h2>
@@ -235,10 +235,10 @@
 				{#if hasActivity}
 					<a
 						href="/vendor/collab"
-						class="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-gray-900"
+						class="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-gray-900 bg-gray-200 px-3 py-2 rounded-lg"
 					>
 						View All Collaboration Requests
-						<img src="/arrow-right.svg" alt="arrow" class="h-3 w-3" />
+						<img src="/arrow-left.svg" alt="arrow" class="h-3 w-3" />
 					</a>
 				{/if}
 			</div>
@@ -296,11 +296,11 @@
 				<h2 class="text-lg font-bold">Your Latest Products</h2>
 				<div class="flex gap-2">
 					<button
-						class="flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200"
-						>+ Add New Product</button
+						class="flex items-center gap-1 rounded-lg bg-gray-300 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-300"
+						><img src="/plus.svg" alt="plus" class="h-3 w-3" />  Add New Product</button
 					>
 					<button
-						class="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50"
+						class="flex items-center gap-2 rounded-lg bg-gray-300 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50"
 					>
 						View All Products
 						<img src="/arrow-left.svg" alt="arrow" class="h-3 w-3" />
@@ -309,78 +309,102 @@
 			</div>
 
 			{#if hasActivity}
-				<div class="relative space-y-8 border-l border-gray-200 pl-6">
-					{#each latestProducts as product}
-						<div class="relative">
-							<div
-								class="absolute top-0 -left-[29px] h-3 w-3 rounded-full bg-gray-300 ring-4 ring-gray-50"
-							></div>
-							<div class="mb-2">
-								<p class="text-sm font-bold text-gray-900">{product.date}</p>
-								<p class="text-xs text-gray-400">{product.day}</p>
-							</div>
-							<div
-								class="flex max-w-2xl flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row"
-							>
-								<div class="flex flex-1 flex-col justify-between">
-									<div class="flex items-start justify-between">
-										<div>
-											<h3 class="text-sm font-bold text-gray-900">{product.name}</h3>
-											<p class="text-xs text-gray-500">{product.sub}</p>
-										</div>
-									</div>
-									<div class="mt-2 mb-4">
-										<span class="text-lg font-bold text-gray-900">{product.price}</span>
-										<span
-											class="ml-2 flex inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-500"
-										>
-											<img src="/edit-icon-2.svg" alt="icon" class="h-3 w-3 opacity-60" />
-											{product.type}
-										</span>
-									</div>
-									<div class="flex gap-2">
-										<button
-											class="flex items-center gap-1.5 rounded-lg bg-black px-3 py-1.5 text-[10px] font-bold text-white"
-										>
-											<img
-												src="/edit-icon-2.svg"
-												alt="active"
-												class="h-3 w-3 brightness-0 invert"
-											/>
-											Active
-										</button>
-										<button
-											class="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50"
-										>
-											<Icon icon="heroicons:document-duplicate" /> Duplicate
-										</button>
-										<button
-											class="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50"
-										>
-											<Icon icon="heroicons:archive-box" /> Archive
-										</button>
-										<button
-											class="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-[10px] font-bold text-red-500 hover:bg-red-50"
-										>
-											<Icon icon="heroicons:trash" /> Delete
-										</button>
-									</div>
-								</div>
-								<div
-									class="relative h-32 w-full flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 sm:w-32"
-								>
-									<img src={product.image} alt={product.name} class="h-full w-full object-cover" />
-									<span
-										class={`absolute top-2 right-2 z-10 rounded-md border border-transparent px-2 py-0.5 text-[10px] font-bold shadow-sm ${product.statusColor}`}
-									>
-										{product.status}
-									</span>
-								</div>
-							</div>
-						</div>
-					{/each}
-				</div>
-			{:else}
+  <div class="relative">
+
+    <!-- TIMELINE CONTAINER -->
+    <div class="relative space-y-10">
+
+      {#each latestProducts as product}
+        <div class="relative flex items-start gap-6">
+
+          <!-- DATE / DAY -->
+          <div class="w-24 text-left">
+            <p class="text-sm font-bold text-gray-900">{product.date}</p>
+            <p class="text-xs text-gray-400">{product.day}</p>
+          </div>
+
+          <!-- TIMELINE COLUMN (CONTINUOUS) -->
+  <div class="relative hidden md:flex w-[11px] shrink-0 justify-center self-stretch">
+    <!-- CONTINUOUS DASHED LINE -->
+    <span class="absolute top-0 bottom-0 border-l-2 border-dashed border-[#D9D9D9]"></span>
+
+    <!-- DOT -->
+    <span class="relative z-10 mt-2 h-[11px] w-[11px] rounded-full bg-[#D9D9D9]"></span>
+  </div>
+          <!-- CARD -->
+          <div
+            class="flex max-w-2xl flex-1 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row"
+          >
+            <div class="flex flex-1 flex-col justify-between">
+              <div>
+                <h3 class="text-sm font-bold text-gray-900">
+                  {product.name}
+                </h3>
+                <p class="text-xs text-gray-500">
+                  {product.sub}
+                </p>
+              </div>
+
+              <div class="mt-2 mb-4">
+                <span class="text-lg font-bold text-gray-900">
+                  {product.price}
+                </span>
+                <span
+                  class="ml-2 inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-500"
+                >
+                  <img src="/edit-icon-2.svg" class="h-3 w-3 opacity-60" />
+                  {product.type}
+                </span>
+              </div>
+
+              <div class="flex flex-wrap gap-2">
+                <button class="flex items-center gap-1.5 rounded-lg bg-black px-3 py-1.5 text-[10px] font-bold text-white">
+                  <img src="/edit-icon-2.svg" class="h-3 w-3 brightness-0 invert" />
+                  Active
+                </button>
+
+                <button class="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50">
+                  <Icon icon="heroicons:document-duplicate" />
+                  Duplicate
+                </button>
+
+                <button class="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50">
+                  <Icon icon="heroicons:archive-box" />
+                  Archive
+                </button>
+
+                <button class="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-[10px] font-bold text-red-500 hover:bg-red-50">
+                  <Icon icon="heroicons:trash" />
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            <!-- IMAGE -->
+            <div
+              class="relative h-32 w-full flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 sm:w-32"
+            >
+              <img
+                src={product.image}
+                alt={product.name}
+                class="h-full w-full object-cover"
+              />
+              <span
+                class={`absolute right-2 top-2 rounded-md px-2 py-0.5 text-[10px] font-bold shadow-sm ${product.statusColor}`}
+              >
+                {product.status}
+              </span>
+            </div>
+          </div>
+        </div>
+      {/each}
+    </div>
+  </div>
+{:else}
+
+
+
+
 				<div
 					class="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white py-12 text-center shadow-sm"
 				>
@@ -406,7 +430,11 @@
 			<div class="border-b border-gray-100 p-5">
 				<div class="flex items-center gap-2">
 					<h2 class="text-lg font-bold text-gray-900">Recent Transactions</h2>
-					<Icon icon="heroicons:information-circle" class="text-gray-400" />
+					<span
+							class="ml-auto flex h-[25.5px] min-w-[25.5px] items-center justify-center rounded-full border border-black text-[17.2px] font-medium xl:ml-0"
+						>
+							1
+						</span>
 				</div>
 				<p class="mt-1 text-xs text-gray-500">View transaction history</p>
 			</div>

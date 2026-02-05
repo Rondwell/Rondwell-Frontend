@@ -62,7 +62,7 @@
 		{
 			title: 'Order Conversion Rate',
 			value: '4.5%',
-			icon: 'brand.svg',
+			icon: '/brand.svg',
 			color: 'text-teal-500',
 			bg: 'bg-teal-50',
 			type: 'chart',
@@ -74,14 +74,14 @@
 	const collaborationRequests = [
 		{
 			name: 'John Odoemenam',
-			email: 'john.odoe...gmail.com',
+			email: 'johnemdoc23@gmail.com',
 			event: 'Megaexe Award Ceremony',
 			time: '12 Minutes Ago',
 			avatar: '/Profile Gravater.svg'
 		},
 		{
 			name: 'John Innocent Tamunosiki',
-			email: 'tamunosiki...gmail.com',
+			email: 'tamunosiki@gmail.com',
 			event: 'Megaexe Award Ceremony',
 			time: '13 Minutes Ago',
 			avatar: '/face-2.svg'
@@ -153,8 +153,9 @@
 		}
 	];
 </script>
-
-<div class="min-h-screen w-full text-[#101828]">
+<!-- DESKTOP DASHBOARD -->
+<div class="hidden md:block min-h-screen w-full text-[#101828]">
+  <!-- ✅ YOUR EXISTING CODE STAYS HERE UNCHANGED -->
 	<div class="mb-8 flex items-center gap-3">
 		<img src="/loader.svg" alt="logo" class="h-8 w-8 rounded-lg object-cover" />
 		<h1 class="text-2xl font-bold">{vendorName}</h1>
@@ -297,7 +298,7 @@
 				<div class="flex gap-2">
 					<button
 						class="flex items-center gap-1 rounded-lg bg-gray-300 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-300"
-						><img src="/plus.svg" alt="plus" class="h-3 w-3" />  Add New Product</button
+						><img src="/plus-icon.svg" alt="plus" class="h-3 w-3" />  Add New Product</button
 					>
 					<button
 						class="flex items-center gap-2 rounded-lg bg-gray-300 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50"
@@ -364,17 +365,17 @@
                 </button>
 
                 <button class="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50">
-                  <Icon icon="heroicons:document-duplicate" />
+					 <img src="/copy.png" class="h-3 w-3" />
                   Duplicate
                 </button>
 
                 <button class="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50">
-                  <Icon icon="heroicons:archive-box" />
+                  <img src="/archive-minus.png" class="h-3 w-3" />
                   Archive
                 </button>
 
                 <button class="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-[10px] font-bold text-red-500 hover:bg-red-50">
-                  <Icon icon="heroicons:trash" />
+                  <img src="/delete.svg" class="h-3 w-3" />
                   Delete
                 </button>
               </div>
@@ -530,4 +531,227 @@
 			</div>
 		</div>
 	</div>
+</div>
+<!-- ========================= -->
+<!-- 📱 MOBILE DASHBOARD -->
+<!-- ========================= -->
+<div class="relative block md:hidden">
+
+  <!-- HEADER -->
+  <div class="mb-4 pt-4">
+    <h1 class="text-lg font-bold">{vendorName}</h1>
+  </div>
+
+  <!-- STATS (STACKED CARDS) -->
+  <div class="space-y-4">
+    {#each [...topStatsRow1, ...topStatsRow2] as stat}
+      <div class="rounded-2xl border bg-white p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-gray-500">{stat.title}</p>
+            <p class="mt-1 text-xl font-bold">
+              {'count' in stat ? val(stat.count) : stat.type === 'revenue' ? money(stat.value) : stat.value}
+            </p>
+          </div>
+          <div class={`flex h-10 w-10 items-center justify-center rounded-full ${stat.bg}`}>
+            <img src={stat.icon} class="h-6 w-6" />
+          </div>
+        </div>
+
+        {#if 'type' in stat && stat.type === 'chart'}
+          <div class="mt-3 flex h-5 gap-1">
+							{#each Array(20) as _, i}
+								<div
+									class={`h-full flex-1 rounded-sm ${hasActivity && i < (stat.fillAmount || 0) ? stat.barColor : 'bg-gray-100'}`}
+								></div>
+							{/each}
+          </div>
+        {:else}
+          <button
+            class="mt-4 flex w-full items-center justify-center gap-1 rounded-xl bg-black py-2 text-xs font-bold text-white"
+          >
+            {stat.btn}
+            <Icon icon="heroicons:paper-airplane" class="h-3 w-3 -rotate-45" />
+          </button>
+        {/if}
+      </div>
+    {/each}
+  </div>
+
+  <!-- COLLAB REQUEST -->
+  <div class="mt-6 rounded-2xl border bg-white shadow-sm">
+    <div class="flex flex-col gap-2 border-b p-4">
+      <h2 class="text-sm font-bold">Collaboration Request</h2>
+      <button
+        class="flex w-full items-center justify-center rounded-lg bg-gray-100 gap-2 px-3 py-2 text-[15px] font-bold text-gray-400"
+      >
+        View All Collaboration Requests  <img src="/arrow-left.svg" alt="arrow" class="h-3 w-3" />
+      </button>
+    </div>
+
+    <div class="divide-y">
+      {#each collaborationRequests as req}
+        <div class="flex flex-col gap-2 p-4">
+          <div class="flex items-center gap-2">
+            <img src={req.avatar} class="h-5 w-5 rounded-full" />
+            <span class="inline-flex items-center gap-1 text-sm font-bold">
+              {req.name}
+              <span class="h-1.5 w-1.5 rounded-full bg-yellow-400"></span>
+            </span>
+          </div>
+          <p class="text-xs text-gray-400">{req.email}</p>
+          <p class="text-xs text-gray-700">{req.event}</p>
+          <div class="flex items-center justify-between">
+            <p class="text-[12px] text-gray-400">{req.time}</p>
+            <button
+              class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700"
+            >
+              View Details
+            </button>
+          </div>
+        </div>
+      {/each}
+	</div>
+  <div class="mb-3">
+    <h2 class="text-sm font-bold">Your Latest Products</h2>
+
+    <!-- ACTION BUTTONS -->
+    <div class="mt-2 flex gap-2">
+      <button
+        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-gray-200 px-3 py-2 text-[10px] font-bold text-gray-500"
+      >
+        <img src="/plus-icon.svg" alt="plus" class="h-3 w-3 " />
+        Add New Product
+      </button>
+
+      <button
+        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-gray-200 px-3 py-2 text-[10px] font-bold text-gray-500"
+      >
+        View All Products
+        <img src="/arrow-left.svg" alt="arrow" class="h-3 w-3" />
+      </button>
+    </div>
+  </div>
+
+  {#if hasActivity}
+    <div class="space-y-6">
+      {#each latestProducts as product}
+        <div class="rounded-2xl border bg-white p-4 shadow-sm">
+
+          <!-- DATE -->
+          <div class="mb-2">
+            <p class="text-sm font-bold">{product.date}</p>
+            <p class="text-xs text-gray-400">{product.day}</p>
+          </div>
+
+          <!-- INFO -->
+		   <div class="pl-5">
+          <h3 class="text-sm font-bold ">{product.name}</h3>
+          <p class="text-xs text-gray-400">{product.sub}</p>
+
+          <p class="mt-2 text-sm font-bold">{product.price}</p>
+
+          <!-- TYPE -->
+          <span
+            class="mt-2 inline-flex items-center gap-1  px-4 py-1 text-[12px] text-gray-500 bg-gray-100 rounded-md"
+          >
+            <img src="/edit-icon-2.svg" class="h-3 w-3 opacity-60" />
+            {product.type}
+          </span>
+
+          <!-- ACTIONS -->
+          <div class="mt-4 grid grid-cols-2 gap-3">
+            <div class="col-span-2 flex items-center gap-3">
+              <button
+                class="inline-flex w-max items-center justify-center gap-3 rounded-xl bg-black px-2 py-1 text-[12px] font-bold text-white sm:w-max"
+              >
+			  <img src="/edit-icon-2.svg" class="h-3 w-3 brightness-0 invert" />
+                Active
+              </button>
+
+              <button
+                class="flex w-max items-center justify-center gap-3 rounded-xl border px-2 py-1 text-[12px] font-bold sm:w-max"
+              >
+                <img src="/copy.png" class="h-3 w-3" />
+                Duplicate
+              </button>
+            </div>
+
+            <div class="col-span-2 flex items-center gap-3">
+              <button
+                class="flex w-max items-center justify-center gap-1 rounded-xl px-2 py-1 text-[12px] font-bold sm:w-max"
+              >
+                <img src="/archive-minus.png" class="h-3 w-3" />
+                Archive
+              </button>
+
+              <button
+                class="flex w-max items-center justify-center gap-1 rounded-xl px-2 py-1 text-[12px] font-bold text-red-500 sm:w-max"
+              >
+                <img src="/delete.svg" class="h-3 w-3" />
+                Delete
+              </button>
+            </div>
+          </div>
+		  </div>
+
+          <!-- IMAGE -->
+          <div class="relative mt-4 h-36 overflow-hidden rounded-xl">
+            <img src={product.image} class="h-full w-full object-cover" />
+            <span
+              class={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-bold ${product.statusColor}`}
+            >
+              {product.status}
+            </span>
+          </div>
+
+        </div>
+      {/each}
+    </div>
+  {:else}
+    <!-- empty state unchanged -->
+  {/if}
+</div>
+
+
+
+  <!-- TRANSACTIONS -->
+  <div class="mt-6 rounded-2xl border bg-white shadow-sm">
+    <div class="border-b p-4">
+      <div class="flex items-center gap-2">
+        <h2 class="text-[20px] font-bold">Recent Transactions</h2>
+        <span
+          class="ml-1 flex h-6 min-w-6 items-center justify-center rounded-full border border-black text-[15px] font-medium"
+        >
+          {recentTransactions.length}
+        </span>
+      </div>
+      <button
+        class="flex w-full justify-left rounded-lg  px-3 py-2 text-[13px] font-bold text-gray-600"
+      >
+        View transaction history
+      </button>
+    </div>
+
+
+          <div class="divide-y">
+      {#each recentTransactions as tx}
+        <div class="flex items-center gap-3 p-4">
+          <div class="flex-1">
+            <p class="text-sm font-bold"><img src="/Brand.svg" class="h-8 w-8 inline mr-1"/>{tx.name}</p>
+            <p class="text-xs text-gray-500">
+              <span class="relative -top-1 text-[12px]">{tx.id}</span>
+              <span class="ml-1 text-[18px] text-gray-800">{tx.type} {tx.amount}</span>
+            </p>
+            <p class="text-xs text-gray-400">{tx.time}</p>
+            <div class="mt-2 flex items-center gap-4">
+              <span class="text-xs text-green-600 p-1 bg-gray-100">{tx.status}</span>
+              <button class="text-xs font-semibold text-gray-600 bg-gray-100">View Details</button>
+            </div>
+          </div>
+        </div>
+      {/each}
+    </div>
+  </div>
+
 </div>

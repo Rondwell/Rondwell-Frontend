@@ -11,13 +11,13 @@
 <section class="p-4 ">
 	<!-- Header -->
 
-	<div class="mb-6 flex flex-col justify-between sm:flex-row md:mb-6">
-		<div class="flex items-center justify-between">
-			<img src="/tech-icon.svg" alt="icon" class="h-7 w-7" />
-			<h1 class="ml-2 lg:text-2xl text-md">Business Collection</h1>
+	<div class="mb-6 flex flex-col gap-4 justify-between sm:flex-row md:mb-6">
+		<div class="flex gap-2 items-center md:justify-between">
+			<img src="/tech-icon.svg" alt="icon" class="h-7 w-7 hidden sm:block" />
+			<h1 class="text-xl lg:text-2xl font-bold sm:font-medium">Business Collection</h1>
 		</div>
 		<button
-			class="flex items-center gap-2 w-fit rounded-md bg-[#DCE4EE] px-3 whitespace-nowrap md:text-sm text-[#5D646F]"
+			class="flex items-center gap-2 w-fit rounded-md bg-[#EBECED] px-3 whitespace-nowrap md:text-sm text-[#5D646F]"
 		>
 			<span class="md:text-sm">Calendar Page</span>
 			<svg
@@ -122,7 +122,7 @@
 			</div>
 			<button
 				on:click={() => goto('newsletter/verify')}
-				class="flex w-[90px] items-center justify-center gap-1 rounded-md bg-[#EBECED] px-1 py-1 text-sm text-[#616265]"
+				class="flex w-[90px] items-center justify-center gap-1 rounded-md bg-[#E8E0D0] px-1 py-1 text-sm text-[#616265]"
 			>
 				Verify<svg
 					width="13"

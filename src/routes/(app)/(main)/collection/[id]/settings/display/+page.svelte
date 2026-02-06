@@ -1,53 +1,28 @@
-<script lang="ts">
+ <script lang="ts">
+    import Icon from '@iconify/svelte';
 	import { colors } from '$lib/utils/colors';
-	import Icon from '@iconify/svelte';
+type SocialLinkKey = 'instagram' | 'x' | 'youtube' | 'tiktok' | 'linkedin' | 'website';
+    const socialLinks: { key: SocialLinkKey; icon: string; label: string; prefix: string }[] = [
+		{ key: 'instagram', icon: 'mdi:instagram', label: 'instagram.com/', prefix: '' },
+		{ key: 'x', icon: 'mdi:twitter', label: 'x.com/', prefix: '' },
+		{ key: 'youtube', icon: 'mdi:youtube', label: 'youtube.com/@', prefix: '' },
+		{ key: 'tiktok', icon: 'simple-icons:tiktok', label: 'tiktok.com/@', prefix: '' },
+		{ key: 'linkedin', icon: 'mdi:linkedin', label: 'linkedin.com/in/', prefix: '' },
+		{ key: 'website', icon: 'mdi:web', label: '', prefix: 'Your website' }
+	];
 
-	type SocialLinkKey = 'instagram' | 'x' | 'youtube' | 'tiktok' | 'linkedin' | 'website';
-
-	type EventData = {
+    interface Profile {
 		name: string;
-		description: string;
-		tintColor: string;
-		publicUrl: string;
-		location: {
-			type: 'City' | 'Global';
-			city: string;
-		};
-		links: {
-			instagram: '';
-			x: '';
-			youtube: '';
-			tiktok: '';
-			linkedin: '';
-			website: '';
-		};
-		socialPreviewImage: string | null;
-	};
-
-	let eventData: EventData = {
-		name: 'John Calendar',
-		description: '',
-		tintColor: '#6B7280',
-		publicUrl: '',
-		location: { type: 'City', city: 'Lagos' },
-		links: {
-			instagram: '',
-			x: '',
-			youtube: '',
-			tiktok: '',
-			linkedin: '',
-			website: ''
-		},
-		socialPreviewImage: null
-	};
-
-	function selectTintColor(color: string) {
-		eventData.tintColor = color;
+		username: string;
+		bio: string;
+		profilePicture: string;
+		socialLinks: Record<SocialLinkKey, string>;
+	}
+    function handleDragOver(event: DragEvent) {
+		event.preventDefault();
 	}
 
-	function saveChanges() {
-		console.log('Saving changes:', eventData);
-	}
+    
 
 	function handleFileUpload(event: Event) {
 		const input = event.target as HTMLInputElement | null;
@@ -61,11 +36,7 @@
 		reader.readAsDataURL(file);
 	}
 
-	function handleDragOver(event: DragEvent) {
-		event.preventDefault();
-	}
-
-	function handleDrop(event: DragEvent) {
+    function handleDrop(event: DragEvent) {
 		event.preventDefault();
 		const file = event.dataTransfer?.files?.[0];
 		if (!file) return;
@@ -75,6 +46,46 @@
 			if (typeof result === 'string') eventData.socialPreviewImage = result;
 		};
 		reader.readAsDataURL(file);
+	}
+
+	// Mock data for the settings page
+	let profile: Profile = {
+		name: 'JOHN HOUSEMAN',
+		username: '',
+		bio: '',
+		socialLinks: {
+			instagram: '',
+			x: '',
+			youtube: '',
+			tiktok: '',
+			linkedin: '',
+			website: ''
+		},
+		profilePicture: '/face-1.svg'
+	};
+	type EventData = {
+		name: string;
+		description: string;
+		tintColor: string;
+		publicUrl: string;
+		location: {
+			type: 'City' | 'Global';
+			city: string;
+		};
+        socialPreviewImage: string | null;
+	};
+
+	let eventData: EventData = {
+		name: 'John Doe',
+		description: '',
+		tintColor: '#6B7280',
+		publicUrl: '',
+		location: { type: 'City', city: 'Lagos' },
+        socialPreviewImage: null
+	};
+
+	function selectTintColor(color: string) {
+		eventData.tintColor = color;
 	}
 
 	let search = '';
@@ -106,85 +117,54 @@
 		// dispatch('close');
 	}
 
-	const socialLinks: { key: SocialLinkKey; icon: string; label: string; prefix: string }[] = [
-		{ key: 'instagram', icon: 'mdi:instagram', label: 'instagram.com/', prefix: '' },
-		{ key: 'x', icon: 'mdi:twitter', label: 'x.com/', prefix: '' },
-		{ key: 'youtube', icon: 'mdi:youtube', label: 'youtube.com/@', prefix: '' },
-		{ key: 'tiktok', icon: 'simple-icons:tiktok', label: 'tiktok.com/@', prefix: '' },
-		{ key: 'linkedin', icon: 'mdi:linkedin', label: 'linkedin.com/in/', prefix: '' },
-		{ key: 'website', icon: 'mdi:web', label: '', prefix: 'Your website' }
-	];
-
 	function handlePublicUrlInput(e: Event) {
 		const value = (e.target as HTMLInputElement).value;
 		eventData.publicUrl = `ron.d/${value}`;
 	}
+
+	async function saveChanges() {
+		try {
+			// Add your API call here to save the collection settings
+			console.log('Saving changes:', { eventData, profile });
+			// Example: await fetch('/api/collection/settings', { method: 'POST', body: JSON.stringify({ eventData, profile }) })
+		} catch (error) {
+			console.error('Error saving changes:', error);
+		}
+	}
 </script>
 
-<div class="w-full max-w-5xl">
-	<!-- Header -->
-	<div class="mb-6 flex items-center gap-2">
-		<button
-			aria-label="back button"
-			on:click={() => history.back()}
-			class="flex h-[29px] w-[29px] cursor-pointer items-center justify-center rounded-full bg-[#D8D8DD]"
-		>
-			<svg
-				width="11"
-				height="11"
-				viewBox="0 0 11 11"
-				fill="none"
-				xmlns="http://www.w3.org/2000/svg"
-			>
-				<path
-					d="M9.2793 9.60352C8.62129 10.2457 7.66873 10.3899 6.85156 9.95801L1.31152 7.04199H1.3125C0.625893 6.68284 0.198242 5.97506 0.198242 5.19922C0.198273 4.42347 0.626009 3.71658 1.3125 3.35742L6.85156 0.442383L6.85059 0.441406C7.16604 0.273212 7.49893 0.19339 7.83203 0.193359C8.36285 0.193359 8.87545 0.401565 9.2793 0.794922C9.93827 1.43808 10.0974 2.39081 9.68652 3.21289L8.91211 4.76172C8.77777 5.0304 8.77707 5.35686 8.91211 5.63184L9.68652 7.18555C10.0975 8.00765 9.93828 8.96033 9.2793 9.60352ZM7.82715 9.09375C8.09498 9.09375 8.33474 8.96867 8.50195 8.80566L8.50293 8.80469C8.75219 8.56339 8.92307 8.1421 8.69238 7.67676L7.91895 6.12891L7.91797 6.12793C7.62789 5.54228 7.62782 4.85125 7.91797 4.26562L7.91895 4.26465L8.69336 2.7168V2.71582C8.92712 2.25216 8.7534 1.83126 8.50293 1.58887C8.25053 1.34462 7.82951 1.17961 7.37012 1.4209L1.83008 4.33691C1.50292 4.50847 1.30964 4.82834 1.30957 5.19434C1.30957 5.56041 1.50286 5.88017 1.83008 6.05176V6.05273L7.37012 8.97754V8.97852C7.53115 9.06286 7.68577 9.09371 7.82715 9.09375Z"
-					fill="#8E8E90"
-					stroke="#8E8E90"
-					stroke-width="0.394617"
-				/>
-				<rect
-					x="5.09957"
-					y="4.60738"
-					width="3.34009"
-					height="1.13098"
-					rx="0.565492"
-					fill="#919091"
-					stroke="#8E8E90"
-					stroke-width="0.394617"
-				/>
-			</svg>
-		</button>
-		<h1 class="text-3xl font-bold">Edit Event</h1>
-	</div>
+<div class="w-full space-y-8">
+	<!-- HEADER CARD -->
+	<div class="rounded-lg">
+		
 
-	<!-- Event Title / Description -->
-	<div class="relative mb-6 rounded-t-lg bg-[#FDFDFD]">
-		<div class="h-[191px] rounded-t-lg bg-[#D8D8DD]"></div>
-		<button
-			class="absolute top-2 right-3 rounded-md bg-[#E4E4E5] px-3 py-2 text-sm font-medium text-[#5D5E61]"
-		>
-			Change Cover
-		</button>
-		<img src="/edit-cover-photo.svg" alt="" class="w-14 absolute bottom-28 left-5">
-		<div class="mt-8 w-full ml-4">
-			<input
-				type="text"
-				placeholder="Event name"
-				bind:value={eventData.name}
-				class="h-12 w-full px-4 py-2 text-3xl font-semibold focus:ring-0 focus:outline-none"
-			/>
-			<div class="mt-2 border-t">
+		<div class="relative mb-6 rounded-t-lg bg-[#FDFDFD]">
+			<div class="h-[191px] rounded-t-lg bg-[#D8D8DD]"></div>
+			<button
+				class="absolute top-2 right-3 rounded-md bg-[#E4E4E5] px-3 py-2 text-sm font-medium text-[#5D5E61]"
+			>
+				Change Cover
+			</button>
+			<img src="/edit-cover-photo.svg" alt="" class="absolute bottom-28 left-5 w-14" />
+			<div class="mt-8 ml-4 w-full">
 				<input
 					type="text"
-					placeholder="Add a short description"
-					bind:value={eventData.description}
-					class="h-12 w-full px-4 py-2 focus:ring-0 focus:outline-none"
+					placeholder="Collection name"
+					bind:value={eventData.name}
+					class="h-12 w-full px-4 py-2 text-3xl font-semibold focus:ring-0 focus:outline-none"
 				/>
+				<div class="mt-2 border-t">
+					<input
+						type="text"
+						placeholder="Add a short description"
+						bind:value={eventData.description}
+						class="h-12 w-full px-4 py-2 focus:ring-0 focus:outline-none"
+					/>
+				</div>
 			</div>
 		</div>
-	</div>
 
-	<!-- Customization -->
+		<!-- Customization -->
 	<div class="mb-6 rounded-lg bg-[#FDFDFD] p-4">
 		<h2 class="mb-3 text-2xl font-semibold">Customization</h2>
 
@@ -389,15 +369,16 @@
 		</div>
 	</div>
 
-	<!-- Links -->
-	<div class="mb-6 rounded-lg bg-[#FDFDFD] p-4">
-		<h2 class="mb-3 font-semibold">Links</h2>
-
-		<div class="grid w-full max-w-xl grid-cols-1 gap-6">
+        
+        <div class="mt-6 p-4 flex flex-col bg-[#FDFDFD]">
+		<h3 class="mb-3 text-sm font-medium text-[#000]"> Links</h3>
+		<div class=" w-fit flex flex-col gap-6">
 			{#each socialLinks as { key, icon, label, prefix }}
-				<div class="flex items-center gap-4">
+				<div class="flex items-center gap-2">
 					<!-- Icon -->
-					<Icon {icon} class="h-5 w-5 text-[#A3A5A5]" />
+					<div class="flex h-8 w-8 items-center justify-center rounded bg-gray-100">
+						<Icon {icon} class="h-4 w-4" />
+					</div>
 
 					<div class="flex h-[42px] w-full items-center shadow-sm">
 						<!-- Label (optional) -->
@@ -412,7 +393,7 @@
 						<!-- Input -->
 						<input
 							type="text"
-							bind:value={eventData.links[key]}
+							bind:value={profile.socialLinks[key]}
 							placeholder={prefix || 'username'}
 							class="h-full w-full {key === 'website'
 								? 'rounded-[7.5px]'
@@ -422,9 +403,8 @@
 				</div>
 			{/each}
 		</div>
-	</div>
-
-	<!-- Social Preview -->
+	    </div>
+<!-- Social Preview -->
 	<div class="rounded-lg border border-gray-200 bg-white p-4">
 		<h2 class="mb-3 font-semibold">Sharing</h2>
 		<p class="mb-4 text-sm text-gray-600">Social Preview Image</p>
@@ -461,7 +441,7 @@
 		</p>
 	</div>
 
-	<!-- Save -->
+		<!-- Save -->
 	<div class="mt-6">
 		<button
 			on:click={saveChanges}
@@ -505,4 +485,5 @@
 			Save Changes
 		</button>
 	</div>
-</div>
+	</div>
+</div> -->

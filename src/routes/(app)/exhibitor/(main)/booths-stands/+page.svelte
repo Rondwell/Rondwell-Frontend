@@ -35,16 +35,16 @@
 				</h1>
 			</div>
 		</div>
-		<div class="ml-auto flex justify-end gap-5">
+		<div class="ml-auto flex justify-start gap-5">
 			<button
 				on:click={openModal}
-				class="flex items-center gap-3 rounded-[10px] bg-black px-6 py-2.5 text-[18.45px] font-normal text-white transition-colors hover:bg-gray-800"
+				class="flex items-center gap-3 rounded-[10px] bg-black px-6 py-2.5 text-[13.45px] font-normal text-white transition-colors hover:bg-gray-800"
 			>
 				<img src="/plus.svg" alt="plus" class="w-[16px]" />
 				Add New Booth
 			</button>
 			<!-- View Mode Toggle -->
-			<div class="flex items-center gap-1 rounded-[12.3px] bg-[#0000001A] p-[5px]">
+			<div class="flex items-center ml-auto gap-1 rounded-[12.3px] bg-[#0000001A] p-[5px]">
 				<button
 					class="rounded-[7.38px] p-2 {viewMode === 'grid'
 						? 'bg-white shadow-md'
@@ -68,7 +68,7 @@
 	<!-- Page Content -->
 	<div class="py-6 xl:px-8">
 		<!-- Title and Filters -->
-		<div class="mb-6 flex flex-col items-start justify-between 2xl:flex-row 2xl:items-center">
+		<div class=" flex flex-col items-start justify-between 2xl:flex-row 2xl:items-center">
 			<div class="flex w-full items-center justify-between space-y-10 xl:w-auto 2xl:space-y-0">
 				<h2 class="text-[24.68px] font-normal text-[#192226]">My Digital Booths</h2>
 				<button
@@ -123,10 +123,10 @@
 
 		<!-- Empty State -->
 
-		<div class="flex flex-col items-center justify-center py-20">
-			<div class="relative mx-auto mb-20 h-[283.9px] w-[283.9px]">
+		<div class="flex flex-col items-center justify-center py-10">
+			<div class="relative mx-auto mb-10 h-[200.9px] w-[200.9px]">
 				<img src="/empty.svg" alt="eempty" class="relative z-10 w-full" />
-				<div class="absolute top-22 left-10 z-0 h-[160.8px] w-[180px] bg-[#D9D9D9]"></div>
+				<div class="absolute top-15 left-10 z-0 h-[120.8px] w-[120px] bg-[#D9D9D9]"></div>
 			</div>
 
 			<!-- <div class="mb-8">
@@ -140,8 +140,8 @@
 				</svg>
 			</div> -->
 
-			<h3 class="mb-2 text-[31.97px] font-normal text-[#646568]">No Booths / Stands, yet</h3>
-			<p class="mb-8 max-w-[440.2px] text-center text-[20.36px] font-light text-[#A2ACB2]">
+			<h3 class="mb-2 text-[19.97px] font-normal text-[#646568]">No Booths / Stands, yet</h3>
+			<p class="mb-8 max-w-[240.2px] text-center text-[19.36px] font-light text-[#A2ACB2]">
 				You haven't added any boot yet. Start by adding your first one!
 			</p>
 

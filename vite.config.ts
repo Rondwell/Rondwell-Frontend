@@ -8,7 +8,7 @@ export default defineConfig({
 	plugins: [
 		adapter({
 			edge: false,
-			split: false,
+			split: false
 		}),
 		tailwindcss(),
 		sveltekit(),

@@ -244,7 +244,7 @@ $: pageTitle =
 
   <!-- RIGHT IMAGE -->
   <div class="relative h-[90px] w-[90px] shrink-0 overflow-hidden rounded-lg">
-    <img src="/Megaexe-party.png" class="h-full w-full object-cover" />
+    <img src="/Megaexe-party.png" alt="cover" class="h-full w-full object-cover" />
     <span class={`absolute right-1 top-1 rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[item.status]}`}>
       {item.status}
     </span>

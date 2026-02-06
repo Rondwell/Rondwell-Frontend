@@ -1,9 +1,9 @@
 import { writable } from 'svelte/store';
 
 export interface SubMenuItem {
-    label: string;
-    icon: string;
-    nav: string;
+	label: string;
+	icon: string;
+	nav: string;
 }
 
 export const showSubMenu = writable(false);

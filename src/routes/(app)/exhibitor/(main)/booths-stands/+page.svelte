@@ -140,8 +140,8 @@
 				</svg>
 			</div> -->
 
-			<h3 class="mb-2 text-[21.97px] font-normal text-[#646568]">No Booths / Stands, yet</h3>
-			<p class="mb-8 max-w-[240.2px] text-center text-[20.36px] font-light text-[#A2ACB2]">
+			<h3 class="mb-2 text-[19.97px] font-normal text-[#646568]">No Booths / Stands, yet</h3>
+			<p class="mb-8 max-w-[240.2px] text-center text-[19.36px] font-light text-[#A2ACB2]">
 				You haven't added any boot yet. Start by adding your first one!
 			</p>
 

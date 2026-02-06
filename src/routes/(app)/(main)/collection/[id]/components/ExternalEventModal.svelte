@@ -39,12 +39,7 @@
 	let locationName = '...';
 	let timezone = '';
 
-	$: if (open) {
-		previousOverflow = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
-	} else {
-		document.body.style.overflow = previousOverflow || '';
-	}
+	
 
 	function submitEvent() {
 		dispatch('submit', {
@@ -210,7 +205,7 @@
 
 			<!-- Existing Event section -->
 			<div class="flex flex-col">
-				<div class="custom-scrollbar overflow-y-auto px-3 pb-10 md:pb-4" style="max-height: 80vh;">
+				<div class="custom-scrollbar overflow-y-auto px-3 pb-10 md:pb-4" style="max-height: 75vh;">
 					<div class="flex items-center justify-start gap-2 py-2">
 						<div class="cursor-pointer" on:click={() => dispatch('collection')}>
 							<svg
@@ -243,7 +238,7 @@
 						<p class="text-[16px]">Existing Rondwell Event</p>
 					</div>
 					<!-- URL SECTION  -->
-					<div class=" pt-2 md:pr-4">
+					<div class=" pt-2 ">
 						<label class="mb-1 block text-sm font-medium text-[#666769]">
 							Event Page URL <span>*</span>
 						</label>
@@ -257,7 +252,7 @@
 					</div>
 
 					<!-- Event Name Section-->
-					<div class="pt-5 md:mr-4">
+					<div class="pt-5">
 						<label class="mb-1 block text-sm font-medium text-[#666769]">
 							Event Name <span>*</span>
 						</label>

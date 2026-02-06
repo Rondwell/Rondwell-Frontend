@@ -171,7 +171,11 @@
 								</div>
 								<span class="text-[18.65px] text-[#131517]" >{request.from}</span>
 							</div>
+<<<<<<< HEAD
 							<span class="text-[18.65px] text-[#808080] flex-1 w-60 truncate">for {request.for}</span>
+=======
+							<span class="text-[18.65px] text-[#808080] flex-1 w-60 truncate" >for {request.for}</span>
+>>>>>>> 5bcdff77dfcadf3f41f9c6622968264d2b99283e
 							
 						</div>
 					{/each}

@@ -52,6 +52,11 @@
 		// dispatch('select', loc);
 		// dispatch('close');
 	}
+
+	function handlePublicUrlInput(e: Event) {
+		const value = (e.target as HTMLInputElement).value;
+		eventData.publicUrl = `ron.d/${value}`;
+	}
 </script>
 
 <div class="w-full space-y-8">
@@ -119,8 +124,7 @@
 								type="text"
 								placeholder="some calendar"
 								bind:value={eventData.publicUrl}
-								on:input={(e) =>
-									(eventData.publicUrl = `ron.d/${(e.target as HTMLInputElement).value}`)}
+								on:input={handlePublicUrlInput}
 								class="flex-1 rounded-r-md border border-gray-300 bg-[#FFFFFF] p-3 text-sm focus:ring-0 focus:outline-none"
 							/>
 						</div>

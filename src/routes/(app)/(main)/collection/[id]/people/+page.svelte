@@ -82,15 +82,15 @@
 
 <section class="p-4">
 	<!-- Header -->
-	<div class="hidden sm:justify-between md:mb-10 md:flex">
+	<div class="hidden sm:justify-between lg-block md:mb-10 md:flex">
 		<div class="flex items-center justify-between">
 			<img src="/tech-icon.svg" alt="icon" class="h-7 w-7" />
-			<h1 class="ml-2 text-2xl">Business Collection</h1>
+			<h1 class="ml-2 lg:text-2xl text-md">Business Collection</h1>
 		</div>
 		<button
-			class="flex items-center gap-2 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm text-[#5D646F]"
+			class="flex items-center gap-2 w-fit rounded-md bg-[#DCE4EE] px-3 whitespace-nowrap md:text-sm text-[#5D646F]"
 		>
-			Calendar Page
+			<span class="md:text-sm">Calendar Page</span>
 			<svg
 				width="16"
 				height="16"

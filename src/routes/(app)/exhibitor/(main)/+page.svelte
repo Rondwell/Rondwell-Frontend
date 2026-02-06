@@ -11,7 +11,7 @@
 	let collaborationRequests = [
 		{ id: 1, from: 'John Odoemenem', for: 'Megaexe award ceremony' },
 		{ id: 2, from: 'John Odoemenem', for: 'Megaexe Induction ceremony' },
-		{ id: 3, from: 'John Odoemenem', for: 'Megaexe award ceremonydnsfdjnfsjfndfsl' }
+		{ id: 3, from: 'John Odoemenem', for: 'Megaexe award ceremony' }
 	];
 
 	let booths = [
@@ -48,7 +48,7 @@
 			<p
 				class="mt-5 flex flex-wrap items-center text-[18px] text-[#00000080] md:mt-10 xl:text-[29.48px]"
 			>
-				Welcome Back <span class="font-semibold text-[#171717] ml-1"> Megaexe Limited</span>
+				Welcome Back <span class="font-semibold text-[#171717] ml-3"> Megaexe Limited</span>
 				<span class="text-text-[29.48px]">👋🏻</span>
 			</p>
 		</div>
@@ -171,11 +171,9 @@
 								</div>
 								<span class="text-[18.65px] text-[#131517]" >{request.from}</span>
 							</div>
-<<<<<<< HEAD
-							<span class="text-[18.65px] text-[#808080] flex-1 w-60 truncate">for {request.for}</span>
-=======
 							<span class="text-[18.65px] text-[#808080] flex-1 w-60 truncate" >for {request.for}</span>
->>>>>>> 5bcdff77dfcadf3f41f9c6622968264d2b99283e
+
+							<span  class="text-[18.65px] text-[#808080] flex-1 w-full xl:w-60 truncate xl:truncate-none  break-words" >for {request.for}</span>
 							
 						</div>
 					{/each}
@@ -268,8 +266,7 @@
 					>
 						<div class="flex items-center gap-4">
 							<div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50">
-								<img src="Brand.svg" alt="Brand" class="block w-[40.52px] xl:hidden" />
-								<img src="Brand-desktop.svg" alt="Brand" class="hidden w-[40.52px] xl:block" />
+								<img src="Brand-desktop.svg" alt="Brand" class="w-[40.52px]" />
 							</div>
 							<div>
 								<p class="text=[16px] text-[#131517] lg:text-[19.65px]">

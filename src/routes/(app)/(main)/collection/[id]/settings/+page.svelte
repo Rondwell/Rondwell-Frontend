@@ -429,7 +429,7 @@ type SocialLinkKey = 'instagram' | 'x' | 'youtube' | 'tiktok' | 'linkedin' | 'we
 		<!-- Save -->
 	<div class="mt-6">
 		<button
-			on:click={saveChanges}
+			
 			class="flex items-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white hover:bg-gray-800"
 		>
 			<svg

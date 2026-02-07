@@ -1,7 +1,6 @@
 import { redirect } from '@sveltejs/kit';
+import type { PageLoad } from './$types';
 
-
-
-export function load({ params  }:any) {
+export const load: PageLoad = ({ params }) => {
 	throw redirect(302, `/collection/${params.id}/settings/display`);
-}
+};

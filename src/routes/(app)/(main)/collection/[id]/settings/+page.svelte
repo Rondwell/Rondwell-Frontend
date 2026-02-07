@@ -116,6 +116,21 @@ type SocialLinkKey = 'instagram' | 'x' | 'youtube' | 'tiktok' | 'linkedin' | 'we
 		// dispatch('select', loc);
 		// dispatch('close');
 	}
+
+	function handlePublicUrlInput(e: Event) {
+		const value = (e.target as HTMLInputElement).value;
+		eventData.publicUrl = `ron.d/${value}`;
+	}
+
+	async function saveChanges() {
+		try {
+			// Add your API call here to save the collection settings
+			console.log('Saving changes:', { eventData, profile });
+			// Example: await fetch('/api/collection/settings', { method: 'POST', body: JSON.stringify({ eventData, profile }) })
+		} catch (error) {
+			console.error('Error saving changes:', error);
+		}
+	}
 </script>
 
 <div class="w-full space-y-8">
@@ -179,7 +194,7 @@ type SocialLinkKey = 'instagram' | 'x' | 'youtube' | 'tiktok' | 'linkedin' | 'we
 					type="text"
 					placeholder="some calendar"
 					bind:value={eventData.publicUrl}
-					on:input={(e) => (eventData.publicUrl = `ron.d/${(e.target as HTMLInputElement).value}`)}
+					on:input={handlePublicUrlInput}
 					class="flex-1 rounded-r-md border border-gray-300 bg-[#FFFFFF] p-3 text-sm focus:ring-0 focus:outline-none"
 				/>
 			</div>

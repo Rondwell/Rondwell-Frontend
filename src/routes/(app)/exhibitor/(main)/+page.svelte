@@ -264,8 +264,7 @@
 					>
 						<div class="flex items-center gap-4">
 							<div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50">
-								<img src="Brand.svg" alt="Brand" class="block w-[40.52px] xl:hidden" />
-								<img src="Brand-desktop.svg" alt="Brand" class="hidden w-[40.52px] xl:block" />
+								<img src="Brand-desktop.svg" alt="Brand" class="w-[40.52px]" />
 							</div>
 							<div>
 								<p class="text=[16px] text-[#131517] lg:text-[19.65px]">

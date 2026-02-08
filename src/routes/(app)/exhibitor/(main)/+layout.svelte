@@ -99,7 +99,7 @@
 	});
 
 	const themes = {
-		default: 'linear-gradient(180deg, #d1e8f5 0%, #EAF2F5 17%, #f4f5f6 35%)'
+		default: 'linear-gradient(180deg, #DBD4F1 0%, #DBE5F5 17%, #F4F5F6 35%)',
 	};
 
 	let selectedTheme = themes.default;
@@ -154,7 +154,7 @@
 
 <style>
 	.bg {
-		background: rgba(255, 255, 255, 0.08);
+		background: linear-gradient(180deg, #DBD4F1 0%, #DBE5F5 17%, #F4F5F6 35%);
 		box-shadow:
 			0px 0px 0px 1px rgba(64, 87, 109, 0.04),
 			0px 6px 20px -4px rgba(64, 87, 109, 0.3);

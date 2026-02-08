@@ -1,11 +1,11 @@
-import type { Config } from 'tailwindcss'
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
-    content: ['./src/**/*.{html,js,svelte,ts}'],
-    darkMode: 'class',
-    theme: {
-        extend: {},
-    },
-}
+	content: ['./src/**/*.{html,js,svelte,ts}'],
+	darkMode: 'class',
+	theme: {
+		extend: {}
+	}
+};
 
-export default config
+export default config;

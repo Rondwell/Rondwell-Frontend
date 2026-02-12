@@ -1,5 +1,5 @@
 <script>
-	import { TrendingUp, ArrowRight } from 'lucide-svelte';
+	import { ArrowRight, TrendingUp } from 'lucide-svelte';
 
 	let stats = {
 		totalBoothViews: { value: 1245, change: -2 },
@@ -117,7 +117,7 @@
 						</span>
 					</div>
 					<p class="text-[19.65px] text-[#737577]">
-						You have <span class="text-[#000000]">3</span> new requests.
+						You have <span class="text-[#000000]">{collaborationRequests.length}</span> new requests.
 					</p>
 				</div>
 
@@ -134,7 +134,7 @@
 					class="relative flex min-h-[257.5px] w-full flex-col justify-between rounded-[13.51px] bg-[#FDFDFD] px-5 py-6 text-left xl:w-[235px]"
 				>
 					<p class="mb-2 text-[24.57px] text-[#B6B7B7]">
-						You have <span class="text-black">3</span> new <br />requests.
+						You have <span class="text-black">{collaborationRequests.length}</span> new <br />requests.
 					</p>
 					<div class="text-[44.17px] font-bold text-black">
 						3<span class="text-[29.48px] text-[#0000004D]">/40</span>

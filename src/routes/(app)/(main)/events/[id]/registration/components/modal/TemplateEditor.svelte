@@ -14,7 +14,7 @@
 		<div class="flex items-center justify-between border-b bg-white px-6 py-3">
 			<!-- Left Section -->
 			<div class="flex items-center gap-6">
-				<button class="rounded-xl border border-pink-300 px-5 py-2 text-black hover:bg-pink-50">
+				<button class="rounded-lg border border-pink-300 px-5 py-2 text-black hover:bg-pink-50">
 					New project
 				</button>
 
@@ -70,50 +70,68 @@
 					<h2 class="mb-2 font-semibold text-gray-700">Layout Element</h2>
 
 					<div class="grid grid-cols-3 gap-4">
-						<div class="flex cursor-pointer flex-col items-center text-sm text-gray-700">
-							<div class="h-10 w-10 rounded-full bg-gray-200"></div>
-							Round Table
-						</div>
+							<div class="flex cursor-pointer flex-col items-center justify-center  text-xs text-gray-700">
+								<div class="border border-[#A7A7A7] rounded-xl p-3 flex items-center mb-1 justify-center">
+									<div class="h-10 w-10 rounded-full bg-gray-200"></div>
+								</div>
+								Round Table
+							</div>
 
-						<div class="flex cursor-pointer flex-col items-center text-sm text-gray-700">
-							<div class="h-10 w-10 rounded bg-gray-200"></div>
-							Square Table
-						</div>
+							<div class="flex cursor-pointer flex-col items-center justify-center  text-xs text-gray-700">
+								<div class="border border-[#A7A7A7] rounded-xl p-3 flex items-center mb-1 justify-center">
+									<div class="h-10 w-10 rounded bg-gray-200"></div>
+								</div>
+								Square Table
+							</div>
 
-						<div class="flex cursor-pointer flex-col items-center text-sm text-gray-700">
-							<Icon icon="mdi:seat" class="h-10 w-10 text-gray-300" />
-							Chair
-						</div>
+							<div class="flex cursor-pointer flex-col items-center justify-center  text-xs text-gray-700">
+								<div class="border border-[#A7A7A7] rounded-xl p-3 flex items-center mb-1 justify-center">
+									<Icon icon="mdi:seat" class="h-10 w-10 text-gray-300" />
+								</div>
+								Chair
+							</div>
 
-						<div class="flex cursor-pointer flex-col items-center text-sm text-gray-700">
-							<Icon icon="mdi:door" class="h-10 w-10 text-gray-300" />
-							Door
-						</div>
+							<div class="flex cursor-pointer flex-col items-center justify-center  text-xs text-gray-700">
+								<div class="border border-[#A7A7A7] rounded-xl p-3 flex items-center mb-1 justify-center">
+									<Icon icon="mdi:door" class="h-10 w-10 text-gray-300" />
+								</div>
+								Door
+							</div>
 
-						<div class="flex cursor-pointer flex-col items-center text-sm text-gray-700">
-							<Icon icon="mdi:podium" class="h-10 w-10 text-gray-300" />
-							Stage
-						</div>
+							<div class="flex cursor-pointer flex-col items-center justify-center  text-xs text-gray-700">
+								<div class="border border-[#A7A7A7] rounded-xl p-3 flex items-center mb-1 justify-center">
+									<Icon icon="mdi:podium" class="h-10 w-10 text-gray-300" />
+								</div>
+								Stage
+							</div>
 
-						<div class="flex cursor-pointer flex-col items-center text-sm text-gray-700">
-							<Icon icon="mdi:toilet" class="h-10 w-10 text-gray-300" />
-							Rest room
-						</div>
+							<div class="flex cursor-pointer flex-col items-center justify-center  text-xs text-gray-700">
+								<div class="border border-[#A7A7A7] rounded-xl p-3 flex items-center mb-1 justify-center">
+									<Icon icon="mdi:toilet" class="h-10 w-10 text-gray-300" />
+								</div>
+								Rest room
+							</div>
 
-						<div class="flex cursor-pointer flex-col items-center text-sm text-gray-700">
-							<div class="h-10 w-10 rounded-md border-2 border-gray-300"></div>
-							Rectangle
-						</div>
+							<div class="flex cursor-pointer flex-col items-center justify-center  text-xs text-gray-700">
+								<div class="border border-[#A7A7A7] rounded-xl p-3 flex items-center mb-1 justify-center">
+									<div class="h-10 w-10 rounded-md border-2 border-gray-300"></div>
+								</div>
+								Rectangle
+							</div>
 
-						<div class="flex cursor-pointer flex-col items-center text-sm text-gray-700">
-							<div class="h-10 w-10 rounded-full border-2 border-gray-300"></div>
-							Circle
-						</div>
+							<div class="flex cursor-pointer flex-col items-center justify-center  text-xs text-gray-700">
+								<div class="border border-[#A7A7A7] rounded-xl p-3 flex items-center mb-1 justify-center">
+									<div class="h-10 w-10 rounded-full border-2 border-gray-300"></div>
+								</div>
+								Circle
+							</div>
 
-						<div class="flex cursor-pointer flex-col items-center text-sm text-gray-700">
-							<div class="h-1 w-10 bg-gray-300"></div>
-							Straight
-						</div>
+							<div class="flex cursor-pointer flex-col items-center justify-center  text-xs text-gray-700">
+								<div class="border border-[#A7A7A7] rounded-xl w-16 h-16 p-3 flex items-center mb-1 justify-center">
+									<div class="w-1 h-10 bg-gray-300"></div>
+								</div>
+								Straight
+							</div>
 					</div>
 				</div>
 
@@ -121,7 +139,7 @@
 				<div>
 					<h2 class="mb-2 font-semibold text-gray-700">Shapes Element</h2>
 
-					<div class="grid grid-cols-4 gap-4">
+					<div class="grid grid-cols-3 gap-4">
 						<div class="flex flex-col items-center text-sm text-gray-700">
 							<div class="h-10 w-10 rounded-full border-2 border-gray-300"></div>
 							Circle
@@ -133,12 +151,11 @@
 						</div>
 
 						<div class="flex flex-col items-center text-sm text-gray-700">
-							<div class="h-10 w-10 border-2 border-gray-300"></div>
-							Rectangle
-						</div>
-
-						<div class="flex flex-col items-center text-sm text-gray-700">
-							<div class="h-10 w-10 border-2 border-gray-300"></div>
+							<div class="w-0 h-0 
+								border-l-[20px] border-l-transparent 
+								border-r-[20px] border-r-transparent 
+								border-b-[35px] border-b-gray-500">
+							</div>
 							Triangle
 						</div>
 					</div>

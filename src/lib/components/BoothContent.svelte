@@ -2,6 +2,13 @@
     export let groups
     export let statusStyles
     export let viewMode
+    import { browser } from '$app/environment';
+
+    let width = 0;
+    if (browser) {
+        width = window.screen.width 
+    }
+    const isMobile = width < 768;
 </script>
 
 <div class="flex flex-wrap  flex-col  items-center justify-center py-10">
@@ -33,7 +40,7 @@
 
 <!-- CONTENT GRID (far right) -->
 <!-- CONTENT -->
-{#if viewMode === 'grid'}
+{#if viewMode === 'grid' || isMobile}
 <!-- GRID VIEW -->
 <div class="flex flex-wrap justify-around gap-4 ">
     {#each group.items as item}
@@ -103,41 +110,48 @@
 <!-- LIST VIEW -->
 <div class="flex flex-col gap-6 w-full">
     {#each group.items as item}
-    <div class="flex flex-1 items-center justify-between rounded-xl bg-white px-5 py-4 shadow-sm">
+    <div class="flex flex-1  justify-between rounded-xl bg-white px-5 py-4 shadow-sm">
 
 <!-- LEFT CONTENT -->
-<div class="flex flex-col gap-1 flex-1 pr-60">
-    <h3 class="text-base font-semibold">
-    Shaping the future with AI
+<div class="flex flex-col  gap-1 flex-1 pr-60">
+    <h3 class="text-2xl font-semibold leading-tight pt-5">
+        Innovative Tech Showcase 2025
     </h3>
+    <div class="flex gap-4">
+        <div class="flex gap-1 mt-1 text-sm text-gray-500 pt-2">
+            <img src="/eye.svg" alt="view-icon" class="h-5 w-5"/>
+            <span>Views</span>
+        </div>
 
-    <p class="text-sm text-gray-500">
-    How AI transforms education
-    </p>
+        <div class="flex gap-1 mt-1 text-sm text-gray-500 pt-2">
+            <img src="/eye.svg" alt="view-icon" class="h-5 w-5"/>
+            <span>Leads</span>
+        </div>
+    </div>
 
-    <p class="text-xs text-gray-400">
-    12 Minutes Ago
-    </p>
 
-    <div class="mt-2 flex items-center gap-2">
-    <button class="flex items-center gap-1 rounded-md bg-black px-3 py-1 text-xs text-white">
-        <img src="/eye.svg" class="h-3 w-3" alt="view" />
-        View
-    </button>
+    <div class="mt-auto flex gap-2">
+        <button class="flex items-center gap-1 rounded-md bg-black px-3 py-1 text-xs text-white">
+            <img src="/eye.svg" class="h-5 w-5" alt="view" />
+            View Public Page
+        </button>
 
-    <button class="flex items-center gap-1 rounded-md border border-black px-3 py-1 text-xs">
-        <img src="/edit-icon3.svg" class="h-3 w-3" alt="edit" />
-        Edit
-    </button>
+        <button class="flex items-center gap-1 rounded-md border border-black px-3 py-1 text-xs">
+            <img src="/edit-icon3.svg" class="h-5 w-5" alt="edit" />
+            Edit Booth
+        </button>
+        <p class="text-xs text-gray-400">
+            12 Minutes Ago
+        </p>
 
-    <button class="text-gray-400">
-        <img src="/more-square.svg" class="h-5 w-5" alt="more" />
-    </button>
+        <button class="text-gray-400">
+            <img src="/more-square.svg" class="h-5 w-5" alt="more" />
+        </button>
     </div>
 </div>
 
 <!-- RIGHT IMAGE -->
-<div class="relative h-[90px] w-[90px] shrink-0 overflow-hidden rounded-lg">
+<div class="relative h-[150px] w-[150px] shrink-0 overflow-hidden rounded-lg">
     <img src="/Megaexe-party.png" alt="cover" class="h-full w-full object-cover" />
     <span class={`absolute right-1 top-1 rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[item.status]}`}>
     {item.status}

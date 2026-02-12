@@ -24,9 +24,9 @@
 					? 'lg:max-w-none lg:flex-shrink'
 					: ''}
 					{activeTab === tab.id
-					? 'border-[#DB3EC6] text-[#DB3EC6]'
-					: 'border-transparent text-gray-500 hover:text-gray-700'}"
-			>
+						? 'border-[#DB3EC6] text-[#DB3EC6]'
+						: 'border-transparent text-black hover:text-gray-700'}"
+				>
 				<span class="flex items-center justify-center">{@html tab.icon}</span>
 				{tab.label}
 			</button>

@@ -1,17 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import { clickOutside } from '$lib/utils/constant';
 
 	export let open: boolean = false;
 	const dispatch = createEventDispatcher();
-	onMount(() => {
-		document.body.style.overflow = 'hidden';
-
-		return () => {
-			document.body.style.overflow = '';
-		};
-	});
+	
 </script>
 
 {#if open}

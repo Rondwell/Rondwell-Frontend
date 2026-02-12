@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Plus } from 'lucide-svelte';
 	import CreateBoothModal from '../../components/CreateBoothModal.svelte';
+	import BoothContent from '$lib/components/BoothContent.svelte'
 
 	let showModal = false;
 	let viewMode = 'grid'; // 'grid' or 'list'
@@ -22,6 +23,39 @@
 		console.log('Booth created:', event.detail);
 		closeModal();
 	}
+
+	const groups = [
+		{
+		date: 'January 25',
+		day: 'Monday',
+		items: [
+			{ status: 'Published' },
+			{ status: 'Draft' }
+		]
+		},
+		{
+		date: 'Sep 25',
+		day: 'Wednesday',
+		items: [
+			{ status: 'Archived' },
+			{ status: 'Active' }
+		]
+		},
+		{
+		date: 'Sep 25',
+		day: 'Wednesday',
+		items: [
+			{ status: 'Archived' },
+			{ status: 'Draft' }
+		]
+		}
+	];
+	  const statusStyles: Record<string, string> = {
+		Published: 'bg-green-100 text-green-700',
+		Draft: 'bg-purple-100 text-purple-700',
+		Archived: 'bg-pink-100 text-pink-700',
+		Active: 'bg-emerald-100 text-emerald-700'
+	};
 </script>
 
 <div class="min-h-screen">
@@ -35,16 +69,16 @@
 				</h1>
 			</div>
 		</div>
-		<div class="ml-auto flex justify-end gap-5">
+		<div class="ml-auto flex justify-start gap-5">
 			<button
 				on:click={openModal}
-				class="flex items-center gap-3 rounded-[10px] bg-black px-6 py-2.5 text-[18.45px] font-normal text-white transition-colors hover:bg-gray-800"
+				class="flex items-center gap-3 rounded-[10px] bg-black px-6 py-2.5 text-[13.45px] font-normal text-white transition-colors hover:bg-gray-800"
 			>
 				<img src="/plus.svg" alt="plus" class="w-[16px]" />
 				Add New Booth
 			</button>
 			<!-- View Mode Toggle -->
-			<div class="flex items-center gap-1 rounded-[12.3px] bg-[#0000001A] p-[5px]">
+			<div class="flex items-center ml-auto gap-1 rounded-[12.3px] bg-[#0000001A] p-[5px]">
 				<button
 					class="rounded-[7.38px] p-2 {viewMode === 'grid'
 						? 'bg-white shadow-md'
@@ -68,7 +102,7 @@
 	<!-- Page Content -->
 	<div class="py-6 xl:px-8">
 		<!-- Title and Filters -->
-		<div class="mb-6 flex flex-col items-start justify-between 2xl:flex-row 2xl:items-center">
+		<div class=" flex flex-col items-start justify-between 2xl:flex-row 2xl:items-center">
 			<div class="flex w-full items-center justify-between space-y-10 xl:w-auto 2xl:space-y-0">
 				<h2 class="text-[24.68px] font-normal text-[#192226]">My Digital Booths</h2>
 				<button
@@ -121,38 +155,49 @@
 			</div>
 		</div>
 
-		<!-- Empty State -->
+		<!--WRAPPER-->
 
-		<div class="flex flex-col items-center justify-center py-20">
-			<div class="relative mx-auto mb-20 h-[283.9px] w-[283.9px]">
-				<img src="/empty.svg" alt="eempty" class="relative z-10 w-full" />
-				<div class="absolute top-22 left-10 z-0 h-[160.8px] w-[180px] bg-[#D9D9D9]"></div>
+		<!-- load booth content if any -->
+		 {#if groups.length > 0}
+
+		 	<!--BOOTH STAND CONTENT STATE-->
+		 	<BoothContent {groups} {statusStyles} {viewMode}/>
+
+		 {:else}
+		 
+		 	<!-- Empty State -->
+			<div class="flex flex-col items-center justify-center py-10">
+				<div class="relative mx-auto mb-10 h-[200.9px] w-[200.9px]">
+					<img src="/empty.svg" alt="eempty" class="relative z-10 w-full" />
+					<div class="absolute top-15 left-10 z-0 h-[120.8px] w-[120px] bg-[#D9D9D9]"></div>
+				</div>
+
+				<!-- <div class="mb-8">
+					<svg class="h-48 w-48 text-gray-300" viewBox="0 0 200 200" fill="none">
+						<circle cx="100" cy="100" r="80" fill="#F3F4F6" />
+						<rect x="60" y="80" width="30" height="40" rx="4" fill="white" />
+						<rect x="100" y="70" width="40" height="30" rx="4" fill="white" />
+						<rect x="60" y="130" width="50" height="20" rx="4" fill="white" />
+						<rect x="120" y="110" width="20" height="40" rx="4" fill="white" />
+						<text x="160" y="60" font-size="80" fill="#D1D5DB" font-weight="bold">0</text>
+					</svg>
+				</div> -->
+
+				<h3 class="mb-2 text-[21.97px] font-normal text-[#646568]">No Booths / Stands, yet</h3>
+				<p class="mb-8 max-w-[240.2px] text-center text-[20.36px] font-light text-[#A2ACB2]">
+					You haven't added any boot yet. Start by adding your first one!
+				</p>
+
+				<button
+					on:click={openModal}
+					class="flex items-center gap-2 rounded-[12.33px] bg-[#E2E4E5] px-4 py-3 text-[17.28px] font-medium text-gray-900 transition-colors hover:bg-gray-300"
+				>
+					<Plus class="h-5 w-5" />
+					Add New Booth
+				</button>
 			</div>
-
-			<!-- <div class="mb-8">
-				<svg class="h-48 w-48 text-gray-300" viewBox="0 0 200 200" fill="none">
-					<circle cx="100" cy="100" r="80" fill="#F3F4F6" />
-					<rect x="60" y="80" width="30" height="40" rx="4" fill="white" />
-					<rect x="100" y="70" width="40" height="30" rx="4" fill="white" />
-					<rect x="60" y="130" width="50" height="20" rx="4" fill="white" />
-					<rect x="120" y="110" width="20" height="40" rx="4" fill="white" />
-					<text x="160" y="60" font-size="80" fill="#D1D5DB" font-weight="bold">0</text>
-				</svg>
-			</div> -->
-
-			<h3 class="mb-2 text-[31.97px] font-normal text-[#646568]">No Booths / Stands, yet</h3>
-			<p class="mb-8 max-w-[440.2px] text-center text-[20.36px] font-light text-[#A2ACB2]">
-				You haven't added any boot yet. Start by adding your first one!
-			</p>
-
-			<button
-				on:click={openModal}
-				class="flex items-center gap-2 rounded-[12.33px] bg-[#E2E4E5] px-4 py-3 text-[17.28px] font-medium text-gray-900 transition-colors hover:bg-gray-300"
-			>
-				<Plus class="h-5 w-5" />
-				Add New Booth
-			</button>
-		</div>
+		 {/if}
+		
 	</div>
 </div>
 

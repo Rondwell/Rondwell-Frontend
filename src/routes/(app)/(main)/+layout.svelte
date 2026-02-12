@@ -2,7 +2,14 @@
 	import { browser } from '$app/environment';
 	import Sidebar from '../components/Sidebar.svelte';
 	import SideMenu from '../components/SideMenu.svelte';
-	import { showSubMenu, subMenuItems, activeSubItem } from '$lib/stores/uiStore.js';
+	import {
+		showSubMenu,
+		subMenuItems,
+		activeSubItem,
+		showSettingsSubMenu,
+		settingsSubMenuItems,
+		activeSettingsItem
+	} from '$lib/stores/uiStore.js';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 
@@ -45,23 +52,19 @@
 		return themes.default;
 	}
 
+	/* ---------- Stores ---------- */
 	$: menuItems = $subMenuItems;
 	$: activeItem = $activeSubItem;
+
+	$: settingsMenuItems = $settingsSubMenuItems;
+	$: activeSettings = $activeSettingsItem;
+
 	$: isSubMenuVisible = isMobile ? menuItems.length > 0 : $showSubMenu;
+	$: isSettingsMenuVisible = $showSettingsSubMenu;
 
 	$: {
 		const path = $page.url.pathname;
 		selectedTheme = getThemeForRoute(path);
-
-		// show submenu only for nested event subroutes (not base)
-		if (
-			!path.startsWith('/events/') ||
-			(!path.startsWith('/collection/') && path !== '/collection/create')
-		) {
-			showSubMenu.set(false);
-			subMenuItems.set([]);
-			activeSubItem.set('');
-		}
 	}
 </script>
 
@@ -69,6 +72,7 @@
 	class="relative flex min-h-screen flex-col text-sm font-medium md:flex-row"
 	style="background-image: {selectedTheme};"
 >
+	<!-- Sidebar -->
 	<div class="relative md:min-w-[117px]">
 		<Sidebar background_color="#f4f5f6" />
 	</div>
@@ -78,13 +82,32 @@
 			<SideMenu items={menuItems} {activeItem} />
 		</div>
 	{/if}
+
+	<!-- Main Content Area -->
 	<main class="relative mb-[106px] flex min-h-screen min-w-0 w-full flex-col p-3 md:mb-0 md:p-5">
 		<div class="bg flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
-			{#if isSubMenuVisible && menuItems.length > 0}
-				<div class="relative mb-6 md:hidden">
+
+			<!-- Mobile SubMenu (Events / People / Collections root only) -->
+			{#if isSubMenuVisible && isMobile && menuItems.length > 0}
+				<div style={`isSettingsMenuVisible ? 'mb-0':'mb-4'`}>
 					<SideMenu items={menuItems} {activeItem} />
 				</div>
 			{/if}
+
+			<!-- SETTINGS HORIZONTAL MENU (MOBILE + DESKTOP) -->
+			{#if isSettingsMenuVisible && settingsMenuItems.length > 0}
+				<div class="mb-4">
+					<SideMenu
+						items={settingsMenuItems}
+						activeItem={activeSettings}
+						variant="horizontal"
+					/>
+				</div>
+			{/if}
+
+			
+
+			<!-- Page Content -->
 			<slot class="h-full w-full flex-1" />
 		</div>
 	</main>

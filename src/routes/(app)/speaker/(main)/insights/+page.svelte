@@ -112,11 +112,10 @@ type StackKey = "pending" | "accepted" | "completed";
 </script>
 
 
-<div class="min-h-screen px-6 py-6 space-y-6">
+<div class="min-h-screen px-0.5 py-2 space-y-2">
 
   <!-- ================= PRODUCTS / SERVICES ================= -->
-  <div class="bg-white rounded-xl p-6 shadow-sm space-y-6">
-
+  <div class=" bg-white rounded-xl p-4 shadow-sm space-y-6">
    <!-- Header Row -->
 <div class="flex items-center justify-between gap-6 whitespace-nowrap">
   <!-- LEFT -->
@@ -144,7 +143,7 @@ type StackKey = "pending" | "accepted" | "completed";
   class="border px-4 py-1.5 rounded-lg text-sm text-gray-600 flex items-center gap-2 flex-shrink-0"
 >
   This Month
-  <Icon icon="heroicons:chevron-down" class="w-4 h-4 text-gray-500" />
+  <img src="/arrow-down.png"class="h-2 w-3"/>
 </button>
 
 </div>
@@ -178,7 +177,7 @@ type StackKey = "pending" | "accepted" | "completed";
     </div>
   </div>
 </div>
-
+</div>
 
 
 
@@ -194,10 +193,7 @@ type StackKey = "pending" | "accepted" | "completed";
   <span class="absolute bottom-0 left-0 w-32 h-32 border-b-2 border-l-2 border-green-200/60"></span>
 
   <!-- Icon -->
-  <Icon
-    icon="heroicons:arrow-down-tray"
-    class="w-6 h-6 text-green-600 mt-1 z-10"
-  />
+  <img src="/acc2.svg" />
 
   <!-- Text -->
   <div class="z-10">
@@ -210,10 +206,7 @@ type StackKey = "pending" | "accepted" | "completed";
             bg-gradient-to-br from-yellow-50 via-yellow-100 to-yellow-50">
 
   <!-- Icon -->
-  <Icon
-    icon="heroicons:arrow-up-tray"
-    class="w-6 h-6 text-yellow-600 mt-1 z-10"
-  />
+  <img src="/acc3.svg"/>
 
   <!-- Text wrapper -->
   <div>
@@ -226,10 +219,7 @@ type StackKey = "pending" | "accepted" | "completed";
 
     <div class="bg-purple-50 p-4 rounded-xl flex items-start gap-3">
   <!-- In Progress Icon -->
-  <Icon
-    icon="mdi:progress-clock"
-    class="w-6 h-6 text-purple-600 mt-1"
-  />
+  <img src="/acc.svg"/>
 
   <!-- Text -->
   <div>
@@ -402,5 +392,4 @@ type StackKey = "pending" | "accepted" | "completed";
     </div>
   </div>
 
-</div>
 </div>

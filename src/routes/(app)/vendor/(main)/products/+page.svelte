@@ -20,7 +20,15 @@
       date: 'January 25',
       day: 'Monday',
       items: [
-        { status: 'Active' },
+        { status: 'Published' },
+        { status: 'Draft' }
+      ]
+    },
+    {
+      date: 'Sep 25',
+      day: 'Wednesday',
+      items: [
+        { status: 'Archived' },
         { status: 'Active' }
       ]
     },
@@ -28,16 +36,8 @@
       date: 'Sep 25',
       day: 'Wednesday',
       items: [
-        { status: 'Active' },
-        { status: 'Active' }
-      ]
-    },
-    {
-      date: 'Sep 25',
-      day: 'Wednesday',
-      items: [
-        { status: 'Active' },
-        { status: 'Active' }
+        { status: 'Archived' },
+        { status: 'Draft' }
       ]
     }
   ];
@@ -66,21 +66,16 @@ $: pageTitle =
 
 <div class="min-h-screen bg-gradient-to-b ">
 	<!-- Top Header -->
-	<div class="mb-8 flex flex-col gap-3">
-		<div class="flex items-center">
-			<div class="flex items-center gap-2 text-[30px] font-semibold">
-				<span class="w-6 h-6 bg-yellow-400 rounded-full inline-flex items-center justify-center text-sm"><img src="/tech-icon.svg" alt="Tech Icon"/></span>
-				Megaexe Limited
-			</div>
+	<div class="flex items-center justify-between mb-8">
+		<div class="flex items-center gap-2 text-lg font-semibold">
+			<span class="w-6 h-6 bg-yellow-400 rounded-full inline-flex items-center justify-center text-sm"><img src="/tech-icon.svg" alt="Tech Icon"/></span>
+			Innocent James
 		</div>
 
-		<div class="flex items-center justify-end gap-3">
-			<button
-				class="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm shadow"
-				onclick={() => (showModal = true)}
-			>
+		<div class="flex items-center gap-3">
+			<button class="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm shadow" onclick={() => (showModal = true)}>
 				<span class="text-lg">+</span>
-				Add New Product/Services
+				Add New Engagement
 			</button>
 
 			<div class="flex rounded-lg bg-white shadow overflow-hidden">
@@ -100,6 +95,7 @@ $: pageTitle =
     <img src="/list.svg" alt="list Icon" />
   </button>
 </div>
+
 		</div>
 	</div>
 
@@ -112,7 +108,7 @@ $: pageTitle =
 				<span><img src="/search.svg" alt="Search Icon" /></span>
 				<input
 					type="text"
-					placeholder="Search by product name..."
+					placeholder="Search portfolio entries..."
 					class="outline-none bg-transparent w-48"
 				/>
 			</div>
@@ -130,7 +126,7 @@ $: pageTitle =
       <div class="flex items-start gap-4 w-full">
 
         <!-- DATE COLUMN (far left) -->
-        <div class="hidden w-[90px] shrink-0 flex-col items-start sm:flex">
+        <div class="flex w-[90px] flex-col items-start shrink-0">
           <div class="whitespace-nowrap text-sm font-medium">
             {group.date}
           </div>
@@ -140,7 +136,7 @@ $: pageTitle =
         </div>
 
         <!-- RIGHT SIDE: TIMELINE + CONTENT -->
-<div class="w-full flex items-start gap-6 sm:ml-auto">
+<div class="ml-auto flex items-start gap-6">
 
   <!-- TIMELINE COLUMN (CONTINUOUS) -->
   <div class="relative hidden md:flex w-[11px] shrink-0 justify-center self-stretch">
@@ -175,20 +171,16 @@ $: pageTitle =
         </div>
 
         <!-- TEXT -->
-        <h3 class="text-[25px] font-semibold leading-tight pt-5">
-          Event Management
+        <h3 class="text-base font-semibold leading-tight pt-5">
+          Shaping the future<br />with AI
         </h3>
-        <p class="mt-1 text-sm text-gray-500">
-          Event Venue
+        <p class="mt-1 text-sm text-gray-500 pt-5">
+          How AI transforms education
         </p>
 
-        <div class="mt-1 flex items-center gap-2 text-[15px]">
-          <span class="text-black-200">#1,250,000</span>
-          <button class="flex items-center gap-1 rounded-md px-2 py-0.5 text-[15px] font-semibold text-gray-600  bg-gray-200">
-            <img src="/edit.svg" alt="edit-icon" class="h-3 w-3" />
-            Custom Quote
-          </button>
-        </div>
+        <p class="mt-1 text-xs text-gray-400">
+          12 Minutes Ago
+        </p>
 
         <!-- ACTIONS -->
         <div class="mt-3 flex items-center gap-2">
@@ -215,63 +207,7 @@ $: pageTitle =
 
 {:else}
   <!-- LIST VIEW -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:hidden">
-    {#each group.items as item}
-      <div class="w-[320px] rounded-xl border bg-white p-3 shadow-sm">
-        <!-- IMAGE -->
-        <div class="relative mb-3 h-[180px] overflow-hidden rounded-lg bg-gray-200">
-          <img
-            src="/Megaexe-party.png"
-            alt="cover"
-            class="h-full w-full object-cover"
-          />
-          <span
-            class={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[item.status]}`}
-          >
-            {item.status}
-          </span>
-        </div>
-
-        <!-- TEXT -->
-        <h3 class="text-[25px] font-semibold leading-tight pt-5">
-          Event Management
-        </h3>
-        <p class="mt-1 text-sm text-gray-500">
-          Event Venue
-        </p>
-
-        <div class="mt-1 flex items-center gap-2 text-xs">
-          <span class="text-gray-400">#1,250,000</span>
-          <button class="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
-            <img src="/edit-icon3.svg" alt="edit-icon" class="h-3 w-3" />
-            Custom Quote
-          </button>
-        </div>
-
-        <!-- ACTIONS -->
-        <div class="mt-3 flex items-center gap-2">
-          <button
-            class="flex items-center gap-1 rounded-md bg-black px-3 py-1 text-xs text-white"
-          >
-            <img src="/eye.svg" alt="view-icon" class="h-3 w-3" />
-            <span>View</span>
-          </button>
-          <button
-            class="flex items-center gap-1 rounded-md border border-black px-3 py-1 text-xs"
-          >
-            <img src="/edit-icon3.svg" alt="edit-icon" class="h-3 w-3" />
-            <span>Edit</span>
-          </button>
-
-          <button>
-            <img src="/more-square.svg" alt="more-icon" class="h-6 w-6" />
-          </button>
-        </div>
-      </div>
-    {/each}
-  </div>
-
-  <div class="hidden w-full flex-col gap-6 md:flex">
+  <div class="flex flex-col gap-6 w-full">
     {#each group.items as item}
       <div class="flex flex-1 items-center justify-between rounded-xl bg-white px-5 py-4 shadow-sm">
 
@@ -285,13 +221,9 @@ $: pageTitle =
       How AI transforms education
     </p>
 
-    <div class="flex items-center gap-2 text-xs">
-      <span class="text-gray-400">#1,250,000</span>
-      <button class="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
-        <img src="/edit-icon3.svg" alt="edit" class="h-3 w-3" />
-        Custom Quote
-      </button>
-    </div>
+    <p class="text-xs text-gray-400">
+      12 Minutes Ago
+    </p>
 
     <div class="mt-2 flex items-center gap-2">
       <button class="flex items-center gap-1 rounded-md bg-black px-3 py-1 text-xs text-white">

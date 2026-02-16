@@ -3,8 +3,6 @@
 	import InboundOrders from './components/InboundOrders.svelte';
 	import AcceptedCollaborations from './components/AcceptedCollaborations.svelte';
 	import SentRequests from './components/SentRequests.svelte';
-	import Finance from './components/finance.svelte';
-	import Calendar from './components/calendar.svelte';
 
 	let activeTab = 'inbound';
 
@@ -62,9 +60,9 @@
 	];
 </script>
 
-<div class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="max-w-6xl">
 	<div class="mb-6">
-		<h1 class="mb-6 text-2xl font-bold sm:text-3xl md:text-4xl">Megaexe Limited</h1>
+		<h1 class="mb-6 text-3xl font-bold md:text-4xl">Megaexe Limited</h1>
 		<Nav {tabs} bind:activeTab />
 	</div>
 
@@ -75,8 +73,12 @@
 	{:else if activeTab === 'sent'}
 		<SentRequests />
 	{:else if activeTab === 'financials'}
-		<Finance />
+		<div class="flex h-50 flex-col items-center justify-center">
+			<p class="text-gray-500">Financials module coming soon...</p>
+		</div>
 	{:else if activeTab === 'calendar'}
-		<Calendar />
+		<div class="flex h-50 flex-col items-center justify-center">
+			<p class="text-gray-500">Calendar/Bookings module coming soon...</p>
+		</div>
 	{/if}
 </div>

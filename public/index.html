@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rondwell Public</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Rondwell Demo Login</h1>
+      <p>Use <code>admin@rondwell.com</code> / <code>password123</code></p>
+
+      <form id="login-form" class="card">
+        <label>
+          Email
+          <input id="email" type="email" value="admin@rondwell.com" />
+        </label>
+        <label>
+          Password
+          <input id="password" type="password" value="password123" />
+        </label>
+        <button type="submit">Login</button>
+      </form>
+
+      <p id="login-message"></p>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

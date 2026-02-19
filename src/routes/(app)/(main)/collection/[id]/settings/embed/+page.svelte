@@ -3,7 +3,7 @@
 	import { writable } from 'svelte/store';
 	import SelectDropdown from './SelectDropdown.svelte';
 
-	let selected = 'Main';
+	let selected: string | null = null;
 	const options = ['Main', 'New Tag', 'Crypto'];
 
 	type Theme = 'light' | 'dark';
@@ -36,18 +36,20 @@
 		return unsubscribe;
 	});
 
-	function toggleTheme() {
-		theme.update((t) => (t === 'light' ? 'dark' : 'light'));
+	function setTheme(value: Theme) {
+		theme.set(value);
 	}
 
 	let copied = false;
 
 	const embedCode = `<iframe
-  src="https://rondwell.com/embed/calendar/cal-QxJCmyPBjw5PKsT/events?"
+  src="https://rondwell.com/embed/calendar
+  /cal-QxJCmyPBjw5PKsT/events?"
   width="600"
   height="450"
   frameborder="0"
-  style="border: 1px solid #bfcbd8; border-radius: 4px;"
+  style="border: 1px solid #bfcbd8;
+   border-radius: 4px;"
   allowfullscreen=""
   aria-hidden="false"
   tabindex="0">
@@ -80,99 +82,103 @@
 	>
 		<div class="flex w-full flex-col items-center justify-between gap-2 lg:flex-row">
 			<div class="lg:gap-15 flex w-full justify-between px-8 lg:justify-start lg:px-0">
-				<div class="flex items-center justify-between gap-2">
-					<button
-						class="rounded-lg border border-gray-300 bg-white p-2 shadow-sm transition hover:scale-105 dark:border-gray-700 dark:bg-gray-800"
-						aria-label="Toggle theme"
-					>
-						<svg
-							width="18"
-							height="18"
-							viewBox="0 0 18 18"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M13.6291 3.93359L13.5318 4.00398L9.0539 8.90641L8.99414 8.99735L9.01673 9.00701L13.6224 9.01422L13.6291 8.99735L17.9976 4.70878L13.6291 3.93359Z"
-								fill="#A3A4A4"
-							/>
-							<path
-								d="M13.6291 14.0638L13.6016 14.0702L9.01213 9.05751L8.99414 9H13.6291L17.9976 13.2355L13.6291 14.0638Z"
-								fill="#A3A4A4"
-							/>
-							<path
-								d="M8.99737 9L13.6323 14.0638L13.4182 18.0013L8.99737 13.4985L8.98593 13.4568L8.97656 9.06073L8.99737 9Z"
-								fill="#A3A4A4"
-							/>
-							<path
-								d="M4.08978 13.7816L4.08398 13.735L8.93964 9.03558L8.9982 9L8.99761 13.4988L4.60811 18.0016L4.08978 13.7816Z"
-								fill="#A3A4A4"
-							/>
-							<path
-								d="M8.9978 8.99781L4.08938 13.7794L0 13.2204L4.63729 8.99781L4.66271 8.97588L8.94236 8.97266L8.9978 8.99781Z"
-								fill="#A3A4A4"
-							/>
-							<path
-								d="M8.9978 9.00034L8.93924 8.90113L4.164 4.22396L4.08938 4.21875L0 4.81789L4.63729 9.00034H8.9978Z"
-								fill="#A3A4A4"
-							/>
-							<path
-								d="M4.08984 4.21742L8.99826 8.99901L9.02026 8.88063V4.58684L8.99767 4.5002L4.60252 0L4.08984 4.21742Z"
-								fill="#A3A4A4"
-							/>
-							<path
-								d="M8.99414 8.99871L13.6291 3.93495L13.3665 0L8.99414 4.5002V8.99871Z"
-								fill="#A3A4A4"
-							/>
-						</svg>
-					</button>
-
+				<div class="flex items-center justify-between rounded-md p-1 gap-2 bg-[#F4F4F4]">
 					{#if mounted}
+						<button
+							on:click={() => setTheme('light')}
+							class="rounded-lg p-2 shadow-sm transition hover:scale-105"
+							aria-label="Toggle theme"
+						>
+							<svg
+								width="18"
+								height="18"
+								viewBox="0 0 18 18"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									d="M9.06641 1.00488C13.1415 1.20045 16.3857 4.56689 16.3857 8.69043V9.31055C16.3857 13.4341 13.1415 16.7995 9.06641 16.9951V1.00488Z"
+									fill="#131517"
+									stroke="#131517"
+									stroke-width="0.75"
+								/>
+								<circle cx="9" cy="9" r="7.875" stroke="#131517" stroke-width="2.25" />
+							</svg>
+						</button>
+
+						<button
+							class="rounded-lg  shadow-sm transition hover:scale-105 "
+							aria-label="Toggle theme"
+						>
+							<svg
+								width="18"
+								height="18"
+								viewBox="0 0 18 18"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									d="M13.6291 3.93359L13.5318 4.00398L9.0539 8.90641L8.99414 8.99735L9.01673 9.00701L13.6224 9.01422L13.6291 8.99735L17.9976 4.70878L13.6291 3.93359Z"
+									fill="#A3A4A4"
+								/>
+								<path
+									d="M13.6291 14.0638L13.6016 14.0702L9.01213 9.05751L8.99414 9H13.6291L17.9976 13.2355L13.6291 14.0638Z"
+									fill="#A3A4A4"
+								/>
+								<path
+									d="M8.99737 9L13.6323 14.0638L13.4182 18.0013L8.99737 13.4985L8.98593 13.4568L8.97656 9.06073L8.99737 9Z"
+									fill="#A3A4A4"
+								/>
+								<path
+									d="M4.08978 13.7816L4.08398 13.735L8.93964 9.03558L8.9982 9L8.99761 13.4988L4.60811 18.0016L4.08978 13.7816Z"
+									fill="#A3A4A4"
+								/>
+								<path
+									d="M8.9978 8.99781L4.08938 13.7794L0 13.2204L4.63729 8.99781L4.66271 8.97588L8.94236 8.97266L8.9978 8.99781Z"
+									fill="#A3A4A4"
+								/>
+								<path
+									d="M8.9978 9.00034L8.93924 8.90113L4.164 4.22396L4.08938 4.21875L0 4.81789L4.63729 9.00034H8.9978Z"
+									fill="#A3A4A4"
+								/>
+								<path
+									d="M4.08984 4.21742L8.99826 8.99901L9.02026 8.88063V4.58684L8.99767 4.5002L4.60252 0L4.08984 4.21742Z"
+									fill="#A3A4A4"
+								/>
+								<path
+									d="M8.99414 8.99871L13.6291 3.93495L13.3665 0L8.99414 4.5002V8.99871Z"
+									fill="#A3A4A4"
+								/>
+							</svg>
+						</button>
+
 						<div class=" ">
 							<button
-								on:click={toggleTheme}
-								class="rounded-lg border border-gray-300 bg-white p-2 shadow-sm transition hover:scale-105 dark:border-gray-700 dark:bg-gray-800"
+								on:click={() => setTheme('dark')}
+								class="rounded-lg p-2 shadow-sm transition hover:scale-105 "
 								aria-label="Toggle theme"
 							>
-								{#if $theme === 'light'}
-									<!-- Moon Icon -->
-									<svg
-										class="h-5 w-5 text-gray-700"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-										/>
-									</svg>
-								{:else}
-									<!-- Sun Icon -->
-									<svg
-										class="h-5 w-5 text-yellow-400"
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-										/>
-									</svg>
-								{/if}
+								<svg
+									class="h-5 w-5 text-gray-700"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+									/>
+								</svg>
 							</button>
 						</div>
 					{/if}
 				</div>
 
-				<div class="flex gap-2">
+				<div class="flex gap-2 rounded-md p-1 bg-[#F4F4F4]">
 					<button
-						class="rounded-lg border border-gray-300 bg-white p-2 shadow-sm transition hover:scale-105 dark:border-gray-700 dark:bg-gray-500"
+						class="rounded-lg p-2 shadow-sm transition hover:scale-105"
 						aria-label="Toggle theme"
 					>
 						<svg
@@ -199,7 +205,7 @@
 					</button>
 
 					<button
-						class="rounded-lg border border-gray-300 bg-white p-2.5 shadow-sm transition hover:scale-105 dark:border-gray-700 dark:bg-gray-800"
+						class="rounded-lg p-2.5 shadow-sm transition hover:scale-105 "
 						aria-label="Toggle theme"
 					>
 						<svg
@@ -232,26 +238,21 @@
 		</div>
 	</div>
 
-	<div class="my-4 w-full ">
+	<div class="my-4 w-full">
 		<div class="mb-2 flex items-center justify-between">
-			<div
-				
-				class="text-md mt-4 cursor-pointer rounded-md px-3 py-1 text-[#838486] transition"
-			>
+			<div class="text-md mt-4 cursor-pointer rounded-md px-3 py-1 text-[#838486] transition">
 				{copied ? 'Copied!' : ' Code to Copy'}
 			</div>
 		</div>
 
-		<pre on:click={copyToClipboard}
-			class=" cursor-pointer rounded-lg border border-gray-200 bg-gray-100 text-sm">
+		<pre
+			on:click={copyToClipboard}
+			class=" w-full cursor-pointer rounded-lg border border-gray-200 bg-gray-100 text-sm">
 			<code>{embedCode}</code>
  	    </pre>
 	</div>
 
-	<div
-	
-		class="text-md mt-4 rounded-md px-3 py-1 text-[#838486] transition"
-	>
+	<div class="text-md mt-4 rounded-md px-3 py-1 text-[#838486] transition">
 		You can change the width and height attributes above to fit the size of your page.
 	</div>
 </section>

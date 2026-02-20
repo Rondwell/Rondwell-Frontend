@@ -42,34 +42,75 @@
 
 	let copied = false;
 
-	const embedCode = `<iframe
-  src="https://rondwell.com/embed/calendar
-  /cal-QxJCmyPBjw5PKsT/events?"
-  width="600"
-  height="450"
-  frameborder="0"
-  style="border: 1px solid #bfcbd8;
-   border-radius: 4px;"
-  allowfullscreen=""
-  aria-hidden="false"
-  tabindex="0">
-</iframe>`;
-
-	async function copyToClipboard() {
-		try {
-			await navigator.clipboard.writeText(embedCode);
-			copied = true;
-
-			setTimeout(() => {
-				copied = false;
-			}, 2000);
-		} catch (err) {
-			console.error('Copy failed', err);
-		}
+	const embedCode = `<iframe 
+  src="https://rondwell.com/embed/calendar/cal-QxJCmyPBjw5PKsT/events?" 
+  width="600" 
+  height="450" 
+  frameborder="0" 
+  style="border: 1px solid #bfcbda88; border-radius: 4px;" 
+  allowfullscreen=" 
+  aria-hidden="false" 
+  tabindex="0" 
+X/iframe>`;
+function escapeHtml(str: any) {
+		return str
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#039;');
 	}
+
+	const copyToClipboard = (text: string) => {
+		navigator.clipboard
+			.writeText(text)
+			.then(() => {
+				console.log('Copied to clipboard');
+				// In a real app, you might show a toast notification
+			})
+			.catch((err) => {
+				console.error('Failed to copy: ', err);
+			});
+	};
 </script>
 
 <section class="p-4">
+	<div class="lg-block hidden sm:justify-between md:mb-10 md:flex">
+		<div class="flex items-center justify-between">
+			<img src="/tech-icon.svg" alt="icon" class="h-7 w-7" />
+			<h1 class="text-md ml-2 lg:text-2xl">Business Collection</h1>
+		</div>
+		<button
+			class="flex w-fit items-center gap-2 whitespace-nowrap rounded-md bg-[#DCE4EE] px-3 text-[#5D646F] md:text-sm"
+		>
+			<span class="md:text-sm">Calendar Page</span>
+			<svg
+				width="16"
+				height="16"
+				viewBox="0 0 16 16"
+				fill="none"
+				xmlns="http://www.w3.org/2000/svg"
+			>
+				<path
+					d="M1.24306 6.4387C1.40611 5.40243 2.12888 4.62786 3.0931 4.47826L9.69034 3.43935L9.8408 3.42097C10.5948 3.35739 11.3249 3.72187 11.7721 4.3912C12.2195 5.06073 12.3131 5.92902 12.0244 6.68931L11.9618 6.83923L9.01457 13.3413L9.01326 13.3411C8.84871 13.7088 8.61528 14.0066 8.33157 14.2308C7.8792 14.5883 7.31432 14.7405 6.72781 14.6481C5.77143 14.4963 5.05093 13.7247 4.89305 12.6922L4.591 10.7138C4.53659 10.3578 4.3245 10.0403 4.02548 9.86912L4.02494 9.8683L2.3872 8.94152C1.53287 8.45922 1.08026 7.47484 1.24306 6.4387ZM2.76439 5.88928C2.52769 6.07636 2.39626 6.36366 2.35324 6.63719L2.35378 6.638C2.28828 7.04462 2.40721 7.57568 2.91465 7.86476L4.55152 8.78851L4.66279 8.85692C5.17357 9.19045 5.53909 9.73754 5.67294 10.3689L5.69839 10.5051L6.00044 12.4835L6.00098 12.4843C6.09306 13.0997 6.52266 13.3845 6.9 13.4426C7.27991 13.5012 7.75745 13.3662 8.00792 12.8142L10.9559 6.31145C11.1348 5.91836 11.1012 5.47237 10.8636 5.11651C10.6258 4.7606 10.2457 4.58735 9.84651 4.65089L9.84575 4.6515L3.24253 5.68148C3.04601 5.71271 2.88934 5.79056 2.76439 5.88928Z"
+					fill="#5D646F"
+					stroke="#5D646F"
+					stroke-width="0.37461"
+				/>
+				<rect
+					x="7.25931"
+					y="8.68484"
+					width="3.5114"
+					height="1.15881"
+					rx="0.579404"
+					transform="rotate(144 7.25931 8.68484)"
+					fill="#5D646F"
+					stroke="#5D646F"
+					stroke-width="0.37461"
+				/>
+			</svg>
+		</button>
+	</div>
 	<div class="mb-4 flex flex-col justify-between gap-2">
 		<h2 class="text-lg font-semibold">Embed Collection</h2>
 		<p class="text-[#8C8F93]">
@@ -238,19 +279,25 @@
 		</div>
 	</div>
 
-	<div class="my-4 w-full">
-		<div class="mb-2 flex items-center justify-between">
-			<div class="text-md mt-4 cursor-pointer rounded-md px-3 py-1 text-[#838486] transition">
-				{copied ? 'Copied!' : ' Code to Copy'}
+	<div class="my-4 sm:my-6">
+			<p class="mb-2 text-sm text-[#838486] sm:mb-3 sm:text-base">
+				Code to Copy
+			</p>
+			<div class="relative md:max-w-158 lg:max-w-auto">
+				<div
+					class="custom-scrollbar overflow-x-auto rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-sm sm:p-5 sm:text-sm"
+				>
+					<pre class=""><code>{escapeHtml(embedCode)}</code></pre>
+				</div>
+				<button
+					on:click={() => copyToClipboard(embedCode)}
+					class="absolute top-3 right-3 flex items-center gap-1 rounded-md bg-[#F6F6F6] p-2 text-xs font-medium text-[#616265] transition-colors hover:bg-gray-100 sm:top-4 sm:right-4"
+				>
+					<img src="/copy.svg" alt="" />
+					Copy
+				</button>
 			</div>
 		</div>
-
-		<pre
-			on:click={copyToClipboard}
-			class=" w-full cursor-pointer rounded-lg border border-gray-200 bg-gray-100 text-sm">
-			<code>{embedCode}</code>
- 	    </pre>
-	</div>
 
 	<div class="text-md mt-4 rounded-md px-3 py-1 text-[#838486] transition">
 		You can change the width and height attributes above to fit the size of your page.

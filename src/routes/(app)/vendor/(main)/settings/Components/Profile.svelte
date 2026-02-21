@@ -19,7 +19,7 @@
 <section class="w-full max-w-5xl space-y-6 rounded-2xl p-4 md:p-6">
   <!-- Header -->
   <header class="space-y-1">
-    <h1 class="text-3xl font-semibold text-gray-900">Public Vendor Profile</h1>
+    <h1 class="text-2xl font-semibold text-gray-900 md:text-3xl">Public Vendor Profile</h1>
     <p class="max-w-md text-sm leading-snug text-gray-500">
       This is how Organizers and guests see your business on Rondwell
     </p>
@@ -31,7 +31,7 @@
   <div class="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
     <!-- Left preview card -->
     <article class="overflow-hidden rounded-xl border border-[#e6dbc6] bg-[#f5ebd7]">
-      <div class="grid grid-cols-[160px_1fr]">
+      <div class="grid grid-cols-1 sm:grid-cols-[160px_1fr]">
         <img
           src="/eventpage_sample.svg"
           alt="Vendor event preview"
@@ -39,7 +39,7 @@
         />
 
         <div class="space-y-3 p-4">
-          <h2 class="text-[40px] font-semibold leading-none text-[#241f1a]">Megaexe Party</h2>
+          <h2 class="text-2xl font-semibold leading-none text-[#241f1a] sm:text-3xl md:text-[40px]">Megaexe Party</h2>
 
           <div class="space-y-2 text-sm text-[#3d372f]">
             <div class="flex items-start gap-2">
@@ -67,11 +67,11 @@
 
     <!-- Right customization panel -->
     <aside class="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
-      <h3 class="text-[34px] font-semibold text-gray-900">Customization Options</h3>
+      <h3 class="text-2xl font-semibold text-gray-900 md:text-3xl">Customization Options</h3>
 
       <div class="space-y-4">
         <div class="flex items-center justify-between border-b border-gray-200 pb-3">
-          <p class="text-[20px] text-gray-800">Show Customer Reviews</p>
+          <p class="text-base text-gray-800 md:text-lg">Show Customer Reviews</p>
           <button
             type="button"
             aria-label="Toggle customer reviews"
@@ -85,7 +85,7 @@
         </div>
 
         <div class="flex items-center justify-between border-b border-gray-200 pb-3">
-          <p class="text-[20px] text-gray-800">Show Contact Information</p>
+          <p class="text-base text-gray-800 md:text-lg">Show Contact Information</p>
           <button
             type="button"
             aria-label="Toggle contact information"
@@ -100,7 +100,7 @@
 
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <p class="text-[20px] text-gray-800">Manage Displayed Listings:</p>
+            <p class="text-base text-gray-800 md:text-lg">Manage Displayed Listings:</p>
             <button
               type="button"
               aria-label="Toggle listing display"
@@ -115,7 +115,7 @@
 
           <div class="grid grid-cols-2 gap-y-3 sm:grid-cols-3">
             {#each listings as listing}
-              <label class="flex cursor-pointer items-center gap-2 text-[30px] text-gray-700">
+              <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700 sm:text-base">
                 <input
                   type="checkbox"
                   checked={selectedListings.includes(listing)}
@@ -134,15 +134,15 @@
 
   <!-- Footer action row -->
   <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
-    <div class="flex items-center gap-4 text-[#909090] sm:w-1/2">
+    <div class="flex flex-wrap items-center gap-4 text-[#909090] sm:w-1/2">
       <span class="text-[13px] font-medium">Share Profile</span>
-      <span class="text-lg"><img src="/instagram.svg"/></span>
-      <span class="text-lg"><img src="/twitter.svg" alt="" srcset="" class="w-3"/></span>
-      <span class="text-lg"><img src='/linkedin-icon.svg'/></span>
-      <span class="text-lg"><img src="/tiktok.svg"/></span>
-	  <button type="button" class="rounded-lg border border-gray-300 px-5 py-2 text-[12px] text-gray-700 hover:bg-gray-50">
-        View My Public Profile
-      </button>
+      <span class="text-lg"><img src="/instagram.svg" alt="Instagram icon"/></span>
+      <span class="text-lg"><img src="/twitter.svg" alt="X icon" class="w-3"/></span>
+      <span class="text-lg"><img src="/linkedin-icon.svg" alt="LinkedIn icon"/></span>
+      <span class="text-lg"><img src="/tiktok.svg" alt="TikTok icon"/></span>
+		  <button type="button" class="rounded-lg border border-gray-300 px-5 py-2 text-[12px] text-gray-700 hover:bg-gray-50">
+	        View My Public Profile
+	      </button>
     </div>
     <div class="space-y-3 sm:w-1/2 sm:text-right">
       <div class="rounded-lg bg-[#f6efdf] p-4 text-sm font-medium text-[#3f3a33]">
@@ -152,7 +152,7 @@
   </div>
 
   <!-- Save -->
-      <button class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition">
-        <img src="/profile-gear.svg" class="pr-2"/>Save Changes
+      <button class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-gray-800 sm:w-auto sm:justify-start">
+        <img src="/profile-gear.svg" alt="Save icon" class="pr-2"/>Save Changes
       </button>
 </section>

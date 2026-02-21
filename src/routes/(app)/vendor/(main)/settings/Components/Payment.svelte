@@ -4,10 +4,10 @@
   let companyDescription = '';
 </script>
 
-<div class="p-4">
-	<h1 class="text-2xl ">Payment & Financial Settings</h1>
+<div class="w-full max-w-5xl p-4 md:p-6">
+	<h1 class="text-xl font-semibold md:text-2xl">Payment & Financial Settings</h1>
 	<p class="text-gray-400">Configure how you'll receive payments and set your default currency</p>
-		<hr class="mt-4 w-[90%] border-gray-200" />
+		<hr class="mt-4 border-gray-200" />
 		<div class="pt-4">
 			<h2 class="text-lg font-medium text-gray-900 mb-1">
         Payment Methods
@@ -61,12 +61,12 @@
         </div>
 		</div>
 		<!-- Buttons -->
-      <div class="flex items-center gap-4 pb-2">
-        <button class="px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition">
-          <img src="/plus.svg" class="w-4 h-4 mr-2 inline"/>Link Bank Account
-        </button>
-      </div>
-	  <hr class="my-6 w-[90%] border-gray-200" />
+	      <div class="flex flex-col items-start gap-4 pb-2 sm:flex-row sm:items-center">
+	        <button class="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800">
+	          <img src="/plus.svg" alt="Plus icon" class="mr-2 inline h-4 w-4"/>Link Bank Account
+	        </button>
+	      </div>
+	  <hr class="my-6 border-gray-200" />
 		 <!-- Tax Information -->
     <div class=" p-2">
       <h2 class="text-lg font-medium text-gray-900 mb-1">
@@ -92,24 +92,24 @@
 			          <p class="pointer-events-none absolute right-10 top-1/2 -translate-y-1/2 text-xs text-gray-400">
 			            {companyDescription.length}/200
 			          </p>
-			          <img
-			            src="/Resize.svg"
-			            alt="Resize icon"
-			            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
-			          />
+				          <img
+				            src="/Resize.svg"
+				            alt="Resize icon"
+				            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
+				          />
 		        </div>
 
 	        <div class="mt-1">
 	          <p class="text-xs text-gray-400">
-	            <img src="/info-itallic.svg" class="w-6 h-6 mr-1 inline"/>Rondwell does not provide tax advice. Please consult with a tax professional.
-	          </p>
-	        </div>
-	      </div>
+		            <img src="/info-itallic.svg" alt="Info icon" class="w-6 h-6 mr-1 inline"/>Rondwell does not provide tax advice. Please consult with a tax professional.
+		          </p>
+		        </div>
+		      </div>
 
-      <!-- Save -->
-      <button class="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition">
-        <img src="/profile-gear.svg" class="pr-2"/>Save Changes
-      </button>
+	      <!-- Save -->
+	      <button class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-gray-800 sm:w-auto">
+	        <img src="/profile-gear.svg" alt="Save icon" class="pr-2"/>Save Changes
+	      </button>
 	    </div>
 			
 </div>

@@ -113,14 +113,6 @@ type StackKey = "pending" | "accepted" | "completed";
 
 
 <div class="min-h-screen px-0.5 py-2 space-y-2">
-<div class="flex items-center justify-between">
-        <div class="mb:mb-2 mb-5 flex items-center gap-5">
-            <img alt="loader" src="/loader.svg" class="hidden h-[28.5px] w-[28.5px] md:block" />
-            <h1 class="text-[24px] font-bold text-gray-900 md:font-normal xl:text-[35.25px]">
-                Sleekwareandslides
-            </h1>
-        </div>
-    </div>
 
   <!-- ================= PRODUCTS / SERVICES ================= -->
   <div class=" bg-white rounded-xl p-4 shadow-sm space-y-6">

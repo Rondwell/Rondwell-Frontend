@@ -61,9 +61,9 @@
 	];
 </script>
 
-<div class="w-full max-w-4xl pb-0 mb-0">
+<div class="w-full max-w-5xl pb-0 mb-0">
 	<!-- Page Header -->
-	<div class=" flex mb-12 text-3xl font-bold"><img src="/tech-icon.svg" class="w-8 h-8 mr-2"/>Megaexe Limited</div>
+	<div class=" flex mb-12 text-3xl font-bold"><img src="/tech-icon.svg" class="w-8 h-8 mr-2"/>Sleekandslides</div>
 
 
 	<!-- Navigation Tabs -->

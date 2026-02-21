@@ -16,9 +16,9 @@
   <p class="mb-6 text-sm text-gray-400">Choose how you are displayed as a host or guest</p>
 
   <!-- TOP SECTION -->
-  <div class="grid gap-6 md:grid-cols-10">
+  <div class="flex flex-col lg:flex-row gap-6">
     <!-- LEFT FORM -->
-    <div class="md:col-span-4 space-y-2">
+    <div class="flex-1 space-y-2">
       <!-- Company Name -->
       <div class="pb-4">
         <label class="mb-1 block text-sm font-medium text-gray-500">
@@ -70,8 +70,8 @@
     </div>
 
     <!-- PROFILE IMAGE CARD -->
-    <div class="relative rounded-xl  md:col-span-6 ml-9">
-      <div class="relative h-50 w-100">
+    <div class="relative rounded-xl  flex-1">
+      <div class="relative h-50 w-full">
         <img
           src="/events.png"
           alt="Business cover"
@@ -98,7 +98,7 @@
             </svg>
           </div>
         </div>
-       
+
       </div>
     </div>
   </div>
@@ -111,7 +111,7 @@
       <input
         type="text"
         bind:value={businessLocation}
-        class="w-150 rounded-lg border px-3 py-2 pl-14 text-sm outline-none focus:border-black bg-white cursor-pointer"
+        class="w-full rounded-lg border px-3 py-2 pl-14 text-sm outline-none focus:border-black bg-white cursor-pointer"
         readOnly
       />
       <div class="absolute left-3 top-1/2 transform -translate-y-1/2 flex-shrink-0 pointer-events-none">
@@ -138,14 +138,17 @@
 
   <!-- EMAILS -->
   <div class="mt-8">
-    <div class="mb-2 flex items-center justify-between">
+    <div class="mb-2 flex flex-wrap gap-4 items-center justify-between">
       <div>
-      <h3 class="text-[19px] font-bold text-gray-900">Emails</h3>
-      <p class="mt-1 text-[15px] text-gray-400">
-      Add additional emails to receive events invites sent to those addresses.
-    </p>
+        <h3 class="text-[19px] font-bold text-gray-900">Emails</h3>
+        <p class="mt-1 text-[15px] text-gray-400">
+        Add additional emails to receive events invites sent to those addresses.
+      </p>
     </div>
-      <button class="text-sm font-semibold text-gray-400 bg-gray-200 rounded-md p-2 flex"><img src="/plus-icon.svg" alt="plus icon" class="pr-2"/> Add Email</button>
+      <button class="text-sm font-semibold text-gray-400 bg-gray-200 rounded-md p-2 flex">
+        <img src="/plus-icon.svg" alt="plus icon" class="pr-2"/> 
+        Add Email
+      </button>
     </div>
 
     <div class="w-full rounded-lg border px-3 py-3">
@@ -198,7 +201,7 @@
       <input
         type="text"
         bind:value={phone}
-        class="w-[calc(100%-560px)] max-w-full text-gray-400 rounded-lg px-3 py-2 text-sm  bg-white"
+        class="w-full max-w-60 text-gray-400 rounded-lg px-3 py-2 text-sm  bg-white"
       />
       <button class="rounded-lg border px-4 py-2 text-sm font-semibold bg-gray-500 text-white">
         Update
@@ -226,18 +229,14 @@
         type="url"
         bind:value={website}
         placeholder="yourwebsite.com"
-        class="w-[calc(100%-500px)] max-w-full text-gray-400 rounded-lg py-2 pl-12 pr-3 text-sm outline-none bg-white"
+        class="w-full max-w-60 text-gray-400 rounded-lg py-2 pl-12 pr-3 text-sm outline-none bg-white"
       />
     </div>
   </div>
 
   <!-- SAVE BUTTON -->
   <div class="mt-8 flex gap-4">
-    <button
-      class="flex items-center rounded-lg bg-[#333537] px-6 py-2 text-sm font-bold text-white hover:bg-gray-900"
-    >
-      <img src="/profile-gear.svg" class="pr-2"/>Discard Changes
-    </button>
+    
         <button
           class="flex items-center rounded-lg bg-black px-6 py-2 text-sm font-bold text-white hover:bg-gray-900"
         >

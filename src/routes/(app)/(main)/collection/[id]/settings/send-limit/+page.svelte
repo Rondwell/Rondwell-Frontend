@@ -267,35 +267,42 @@
 		<p class="text-[#8C8F93]">Your calendar currently has 15 sends per week.</p>
 	</div>
 
+	<!-- Verify Calendar page -->
 	<div
-		class="mb-8 mt-4 w-full flex flex-col items-center justify-start overflow-hidden rounded-md bg-[#FDFDFD] px-4 py-3 sm:flex  sm:justify-between lg:w-[670.5px]"
+		class="mb-1 mt-4 w-full flex-col items-center justify-start overflow-hidden rounded-md bg-[#FFFFFF] px-4 py-3 sm:flex sm:flex-row sm:justify-between lg:w-[670.5px]"
 	>
-	<div class="">	
-	<div class="mb-4 flex items-center gap-2">
-			<img src="/verify.svg" alt="add people" class="h-4 w-4" />
+		<div class="mb-4 flex items-center gap-2">
+			<img src="/verify-white.svg" alt="add people" class="h-4 w-4 text-[#FFFFFF]" />
 			<div class="flex flex-col">
-				<h2 class="text-[#192226]">Verify Calendar</h2>
-				<p class="text-[#7F766A]">Verify to increase your weekly limit to 500</p>
+				<h2 class="text-[#131517]">Verify Calendar</h2>
+				<p class="text-[#B6B7B7]">
+					Verify to increase your weekly limit to 500
+				</p>
 			</div>
 		</div>
 		<button
-			class="flex w-[90px] items-center justify-center gap-1 rounded-md bg-[#333537] px-1 py-1 text-sm text-[#FAFAFB]"
+			class="flex w-22.5 items-center justify-center gap-1 rounded-md bg-[#131517] px-1 py-1 text-sm text-[#FAFAFB]"
 		>
 			Verify
-		</button></div>
-		<div class="mb-4 flex items-center justify-between gap-2">
-			<div class="mb-4 flex items-center justify-between gap-2">
-				<img src="/verify.svg" alt="add people" class="h-4 w-4" />
-				<div class="flex flex-col">
-					<h2 class="text-[#192226]">Upgrade to Rondwell Plus</h2>
-					<p class="text-[#7F766A]">Get 5,000 to 100,000 sends per week</p>
-				</div>
+		</button>
+	</div>
+
+	<div
+		class="mb-1 lg:mb-14 mt-2 w-full flex-col items-center justify-start overflow-hidden rounded-md bg-[#FFFFFF] px-4 py-3 sm:flex sm:flex-row sm:justify-between lg:w-[670.5px]"
+	>
+		<div class="mb-4 flex items-center gap-2">
+			<img src="/verify-white.svg" alt="add people" class="h-4 w-4 text-[#FFFFFF]" />
+			<div class="flex flex-col">
+				<h2 class="text-[#131517]">Upgrade to Rondwell Plus</h2>
+				<p class="text-[#B6B7B7]">
+					Get 5,000 to 100,000 sends per week
+				</p>
 			</div>
-			<button
-				class="w-22.5 flex items-center justify-center gap-1 rounded-md bg-[#333537] px-1 py-1 text-sm text-[#FAFAFB]"
-			>
-				Upgrade
-			</button>
 		</div>
+		<button
+			class="flex w-22.5 items-center justify-center gap-1 rounded-md bg-[#131517] px-1 py-1 text-sm text-[#FAFAFB]"
+		>
+			Upgrade
+		</button>
 	</div>
 </section>

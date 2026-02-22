@@ -171,9 +171,8 @@
 								</div>
 								<span class="text-[18.65px] text-[#131517]" >{request.from}</span>
 							</div>
-							<span class="text-[18.65px] text-[#808080] flex-1 w-60 truncate" >for {request.for}</span>
 
-							<span  class="text-[18.65px] text-[#808080] flex-1 w-full xl:w-60 truncate xl:truncate-none  break-words" >for {request.for}</span>
+							<span class="text-[18.65px] text-[#808080] flex-1 w-60 truncate">for {request.for}</span>
 							
 						</div>
 					{/each}

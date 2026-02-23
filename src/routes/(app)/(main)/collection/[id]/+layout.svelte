@@ -191,7 +191,7 @@ rondwellPlusIcon: `<svg width="20" height="23" viewBox="0 0 20 23" fill="none" x
 		{ label: 'Send limit',
 		icon: settingIcon.sendLimitIcon, nav: `/collection/${collectionId}/settings/send-limit` },
 		{ label: 'Rondwell Plus',
-		icon: settingIcon.rondwellPlusIcon, nav: `/collection/${collectionId}/settings/plus` }
+		icon: settingIcon.rondwellPlusIcon, nav: `/collection/${collectionId}/settings/rondwell-plus` }
 
 	]);
 }

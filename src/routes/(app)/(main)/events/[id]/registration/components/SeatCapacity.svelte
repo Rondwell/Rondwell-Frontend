@@ -53,7 +53,7 @@
 					>
 						Create from scratch
 					</button>
-					<!-- <TemplateEditor bind:open={showEditorModal} /> -->
+					<TemplateEditor bind:open={showEditorModal} />
 				</div>
 			</div>
 		</div>

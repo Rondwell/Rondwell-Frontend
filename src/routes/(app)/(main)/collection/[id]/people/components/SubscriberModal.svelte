@@ -4,11 +4,11 @@
 </script>
 
 {#if open}
-	<div id="ticket" class="triangle absolute top-7 right-0 z-40 mt-2 inline-block text-left">
+	<div id="ticket" class="triangle absolute right-0 top-7 z-40 mt-2 inline-block text-left">
 		<div class="relative w-[142px] max-w-lg gap-1 rounded-lg bg-[#FFFCFC] p-2 shadow-lg">
 			<!-- Collapse Icon -->
 
-			<div class="flex w-[130px] flex-col items-center gap-2">
+			<div class="flex w-[130px] flex-col items-center justify-center gap-2">
 				{#if !subscriber?.name}
 					<button
 						class="flex w-full gap-1 rounded-md px-2 py-1 text-sm transition hover:bg-[#F0F0F0]"

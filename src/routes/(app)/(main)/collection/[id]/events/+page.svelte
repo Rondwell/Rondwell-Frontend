@@ -149,7 +149,7 @@
 			/>
 		</h1>
 
-		<div class="h-[40px] w-fit rounded bg-[#EBECED] p-1 text-[#A1A2A2]">
+		<div class="h-10 w-fit rounded bg-[#EBECED] p-1 text-[#A1A2A2]">
 			<button
 				class={`h-full cursor-pointer rounded px-3 py-1 text-sm ${
 					activeTab === 'Upcoming' ? 'bg-white text-black' : ''
@@ -192,7 +192,7 @@
 			{#each Array.from(groupedEvents) as [date, dayEvents]}
 				<!-- Date Label -->
 				<div class="flex flex-col items-stretch gap-4 md:flex-row">
-					<div class="flex w-full max-w-[120px] justify-between">
+					<div class="flex w-full max-w-30 justify-between">
 						<div>
 							<div class="text-lg">{formatDate(date).formatted}</div>
 							<div class="text-lg text-[#B9BABA]">{formatDate(date).weekday}</div>
@@ -203,7 +203,7 @@
 						</div>
 					</div>
 
-					<div class="flex w-full max-w-[687px] flex-col gap-4">
+					<div class="flex w-full max-w-171.75 overflow-hidden flex-col gap-4">
 						{#each dayEvents as event, index (index)}
 							<EventCard {event} {type} />
 						{/each}

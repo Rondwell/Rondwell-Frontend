@@ -11,42 +11,6 @@
 </script>
 
 <section class="p-4">
-	<div class="lg-block hidden sm:justify-between md:mb-10 md:flex">
-		<div class="flex items-center justify-between">
-			<img src="/tech-icon.svg" alt="icon" class="h-7 w-7" />
-			<h1 class="text-md ml-2 lg:text-2xl">Business Collection</h1>
-		</div>
-		<button
-			class="flex w-fit items-center gap-2 whitespace-nowrap rounded-md bg-[#DCE4EE] px-3 text-[#5D646F] md:text-sm"
-		>
-			<span class="md:text-sm">Calendar Page</span>
-			<svg
-				width="16"
-				height="16"
-				viewBox="0 0 16 16"
-				fill="none"
-				xmlns="http://www.w3.org/2000/svg"
-			>
-				<path
-					d="M1.24306 6.4387C1.40611 5.40243 2.12888 4.62786 3.0931 4.47826L9.69034 3.43935L9.8408 3.42097C10.5948 3.35739 11.3249 3.72187 11.7721 4.3912C12.2195 5.06073 12.3131 5.92902 12.0244 6.68931L11.9618 6.83923L9.01457 13.3413L9.01326 13.3411C8.84871 13.7088 8.61528 14.0066 8.33157 14.2308C7.8792 14.5883 7.31432 14.7405 6.72781 14.6481C5.77143 14.4963 5.05093 13.7247 4.89305 12.6922L4.591 10.7138C4.53659 10.3578 4.3245 10.0403 4.02548 9.86912L4.02494 9.8683L2.3872 8.94152C1.53287 8.45922 1.08026 7.47484 1.24306 6.4387ZM2.76439 5.88928C2.52769 6.07636 2.39626 6.36366 2.35324 6.63719L2.35378 6.638C2.28828 7.04462 2.40721 7.57568 2.91465 7.86476L4.55152 8.78851L4.66279 8.85692C5.17357 9.19045 5.53909 9.73754 5.67294 10.3689L5.69839 10.5051L6.00044 12.4835L6.00098 12.4843C6.09306 13.0997 6.52266 13.3845 6.9 13.4426C7.27991 13.5012 7.75745 13.3662 8.00792 12.8142L10.9559 6.31145C11.1348 5.91836 11.1012 5.47237 10.8636 5.11651C10.6258 4.7606 10.2457 4.58735 9.84651 4.65089L9.84575 4.6515L3.24253 5.68148C3.04601 5.71271 2.88934 5.79056 2.76439 5.88928Z"
-					fill="#5D646F"
-					stroke="#5D646F"
-					stroke-width="0.37461"
-				/>
-				<rect
-					x="7.25931"
-					y="8.68484"
-					width="3.5114"
-					height="1.15881"
-					rx="0.579404"
-					transform="rotate(144 7.25931 8.68484)"
-					fill="#5D646F"
-					stroke="#5D646F"
-					stroke-width="0.37461"
-				/>
-			</svg>
-		</button>
-	</div>
 	<div class="mb-4 flex flex-col justify-between gap-2">
 		<h2 class="text-lg font-semibold">Send Limit</h2>
 		<p class="text-[#8C8F93]">
@@ -275,32 +239,28 @@
 			<img src="/verify-white.svg" alt="add people" class="h-4 w-4 text-[#FFFFFF]" />
 			<div class="flex flex-col">
 				<h2 class="text-[#131517]">Verify Calendar</h2>
-				<p class="text-[#B6B7B7]">
-					Verify to increase your weekly limit to 500
-				</p>
+				<p class="text-[#B6B7B7]">Verify to increase your weekly limit to 500</p>
 			</div>
 		</div>
 		<button
-			class="flex w-22.5 items-center justify-center gap-1 rounded-md bg-[#131517] px-1 py-1 text-sm text-[#FAFAFB]"
+			class="w-22.5 flex items-center justify-center gap-1 rounded-md bg-[#131517] px-1 py-1 text-sm text-[#FAFAFB]"
 		>
 			Verify
 		</button>
 	</div>
 
 	<div
-		class="mb-1 lg:mb-14 mt-2 w-full flex-col items-center justify-start overflow-hidden rounded-md bg-[#FFFFFF] px-4 py-3 sm:flex sm:flex-row sm:justify-between lg:w-[670.5px]"
+		class="mb-1 mt-2 w-full flex-col items-center justify-start overflow-hidden rounded-md bg-[#FFFFFF] px-4 py-3 sm:flex sm:flex-row sm:justify-between lg:mb-14 lg:w-[670.5px]"
 	>
 		<div class="mb-4 flex items-center gap-2">
 			<img src="/verify-white.svg" alt="add people" class="h-4 w-4 text-[#FFFFFF]" />
 			<div class="flex flex-col">
 				<h2 class="text-[#131517]">Upgrade to Rondwell Plus</h2>
-				<p class="text-[#B6B7B7]">
-					Get 5,000 to 100,000 sends per week
-				</p>
+				<p class="text-[#B6B7B7]">Get 5,000 to 100,000 sends per week</p>
 			</div>
 		</div>
 		<button
-			class="flex w-22.5 items-center justify-center gap-1 rounded-md bg-[#131517] px-1 py-1 text-sm text-[#FAFAFB]"
+			class="w-22.5 flex items-center justify-center gap-1 rounded-md bg-[#131517] px-1 py-1 text-sm text-[#FAFAFB]"
 		>
 			Upgrade
 		</button>

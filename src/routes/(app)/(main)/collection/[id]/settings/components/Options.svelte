@@ -6,13 +6,13 @@
 </script>
 
 <div class="mb-6">
-	<div class="hidden sm:justify-between lg-block md:mb-10 md:flex">
+	<div class="lg-block hidden sm:justify-between md:mb-10 md:flex">
 		<div class="flex items-center justify-between">
 			<img src="/tech-icon.svg" alt="icon" class="h-7 w-7" />
-			<h1 class="ml-2 lg:text-2xl text-md">Business Collection</h1>
+			<h1 class="text-md ml-2 lg:text-2xl">Business Collection</h1>
 		</div>
 		<button
-			class="flex items-center gap-2 w-fit rounded-md bg-[#DCE4EE] px-3 whitespace-nowrap md:text-sm text-[#5D646F]"
+			class="flex w-fit items-center gap-2 whitespace-nowrap rounded-md bg-[#DCE4EE] px-3 text-[#5D646F] md:text-sm"
 		>
 			<span class="md:text-sm">Calendar Page</span>
 			<svg
@@ -257,7 +257,7 @@
 				class="my-4 flex flex-col justify-between gap-2 rounded-md bg-[#EBECED] px-5 py-3 sm:mb-0 sm:flex-row sm:items-center"
 			>
 				<div class="text-xs text-[#7A7C7E] sm:text-sm">
-					Upgrade to Rondwell Plus to integrate with Google or Facebook ads. 
+					Upgrade to Rondwell Plus to integrate with Google or Facebook ads.
 				</div>
 				<button
 					class="flex w-fit items-center justify-center gap-1 rounded-md bg-[#E3E4E5] px-3 py-2 text-xs font-medium text-[#7A7C7E] transition-colors hover:bg-gray-200 sm:justify-start sm:text-sm"
@@ -304,7 +304,7 @@
 					We will indicate on the calendar page that it has been archived.
 				</label>
 			</div>
-			
+
 			<button
 				class="mb-4 mt-6 flex w-fit items-center justify-center gap-1 rounded-md bg-[#333537] px-3 py-2 text-xs font-medium text-[#7A7C7E] text-[#FFFFFF] transition-colors sm:justify-start sm:text-sm"
 			>
@@ -371,15 +371,13 @@
 			<h1 class="my-2 text-lg">Delete Calendar</h1>
 			<div class="flex flex-col">
 				<label class="text-[#8C8F93]">
-				Permanently delete this calendar.  This operation cannot be undone. 
+					Permanently delete this calendar. This operation cannot be undone.
 				</label>
-				<label class="text-[#8C8F93]">
-				Subscribers won't be notified.
-				</label>
+				<label class="text-[#8C8F93]"> Subscribers won't be notified. </label>
 			</div>
-			
+
 			<button
-				class="mb-4 mt-6 flex w-fit items-center justify-center gap-1 rounded-md bg-[#ED2B32] pl-5 pr-8 py-2 text-xs font-medium  text-[#FFFFFF] transition-colors sm:justify-start sm:text-sm"
+				class="mb-4 mt-6 flex w-fit items-center justify-center gap-1 rounded-md bg-[#ED2B32] py-2 pl-5 pr-8 text-xs font-medium text-[#FFFFFF] transition-colors sm:justify-start sm:text-sm"
 			>
 				<svg
 					width="25"

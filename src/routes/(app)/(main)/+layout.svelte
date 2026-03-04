@@ -1,17 +1,10 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { page } from '$app/stores';
+	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
+	import { onMount } from 'svelte';
 	import Sidebar from '../components/Sidebar.svelte';
 	import SideMenu from '../components/SideMenu.svelte';
-	import {
-		showSubMenu,
-		subMenuItems,
-		activeSubItem,
-		showSettingsSubMenu,
-		settingsSubMenuItems,
-		activeSettingsItem
-	} from '$lib/stores/uiStore.js';
-	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
 
 	// ⚠️ IF YOU HAD A HEADER OR MODALS, YOU MUST RE-IMPORT THEM HERE
 	// import Header from '../components/Header.svelte';
@@ -56,11 +49,7 @@
 	$: menuItems = $subMenuItems;
 	$: activeItem = $activeSubItem;
 
-	$: settingsMenuItems = $settingsSubMenuItems;
-	$: activeSettings = $activeSettingsItem;
-
 	$: isSubMenuVisible = isMobile ? menuItems.length > 0 : $showSubMenu;
-	$: isSettingsMenuVisible = $showSettingsSubMenu;
 
 	$: {
 		const path = $page.url.pathname;
@@ -84,28 +73,14 @@
 	{/if}
 
 	<!-- Main Content Area -->
-	<main class="relative mb-[106px] flex min-h-screen min-w-0 w-full flex-col p-3 md:mb-0 md:p-5">
+	<main class="relative mb-[106px] flex min-h-screen w-full min-w-0 flex-col p-3 md:mb-0 md:p-5">
 		<div class="bg flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
-
 			<!-- Mobile SubMenu (Events / People / Collections root only) -->
 			{#if isSubMenuVisible && isMobile && menuItems.length > 0}
 				<div style={`isSettingsMenuVisible ? 'mb-0':'mb-4'`}>
 					<SideMenu items={menuItems} {activeItem} />
 				</div>
 			{/if}
-
-			<!-- SETTINGS HORIZONTAL MENU (MOBILE + DESKTOP) -->
-			{#if isSettingsMenuVisible && settingsMenuItems.length > 0}
-				<div class="mb-4">
-					<SideMenu
-						items={settingsMenuItems}
-						activeItem={activeSettings}
-						variant="horizontal"
-					/>
-				</div>
-			{/if}
-
-			
 
 			<!-- Page Content -->
 			<slot class="h-full w-full flex-1" />

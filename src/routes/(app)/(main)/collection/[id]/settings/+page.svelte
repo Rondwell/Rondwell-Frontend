@@ -1,489 +1,173 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
-	import { colors } from '$lib/utils/colors';
-type SocialLinkKey = 'instagram' | 'x' | 'youtube' | 'tiktok' | 'linkedin' | 'website';
-    const socialLinks: { key: SocialLinkKey; icon: string; label: string; prefix: string }[] = [
-		{ key: 'instagram', icon: 'mdi:instagram', label: 'instagram.com/', prefix: '' },
-		{ key: 'x', icon: 'mdi:twitter', label: 'x.com/', prefix: '' },
-		{ key: 'youtube', icon: 'mdi:youtube', label: 'youtube.com/@', prefix: '' },
-		{ key: 'tiktok', icon: 'simple-icons:tiktok', label: 'tiktok.com/@', prefix: '' },
-		{ key: 'linkedin', icon: 'mdi:linkedin', label: 'linkedin.com/in/', prefix: '' },
-		{ key: 'website', icon: 'mdi:web', label: '', prefix: 'Your website' }
-	];
+	import Nav from '../../../../components/Nav.svelte';
+	import Admins from './components/Admins.svelte';
+	import Display from './components/Display.svelte';
+	import Embed from './components/Embed.svelte';
+	import Options from './components/Options.svelte';
+	import Payment from './components/Payment.svelte';
+	import RondwellPlus from './components/RondwellPlus.svelte';
+	import SendLimit from './components/SendLimit.svelte';
+	import Tags from './components/Tags.svelte';
 
-    interface Profile {
-		name: string;
-		username: string;
-		bio: string;
-		profilePicture: string;
-		socialLinks: Record<SocialLinkKey, string>;
-	}
-    function handleDragOver(event: DragEvent) {
-		event.preventDefault();
-	}
+	let activeTab = 'display';
 
-    
-
-	function handleFileUpload(event: Event) {
-		const input = event.target as HTMLInputElement | null;
-		if (!input?.files?.[0]) return;
-		const file = input.files[0];
-		const reader = new FileReader();
-		reader.onload = (e: ProgressEvent<FileReader>) => {
-			const result = e.target?.result;
-			if (typeof result === 'string') eventData.socialPreviewImage = result;
-		};
-		reader.readAsDataURL(file);
-	}
-
-    function handleDrop(event: DragEvent) {
-		event.preventDefault();
-		const file = event.dataTransfer?.files?.[0];
-		if (!file) return;
-		const reader = new FileReader();
-		reader.onload = (e: ProgressEvent<FileReader>) => {
-			const result = e.target?.result;
-			if (typeof result === 'string') eventData.socialPreviewImage = result;
-		};
-		reader.readAsDataURL(file);
-	}
-
-	// Mock data for the settings page
-	let profile: Profile = {
-		name: 'JOHN HOUSEMAN',
-		username: '',
-		bio: '',
-		socialLinks: {
-			instagram: '',
-			x: '',
-			youtube: '',
-			tiktok: '',
-			linkedin: '',
-			website: ''
+	const tabs = [
+		{
+			id: 'display',
+			label: 'Display',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M13.9081 18.9584H6.09144C2.61644 18.9584 1.55811 17.9 1.55811 14.425V14.0417C1.55811 13.7 1.84144 13.4167 2.18311 13.4167C2.91644 13.4167 3.51644 12.8167 3.51644 12.0834C3.51644 11.35 2.91644 10.75 2.18311 10.75C1.84144 10.75 1.55811 10.4667 1.55811 10.125V9.74171C1.55811 6.26671 2.61644 5.20837 6.09144 5.20837H13.9081C17.3831 5.20837 18.4414 6.26671 18.4414 9.74171V10.525C18.4414 10.8667 18.1581 11.15 17.8164 11.15C17.0831 11.15 16.4831 11.75 16.4831 12.4834C16.4831 13.2167 17.0831 13.8084 17.8164 13.8084C18.1581 13.8084 18.4414 14.0917 18.4414 14.4334C18.4331 17.9 17.3748 18.9584 13.9081 18.9584ZM2.81644 14.5917C2.83311 17.2417 3.35811 17.7084 6.09977 17.7084H13.9164C16.5164 17.7084 17.1164 17.2834 17.1914 14.975C16.0748 14.6917 15.2414 13.6834 15.2414 12.475C15.2414 11.2667 16.0748 10.25 17.1998 9.96671V9.73337C17.1998 6.94171 16.7081 6.45004 13.9164 6.45004H6.09144C3.35811 6.45004 2.83311 6.92504 2.80811 9.56671C3.93311 9.85004 4.76644 10.8667 4.76644 12.075C4.76644 13.2834 3.93311 14.3084 2.81644 14.5917Z" fill="currentColor"/>
+<path d="M8.3335 8.54171C7.99183 8.54171 7.7085 8.25837 7.7085 7.91671V5.83337C7.7085 5.49171 7.99183 5.20837 8.3335 5.20837C8.67516 5.20837 8.9585 5.49171 8.9585 5.83337V7.91671C8.9585 8.25837 8.67516 8.54171 8.3335 8.54171Z" fill="currentColor"/>
+<path d="M8.3335 14.1C7.99183 14.1 7.7085 13.8166 7.7085 13.475V10.7C7.7085 10.3583 7.99183 10.075 8.3335 10.075C8.67516 10.075 8.9585 10.3583 8.9585 10.7V13.475C8.9585 13.8166 8.67516 14.1 8.3335 14.1Z" fill="currentColor"/>
+<path d="M8.3335 18.9583C7.99183 18.9583 7.7085 18.675 7.7085 18.3333V16.25C7.7085 15.9083 7.99183 15.625 8.3335 15.625C8.67516 15.625 8.9585 15.9083 8.9585 16.25V18.3333C8.9585 18.675 8.67516 18.9583 8.3335 18.9583Z" fill="currentColor"/>
+<path d="M13.6082 6.45828H6.03315C5.78315 6.45828 5.54982 6.30828 5.45815 6.07495C5.36649 5.84162 5.41649 5.56662 5.59149 5.39162L8.03315 2.94995C10.2832 0.699951 11.6582 0.699951 13.8998 2.94995L14.3998 3.44995C14.5165 3.56662 14.5832 3.72495 14.5832 3.89162C14.5832 4.05828 14.5165 4.21662 14.3998 4.33328C14.0665 4.66662 13.9748 5.15828 14.1665 5.58328C14.2582 5.77495 14.2415 5.99995 14.1248 6.18328C14.0165 6.34995 13.8165 6.45828 13.6082 6.45828ZM7.54149 5.20828H12.8165C12.7998 4.76662 12.9082 4.32495 13.1332 3.94162L13.0248 3.83328C11.2832 2.09162 10.6665 2.09162 8.92482 3.83328L7.54149 5.20828Z" fill="currentColor"/>
+</svg>`
 		},
-		profilePicture: '/face-1.svg'
-	};
-	type EventData = {
-		name: string;
-		description: string;
-		tintColor: string;
-		publicUrl: string;
-		location: {
-			type: 'City' | 'Global';
-			city: string;
-		};
-        socialPreviewImage: string | null;
-	};
+		{
+			id: 'payment',
+			label: 'Payment',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12.4998 18.9583H7.49984C2.97484 18.9583 1.0415 17.025 1.0415 12.5V7.49999C1.0415 2.97499 2.97484 1.04166 7.49984 1.04166H12.4998C17.0248 1.04166 18.9582 2.97499 18.9582 7.49999V12.5C18.9582 17.025 17.0248 18.9583 12.4998 18.9583ZM7.49984 2.29166C3.65817 2.29166 2.2915 3.65832 2.2915 7.49999V12.5C2.2915 16.3417 3.65817 17.7083 7.49984 17.7083H12.4998C16.3415 17.7083 17.7082 16.3417 17.7082 12.5V7.49999C17.7082 3.65832 16.3415 2.29166 12.4998 2.29166H7.49984Z" fill="#808080"/>
+<path d="M13.125 8.125H6.875C6.53333 8.125 6.25 7.84167 6.25 7.5C6.25 7.15833 6.53333 6.875 6.875 6.875H13.125C13.4667 6.875 13.75 7.15833 13.75 7.5C13.75 7.84167 13.4667 8.125 13.125 8.125Z" fill="#808080"/>
+<path d="M13.125 13.125H6.875C6.53333 13.125 6.25 12.8417 6.25 12.5C6.25 12.1583 6.53333 11.875 6.875 11.875H13.125C13.4667 11.875 13.75 12.1583 13.75 12.5C13.75 12.8417 13.4667 13.125 13.125 13.125Z" fill="#808080"/>
+</svg>`
+		},
+		{
+			id: 'options',
+			label: 'Options',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12.4998 18.9583H7.49984C2.97484 18.9583 1.0415 17.025 1.0415 12.5V7.49999C1.0415 2.97499 2.97484 1.04166 7.49984 1.04166H12.4998C17.0248 1.04166 18.9582 2.97499 18.9582 7.49999V12.5C18.9582 17.025 17.0248 18.9583 12.4998 18.9583ZM7.49984 2.29166C3.65817 2.29166 2.2915 3.65832 2.2915 7.49999V12.5C2.2915 16.3417 3.65817 17.7083 7.49984 17.7083H12.4998C16.3415 17.7083 17.7082 16.3417 17.7082 12.5V7.49999C17.7082 3.65832 16.3415 2.29166 12.4998 2.29166H7.49984Z" fill="#808080"/>
+<path d="M13.125 8.125H6.875C6.53333 8.125 6.25 7.84167 6.25 7.5C6.25 7.15833 6.53333 6.875 6.875 6.875H13.125C13.4667 6.875 13.75 7.15833 13.75 7.5C13.75 7.84167 13.4667 8.125 13.125 8.125Z" fill="#808080"/>
+<path d="M13.125 13.125H6.875C6.53333 13.125 6.25 12.8417 6.25 12.5C6.25 12.1583 6.53333 11.875 6.875 11.875H13.125C13.4667 11.875 13.75 12.1583 13.75 12.5C13.75 12.8417 13.4667 13.125 13.125 13.125Z" fill="#808080"/>
+</svg>`
+		},
+		{
+			id: 'admins',
+			label: 'Admins',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12.4998 18.9583H7.49984C2.97484 18.9583 1.0415 17.025 1.0415 12.5V7.49999C1.0415 2.97499 2.97484 1.04166 7.49984 1.04166H12.4998C17.0248 1.04166 18.9582 2.97499 18.9582 7.49999V12.5C18.9582 17.025 17.0248 18.9583 12.4998 18.9583ZM7.49984 2.29166C3.65817 2.29166 2.2915 3.65832 2.2915 7.49999V12.5C2.2915 16.3417 3.65817 17.7083 7.49984 17.7083H12.4998C16.3415 17.7083 17.7082 16.3417 17.7082 12.5V7.49999C17.7082 3.65832 16.3415 2.29166 12.4998 2.29166H7.49984Z" fill="#808080"/>
+<path d="M13.125 8.125H6.875C6.53333 8.125 6.25 7.84167 6.25 7.5C6.25 7.15833 6.53333 6.875 6.875 6.875H13.125C13.4667 6.875 13.75 7.15833 13.75 7.5C13.75 7.84167 13.4667 8.125 13.125 8.125Z" fill="#808080"/>
+<path d="M13.125 13.125H6.875C6.53333 13.125 6.25 12.8417 6.25 12.5C6.25 12.1583 6.53333 11.875 6.875 11.875H13.125C13.4667 11.875 13.75 12.1583 13.75 12.5C13.75 12.8417 13.4667 13.125 13.125 13.125Z" fill="#808080"/>
+</svg>`
+		},
+		{
+			id: 'tags',
+			label: 'Tags',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12.4998 18.9583H7.49984C2.97484 18.9583 1.0415 17.025 1.0415 12.5V7.49999C1.0415 2.97499 2.97484 1.04166 7.49984 1.04166H12.4998C17.0248 1.04166 18.9582 2.97499 18.9582 7.49999V12.5C18.9582 17.025 17.0248 18.9583 12.4998 18.9583ZM7.49984 2.29166C3.65817 2.29166 2.2915 3.65832 2.2915 7.49999V12.5C2.2915 16.3417 3.65817 17.7083 7.49984 17.7083H12.4998C16.3415 17.7083 17.7082 16.3417 17.7082 12.5V7.49999C17.7082 3.65832 16.3415 2.29166 12.4998 2.29166H7.49984Z" fill="#808080"/>
+<path d="M13.125 8.125H6.875C6.53333 8.125 6.25 7.84167 6.25 7.5C6.25 7.15833 6.53333 6.875 6.875 6.875H13.125C13.4667 6.875 13.75 7.15833 13.75 7.5C13.75 7.84167 13.4667 8.125 13.125 8.125Z" fill="#808080"/>
+<path d="M13.125 13.125H6.875C6.53333 13.125 6.25 12.8417 6.25 12.5C6.25 12.1583 6.53333 11.875 6.875 11.875H13.125C13.4667 11.875 13.75 12.1583 13.75 12.5C13.75 12.8417 13.4667 13.125 13.125 13.125Z" fill="#808080"/>
+</svg>`
+		},
 
-	let eventData: EventData = {
-		name: 'John Doe',
-		description: '',
-		tintColor: '#6B7280',
-		publicUrl: '',
-		location: { type: 'City', city: 'Lagos' },
-        socialPreviewImage: null
-	};
+		{
+			id: 'embed',
+			label: 'Embed',
+			icon: `<svg width="20" height="23" viewBox="0 0 20 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M1.6665 20.3688H18.3332" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10 1.8517C11.3333 2.44425 12.8333 2.44425 14.1667 1.8517V4.62926C12.8333 5.2218 11.3333 5.2218 10 4.62926V1.8517Z" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10 4.62927V7.40683" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.1668 7.40683H5.8335C4.16683 7.40683 3.3335 8.33268 3.3335 10.1844V20.3688H16.6668V10.1844C16.6668 8.33268 15.8335 7.40683 14.1668 7.40683Z" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3.81689 11.1102H16.1836" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6.6582 11.1102V20.3688" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
+<path d="M9.9917 11.1102V20.3688" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
+<path d="M13.3252 11.1102V20.3688" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
+</svg>`
+		},
 
-	function selectTintColor(color: string) {
-		eventData.tintColor = color;
-	}
-
-	let search = '';
-	let activeTab = 'City';
-
-	type Location = { name: string; region: string };
-
-	const cityLocations: Location[] = [
-		{ name: 'Lagos', region: 'Portugal' },
-		{ name: 'Laguna Beach', region: 'CA, USA' }
-	];
-
-	const globalLocations: Location[] = [
-		{ name: 'Laguna Beach', region: '' },
-		{ name: 'Berlin', region: 'Germany' }
-	];
-
-	let selectedLocations: Location[] = [];
-	let filteredLocations: Location[] = [];
-
-	$: selectedLocations = activeTab === 'City' ? cityLocations : globalLocations;
-
-	$: filteredLocations = search
-		? selectedLocations.filter((loc) => loc.name.toLowerCase().startsWith(search.toLowerCase()))
-		: selectedLocations;
-
-	function selectLocation(loc: Location) {
-		// dispatch('select', loc);
-		// dispatch('close');
-	}
-
-	function handlePublicUrlInput(e: Event) {
-		const value = (e.target as HTMLInputElement).value;
-		eventData.publicUrl = `ron.d/${value}`;
-	}
-
-	async function saveChanges() {
-		try {
-			// Add your API call here to save the collection settings
-			console.log('Saving changes:', { eventData, profile });
-			// Example: await fetch('/api/collection/settings', { method: 'POST', body: JSON.stringify({ eventData, profile }) })
-		} catch (error) {
-			console.error('Error saving changes:', error);
+		{
+			id: 'send-limit',
+			label: 'Send Limit',
+			icon: `<svg width="20" height="23" viewBox="0 0 20 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M1.6665 20.3688H18.3332" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10 1.8517C11.3333 2.44425 12.8333 2.44425 14.1667 1.8517V4.62926C12.8333 5.2218 11.3333 5.2218 10 4.62926V1.8517Z" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10 4.62927V7.40683" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.1668 7.40683H5.8335C4.16683 7.40683 3.3335 8.33268 3.3335 10.1844V20.3688H16.6668V10.1844C16.6668 8.33268 15.8335 7.40683 14.1668 7.40683Z" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3.81689 11.1102H16.1836" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6.6582 11.1102V20.3688" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
+<path d="M9.9917 11.1102V20.3688" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
+<path d="M13.3252 11.1102V20.3688" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
+</svg>`
+		},
+		{
+			id: 'rondwell-plus',
+			label: 'Rondwell Plus',
+			icon: `<svg width="20" height="23" viewBox="0 0 20 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M1.6665 20.3688H18.3332" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10 1.8517C11.3333 2.44425 12.8333 2.44425 14.1667 1.8517V4.62926C12.8333 5.2218 11.3333 5.2218 10 4.62926V1.8517Z" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M10 4.62927V7.40683" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.1668 7.40683H5.8335C4.16683 7.40683 3.3335 8.33268 3.3335 10.1844V20.3688H16.6668V10.1844C16.6668 8.33268 15.8335 7.40683 14.1668 7.40683Z" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M3.81689 11.1102H16.1836" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6.6582 11.1102V20.3688" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
+<path d="M9.9917 11.1102V20.3688" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
+<path d="M13.3252 11.1102V20.3688" stroke="#808080" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
+</svg>`
 		}
-	}
+	];
 </script>
 
-<div class="w-full space-y-8">
-	<!-- HEADER CARD -->
-	<div class="rounded-lg">
-		
-
-		<div class="relative mb-6 rounded-t-lg bg-[#FDFDFD]">
-			<div class="h-[191px] rounded-t-lg bg-[#D8D8DD]"></div>
+<div class="min-h-screen">
+	<!-- Header -->
+	<div class="px-4 py-4">
+		<div class="lg-block hidden sm:justify-between md:mb-10 md:flex">
+			<div class="flex items-center justify-between">
+				<img src="/tech-icon.svg" alt="icon" class="h-7 w-7" />
+				<h1 class="text-md ml-2 lg:text-2xl">Business Collection</h1>
+			</div>
 			<button
-				class="absolute top-2 right-3 rounded-md bg-[#E4E4E5] px-3 py-2 text-sm font-medium text-[#5D5E61]"
+				class="flex w-fit items-center gap-2 whitespace-nowrap rounded-md bg-[#DCE4EE] px-3 text-[#5D646F] md:text-sm"
 			>
-				Change Cover
-			</button>
-			<img src="/edit-cover-photo.svg" alt="" class="absolute bottom-28 left-5 w-14" />
-			<div class="mt-8 ml-4 w-full">
-				<input
-					type="text"
-					placeholder="Collection name"
-					bind:value={eventData.name}
-					class="h-12 w-full px-4 py-2 text-3xl font-semibold focus:ring-0 focus:outline-none"
-				/>
-				<div class="mt-2 border-t">
-					<input
-						type="text"
-						placeholder="Add a short description"
-						bind:value={eventData.description}
-						class="h-12 w-full px-4 py-2 focus:ring-0 focus:outline-none"
-					/>
-				</div>
-			</div>
-		</div>
-
-		<!-- Customization -->
-	<div class="mb-6 rounded-lg bg-[#FDFDFD] p-4">
-		<h2 class="mb-3 text-2xl font-semibold">Customization</h2>
-
-		<!-- Tint Color -->
-		<div class="mb-4">
-			<label for="color" class="mb-2 block text-sm font-medium text-gray-700">Tint Color</label>
-			<div class="flex flex-wrap items-center justify-start gap-3">
-				{#each colors as color}
-					<button
-						type="button"
-						class="h-8 w-8 rounded-full border-2"
-						style="background-color: {color.bg};"
-						class:border-black={eventData.tintColor === color.bg}
-						on:click={() => selectTintColor(color.bg)}
-						aria-label={`Select color ${color.bg}`}
-					></button>
-				{/each}
-			</div>
-		</div>
-
-		<!-- Public URL -->
-		<div class="mb-4">
-			<label for="" class="mb-2 block text-sm font-medium text-gray-700">Public URL</label>
-			<div class="flex max-w-xl items-center">
-				<span class="w-20 rounded-l-md bg-[#F4F4F4] p-3 text-sm">ron.d/</span>
-				<input
-					type="text"
-					placeholder="some calendar"
-					bind:value={eventData.publicUrl}
-					on:input={handlePublicUrlInput}
-					class="flex-1 rounded-r-md border border-gray-300 bg-[#FFFFFF] p-3 text-sm focus:ring-0 focus:outline-none"
-				/>
-			</div>
-		</div>
-
-		<!-- Location -->
-		<div class="mb-4">
-			<label for="location" class="mb-2 block text-sm font-medium text-gray-700">Location</label>
-
-			<div class="relative w-full rounded-lg bg-white shadow-lg">
-				<!-- Tabs -->
-				<div
-					class="mb-3 flex h-[175px] flex-col justify-between gap-2 p-2"
-					style="background: url('/map.png'); background-size: cover;"
+				<span class="md:text-sm">Calendar Page</span>
+				<svg
+					width="16"
+					height="16"
+					viewBox="0 0 16 16"
+					fill="none"
+					xmlns="http://www.w3.org/2000/svg"
 				>
-					<div class="h-[40px] w-fit rounded bg-[#DCDCDC] p-1 text-[#A1A2A2]">
-						<button
-							class={`h-full cursor-pointer rounded px-3 py-1 text-sm ${
-								activeTab === 'City' ? 'bg-white text-black' : ''
-							}`}
-							on:click={() => (activeTab = 'City')}
-						>
-							City
-						</button>
-						<button
-							class={`h-full cursor-pointer rounded px-3 py-1 text-sm ${
-								activeTab === 'Global' ? 'bg-white text-black' : ''
-							}`}
-							on:click={() => (activeTab = 'Global')}
-						>
-							Global
-						</button>
-					</div>
+					<path
+						d="M1.24306 6.4387C1.40611 5.40243 2.12888 4.62786 3.0931 4.47826L9.69034 3.43935L9.8408 3.42097C10.5948 3.35739 11.3249 3.72187 11.7721 4.3912C12.2195 5.06073 12.3131 5.92902 12.0244 6.68931L11.9618 6.83923L9.01457 13.3413L9.01326 13.3411C8.84871 13.7088 8.61528 14.0066 8.33157 14.2308C7.8792 14.5883 7.31432 14.7405 6.72781 14.6481C5.77143 14.4963 5.05093 13.7247 4.89305 12.6922L4.591 10.7138C4.53659 10.3578 4.3245 10.0403 4.02548 9.86912L4.02494 9.8683L2.3872 8.94152C1.53287 8.45922 1.08026 7.47484 1.24306 6.4387ZM2.76439 5.88928C2.52769 6.07636 2.39626 6.36366 2.35324 6.63719L2.35378 6.638C2.28828 7.04462 2.40721 7.57568 2.91465 7.86476L4.55152 8.78851L4.66279 8.85692C5.17357 9.19045 5.53909 9.73754 5.67294 10.3689L5.69839 10.5051L6.00044 12.4835L6.00098 12.4843C6.09306 13.0997 6.52266 13.3845 6.9 13.4426C7.27991 13.5012 7.75745 13.3662 8.00792 12.8142L10.9559 6.31145C11.1348 5.91836 11.1012 5.47237 10.8636 5.11651C10.6258 4.7606 10.2457 4.58735 9.84651 4.65089L9.84575 4.6515L3.24253 5.68148C3.04601 5.71271 2.88934 5.79056 2.76439 5.88928Z"
+						fill="#5D646F"
+						stroke="#5D646F"
+						stroke-width="0.37461"
+					/>
+					<rect
+						x="7.25931"
+						y="8.68484"
+						width="3.5114"
+						height="1.15881"
+						rx="0.579404"
+						transform="rotate(144 7.25931 8.68484)"
+						fill="#5D646F"
+						stroke="#5D646F"
+						stroke-width="0.37461"
+					/>
+				</svg>
+			</button>
+		</div>
 
-					<!-- Input -->
-					<div class="relative z-10">
-						<input
-							type="text"
-							placeholder="Search location"
-							bind:value={search}
-							class="w-full rounded-md border border-black px-10 py-2 text-sm focus:outline-none"
-						/>
-						<span class="absolute top-2.5 left-3 text-gray-500">
-							<svg
-								width="19"
-								height="19"
-								viewBox="0 0 19 19"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M7.4375 8.75391H11.5626"
-									stroke="#141415"
-									stroke-width="1.50004"
-									stroke-linecap="round"
-								/>
-								<path
-									d="M9.5 10.8165V6.69141"
-									stroke="#141415"
-									stroke-width="1.50004"
-									stroke-linecap="round"
-								/>
-								<path
-									d="M4.98575 3.72997C8.26334 0.647395 14.616 1.70492 15.786 6.88755C16.6485 10.6976 14.2785 13.9227 12.2009 15.9178C10.6934 17.3728 8.30834 17.3728 6.7933 15.9178C4.72325 13.9152 2.34569 10.6901 3.21571 6.88005"
-									stroke="#141415"
-									stroke-width="1.50004"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
-						</span>
+		<!-- Navigation Tabs -->
+		<Nav {tabs} bind:activeTab />
+		<!-- Content Area -->
 
-						{#if search}
-							<button
-								aria-label="button"
-								class="absolute top-1.5 right-3 text-gray-400"
-								on:click={() => (search = '')}
-							>
-								<svg
-									width="26"
-									height="27"
-									viewBox="0 0 26 27"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
-								>
-									<rect
-										x="0.0078125"
-										y="13.4473"
-										width="17.9532"
-										height="17.9532"
-										rx="8.97661"
-										transform="rotate(-45 0.0078125 13.4473)"
-										fill="#C7C7C8"
-									/>
-									<g opacity="0.4">
-										<path
-											d="M10.0312 16.1191L15.3764 10.7739"
-											stroke="white"
-											stroke-width="2.25006"
-											stroke-linecap="round"
-										/>
-										<path
-											d="M15.3764 16.1206L10.0312 10.7754"
-											stroke="white"
-											stroke-width="2.25006"
-											stroke-linecap="round"
-										/>
-									</g>
-									<g opacity="0.4">
-										<path
-											d="M10.0312 16.1191L15.3764 10.7739"
-											stroke="white"
-											stroke-width="2.25006"
-											stroke-linecap="round"
-										/>
-										<path
-											d="M15.3764 16.1206L10.0312 10.7754"
-											stroke="white"
-											stroke-width="2.25006"
-											stroke-linecap="round"
-										/>
-									</g>
-									<g opacity="0.4">
-										<path
-											d="M10.0312 10.7754L15.3764 16.1206"
-											stroke="white"
-											stroke-width="2.25006"
-											stroke-linecap="round"
-										/>
-										<path
-											d="M10.0298 16.1206L15.375 10.7754"
-											stroke="white"
-											stroke-width="2.25006"
-											stroke-linecap="round"
-										/>
-									</g>
-									<g opacity="0.4">
-										<path
-											d="M10.0312 10.7754L15.3764 16.1206"
-											stroke="white"
-											stroke-width="2.25006"
-											stroke-linecap="round"
-										/>
-										<path
-											d="M10.0298 16.1206L15.375 10.7754"
-											stroke="white"
-											stroke-width="2.25006"
-											stroke-linecap="round"
-										/>
-									</g>
-								</svg>
-							</button>
-						{/if}
-					</div>
-				</div>
-
-				<!-- Suggestions -->
-				<div class="relative z-10 hidden max-h-40 overflow-y-auto rounded-md bg-white">
-					{#each filteredLocations as loc (loc.name)}
-						<button
-							class="flex w-full flex-col items-start px-4 py-2 text-left hover:bg-gray-100"
-							on:click={() => selectLocation(loc)}
-						>
-							<span class="text-sm font-medium text-gray-800">{loc.name}</span>
-							{#if loc.region}
-								<span class="text-xs text-gray-500">{loc.region}</span>
-							{/if}
-						</button>
-					{/each}
-				</div>
+		{#if activeTab === 'display'}
+			<div class="py-6">
+				<Display />
 			</div>
-		</div>
-	</div>
-
-        
-        <div class="mt-6 p-4 flex flex-col bg-[#FDFDFD]">
-		<h3 class="mb-3 text-sm font-medium text-[#000]"> Links</h3>
-		<div class=" w-fit flex flex-col gap-6">
-			{#each socialLinks as { key, icon, label, prefix }}
-				<div class="flex items-center gap-2">
-					<!-- Icon -->
-					<div class="flex h-8 w-8 items-center justify-center rounded bg-gray-100">
-						<Icon {icon} class="h-4 w-4" />
-					</div>
-
-					<div class="flex h-[42px] w-full items-center shadow-sm">
-						<!-- Label (optional) -->
-						{#if label}
-							<div
-								class="pointer-events-none flex h-full items-center rounded-tl-[7.5px] rounded-bl-[7.5px] bg-[#EBECED] p-3 text-xs text-[#84857A]"
-							>
-								{label}
-							</div>
-						{/if}
-
-						<!-- Input -->
-						<input
-							type="text"
-							bind:value={profile.socialLinks[key]}
-							placeholder={prefix || 'username'}
-							class="h-full w-full {key === 'website'
-								? 'rounded-[7.5px]'
-								: 'rounded-tr-[7.5px] rounded-br-[7.5px]'} bg-[#FFFFFF] px-3 py-2 focus:ring-0 focus:outline-none"
-						/>
-					</div>
-				</div>
-			{/each}
-		</div>
-	    </div>
-<!-- Social Preview -->
-	<div class="rounded-lg border border-gray-200 bg-white p-4">
-		<h2 class="mb-3 font-semibold">Sharing</h2>
-		<p class="mb-4 text-sm text-gray-600">Social Preview Image</p>
-
-		<button
-			on:dragover={handleDragOver}
-			on:drop={handleDrop}
-			on:click={() => document.getElementById('social-preview-image')?.click()}
-			class="h-[332.25px] w-full cursor-pointer items-center justify-center rounded-lg bg-[#F4F4F4] p-8 text-center"
-		>
-			{#if eventData.socialPreviewImage}
-				<img
-					src={eventData.socialPreviewImage}
-					alt="Social Preview"
-					class="mx-auto max-w-full rounded"
-				/>
-			{:else}
-				<div class="flex flex-col items-center justify-center">
-					<img src="/gallery-edit.svg" alt="" />
-					<p class="text-sm text-gray-500">Drag & Drop or Click to Upload</p>
-				</div>
-			{/if}
-			<input
-				id="social-preview-image"
-				type="file"
-				accept="image/*"
-				on:change={handleFileUpload}
-				class="hidden"
-			/>
-		</button>
-
-		<p class="mt-2 text-sm text-[#B3B4B4]">
-			You can use images of any size. For best result, choose asn aspect ration close to 1.9:1.
-		</p>
-	</div>
-
-		<!-- Save -->
-	<div class="mt-6">
-		<button
-			on:click={saveChanges}
-			class="flex items-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white hover:bg-gray-800"
-		>
-			<svg
-				width="19"
-				height="18"
-				viewBox="0 0 19 18"
-				fill="none"
-				xmlns="http://www.w3.org/2000/svg"
-			>
-				<path
-					d="M5.30273 2.8125H6.63184V4.125C6.63184 4.50932 6.86845 4.8386 7.2002 4.9834V6.51367C6.86849 6.65838 6.63201 6.98787 6.63184 7.37207V10.6279C6.63201 11.012 6.86868 11.3406 7.2002 11.4854V13.0156C6.86826 13.1603 6.63184 13.4905 6.63184 13.875V15.1875H5.30273C3.64484 15.1875 2.693 14.9316 2.13574 14.3799C1.57986 13.8292 1.32227 12.8899 1.32227 11.25V10.875C1.32227 10.7781 1.40865 10.6875 1.51562 10.6875C2.44628 10.6874 3.21582 9.93052 3.21582 9C3.21582 8.06948 2.44628 7.31264 1.51562 7.3125C1.40865 7.3125 1.32227 7.22189 1.32227 7.125V6.75C1.32227 5.11009 1.57986 4.17077 2.13574 3.62012C2.693 3.06836 3.64484 2.8125 5.30273 2.8125Z"
-					fill="white"
-					stroke="white"
-					stroke-width="0.75"
-				/>
-				<path
-					d="M5.25977 3.375H6.05371V4.54297C6.05373 4.7594 6.12159 4.96875 6.24512 5.13184C6.2977 5.20121 6.36486 5.26483 6.44336 5.31641V6.7373C6.36468 6.78891 6.2978 6.85336 6.24512 6.92285C6.12162 7.08589 6.05377 7.29535 6.05371 7.51172V10.4883C6.05377 10.7047 6.12162 10.9141 6.24512 11.0771C6.2977 11.1465 6.36487 11.2102 6.44336 11.2617V12.6826C6.36467 12.7342 6.2978 12.7987 6.24512 12.8682C6.12159 13.0312 6.05373 13.2406 6.05371 13.457V14.625H5.25977C4.15078 14.625 3.55859 14.4003 3.20703 13.9365C2.82921 13.4377 2.64848 12.5685 2.64844 11.0576V10.7139C2.64853 10.6494 2.66955 10.6018 2.6875 10.5781C2.68894 10.5762 2.69025 10.5746 2.69141 10.5732C3.07256 10.5632 3.39106 10.3537 3.60352 10.0732C3.8215 9.78542 3.94727 9.40442 3.94727 9C3.94727 8.59558 3.8215 8.21458 3.60352 7.92676C3.39106 7.64628 3.07257 7.4358 2.69141 7.42578C2.69037 7.42454 2.68874 7.42352 2.6875 7.42188C2.66955 7.39818 2.64853 7.35059 2.64844 7.28613V6.94238C2.64848 5.43148 2.82921 4.56227 3.20703 4.06348C3.55859 3.59968 4.15078 3.37504 5.25977 3.375Z"
-					fill="#858687"
-					stroke="#858687"
-					stroke-width="0.75"
-				/>
-				<path
-					opacity="0.4"
-					d="M12.8789 2.8125C14.5366 2.81254 15.4877 3.0684 16.0449 3.62012C16.601 4.17073 16.8594 5.10977 16.8594 6.75V7.5C16.8594 7.59687 16.773 7.68745 16.666 7.6875C15.7352 7.6875 14.9658 8.44439 14.9658 9.375C14.9658 10.3056 15.7352 11.0625 16.666 11.0625C16.773 11.0625 16.8594 11.1531 16.8594 11.25C16.8594 12.8902 16.601 13.8293 16.0449 14.3799C15.4877 14.9316 14.5366 15.1875 12.8789 15.1875H8.51953V13.875C8.51953 13.4905 8.28312 13.1603 7.95117 13.0156V11.4854C8.2827 11.3406 8.51936 11.012 8.51953 10.6279V7.37207C8.51936 6.98787 8.28289 6.65838 7.95117 6.51367V4.9834C8.28293 4.8386 8.51953 4.50933 8.51953 4.125V2.8125H12.8789Z"
-					fill="white"
-					stroke="white"
-					stroke-width="0.75"
-				/>
-				<path
-					d="M9.84375 5.98509L11.359 7.48535L14.619 4.5"
-					stroke="white"
-					stroke-width="1.125"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				/>
-			</svg>
-
-			Save Changes
-		</button>
-	</div>
+		{:else if activeTab === 'payment'}
+			<Payment />
+		{:else if activeTab === 'options'}
+			<Options />
+		{:else if activeTab === 'embed'}
+			<Embed />
+		{:else if activeTab === 'admins'}
+			<Admins />
+		{:else if activeTab === 'tags'}
+			<Tags />
+		{:else if activeTab === 'send-limit'}
+			<SendLimit />
+		{:else if activeTab === 'rondwell-plus'}
+			<RondwellPlus />
+		{/if}
 	</div>
 </div>

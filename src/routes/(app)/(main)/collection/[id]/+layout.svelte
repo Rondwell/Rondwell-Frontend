@@ -1,11 +1,8 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
-	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
-	import { onMount } from 'svelte';
+	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore';
+
 	import { get } from 'svelte/store';
-	import Sidebar from '../../../components/Sidebar.svelte';
-	import SideMenu from '../../../components/SideMenu.svelte';
 
 	const collectionIcon = {
 		eventIcon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -62,30 +59,6 @@
 </svg>`
 	};
 
-	let isMobile = false;
-
-	function checkScreenSize() {
-		if (browser) {
-			isMobile = window.innerWidth < 768;
-		}
-	}
-
-	onMount(() => {
-		checkScreenSize();
-		window.addEventListener('resize', checkScreenSize);
-		return () => window.removeEventListener('resize', checkScreenSize);
-	});
-
-	const themes = {
-		default: 'linear-gradient(180deg, #DBD4F1 0%, #DBE5F5 17%, #F4F5F6 35%)'
-	};
-
-	let selectedTheme = themes.default;
-
-	function getThemeForRoute(_: string | null): string {
-		return themes.default;
-	}
-
 	function updateCollectionSubMenu(collectionId: string) {
 		subMenuItems.set([
 			{
@@ -116,20 +89,25 @@
 		]);
 	}
 
-	$: path = $page.url.pathname;
-	$: collectionId = $page.params.id;
+	$: {
+		const path = $page.url.pathname;
 
-	$: if (collectionId) {
-		selectedTheme = getThemeForRoute(path);
+		const collectionMatch = path.match(/^\/collection\/([^/]+)/);
 
-		updateCollectionSubMenu(collectionId);
+		if (collectionMatch) {
+			const collectionId = collectionMatch[1];
 
-		const currentMenu = get(subMenuItems);
-
-		const active = currentMenu.find((item) => path.startsWith(item.nav))?.label || 'Events';
-
-		activeSubItem.set(active);
-		showSubMenu.set(true);
+			updateCollectionSubMenu(collectionId);
+			const currentMenu = get(subMenuItems);
+			let active = currentMenu.find((item) => path === item.nav)?.label ?? '';
+			activeSubItem.set(active);
+			showSubMenu.set(true);
+		} else {
+			// Outside collection routes
+			showSubMenu.set(false);
+			subMenuItems.set([]);
+			activeSubItem.set('');
+		}
 	}
 </script>
 

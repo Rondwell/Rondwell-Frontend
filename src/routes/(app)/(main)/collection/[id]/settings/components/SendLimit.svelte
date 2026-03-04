@@ -33,7 +33,7 @@
 			</div>
 			<button
 				onclick={() => goto('newsletter/verify')}
-				class="flex w-[90px] items-center justify-center gap-1 rounded-md bg-[#E8E0D0] px-1 py-1 text-sm text-[#616265]"
+				class="w-22.5 flex items-center justify-center gap-1 rounded-md bg-[#E8E0D0] px-1 py-1 text-sm text-[#616265]"
 			>
 				Verify<svg
 					width="13"

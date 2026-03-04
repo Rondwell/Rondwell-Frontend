@@ -66,7 +66,6 @@ X/iframe>`;
 			.writeText(text)
 			.then(() => {
 				console.log('Copied to clipboard');
-				// In a real app, you might show a toast notification
 			})
 			.catch((err) => {
 				console.error('Failed to copy: ', err);

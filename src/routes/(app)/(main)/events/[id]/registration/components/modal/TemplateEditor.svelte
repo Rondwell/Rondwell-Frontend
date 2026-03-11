@@ -195,7 +195,7 @@
 									<div
 										class="mb-1 flex items-center justify-center rounded-xl border border-[#A7A7A7] p-3"
 									>
-										<div class="h-10 w-10 rounded-full bg-gray-200"></div>
+										<div class="h-8 w-8 rounded-full bg-gray-200"></div>
 									</div>
 									Round Table
 								</div>
@@ -206,7 +206,7 @@
 									<div
 										class="mb-1 flex items-center justify-center rounded-xl border border-[#A7A7A7] p-3"
 									>
-										<div class="h-10 w-10 rounded bg-gray-200"></div>
+										<div class="h-8 w-8 rounded bg-gray-200"></div>
 									</div>
 									Square Table
 								</div>
@@ -217,7 +217,7 @@
 									<div
 										class="mb-1 flex items-center justify-center rounded-xl border border-[#A7A7A7] p-3"
 									>
-										<Icon icon="mdi:seat" class="h-10 w-10 text-gray-300" />
+										<Icon icon="mdi:seat" class="h-8 w-8 text-gray-300" />
 									</div>
 									Chair
 								</div>
@@ -228,7 +228,7 @@
 									<div
 										class="mb-1 flex items-center justify-center rounded-xl border border-[#A7A7A7] p-3"
 									>
-										<Icon icon="mdi:door" class="h-10 w-10 text-gray-300" />
+										<Icon icon="mdi:door" class="h-8 w-8 text-gray-300" />
 									</div>
 									Door
 								</div>
@@ -239,7 +239,7 @@
 									<div
 										class="mb-1 flex items-center justify-center rounded-xl border border-[#A7A7A7] p-3"
 									>
-										<Icon icon="mdi:podium" class="h-10 w-10 text-gray-300" />
+										<Icon icon="mdi:podium" class="h-8 w-8 text-gray-300" />
 									</div>
 									Stage
 								</div>
@@ -250,7 +250,7 @@
 									<div
 										class="mb-1 flex items-center justify-center rounded-xl border border-[#A7A7A7] p-3"
 									>
-										<Icon icon="mdi:toilet" class="h-10 w-10 text-gray-300" />
+										<Icon icon="mdi:toilet" class="h-8 w-8 text-gray-300" />
 									</div>
 									Rest room
 								</div>
@@ -261,7 +261,7 @@
 									<div
 										class="mb-1 flex items-center justify-center rounded-xl border border-[#A7A7A7] p-3"
 									>
-										<div class="h-10 w-10 rounded-md border-2 border-gray-300"></div>
+										<div class="h-8 w-8 rounded-md border-2 border-gray-300"></div>
 									</div>
 									Rectangle
 								</div>
@@ -272,7 +272,7 @@
 									<div
 										class="mb-1 flex items-center justify-center rounded-xl border border-[#A7A7A7] p-3"
 									>
-										<div class="h-10 w-10 rounded-full border-2 border-gray-300"></div>
+										<div class="h-8 w-8 rounded-full border-2 border-gray-300"></div>
 									</div>
 									Circle
 								</div>
@@ -283,7 +283,7 @@
 									<div
 										class="mb-1 flex h-16 w-16 items-center justify-center rounded-xl border border-[#A7A7A7] p-3"
 									>
-										<div class="h-10 w-1 bg-gray-300"></div>
+										<div class="h-8 w-1 bg-gray-300"></div>
 									</div>
 									Straight
 								</div>
@@ -298,12 +298,12 @@
 
 							<div class="grid grid-cols-3 gap-2 sm:gap-4">
 								<div class="flex flex-col items-center text-xs text-gray-700 sm:text-sm">
-									<div class="mb-1 h-10 w-10 rounded-full border-2 border-gray-300"></div>
+									<div class="mb-1 h-8 w-8 rounded-full border-2 border-gray-300"></div>
 									Circle
 								</div>
 
 								<div class="flex flex-col items-center text-xs text-gray-700 sm:text-sm">
-									<div class="mb-1 h-10 w-10 rounded border-2 border-gray-300"></div>
+									<div class="mb-1 h-8 w-8 rounded border-2 border-gray-300"></div>
 									Square
 								</div>
 
@@ -328,12 +328,12 @@
 
 								<div class="grid grid-cols-3 gap-4">
 									<div class="flex flex-col items-center text-sm text-gray-700">
-										<div class="mb-1 h-10 w-10 rounded-full border-2 border-gray-300"></div>
+										<div class="mb-1 h-8 w-8 rounded-full border-2 border-gray-300"></div>
 										Circle
 									</div>
 
 									<div class="flex flex-col items-center text-sm text-gray-700">
-										<div class="mb-1 h-10 w-10 rounded border-2 border-gray-300"></div>
+										<div class="mb-1 h-8 w-8 rounded border-2 border-gray-300"></div>
 										Square
 									</div>
 

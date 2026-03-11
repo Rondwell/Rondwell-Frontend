@@ -17,6 +17,7 @@
 
 	function goHome() {
 		goto('/overview');
+		open = false;
 		// showSubMenu.set(false);
 		// subMenuItems.set([]);
 		// activeSubItem.set('');

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { cn } from '$lib/utils/cn';
+	import type { Snippet } from 'svelte';
 
 	interface Props {
 		variant?: 'default' | 'ghost' | 'outline';
@@ -7,7 +8,7 @@
 		class?: string;
 		disabled?: boolean;
 		type?: 'button' | 'submit' | 'reset';
-		children?: any;
+		children?: Snippet;
 	}
 
 	let {
@@ -35,7 +36,7 @@
 		lg: 'h-11 px-8 rounded-md'
 	};
 
-	const classes = cn(baseClasses, variants[variant], sizes[size], className);
+	const classes = $derived(cn(baseClasses, variants[variant], sizes[size], className));
 </script>
 
 <button {type} {disabled} class={classes} {...rest}>

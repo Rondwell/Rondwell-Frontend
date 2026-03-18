@@ -1,25 +1,26 @@
 <!-- src/routes/auth/login/+page.svelte -->
 <script>
-	import { goto } from '$app/navigation';
-	import Header from './components/Header.svelte';
+  import { goto } from '$app/navigation';
+  import Header from './components/Header.svelte';
+  import { requestRegistrationOTP } from '$lib/services/auth.services'; // ✅ import
 
-	let email = '';
-	let password = '';
-	let phone = '';
-	let usePhone = false;
+  let email = '';
+  let password = '';
+  let phone = '';
+  let usePhone = false;
 
-	// Toggle between email and phone
-	const toggleInputType = () => {
-		usePhone = !usePhone;
-	};
+  const toggleInputType = () => {
+    usePhone = !usePhone;
+  };
 
-	function handleClick() {
-		// if (mode === 'signup') {
-		goto('/auth/verify');
-		// } else {
-		// 	goto('/auth/dashboard');
-		// }
-	}
+  async function handleClick() {
+  if (!usePhone && !email) { alert('Please enter your email'); return; }
+  if (usePhone && !phone) { alert('Please enter your phone number'); return; }
+
+  const contact = usePhone ? phone : email;
+  localStorage.setItem('pending-email', contact);
+  goto(`/auth/verify?email=${encodeURIComponent(contact)}`);
+}
 </script>
 
 <main class="bg flex h-full min-h-screen flex-col items-stretch">

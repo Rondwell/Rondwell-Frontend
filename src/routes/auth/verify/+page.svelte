@@ -1,46 +1,114 @@
 <!-- src/routes/auth/verify/+page.svelte -->
 <script lang="ts">
-	import Header from '../components/Header.svelte';
 
-	let code = Array(6).fill('');
-	let email = 'you@gmail.com'; // In real app, this would come from session or URL param
+  import { onMount, onDestroy } from 'svelte';
+  import Header from '../components/Header.svelte';
+  import { page } from '$app/stores';
+  import { requestRegistrationOTP, verifyRegistrationOTP } from '$lib/services/auth.services';
+  import { goto } from '$app/navigation';
 
-	function handleInput(e: Event, index: number) {
-		const target = e.target as HTMLInputElement | null;
-		const value = target?.value ?? '';
-		if (value.length === 1 && /[0-9]/.test(value)) {
-			code[index] = value;
-			if (index < 6) {
-				document.getElementById(`code-${index + 1}`)?.focus();
-			}
-		} else if (value.length === 0) {
-			code[index] = '';
-			if (index > 0) {
-				document.getElementById(`code-${index - 1}`)?.focus();
-			}
-		}
-	}
+  let code = Array(6).fill('');
+  let email = '';
+  let message = '';
+  let loading = false;
+  let seconds = 45;
+  let timer: ReturnType<typeof setInterval> | null = null;
 
-	function pasteCode(e: Event) {
-		e.preventDefault();
-		const clipboardEvent = e as ClipboardEvent;
-		const pasted = clipboardEvent.clipboardData?.getData('text').trim().slice(0, 6) ?? '';
-		if (/^[0-9]{6}$/.test(pasted)) {
-			for (let i = 0; i < 6; i++) {
-				code[i] = pasted[i];
-			}
-			const lastInput = document.getElementById('code-5');
-			if (lastInput) lastInput.focus();
-		}
-	}
 
-	function resendCode() {
-		// Add logic here
-		console.log('Resend code');
-	}
+  onMount(async () => {
+    email = $page.url.searchParams.get('email') || localStorage.getItem('pending-email') || '';
+    console.log('📧 Email on mount:', email);
+
+    if (!email) {
+      message = 'No email found. Please go back and try again.';
+      return;
+    }
+
+    await sendOTP();
+    startTimer();
+  });
+
+  onDestroy(() => clearTimer());
+
+  async function sendOTP() {
+    loading = true;
+    message = '';
+    try {
+      await requestRegistrationOTP(email);
+      localStorage.setItem('pending-email', email);
+      message = 'OTP sent to your email';
+    } catch (err) {
+      message = err instanceof Error ? err.message : 'Failed to send OTP';
+    } finally {
+      loading = false;
+    }
+  }
+
+  function startTimer() {
+    clearTimer();
+    seconds = 45;
+    timer = setInterval(() => {
+      if (seconds <= 0) { clearTimer(); return; }
+      seconds -= 1;
+    }, 1000);
+  }
+
+  function clearTimer() {
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+
+  function handleInput(e: Event, index: number) {
+    const target = e.target as HTMLInputElement;
+    const value = target.value.replace(/[^0-9]/g, '').slice(0, 1);
+    code[index] = value;
+    if (value && index < 5) {
+      const next = document.getElementById(`code-${index + 1}`) as HTMLInputElement | null;
+      next?.focus();
+    }
+    if (value && index === 5) submit();
+  }
+
+  async function submit() {
+    const otp = code.join('');
+    if (otp.length !== 6) { message = 'Enter a 6 digit OTP'; return; }
+    loading = true;
+    message = '';
+    try {
+      await verifyRegistrationOTP(email, otp);
+      localStorage.removeItem('pending-email');
+      message = 'Verified successfully';
+	  // eslint-disable-next-line svelte/no-navigation-without-resolve
+      goto('/dashboard');
+    } catch (err) {
+      message = err instanceof Error ? err.message : 'OTP verification failed';
+      code = Array(6).fill('');
+      document.getElementById('code-0')?.focus();
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function resendCode() {
+    if (seconds > 0) return;
+    if (!email) { message = 'No email found'; return; }
+    await sendOTP();
+    startTimer();
+  }
+
+  async function pasteCode() {
+    try {
+      const text = await navigator.clipboard.readText();
+      const digits = text.replace(/[^0-9]/g, '').slice(0, 6).split('');
+      code = [...digits, ...Array(6).fill('')].slice(0, 6);
+      if (digits.length === 6) submit();
+    } catch {
+      message = 'Could not read clipboard';
+    }
+  }
 </script>
 
 <main class="bg flex h-full min-h-screen flex-col items-stretch">
+ <p>{import.meta.env.VITE_API_URL}</p>
 	<Header />
 
 	<div class="flex h-full flex-1 items-center justify-center px-4 py-15">
@@ -81,6 +149,7 @@
 							type="text"
 							maxlength="1"
 							pattern="[0-9]"
+							disabled={loading} 
 							class="h-[48.75px] w-[42px] sm:w-[48.75px] rounded-md border border-gray-300 text-center text-lg focus:ring-2 focus:ring-black focus:outline-none md:w-full"
 							value={_}
 						/>
@@ -143,8 +212,14 @@
 
 						Paste Code
 					</button>
-					<button on:click={resendCode} class="text-[#B9B7B7]"> Resend code in 42s </button>
+					<button on:click={resendCode} disabled={loading || seconds > 0} class="text-[#B9B7B7]"> Resend code in 42s </button>
 				</div>
+
+				{#if message}
+					<p class="mt-2 text-sm text-center {message.includes('success') || message.includes('sent') ? 'text-green-600' : 'text-red-500'}">
+						{message}
+					</p>
+				{/if}
 			</div>
 		</div>
 	</div>

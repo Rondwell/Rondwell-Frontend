@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RichTextEditor from '$lib/components/RichTextEditor.svelte';
 	import TextEditor from '$lib/components/TextEditor.svelte';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
@@ -12,6 +13,9 @@
 	let moods = ['💐', '💼', '😂'];
 	let selectedMood: string | null = moods[0];
 	let selectedLength = 'S';
+	// ✅ store rich text content
+	let descriptionContent = '';
+	let additionalInstructionsContent = '';
 
 	function toggleDropdown() {
 		showDropdown = !showDropdown;
@@ -27,7 +31,7 @@
 </script>
 
 {#if open}
-	<div id="description" class="absolute top-full left-0 z-40 mt-2 w-full max-w-[662.8px]">
+	<div id="description" class="absolute left-0 top-full z-40 mt-2 w-full max-w-[662.8px]">
 		<div class="w-full max-w-[662.8px] overflow-hidden rounded-sm bg-[#FFFCFC]">
 			<div class="flex h-[50px] w-full items-center justify-end bg-[#F4F5F6] px-3">
 				<button
@@ -60,12 +64,14 @@
 						<TextEditor open={showDropdown} />
 					</div>
 
-					<!-- textarea -->
-					<textarea
-						rows="6"
-						placeholder="Who should come? What's the event about?"
-						class="w-full resize-none border-none text-sm text-gray-500 outline-none focus:ring-0"
-					></textarea>
+					<!-- ✅ replaced textarea with RichTextEditor -->
+					<div class="w-full">
+						<RichTextEditor
+							content={descriptionContent}
+							placeholder="Who should come? What's the event about?"
+							onChange={(html) => (descriptionContent = html)}
+						/>
+					</div>
 				</div>
 			</div>
 
@@ -172,7 +178,7 @@
 				<!-- AI Suggest Modal -->
 				{#if showAIModal}
 					<div
-						class="absolute bottom-[50px] left-[-10px] z-50 w-85 rounded-md border bg-[#F8F8F9] p-2 shadow-lg md:left-0"
+						class="w-85 absolute bottom-[50px] left-[-10px] z-50 rounded-md border bg-[#F8F8F9] p-2 shadow-lg md:left-0"
 					>
 						<div class="mb-4 flex items-start justify-between">
 							<div
@@ -289,15 +295,14 @@
 							</div>
 						</div>
 
+						<!-- ✅ replaced textarea with RichTextEditor -->
 						<div class="mb-3">
-							<label for="" class="mb-1 block text-sm font-medium text-gray-600"
-								>Additional Instructions</label
-							>
-							<textarea
-								rows="4"
+							<p class="mb-1 block text-sm font-medium text-gray-600">Additional Instructions</p>
+							<RichTextEditor
+								content={additionalInstructionsContent}
 								placeholder="For example, you could tell the AI to write about a startup pitch event."
-								class="w-full resize-none rounded-md border p-2 text-xs text-gray-500 outline-none focus:ring-0"
-							></textarea>
+								onChange={(html) => (additionalInstructionsContent = html)}
+							/>
 						</div>
 
 						<button class="mb-5 w-full rounded-md bg-gray-800 py-1.5 text-sm text-white">

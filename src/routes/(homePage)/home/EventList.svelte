@@ -2,6 +2,7 @@
 	import EventCard from '$lib/components/EventCard.svelte';
 
 	const event1 = {
+		id: '1',
 		time: 'Jun 28, 12:00 PM',
 		title: "Geegpay's Geegs & Groove",
 		organizers: 'By Cynthia Orji & Beverly',
@@ -15,6 +16,7 @@
 	};
 
 	const event2 = {
+		id: '2',
 		time: 'Jul 05, 4:00 PM',
 		title: 'Tech Creatives Meetup',
 		organizers: 'By Femi Johnson',
@@ -28,6 +30,7 @@
 	};
 
 	const event3 = {
+		id: '3',
 		time: 'Aug 12, 7:00 PM',
 		title: 'Music & Money Vibes',
 		organizers: 'By DJ Spinall',
@@ -56,7 +59,7 @@
 		<!-- Events Grid -->
 		<div class="mb-12 grid gap-4 lg:grid-cols-2">
 			{#each events as event, index (index)}
-				<EventCard {event} />
+				<EventCard {event} eventId={event.id ?? '1'} />
 			{/each}
 		</div>
 

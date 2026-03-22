@@ -7,6 +7,7 @@
 	// Mock data for the page
 	const events = [
 		{
+			id: '1',
 			date: '2024-06-25',
 			time: '12:00 PM',
 			title: "Geegpay's Geegs & Groove",
@@ -138,7 +139,7 @@
 					</div>
 					<div class="flex w-full max-w-[687px] flex-col gap-4">
 						{#each dayEvents as event, index (index)}
-							<EventCard {event} />
+							<EventCard {event} eventId={event.id ?? '1'} />
 						{/each}
 					</div>
 				</div>

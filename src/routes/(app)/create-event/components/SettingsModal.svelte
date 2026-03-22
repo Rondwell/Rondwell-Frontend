@@ -1,21 +1,28 @@
-<script>
-	import { fly, fade } from 'svelte/transition';
+<script lang="ts">
 	import Icon from '@iconify/svelte';
+	import { fade, fly } from 'svelte/transition';
 
 	export let open = false;
+	export let publicGuestListEnabled = false;
+	export let postEventFeedbackEnabled = false;
+	export let waitlistEnabled = false;
+	export let donationsEnabled = false;
+	export let customLinkSlug = '';
 
 	function closeModal() {
 		open = false;
 	}
 
-	let toggleCards = [
+	$: toggleCards = [
 		{
 			icon: 'mdi:account-group',
 			iconBg: 'bg-purple-200',
 			iconColor: 'text-purple-600',
 			title: 'Public Guest List',
 			description: 'Show Public Guest List',
-			enabled: false
+			key: 'publicGuestListEnabled',
+			get enabled() { return publicGuestListEnabled; },
+			set enabled(v) { publicGuestListEnabled = v; }
 		},
 		{
 			icon: 'mdi:comment-question-outline',
@@ -23,7 +30,9 @@
 			iconColor: 'text-blue-600',
 			title: 'Post Event Feedback',
 			description: 'Send feedback form to guests automatically',
-			enabled: false
+			key: 'postEventFeedbackEnabled',
+			get enabled() { return postEventFeedbackEnabled; },
+			set enabled(v) { postEventFeedbackEnabled = v; }
 		},
 		{
 			icon: 'mdi:clock-outline',
@@ -31,7 +40,9 @@
 			iconColor: 'text-pink-600',
 			title: 'Waitlist',
 			description: 'Allow guests to join a waitlist if tickets run out or registration closes',
-			enabled: false
+			key: 'waitlistEnabled',
+			get enabled() { return waitlistEnabled; },
+			set enabled(v) { waitlistEnabled = v; }
 		},
 		{
 			icon: 'mdi:cash-multiple',
@@ -39,9 +50,18 @@
 			iconColor: 'text-green-600',
 			title: 'Donations',
 			description: 'Guests can optionally donate during registration',
-			enabled: false
+			key: 'donationsEnabled',
+			get enabled() { return donationsEnabled; },
+			set enabled(v) { donationsEnabled = v; }
 		}
 	];
+
+	function toggle(key: string) {
+		if (key === 'publicGuestListEnabled') publicGuestListEnabled = !publicGuestListEnabled;
+		else if (key === 'postEventFeedbackEnabled') postEventFeedbackEnabled = !postEventFeedbackEnabled;
+		else if (key === 'waitlistEnabled') waitlistEnabled = !waitlistEnabled;
+		else if (key === 'donationsEnabled') donationsEnabled = !donationsEnabled;
+	}
 </script>
 
 {#if open}
@@ -67,6 +87,7 @@
 						<input
 							type="text"
 							placeholder="Custom Link"
+							bind:value={customLinkSlug}
 							class="flex-grow bg-white px-3 py-2 text-gray-500 focus:outline-none"
 						/>
 					</div>
@@ -83,12 +104,18 @@
 							>
 								<Icon icon={card.icon} class="text-xl" />
 							</div>
-							<input
-								type="checkbox"
-								bind:checked={card.enabled}
-								class="toggle toggle-primary"
+							<button
 								aria-label={`Toggle ${card.title}`}
-							/>
+								class="relative h-6 w-10 rounded-full transition-colors duration-300"
+								class:bg-gray-300={!card.enabled}
+								class:bg-gray-800={card.enabled}
+								on:click={() => toggle(card.key)}
+							>
+								<span
+									class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300"
+									class:translate-x-4={card.enabled}
+								></span>
+							</button>
 						</div>
 						<div>
 							<h3 class="font-semibold text-gray-900">{card.title}</h3>

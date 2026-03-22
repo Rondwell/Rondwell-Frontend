@@ -1,104 +1,239 @@
 <!-- src/routes/event/+page.svelte -->
 <script lang="ts">
-	import Icon from '@iconify/svelte';
-	import { goto } from '$app/navigation';
-	import { clickOutside } from '$lib/utils/constant';
-	import InviteGuestsModal from './components/InviteGuestsModal.svelte';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import { getEventById, getMyCollections, uploadEventPhoto } from '$lib/services/event.services';
+import { clickOutside } from '$lib/utils/constant';
+import Icon from '@iconify/svelte';
+import { onMount } from 'svelte';
+import InviteGuestsModal from './components/InviteGuestsModal.svelte';
 
+$: eventId = $page.params.id;
 
-	const eventData = {
-		id: 'event-123',
-		title: "Faithful's Graduating Party",
-		collection: 'John Collection',
-		date: 'Wednesday, Dec 25',
-		time: '11:30AM - 12:30AM GMT+1',
-		location: 'Location Missing',
-		description: 'Megaexe Party',
-		organizer: 'John Collection',
-		approvalRequired: true,
-		invites: {
-			accepted: 1,
-			opened: 1,
-			declined: 0
-		},
-		attendees: [
-			{
-				name: 'John Odoemenem',
-				email: 'johnmedic23@gmail.com',
-				status: 'Attending',
-				time: '13 Minutes Ago'
-			}
-		],
-		admins: [{ name: 'John Odoemenem', email: 'johnmedic23@gmail.com', role: 'Creator' }],
-		visibility: {
-			collection: 'John Collection',
-			status: 'Public'
-		}
-	};
+let eventData: any = null;
+let loading = true;
+let error = '';
+let uploadingPhoto = false;
+let photoInput: HTMLInputElement;
 
-	// const eventData = {
-	// 	title: 'Megaexe Party',
-	// 	collection: 'John Collection',
-	// 	date: 'Wednesday, Sep 25',
-	// 	time: '11:30PM GMT+1',
-	// 	location: 'Offline',
-	// 	status: 'Event Has Ended',
-	// 	feedbackCollected: false,
-	// 	invites: {
-	// 		accepted: 1,
-	// 		opened: 1,
-	// 		declined: 0
-	// 	},
-	// 	attendees: [
-	// 		{
-	// 			name: 'John Odoemenem',
-	// 			email: 'johnmedic23@gmail.com',
-	// 			status: 'Unregistered',
-	// 			time: '12 Minutes Ago'
-	// 		},
-	// 		{
-	// 			name: 'John Odoemenem',
-	// 			email: 'johnmedic23@gmail.com',
-	// 			status: 'Attending',
-	// 			time: 'Sep 23'
-	// 		}
-	// 	],
-	// 	admins: [
-	// 		{ name: 'John Odoemenem', email: 'johnmedic23@gmail.com', role: 'Creator' },
-	// 		{ name: 'John Odoemenem', email: 'johnmedic23@gmail.com', role: 'Manager' }
-	// 	],
-	// 	visibility: {
-	// 		calendar: 'JohnCalendar',
-	// 		status: 'Public'
-	// 	}
-	// };
+onMount(async () => {
+try {
+const [event, collections] = await Promise.all([
+  getEventById(eventId!),
+  getMyCollections().catch(() => []),
+]);
+const collectionName = collections.find((c: any) => c._id === event.collectionId || c.id === event.collectionId)?.name ?? 'My Collection';
+eventData = {
+id: event._id ?? event.id,
+title: event.title ?? 'Untitled Event',
+collection: collectionName,
+date: formatEventDate(event.startDateTime),
+time: formatEventTime(event.startDateTime, event.endDateTime, event.timeZone),
+location: getLocationLabel(event),
+description: event.description ?? '',
+organizer: event.eventOrganizerName ?? '',
+approvalRequired: false,
+displayPictureUrl: event.displayPictureUrl ?? null,
+coverPictureUrl: event.coverPictureUrl ?? null,
+eventStatus: event.eventStatus ?? 'DRAFT',
+visibility: {
+collection: collectionName,
+status: event.visibility === 'PUBLIC' ? 'Public' : 'Private'
+},
+invites: { accepted: 0, opened: 0, declined: 0 },
+attendees: [],
+admins: [],
+customLinkSlug: event.customLinkSlug ?? '',
+startDateTime: event.startDateTime,
+endDateTime: event.endDateTime,
+meetingLink: event.locationDetails?.virtual?.meetingLink ?? null,
+venueAddress: event.locationDetails?.physical?.venueAddress ?? event.locationDetails?.physical?.venueName ?? null,
+socialLinks: event.socialLinks ?? {},
+};
+} catch (e: any) {
+error = e.message ?? 'Failed to load event';
+} finally {
+loading = false;
+}
+});
 
-	function isFutureEvent(event: any) {
-		try {
-			// Parse event date — append year if missing
-			const dateString = event.date.includes('202')
-				? event.date
-				: `${event.date} ${new Date().getFullYear()}`;
-			const eventDate = new Date(dateString);
+function formatEventDate(dt: string): string {
+if (!dt) return 'Date TBD';
+const d = new Date(dt);
+return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
 
-			return eventDate.getTime() > Date.now();
-		} catch (err) {
-			console.error('Invalid date format:', err);
-			return false;
-		}
-	}
+function formatEventTime(start: string, end: string, tz: string): string {
+if (!start) return '';
+const s = new Date(start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+const e = end ? new Date(end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+const tzLabel = tz ? ` ${tz}` : '';
+return e ? `${s} - ${e}${tzLabel}` : `${s}${tzLabel}`;
+}
 
-	$: eventIsFuture = isFutureEvent(eventData);
-	let value = 100 / eventData?.attendees?.length;
-	let showInviteGuestsModal = false;
+function getLocationLabel(event: any): string {
+if (event.eventType === 'VIRTUAL' && event.locationDetails?.virtual?.platform) {
+return event.locationDetails.virtual.platform;
+}
+if (event.locationDetails?.physical?.venueName) {
+return event.locationDetails.physical.venueName;
+}
+return 'Location Missing';
+}
+
+function getEventMonth(dt: string): string {
+if (!dt) return 'Jan';
+return new Date(dt).toLocaleDateString('en-US', { month: 'short' });
+}
+
+function getEventDay(dt: string): string {
+if (!dt) return '--';
+return new Date(dt).getDate().toString();
+}
+
+function isFutureEvent(event: any) {
+if (!event?.startDateTime) return true;
+return new Date(event.startDateTime).getTime() > Date.now();
+}
+
+$: eventIsFuture = eventData ? isFutureEvent(eventData) : true;
+$: value = eventData?.attendees?.length ? 100 / eventData.attendees.length : 0;
+let showInviteGuestsModal = false;
+
+async function handleChangePhoto() {
+photoInput?.click();
+}
+
+async function onPhotoSelected(e: Event) {
+const input = e.target as HTMLInputElement;
+const file = input.files?.[0];
+if (!file || !eventData) return;
+uploadingPhoto = true;
+try {
+const url = await uploadEventPhoto(eventId!, file, 'DISPLAY');
+eventData = { ...eventData, displayPictureUrl: url };
+} catch (err: any) {
+alert(err.message ?? 'Failed to upload photo');
+} finally {
+uploadingPhoto = false;
+input.value = '';
+}
+}
+
+$: eventImageSrc = eventData?.displayPictureUrl ?? eventData?.coverPictureUrl ?? '/event_pic1.png';
+$: eventLink = eventData?.customLinkSlug
+? `rondwell.com/${eventData.customLinkSlug}`
+: `rondwell.com/events/${eventId}`;
 </script>
 
+<input
+	type="file"
+	accept="image/*"
+	class="hidden"
+	bind:this={photoInput}
+	on:change={onPhotoSelected}
+/>
+
+{#if loading}
+	<div class="max-w-6xl animate-pulse">
+		<!-- Header skeleton -->
+		<div class="mb-6">
+			<div class="mb-2 flex items-center justify-between">
+				<div class="h-4 w-32 rounded bg-gray-200"></div>
+				<div class="h-8 w-28 rounded-md bg-gray-200"></div>
+			</div>
+			<div class="mb-4 h-9 w-3/4 rounded bg-gray-200"></div>
+			<!-- Action buttons skeleton -->
+			<div class="mb-4 flex flex-wrap gap-3">
+				<div class="h-[60px] w-full rounded-[12.75px] bg-gray-200 sm:w-[200px]"></div>
+				<div class="h-[60px] w-full rounded-[12.75px] bg-gray-200 sm:w-[200px]"></div>
+				<div class="h-[60px] w-full rounded-[12.75px] bg-gray-200 sm:w-[200px]"></div>
+			</div>
+		</div>
+
+		<!-- Event details card skeleton -->
+		<div class="mb-12 rounded-lg bg-[#FDFDFD] p-4 shadow-md">
+			<div class="flex flex-col gap-6 lg:flex-row">
+				<!-- Left: image skeleton -->
+				<div class="w-full lg:w-1/2">
+					<div class="mb-4 h-70 w-full rounded-lg bg-gray-200"></div>
+					<div class="flex items-center justify-between">
+						<div class="h-4 w-20 rounded bg-gray-200"></div>
+						<div class="flex gap-2">
+							<div class="h-5 w-5 rounded bg-gray-200"></div>
+							<div class="h-5 w-5 rounded bg-gray-200"></div>
+							<div class="h-5 w-5 rounded bg-gray-200"></div>
+							<div class="h-5 w-5 rounded bg-gray-200"></div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Right: when & where skeleton -->
+				<div class="flex w-full flex-col gap-4 rounded-md md:p-4 lg:w-1/2">
+					<div class="h-5 w-32 rounded bg-gray-200"></div>
+					<!-- Date row -->
+					<div class="flex items-center gap-3">
+						<div class="h-[49px] w-[49px] rounded-md bg-gray-200"></div>
+						<div class="flex flex-col gap-2">
+							<div class="h-4 w-40 rounded bg-gray-200"></div>
+							<div class="h-3 w-28 rounded bg-gray-200"></div>
+						</div>
+					</div>
+					<!-- Location row -->
+					<div class="flex items-center gap-3">
+						<div class="h-[49px] w-[49px] rounded-md bg-gray-200"></div>
+						<div class="flex flex-col gap-2">
+							<div class="h-4 w-36 rounded bg-gray-200"></div>
+							<div class="h-3 w-52 rounded bg-gray-200"></div>
+						</div>
+					</div>
+					<!-- Buttons -->
+					<div class="mt-4 flex gap-2">
+						<div class="h-9 w-28 rounded-md bg-gray-200"></div>
+						<div class="h-9 w-28 rounded-md bg-gray-200"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Invites section skeleton -->
+		<div class="mb-12">
+			<div class="mb-4 flex items-center justify-between">
+				<div class="h-5 w-20 rounded bg-gray-200"></div>
+				<div class="h-8 w-32 rounded-md bg-gray-200"></div>
+			</div>
+			<div class="flex flex-col gap-4 lg:flex-row">
+				<div class="h-32 w-full rounded-md bg-gray-200 lg:max-w-[284px]"></div>
+				<div class="h-32 w-full rounded-md bg-gray-200"></div>
+			</div>
+		</div>
+
+		<!-- Attendees section skeleton -->
+		<div class="mb-12 border-t pt-12">
+			<div class="mb-3 h-5 w-24 rounded bg-gray-200"></div>
+			<div class="mb-6 h-8 w-full max-w-2xl rounded-full bg-gray-200"></div>
+			<div class="flex flex-col gap-3 rounded-md bg-[#FDFDFD] p-3">
+				{#each [1, 2, 3] as _}
+					<div class="flex items-center justify-between border-b py-3 last:border-b-0">
+						<div class="flex items-center gap-2">
+							<div class="h-6 w-6 rounded-full bg-gray-200"></div>
+							<div class="h-4 w-32 rounded bg-gray-200"></div>
+						</div>
+						<div class="h-6 w-20 rounded-full bg-gray-200"></div>
+					</div>
+				{/each}
+			</div>
+		</div>
+	</div>
+{:else if error}
+	<div class="flex h-64 items-center justify-center text-red-500">{error}</div>
+{:else if eventData}
 <div class="max-w-6xl">
 	<!-- Event Header -->
 	<div class="mb-6">
 		<div class="mb-2 flex items-center justify-between">
 			<div class="flex items-center gap-2">
-				<span class="text-sm text-[#83808D]">John Collection</span>
+				<span class="text-sm text-[#83808D]">{eventData.collection}</span>
 				<svg
 					width="11"
 					height="11"
@@ -267,7 +402,7 @@
 				<div class="w-full lg:w-1/2">
 					<div class="relative w-full">
 						<img
-							src="/event_pic1.png"
+							src={eventImageSrc}
 							alt="Event"
 							class="mb-4 h-70 w-full rounded-lg object-cover"
 						/>
@@ -276,7 +411,7 @@
 						<div
 							class="absolute bottom-2 left-1.5 flex w-full max-w-[96%] items-center justify-between gap-2 rounded-md bg-[#B3ACA0] p-2 text-[#EFEEEC] md:left-2.5"
 						>
-							<span class="text-xs">rondwell.com/copylink</span>
+						<span class="text-xs">{eventLink}</span>
 							<p class="cursor-pointer hover:underline">Copy</p>
 						</div>
 					</div>
@@ -285,10 +420,34 @@
 					<div class="flex w-full items-center justify-between">
 						<p class="text-sm text-[#838485]">Share event</p>
 						<div class="flex items-center gap-2 text-xl text-[#A3A5A5]">
-							<Icon icon="mdi:instagram" />
-							<Icon icon="mdi:twitter" />
-							<Icon icon="mdi:linkedin" />
-							<Icon icon="simple-icons:tiktok" />
+							{#if eventData?.socialLinks?.instagram}
+								<a href="https://instagram.com/{eventData.socialLinks.instagram}" target="_blank" rel="noopener noreferrer" class="hover:text-[#E1306C] transition-colors">
+									<Icon icon="mdi:instagram" />
+								</a>
+							{:else}
+								<Icon icon="mdi:instagram" class="opacity-30" />
+							{/if}
+							{#if eventData?.socialLinks?.x}
+								<a href="https://x.com/{eventData.socialLinks.x}" target="_blank" rel="noopener noreferrer" class="hover:text-black transition-colors">
+									<Icon icon="mdi:twitter" />
+								</a>
+							{:else}
+								<Icon icon="mdi:twitter" class="opacity-30" />
+							{/if}
+							{#if eventData?.socialLinks?.linkedin}
+								<a href="https://linkedin.com/in/{eventData.socialLinks.linkedin}" target="_blank" rel="noopener noreferrer" class="hover:text-[#0A66C2] transition-colors">
+									<Icon icon="mdi:linkedin" />
+								</a>
+							{:else}
+								<Icon icon="mdi:linkedin" class="opacity-30" />
+							{/if}
+							{#if eventData?.socialLinks?.tiktok}
+								<a href="https://tiktok.com/@{eventData.socialLinks.tiktok}" target="_blank" rel="noopener noreferrer" class="hover:text-black transition-colors">
+									<Icon icon="simple-icons:tiktok" />
+								</a>
+							{:else}
+								<Icon icon="simple-icons:tiktok" class="opacity-30" />
+							{/if}
 						</div>
 					</div>
 				</div>
@@ -303,9 +462,9 @@
 							<!-- Date -->
 							<div class="flex items-center gap-2">
 								<div class="flex h-[49.45px] w-[49.45px] flex-col rounded-md border">
-									<p class="bg-[#EBECED] py-[2px] text-center text-xs text-[#C7C9CB]">Jun</p>
+									<p class="bg-[#EBECED] py-[2px] text-center text-xs text-[#C7C9CB]">{getEventMonth(eventData.startDateTime)}</p>
 									<div class="flex flex-1 items-center justify-center border-t">
-										<p class="text-sm font-medium text-gray-700">25</p>
+										<p class="text-sm font-medium text-gray-700">{getEventDay(eventData.startDateTime)}</p>
 									</div>
 								</div>
 
@@ -348,7 +507,13 @@
 										{eventData.location}
 									</div>
 									<div class="max-w-50 text-sm text-gray-500 sm:max-w-full">
-										Please enter the location of the event before it starts
+										{#if eventData.meetingLink}
+											<a href={eventData.meetingLink} target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline truncate block">{eventData.meetingLink}</a>
+										{:else if eventData.venueAddress}
+											{eventData.venueAddress}
+										{:else}
+											Add location details
+										{/if}
 									</div>
 								</div>
 							</div>
@@ -358,15 +523,17 @@
 					<!-- Buttons -->
 					<div class="mt-4 flex w-full items-center gap-2">
 						<button
-							on:click={() => goto('/events/1/edit')}
+							on:click={() => goto(`/events/${eventId}/edit`)}
 							class="w-35 rounded-md bg-[#F4F4F4] px-3 py-2 text-center text-sm font-medium text-[#939495] hover:bg-gray-100"
 						>
 							Edit Event
 						</button>
 						<button
-							class="w-35 rounded-md bg-[#F4F4F4] px-3 py-2 text-center text-sm font-medium text-[#939495] hover:bg-gray-100"
+							class="w-35 rounded-md bg-[#F4F4F4] px-3 py-2 text-center text-sm font-medium text-[#939495] hover:bg-gray-100 disabled:opacity-50"
+							on:click={handleChangePhoto}
+							disabled={uploadingPhoto}
 						>
-							Change Photo
+							{uploadingPhoto ? 'Uploading...' : 'Change Photo'}
 						</button>
 					</div>
 				</div>
@@ -1063,3 +1230,4 @@
 		</div>
 	</div>
 </div>
+{/if}

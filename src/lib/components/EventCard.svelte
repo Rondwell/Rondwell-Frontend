@@ -1,10 +1,12 @@
 <script lang="ts">
-	import Icon from '@iconify/svelte';
 	import { goto } from '$app/navigation';
+	import Icon from '@iconify/svelte';
 
 	export let event: any;
 	export let type: string = 'attending';
 	export let variant: 'default' | 'subscriber' = 'default';
+	// Optional: pass an eventId to make the card link to the event page
+	export let eventId: string = '';
 </script>
 
 {#if variant === 'subscriber'}
@@ -38,7 +40,12 @@
 		</span>
 	</div>
 {:else}
-	<div class="flex cursor-pointer flex-col gap-4 rounded-md bg-[#FDFDFD] p-3 md:flex-row md:p-6">
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<svelte:element
+		this={eventId ? 'a' : 'div'}
+		href={eventId ? `/event-page/${eventId}` : undefined}
+		class="flex cursor-pointer flex-col gap-4 rounded-md bg-[#FDFDFD] p-3 no-underline md:flex-row md:p-6"
+	>
 		<div class="flex-1 space-y-1">
 			<!-- Event Time -->
 			<div class="flex items-center gap-2">
@@ -84,7 +91,7 @@
 				{#if type === 'mine'}
 					<div class="flex items-center gap-2 text-sm text-[#B9BABA]">
 						<img src="/group-icon.svg" alt="Location" class="h-4 w-4" />
-						<span>20+ Attendees</span>
+						<span>{event.attendees ?? 0} Attendees</span>
 					</div>
 				{/if}
 
@@ -117,7 +124,7 @@
 
 				{#if type === 'mine'}
 					<button
-						on:click={() => goto('/events/1')}
+						on:click|stopPropagation={() => goto(`/events/${event.id}`)}
 						class="flex w-35 items-center gap-1 rounded-sm bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-[#616265]"
 					>
 						<p>Manage Event</p>
@@ -159,5 +166,5 @@
 				class="h-full w-full object-cover"
 			/>
 		</div>
-	</div>
+	</svelte:element>
 {/if}

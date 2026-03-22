@@ -1,13 +1,22 @@
-<script>
-	let fromEventPage = false;
-	let header = fromEventPage ? 'Your  Event is Launched' : 'Welcome to Rondwell';
-	let fullName = 'JOHN NEBRASKA';
-	let eventName = 'SPREAD THE WORD';
-	let name = fromEventPage ? eventName : fullName;
+<script lang="ts">
+	import { page } from '$app/stores';
 
-	setTimeout(() => {
-		window.location.href = fromEventPage ? '/event-page' : '/overview';
-	}, 2000);
+	$: fromEventPage = $page.url.searchParams.get('from') === 'event';
+	$: eventName = $page.url.searchParams.get('eventName') ?? 'SPREAD THE WORD';
+	$: userName = $page.url.searchParams.get('name') ?? '';
+
+	$: header = fromEventPage ? 'Your Event is Launched 🎉' : 'Welcome to Rondwell';
+	$: displayName = fromEventPage ? eventName.toUpperCase() : (userName.toUpperCase() || 'WELCOME');
+
+	$: redirectTo = fromEventPage
+		? ($page.url.searchParams.get('redirect') ?? '/overview')
+		: '/overview';
+
+	$: if (typeof window !== 'undefined') {
+		setTimeout(() => {
+			window.location.href = redirectTo;
+		}, 2500);
+	}
 </script>
 
 <section class="relative flex min-h-screen items-center justify-center bg-[#f4f1f0]">
@@ -18,7 +27,7 @@
 		<img src={fromEventPage ? '/add.svg' : '/face.svg'} alt="" class="mx-auto" />
 		<span class="space-y-2">
 			<h1 class="text-2xl font-medium text-white">{header}</h1>
-			<p class="text-lg font-light text-white">{name}</p>
+			<p class="text-lg font-light text-white">{displayName}</p>
 		</span>
 	</div>
 </section>
@@ -35,7 +44,6 @@
 		height: 459.75px;
 		left: 492px;
 		top: 79.5px;
-
 		background: rgba(231, 126, 231, 0.66);
 		filter: blur(112.5px);
 	}
@@ -45,7 +53,6 @@
 		height: 273px;
 		left: 514.5px;
 		top: 36px;
-
 		background: #dac5fe;
 		filter: blur(112.5px);
 	}

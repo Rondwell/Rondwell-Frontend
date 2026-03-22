@@ -1,40 +1,50 @@
-<!-- src/routes/+page.svelte -->
+<!-- src/routes/(app)/(main)/collection/+page.svelte -->
 <script lang="ts">
-	import CollectionCard from '$lib/components/CollectionCard.svelte';
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
+	import CollectionCard from '$lib/components/CollectionCard.svelte';
+	import { getMyCollections } from '$lib/services/event.services';
+	import { isAuthenticated } from '$lib/stores/auth.store';
+	import { onMount } from 'svelte';
 
-	const collections = [
-		{
-			name: 'The GenAI Collective',
-			image: '/eventcard.png',
-			events: [
-				{ title: '💕  GenAI Collective NTC 💕 Resarch Roundatable ', date: 'Thu, Sep 19, 6:30 PM' },
-				{ title: '💕  GenAI Collective NTC 💕 Resarch Roundatable ', date: 'Thu, Sep 19, 6:30 PM' }
-			]
-		}
-	];
+	let myCollections: any[] = [];
+	let loading = true;
 
-	const myCollection = [
-		{
-			name: 'The GenAI Collective',
-			image: '/eventcard.png'
-		}
-	];
+	$: if (browser && !$isAuthenticated) goto('/discover?show=true');
 
-	const InactiveCollection = [
-		{
-			name: 'The GenAI Collective',
-			image: '/eventcard.png'
-		},
-		{
-			name: 'The GenAI Collective',
-			image: '/eventcard.png'
-		},
-		{
-			name: 'The GenAI Collective',
-			image: '/eventcard.png'
+	onMount(async () => {
+		if (!$isAuthenticated) return;
+		try {
+			const all = await getMyCollections();
+			myCollections = all;
+		} catch (e) {
+			myCollections = [];
+		} finally {
+			loading = false;
 		}
-	];
+	});
+
+	function normalizeCollection(c: any) {
+		return {
+			_id: c._id ?? c.id,
+			name: c.name ?? 'Unnamed Collection',
+			image: c.profilePictureUrl ?? c.coverBannerUrl ?? '/eventcard.png',
+			subscribers: c.subscribers ?? [],
+			admins: c.admins ?? [],
+			events: (c.upcomingEvents ?? c.events ?? []).map((e: any) => ({
+				title: e.title ?? e.name ?? '',
+				date: e.startDateTime
+					? new Date(e.startDateTime).toLocaleString('en-US', {
+							weekday: 'short',
+							month: 'short',
+							day: 'numeric',
+							hour: 'numeric',
+							minute: '2-digit'
+						})
+					: e.date ?? ''
+			}))
+		};
+	}
 </script>
 
 <div class="w-full">
@@ -58,7 +68,7 @@
 					<h2 class="font-mediun mb-1 text-xl">Welcome to Rondwell Collection</h2>
 					<p class="mb-3 max-w-[724px] text-sm text-[#B9BABA]">
 						Rondwell Collection lets you easily share and manage your events. Every event on
-						Rondwell is part of a calendar. Let’s see how they work.
+						Rondwell is part of a calendar. Let's see how they work.
 					</p>
 				</span>
 
@@ -76,7 +86,6 @@
 					</button>
 				</div>
 			</div>
-			<!-- </div> -->
 		</div>
 	</div>
 
@@ -110,79 +119,34 @@
 							stroke-linecap="round"
 						/>
 					</g>
-					<g opacity="0.4">
-						<path
-							d="M0.75 6.75H17.1978"
-							stroke="#02091D"
-							stroke-width="1.50004"
-							stroke-linecap="round"
-						/>
-						<path
-							d="M8.97266 12.7503V0.75"
-							stroke="#02091D"
-							stroke-width="1.50004"
-							stroke-linecap="round"
-						/>
-					</g>
 				</svg>
 				create
 			</button>
 		</div>
-		<div class="mb-12 grid w-full max-w-[1020px] gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each myCollection as collection, index (index)}
-				<a href="/collection/1/events" class="w-full">
-					<CollectionCard {collection} type="mine" />
-				</a>
-			{/each}
-		</div>
-	</div>
 
-	<!-- Subscribed Collections Section -->
-	<div>
-		<h2 class="mb-4 text-2xl font-medium">Subscribed Collections</h2>
-
-		<div class="mb-12 flex w-full max-w-[1020px] flex-col gap-4">
-			{#each collections as collection, index (index)}
-				<CollectionCard {collection} />
-			{/each}
-		</div>
-
-		<div>
-			<p class="mb-4 flex items-center gap-1 text-sm text-[#A9AAAA]">
-				3 Inactive Collection
-
-				<svg
-					width="11"
-					height="11"
-					viewBox="0 0 11 11"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M9.75098 0.828125C10.401 1.49438 10.546 2.45899 10.1084 3.28613V3.28516L7.13965 8.92773V8.92676C6.7762 9.62158 6.05956 10.0546 5.27441 10.0547C4.48922 10.0547 3.77365 9.62159 3.41016 8.92676L0.439453 3.28516L0.44043 3.28418C0.270666 2.9653 0.189524 2.62953 0.189453 2.29297C0.189453 1.75592 0.399584 1.23701 0.797852 0.828125C1.44887 0.161097 2.41298 1.20916e-05 3.24512 0.416016L4.82227 1.20508C5.10007 1.34398 5.43768 1.34397 5.72168 1.2041H5.72266L7.30273 0.416016L7.46094 0.344727C8.2549 0.0221156 9.14068 0.202821 9.75098 0.828125ZM9.25391 2.29785C9.25391 2.02072 9.12508 1.77287 8.95703 1.60059H8.95605C8.70723 1.34347 8.27235 1.16629 7.79199 1.4043L6.21484 2.19238H6.21387C5.6953 2.44927 5.09559 2.48166 4.55664 2.28906L4.3291 2.19238L2.75098 1.4043V1.40332C2.27217 1.16187 1.83684 1.34233 1.58691 1.60059C1.33545 1.86073 1.16492 2.29536 1.41406 2.76953L4.38379 8.41211L4.45703 8.53223C4.64408 8.79685 4.93876 8.9502 5.26953 8.9502C5.60011 8.95014 5.89403 8.79662 6.08105 8.53223L6.15527 8.41211L9.13379 2.77051C9.22111 2.60417 9.25384 2.44416 9.25391 2.29785Z"
-						fill="#A9AAAA"
-						stroke="#A9AAAA"
-						stroke-width="0.375009"
-					/>
-					<rect
-						x="4.6875"
-						y="5.0625"
-						width="3.37508"
-						height="1.12503"
-						rx="0.562514"
-						transform="rotate(-90 4.6875 5.0625)"
-						fill="#A9AAAA"
-						stroke="#A9AAAA"
-						stroke-width="0.375009"
-					/>
-				</svg>
-			</p>
-
+		{#if loading}
 			<div class="mb-12 grid w-full max-w-[1020px] gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{#each InactiveCollection as collection, index (index)}
-					<CollectionCard {collection} type="inactive" />
+				{#each [1, 2, 3] as _}
+					<div class="animate-pulse rounded-md bg-[#FDFDFD] p-6">
+						<div class="mb-3 h-20 w-20 rounded-[7.5px] bg-gray-200"></div>
+						<div class="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
+						<div class="h-3 w-1/2 rounded bg-gray-200"></div>
+					</div>
 				{/each}
 			</div>
-		</div>
+		{:else if myCollections.length === 0}
+			<div class="mb-12 flex w-full max-w-[1020px] items-center justify-center rounded-md bg-[#FDFDFD] py-12">
+				<p class="text-sm text-[#B9BABA]">No collections yet. Create your first one.</p>
+			</div>
+		{:else}
+			<div class="mb-12 grid w-full max-w-[1020px] gap-4 md:grid-cols-2 lg:grid-cols-3">
+				{#each myCollections as collection (collection._id ?? collection.id)}
+					{@const c = normalizeCollection(collection)}
+					<a href="/collection/{c._id}/events" class="w-full">
+						<CollectionCard collection={c} type="mine" />
+					</a>
+				{/each}
+			</div>
+		{/if}
 	</div>
 </div>

@@ -1,14 +1,14 @@
 <script lang="ts">
-	import Account from './Components/Account.svelte';
-	import Preferences from './Components/Preferences.svelte';
-	import Payment from './Components/Payment.svelte';
 	import Nav from '../../components/Nav.svelte';
+	import Account from './Components/Account.svelte';
+	import Payment from './Components/Payment.svelte';
+	import Preferences from './Components/Preferences.svelte';
 
 	let activeTab = 'account';
 
 	const tabs = [
 		{
-			id: 'Profile',
+			id: 'account',
 			label: 'Account',
 			icon: `				<svg
 					width="20"

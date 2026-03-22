@@ -1,5 +1,6 @@
 <script lang="ts">
 	export let open = false;
+	export let selected: string[] = [];
 
 	const categories = [
 		'🎨 Art',
@@ -38,8 +39,6 @@
 		'🛐 Religion',
 		'🧳 Travel'
 	];
-
-	let selected: string[] = [];
 
 	function toggleCategory(category: string) {
 		if (selected.includes(category)) {

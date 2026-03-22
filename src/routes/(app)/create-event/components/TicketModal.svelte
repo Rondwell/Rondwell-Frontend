@@ -1,15 +1,17 @@
-<script>
+<script lang="ts">
 	import Icon from '@iconify/svelte';
 
 	export let open = false;
-	let tickets = false;
+	export let registrationType: 'FREE' | 'PAID' = 'FREE';
+
+	let tickets = registrationType === 'PAID';
 
 	function toggleTickect() {
 		tickets = !tickets;
 	}
 
 	function updateTickect() {
-		console.log(`Updated tickets`);
+		registrationType = tickets ? 'PAID' : 'FREE';
 		open = false;
 	}
 </script>

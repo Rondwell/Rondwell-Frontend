@@ -1,26 +1,39 @@
-<!-- src/routes/auth/login/+page.svelte -->
-<script>
+<!-- src/routes/auth/+page.svelte -->
+<script lang="ts">
   import { goto } from '$app/navigation';
+  import { smartRequestOTP } from '$lib/services/auth.services';
+  import { authState } from '$lib/stores/auth.store';
   import Header from './components/Header.svelte';
-  import { requestRegistrationOTP } from '$lib/services/auth.services'; // ✅ import
 
   let email = '';
-  let password = '';
   let phone = '';
   let usePhone = false;
+  let errorMsg = '';
 
   const toggleInputType = () => {
     usePhone = !usePhone;
+    errorMsg = '';
   };
 
   async function handleClick() {
-  if (!usePhone && !email) { alert('Please enter your email'); return; }
-  if (usePhone && !phone) { alert('Please enter your phone number'); return; }
+    if (!usePhone && !email) { errorMsg = 'Please enter your email'; return; }
+    if (usePhone && !phone) { errorMsg = 'Please enter your phone number'; return; }
 
-  const contact = usePhone ? phone : email;
-  localStorage.setItem('pending-email', contact);
-  goto(`/auth/verify?email=${encodeURIComponent(contact)}`);
-}
+    const contact = usePhone ? phone : email;
+    errorMsg = '';
+
+    try {
+      const { isNewUser } = await smartRequestOTP(contact, usePhone);
+      localStorage.setItem('pending-email', contact);
+      localStorage.setItem('pending-is-phone', usePhone ? '1' : '0');
+      localStorage.setItem('pending-is-new-user', isNewUser ? '1' : '0');
+      goto(`/auth/verify?email=${encodeURIComponent(contact)}`);
+    } catch (err) {
+      errorMsg = err instanceof Error ? err.message : 'Failed to send OTP. Please try again.';
+    }
+  }
+
+  $: loading = $authState.loading;
 </script>
 
 <main class="bg flex h-full min-h-screen flex-col items-stretch">
@@ -44,7 +57,6 @@
 						<label for="contact" class="mb-1 block text-sm font-medium">
 							{usePhone ? 'Phone Number' : 'Email'}
 						</label>
-
 						<!-- Toggle between phone/email -->
 						<button
 							type="button"
@@ -93,17 +105,6 @@
 					{/if}
 				</div>
 
-				<div class="hidden">
-					<label for="password" class="mb-2 block text-sm font-medium text-gray-700">Password</label
-					>
-					<input
-						id="password"
-						bind:value={password}
-						type="password"
-						placeholder="Enter password"
-						class="h-[41.25px] w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-black focus:outline-none"
-					/>
-				</div>
 
 				<div class="hidden justify-between text-sm">
 					<a href="/auth" class="text-purple-600 hover:underline">Forgot password?</a>
@@ -112,10 +113,15 @@
 				<!-- Main action button -->
 				<button
 					on:click={handleClick}
-					class="w-full rounded-md bg-black py-2 font-medium text-white hover:bg-gray-800"
+					disabled={loading}
+					class="w-full rounded-md bg-black py-2 font-medium text-white hover:bg-gray-800 disabled:opacity-60"
 				>
-					Continue With {usePhone ? 'Phone' : 'Email'}
+					{loading ? 'Sending OTP...' : `Continue With ${usePhone ? 'Phone' : 'Email'}`}
 				</button>
+
+				{#if errorMsg}
+					<p class="text-sm text-center text-red-500">{errorMsg}</p>
+				{/if}
 
 				<!-- Google sign in button -->
 				<button

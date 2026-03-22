@@ -1,44 +1,45 @@
 <!-- src/routes/auth/verify/+page.svelte -->
 <script lang="ts">
-
-  import { onMount, onDestroy } from 'svelte';
-  import Header from '../components/Header.svelte';
-  import { page } from '$app/stores';
-  import { requestRegistrationOTP, verifyRegistrationOTP } from '$lib/services/auth.services';
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
+  import { getPostLoginRedirect, smartRequestOTP, smartVerifyOTP } from '$lib/services/auth.services';
+  import { authState } from '$lib/stores/auth.store';
+  import { onDestroy, onMount } from 'svelte';
+  import Header from '../components/Header.svelte';
 
   let code = Array(6).fill('');
   let email = '';
+  let isPhone = false;
   let message = '';
   let loading = false;
   let seconds = 45;
   let timer: ReturnType<typeof setInterval> | null = null;
 
-
   onMount(async () => {
     email = $page.url.searchParams.get('email') || localStorage.getItem('pending-email') || '';
-    console.log('📧 Email on mount:', email);
+    isPhone = localStorage.getItem('pending-is-phone') === '1';
 
     if (!email) {
-      message = 'No email found. Please go back and try again.';
+      message = 'No contact found. Please go back and try again.';
       return;
     }
 
-    await sendOTP();
+    // OTP was already sent from the auth page — just start the timer
     startTimer();
+    message = 'OTP sent. Please check your ' + (isPhone ? 'phone' : 'email') + '.';
   });
 
   onDestroy(() => clearTimer());
 
-  async function sendOTP() {
+  async function resendOTP() {
     loading = true;
     message = '';
     try {
-      await requestRegistrationOTP(email);
-      localStorage.setItem('pending-email', email);
-      message = 'OTP sent to your email';
+      await smartRequestOTP(email, isPhone);
+      message = 'OTP resent successfully';
+      startTimer();
     } catch (err) {
-      message = err instanceof Error ? err.message : 'Failed to send OTP';
+      message = err instanceof Error ? err.message : 'Failed to resend OTP';
     } finally {
       loading = false;
     }
@@ -61,6 +62,7 @@
     const target = e.target as HTMLInputElement;
     const value = target.value.replace(/[^0-9]/g, '').slice(0, 1);
     code[index] = value;
+    code = [...code];
     if (value && index < 5) {
       const next = document.getElementById(`code-${index + 1}`) as HTMLInputElement | null;
       next?.focus();
@@ -74,11 +76,13 @@
     loading = true;
     message = '';
     try {
-      await verifyRegistrationOTP(email, otp);
+      const { token } = await smartVerifyOTP(email, otp, isPhone);
       localStorage.removeItem('pending-email');
+      localStorage.removeItem('pending-is-phone');
+      localStorage.removeItem('pending-is-new-user');
       message = 'Verified successfully';
-	  // eslint-disable-next-line svelte/no-navigation-without-resolve
-      goto('/dashboard');
+      const redirect = await getPostLoginRedirect(token);
+      goto(redirect);
     } catch (err) {
       message = err instanceof Error ? err.message : 'OTP verification failed';
       code = Array(6).fill('');
@@ -89,10 +93,8 @@
   }
 
   async function resendCode() {
-    if (seconds > 0) return;
-    if (!email) { message = 'No email found'; return; }
-    await sendOTP();
-    startTimer();
+    if (seconds > 0 || loading) return;
+    await resendOTP();
   }
 
   async function pasteCode() {
@@ -105,10 +107,11 @@
       message = 'Could not read clipboard';
     }
   }
+
+  $: loading = $authState.loading;
 </script>
 
 <main class="bg flex h-full min-h-screen flex-col items-stretch">
- <p>{import.meta.env.VITE_API_URL}</p>
 	<Header />
 
 	<div class="flex h-full flex-1 items-center justify-center px-4 py-15">
@@ -120,25 +123,17 @@
 					on:click={() => history.back()}
 					class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#F4F3F3]"
 				>
-					<svg
-						width="11"
-						height="11"
-						viewBox="0 0 11 11"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M8.32471 0.252009C8.81153 0.252009 9.28374 0.441866 9.65858 0.806975C10.2671 1.40089 10.4131 2.27715 10.0334 3.03658L9.24479 4.61385C9.07927 4.94488 9.07927 5.34407 9.24479 5.67997L10.0334 7.26211C10.4131 8.02154 10.2671 8.8978 9.65858 9.49172C9.05007 10.0856 8.1738 10.2171 7.41924 9.81788L1.77708 6.84832C1.14422 6.51729 0.749907 5.86496 0.749907 5.14935C0.749907 4.43373 1.14422 3.7814 1.77708 3.45037L7.41924 0.480811C7.71133 0.325031 8.01802 0.252009 8.32471 0.252009ZM8.31985 9.31646C8.65575 9.31646 8.94783 9.16068 9.14743 8.96596C9.44925 8.67387 9.66345 8.15298 9.3811 7.58341L8.59246 6.00614C8.32471 5.46577 8.32471 4.82805 8.59246 4.28769L9.3811 2.71041C9.66832 2.14084 9.44925 1.61995 9.14743 1.32786C8.8456 1.03578 8.32471 0.826448 7.76001 1.1234L2.11785 4.09296C1.71866 4.30229 1.48013 4.69661 1.48013 5.14448C1.48013 5.59235 1.71866 5.98666 2.11785 6.19599L7.76001 9.17529C7.95474 9.27752 8.14459 9.31646 8.31985 9.31646Z"
-							fill="#131517"
-						/>
+					<svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path d="M8.32471 0.252009C8.81153 0.252009 9.28374 0.441866 9.65858 0.806975C10.2671 1.40089 10.4131 2.27715 10.0334 3.03658L9.24479 4.61385C9.07927 4.94488 9.07927 5.34407 9.24479 5.67997L10.0334 7.26211C10.4131 8.02154 10.2671 8.8978 9.65858 9.49172C9.05007 10.0856 8.1738 10.2171 7.41924 9.81788L1.77708 6.84832C1.14422 6.51729 0.749907 5.86496 0.749907 5.14935C0.749907 4.43373 1.14422 3.7814 1.77708 3.45037L7.41924 0.480811C7.71133 0.325031 8.01802 0.252009 8.32471 0.252009ZM8.31985 9.31646C8.65575 9.31646 8.94783 9.16068 9.14743 8.96596C9.44925 8.67387 9.66345 8.15298 9.3811 7.58341L8.59246 6.00614C8.32471 5.46577 8.32471 4.82805 8.59246 4.28769L9.3811 2.71041C9.66832 2.14084 9.44925 1.61995 9.14743 1.32786C8.8456 1.03578 8.32471 0.826448 7.76001 1.1234L2.11785 4.09296C1.71866 4.30229 1.48013 4.69661 1.48013 5.14448C1.48013 5.59235 1.71866 5.98666 2.11785 6.19599L7.76001 9.17529C7.95474 9.27752 8.14459 9.31646 8.31985 9.31646Z" fill="#131517"/>
 					</svg>
 				</button>
 				<h2 class="mt-6 text-3xl font-semibold">Enter code</h2>
 				<span class="space-y-1">
-					<p class="text-[#919091]">Please enter the 5 digit code we sent to</p>
-					<p>{email}</p>
+					<p class="text-[#919091]">Please enter the 6 digit code we sent to</p>
+					<p class="font-medium">{email}</p>
 				</span>
 			</div>
+
 			<div class="space-y-4">
 				<div class="flex space-x-2">
 					{#each code as _, i (i)}
@@ -149,7 +144,7 @@
 							type="text"
 							maxlength="1"
 							pattern="[0-9]"
-							disabled={loading} 
+							disabled={loading}
 							class="h-[48.75px] w-[42px] sm:w-[48.75px] rounded-md border border-gray-300 text-center text-lg focus:ring-2 focus:ring-black focus:outline-none md:w-full"
 							value={_}
 						/>
@@ -161,65 +156,37 @@
 						on:click={pasteCode}
 						class="flex items-center gap-1 rounded-md bg-[#F4F1F1] px-3 py-1 text-[#646466]"
 					>
-						<svg
-							width="17"
-							height="17"
-							viewBox="0 0 17 17"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M7.375 4.125H10.125C11.5 4.125 11.5 3.4375 11.5 2.75C11.5 1.375 10.8125 1.375 10.125 1.375H7.375C6.6875 1.375 6 1.375 6 2.75C6 4.125 6.6875 4.125 7.375 4.125Z"
-								stroke="#646466"
-								stroke-width="1.125"
-								stroke-miterlimit="10"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-							<path
-								d="M10.125 15.1269H6.6875C3.25 15.1269 2.5625 13.7519 2.5625 11.0019V6.87688C2.5625 3.74188 3.71063 2.88938 6 2.76562"
-								stroke="#646466"
-								stroke-width="1.125"
-								stroke-miterlimit="10"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-							<path
-								d="M11.5 2.76562C13.7894 2.88938 14.9375 3.735 14.9375 6.87688V10.3144"
-								stroke="#646466"
-								stroke-width="1.125"
-								stroke-miterlimit="10"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-							<path
-								d="M14.9375 13.0625V15.125H12.875"
-								stroke="#646466"
-								stroke-width="1.125"
-								stroke-miterlimit="10"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-							<path
-								d="M10.8125 11L14.91 15.0975"
-								stroke="#646466"
-								stroke-width="1.125"
-								stroke-miterlimit="10"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
+						<svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M7.375 4.125H10.125C11.5 4.125 11.5 3.4375 11.5 2.75C11.5 1.375 10.8125 1.375 10.125 1.375H7.375C6.6875 1.375 6 1.375 6 2.75C6 4.125 6.6875 4.125 7.375 4.125Z" stroke="#646466" stroke-width="1.125" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+							<path d="M10.125 15.1269H6.6875C3.25 15.1269 2.5625 13.7519 2.5625 11.0019V6.87688C2.5625 3.74188 3.71063 2.88938 6 2.76562" stroke="#646466" stroke-width="1.125" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+							<path d="M11.5 2.76562C13.7894 2.88938 14.9375 3.735 14.9375 6.87688V10.3144" stroke="#646466" stroke-width="1.125" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+							<path d="M14.9375 13.0625V15.125H12.875" stroke="#646466" stroke-width="1.125" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+							<path d="M10.8125 11L14.91 15.0975" stroke="#646466" stroke-width="1.125" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
 						</svg>
-
 						Paste Code
 					</button>
-					<button on:click={resendCode} disabled={loading || seconds > 0} class="text-[#B9B7B7]"> Resend code in 42s </button>
+					<button
+						on:click={resendCode}
+						disabled={loading || seconds > 0}
+						class="text-[#B9B7B7] disabled:opacity-50"
+					>
+						{seconds > 0 ? `Resend code in ${seconds}s` : 'Resend code'}
+					</button>
 				</div>
 
 				{#if message}
-					<p class="mt-2 text-sm text-center {message.includes('success') || message.includes('sent') ? 'text-green-600' : 'text-red-500'}">
+					<p class="mt-2 text-sm text-center {message.includes('success') || message.includes('sent') || message.includes('Verified') ? 'text-green-600' : 'text-red-500'}">
 						{message}
 					</p>
 				{/if}
+
+				<button
+					on:click={submit}
+					disabled={loading || code.join('').length !== 6}
+					class="w-full rounded-md bg-black py-2 font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+				>
+					{loading ? 'Verifying...' : 'Verify'}
+				</button>
 			</div>
 		</div>
 	</div>

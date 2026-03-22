@@ -1,6 +1,7 @@
 <script>
-  // 👇 THIS IMPORT IS CRITICAL. IT LOADS TAILWIND.
-  import "../app.css"; 
+  import Toast from '$lib/components/Toast.svelte';
+  import "../app.css";
 </script>
 
 <slot />
+<Toast />

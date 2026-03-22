@@ -1,10 +1,18 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { isAuthenticated } from '$lib/stores/auth.store';
+	import { activeEventPageTheme } from '$lib/stores/eventTheme';
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 	import { onMount } from 'svelte';
 	import Sidebar from '../components/Sidebar.svelte';
 	import SideMenu from '../components/SideMenu.svelte';
+
+	// Auth guard
+	$: if (browser && !$isAuthenticated) {
+		goto('/auth');
+	}
 
 	// ⚠️ IF YOU HAD A HEADER OR MODALS, YOU MUST RE-IMPORT THEM HERE
 	// import Header from '../components/Header.svelte';
@@ -55,15 +63,19 @@
 		const path = $page.url.pathname;
 		selectedTheme = getThemeForRoute(path);
 	}
+
+	$: isEventPage = $page.url.pathname.startsWith('/event-page/');
+	$: eventPageBg = $activeEventPageTheme?.bg ?? '#f4f5f6';
+	$: sidebarBg = isEventPage ? eventPageBg : '#f4f5f6';
 </script>
 
 <div
 	class="relative flex min-h-screen flex-col text-sm font-medium md:flex-row"
-	style="background-image: {selectedTheme};"
+	style="background-image: {isEventPage ? 'none' : selectedTheme}; background-color: {isEventPage ? eventPageBg : 'transparent'};"
 >
 	<!-- Sidebar -->
 	<div class="relative md:min-w-[117px]">
-		<Sidebar background_color="#f4f5f6" />
+		<Sidebar background_color={sidebarBg} />
 	</div>
 
 	{#if isSubMenuVisible}
@@ -74,7 +86,7 @@
 
 	<!-- Main Content Area -->
 	<main class="relative mb-[106px] flex min-h-screen w-full min-w-0 flex-col p-3 md:mb-0 md:p-5">
-		<div class="bg flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
+		<div class="{isEventPage ? '' : 'bg'} flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
 			<!-- Mobile SubMenu (Events / People / Collections root only) -->
 			{#if isSubMenuVisible && isMobile && menuItems.length > 0}
 				<div style={`isSettingsMenuVisible ? 'mb-0':'mb-4'`}>

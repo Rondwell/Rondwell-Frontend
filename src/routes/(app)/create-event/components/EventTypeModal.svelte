@@ -2,8 +2,8 @@
 	import { createEventDispatcher } from 'svelte';
 
 	export let open: boolean = false;
+	export let selected = 'Virtual';
 
-	let selected = 'Virtual';
 	const options = [
 		{ icon: '/vid1.svg', label: 'Virtual' },
 		{ icon: '/profile1.svg', label: 'Physical' },

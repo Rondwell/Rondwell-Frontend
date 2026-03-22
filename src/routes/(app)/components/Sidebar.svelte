@@ -1,12 +1,12 @@
 <!-- src/lib/components/Sidebar.svelte -->
 <script>
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
+	import { clickOutside } from '$lib/utils/constant';
 	import { onMount } from 'svelte';
 	import ProfileMenu from './ProfileMenu.svelte';
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
-	import { clickOutside } from '$lib/utils/constant';
-	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 
 	export let background_color = '';
 	export let show = true;
@@ -137,7 +137,7 @@
 						showMenu = !showMenu;
 					}}
 				>
-					<img src="/face-1.svg" alt="" />
+					<img src="/you-rondwell.png" alt="profile" class="h-9 w-9 rounded-full object-cover" />
 				</button>
 				<ProfileMenu bind:showMenu className="absolute top-15 left-5 md:hidden" />
 			</div>
@@ -284,7 +284,7 @@
 						showMenu = !showMenu;
 					}}
 				>
-					<img src="/face-1.svg" alt="" />
+					<img src="/you-rondwell.png" alt="profile" class="h-9 w-9 rounded-full object-cover" />
 				</button>
 				<ProfileMenu bind:showMenu />
 			</div>

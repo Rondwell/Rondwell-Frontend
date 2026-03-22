@@ -1,6 +1,9 @@
-<script>
+<script lang="ts">
 	export let open = false;
-	let capacity = 50;
+	export let maxAttendees: number | null = null;
+	export let waitlistEnabled = false;
+
+	let capacityInput = 50;
 	let overCapacityWaitlist = false;
 
 	function toggleWaitlist() {
@@ -8,11 +11,15 @@
 	}
 
 	function setLimit() {
-		console.log('Set limit:', capacity, 'waitlist:', overCapacityWaitlist);
+		maxAttendees = capacityInput;
+		waitlistEnabled = overCapacityWaitlist;
+		open = false;
 	}
 
 	function removeLimit() {
-		console.log('Remove limit');
+		maxAttendees = null;
+		waitlistEnabled = false;
+		open = false;
 	}
 </script>
 
@@ -58,7 +65,7 @@
 			<label for="capacity" class="mb-1 block text-sm font-medium text-gray-700">Capacity</label>
 			<input
 				type="text"
-				bind:value={capacity}
+				bind:value={capacityInput}
 				class="h-[40px] w-full rounded-md border border-gray-300 bg-[#FFFFFF] px-3 py-1 text-sm text-black focus:ring-2 focus:ring-gray-400 focus:outline-none"
 			/>
 

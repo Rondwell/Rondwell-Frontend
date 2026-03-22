@@ -1,8 +1,15 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { createEvent, getMyCollections } from '$lib/services/event.services';
+	import { authState, isAuthenticated } from '$lib/stores/auth.store';
+	import { setEventTheme } from '$lib/stores/eventTheme';
+	import { colors, type Color } from '$lib/utils/colors';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
+	import { onMount, tick } from 'svelte';
 	import Sidebar from '../components/Sidebar.svelte';
 	import AIModal from './components/AIModal.svelte';
+	import AuthModal from './components/AuthModal.svelte';
 	import CapacityModal from './components/CapacityModal.svelte';
 	import CategoryModal from './components/CategoryModal.svelte';
 	import CollectionModal from './components/CollectionModal.svelte';
@@ -12,20 +19,20 @@
 	import EventTypeModal from './components/EventTypeModal.svelte';
 	import ImageSelectorModal from './components/ImageSelectorModal.svelte';
 	import SettingsModal from './components/SettingsModal.svelte';
+	import ThemeModal from './components/ThemeModal.svelte';
 	import TicketModal from './components/TicketModal.svelte';
 	import TimeModal from './components/TimeModal.svelte';
 	import VisibilityModal from './components/VisibilityModal.svelte';
-	import { onMount, tick } from 'svelte';
-	import ThemeModal from './components/ThemeModal.svelte';
-	import { colors, type Color } from '$lib/utils/colors';
-	import { goto } from '$app/navigation';
 
 	let showImageSelectorModal = false;
+	let eventImageUrl = '/events.png';
 	let showThemeModal = false;
 	let showSettingsModal = false;
 	let showAIModalMobile = false;
 	let showAIModal = false;
 	let openCollectionModal = false;
+	let selectedCollectionId = '';
+	let selectedCollectionName = 'Personal Collection';
 	let openVisibilityModal = false;
 	let openStartDatePickerModal = false;
 	let openEndDatePickerModal = false;
@@ -37,7 +44,9 @@
 	let openDescriptionModal = false;
 	let openTicketModal = false;
 	let openCapacityModal = false;
+	let showAuthModal = false;
 
+	// Form state
 	let visibility = 'public';
 	let eventName = '';
 	let startTime = '1:30 AM';
@@ -46,13 +55,23 @@
 	let endDate = new Date(2025, 10, 30);
 	let locationName = '...';
 	let timezone = '';
-	let eventType = '';
-	let eventCategory = '';
+	let eventType: 'Virtual' | 'Physical' | 'Hybrid' = 'Virtual';
+	let eventCategories: string[] = [];
 	let location = '';
+	let physicalAddress = '';
 	let description = '';
-	let tickets = false;
+	let registrationType: 'FREE' | 'PAID' = 'FREE';
+	let maxAttendees: number | null = null;
+	let waitlistEnabled = false;
+	let publicGuestListEnabled = false;
+	let postEventFeedbackEnabled = false;
+	let donationsEnabled = false;
+	let customLinkSlug = '';
 	let approvalRequired = false;
-	let capacity = '';
+
+	// Submission state
+	let submitting = false;
+	let submitError = '';
 
 	function scrollToId(id: string, options?: { behavior?: ScrollBehavior }) {
 		const el = document.getElementById(id);
@@ -96,7 +115,22 @@
 	let selectedFont = 'Default';
 	let selectedColor: Color = colors[0];
 
-	onMount(() => {
+	// Persist theme to store whenever organizer changes it
+	$: setEventTheme('pending', selectedColor);
+
+	onMount(async () => {
+		// Pre-load the most recent collection
+		try {
+			const collections = await getMyCollections();
+			if (collections.length > 0) {
+				const latest = collections[collections.length - 1];
+				selectedCollectionId = latest._id ?? latest.id ?? '';
+				selectedCollectionName = latest.name ?? 'Personal Collection';
+			}
+		} catch {
+			// keep defaults
+		}
+
 		// Get user’s location
 		if (navigator.geolocation) {
 			navigator.geolocation.getCurrentPosition(async (position) => {
@@ -131,6 +165,94 @@
 		}
 	});
 
+	function handleImageSelect(e: CustomEvent<File | string>) {
+		const val = e.detail;
+		if (val instanceof File) {
+			eventImageUrl = URL.createObjectURL(val);
+		} else if (typeof val === 'string') {
+			eventImageUrl = val;
+		}
+		showImageSelectorModal = false;
+	}
+
+	function buildDateTime(date: Date, timeStr: string): string {
+		const [timePart, meridiem] = timeStr.split(' ');
+		let [hours, minutes] = timePart.split(':').map(Number);
+		if (meridiem === 'PM' && hours !== 12) hours += 12;
+		if (meridiem === 'AM' && hours === 12) hours = 0;
+		const d = new Date(date);
+		d.setHours(hours, minutes, 0, 0);
+		return d.toISOString();
+	}
+
+	function mapEventType(type: string): 'VIRTUAL' | 'PHYSICAL' | 'HYBRID' {
+		if (type === 'Physical') return 'PHYSICAL';
+		if (type === 'Hybrid') return 'HYBRID';
+		return 'VIRTUAL';
+	}
+
+	async function doCreateEvent() {
+		submitting = true;
+		submitError = '';
+		try {
+			const payload = {
+				title: eventName || 'Untitled Event',
+				description: description ? description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() || undefined : undefined,
+				category: eventCategories[0] ?? 'General',
+				eventOrganizerName: $authState.activeProfile?.name ?? $authState.user?.email ?? 'Organizer',
+				startDateTime: buildDateTime(startDate, startTime),
+				endDateTime: buildDateTime(endDate, endTime),
+				timeZone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+				eventType: mapEventType(eventType),
+				registrationType,
+				visibility: visibility === 'public' ? 'PUBLIC' as const : 'PRIVATE' as const,
+				themeColor: selectedColor.name,
+				locationDetails: location || physicalAddress ? {
+					virtual: (eventType === 'Virtual' || eventType === 'Hybrid') && location
+						? { platform: location.includes('zoom.us') ? 'Zoom' : location.includes('meet.google.com') ? 'Google Meet' : 'Other', meetingLink: location }
+						: undefined,
+					physical: (eventType === 'Physical' || eventType === 'Hybrid') && physicalAddress
+						? { venueName: physicalAddress, venueAddress: physicalAddress, resolvedAddress: { lat: 0, lng: 0, formatted_address: physicalAddress } }
+						: undefined,
+				} : undefined,
+				maxAttendees: maxAttendees ?? undefined,
+				waitlistEnabled,
+				donationsEnabled,
+				publicGuestListEnabled,
+				postEventFeedbackEnabled,
+				customLinkSlug: customLinkSlug || undefined,
+				collectionId: selectedCollectionId || undefined,
+			};
+
+			const result = await createEvent(payload);
+			const eventId = result.eventId;
+			setEventTheme(eventId, selectedColor);
+
+			const params = new URLSearchParams({
+				from: 'event',
+				eventName: eventName || 'Your Event',
+				redirect: `/events/${eventId}`,
+			});
+			goto(`/welcome?${params.toString()}`);
+		} catch (e: any) {
+			submitError = e.message ?? 'Failed to create event';
+			submitting = false;
+		}
+	}
+
+	async function handleCreateEvent() {
+		if ($isAuthenticated) {
+			await doCreateEvent();
+		} else {
+			showAuthModal = true;
+		}
+	}
+
+	async function onAuthenticated() {
+		showAuthModal = false;
+		await doCreateEvent();
+	}
+
 	const arrowDown = `<svg width="12" height="11" viewBox="0 0 12 11" fill="none" xmlns="http://www.w3.org/2000/svg">
 		<path d="M10.375 1.45312C11.025 2.11929 11.1698 3.08309 10.7324 3.91016L7.76367 9.55273V9.55176C7.40021 10.2466 6.68362 10.6797 5.89844 10.6797C5.1133 10.6797 4.39768 10.2465 4.03418 9.55176L4.0332 9.55273L1.06348 3.91016L1.06445 3.90918C0.894635 3.59018 0.813477 3.25368 0.813477 2.91699C0.813602 2.38016 1.02379 1.86187 1.42188 1.45312C2.07284 0.78615 3.03705 0.625109 3.86914 1.04102L5.44629 1.83008C5.68943 1.95165 5.97862 1.96677 6.2373 1.875L6.3457 1.8291L7.92773 1.04102C8.7598 0.625179 9.72406 0.786179 10.375 1.45312ZM9.87793 2.92188C9.87779 2.64494 9.749 2.39777 9.58105 2.22559H9.58008C9.33125 1.96847 8.89638 1.79125 8.41602 2.0293V2.02832L6.83887 2.81738C6.32024 3.07436 5.71969 3.10672 5.18066 2.91406L4.95312 2.81738L3.37598 2.02832H3.375C2.89624 1.78694 2.46182 1.96735 2.21191 2.22559C1.96027 2.48567 1.78887 2.92017 2.03809 3.39453L5.00781 9.03711L5.08105 9.15723C5.2681 9.4218 5.56282 9.57422 5.89355 9.57422C6.22429 9.5742 6.51902 9.42182 6.70605 9.15723L6.7793 9.03711L9.75781 3.39551C9.84523 3.229 9.87793 3.06831 9.87793 2.92188Z" fill="currentColor" stroke="currentColor" stroke-width="0.375"/>
 		<rect x="5.31348" y="5.6875" width="3.375" height="1.125" rx="0.5625" transform="rotate(-90 5.31348 5.6875)" fill="currentColor" stroke="currentColor" stroke-width="0.375"/>
@@ -154,9 +276,9 @@
 			<!-- Image -->
 			<div class="relative w-full overflow-hidden rounded-xl">
 				<button class="w-full" on:click={() => (showImageSelectorModal = !showImageSelectorModal)}>
-					<img src="/events.png" alt="" class="w-full cursor-pointer" />
+					<img src={eventImageUrl} alt="" class="w-full cursor-pointer" />
 				</button>
-				<ImageSelectorModal bind:open={showImageSelectorModal} />
+				<ImageSelectorModal bind:open={showImageSelectorModal} on:select={handleImageSelect} />
 			</div>
 
 			<div class="space-y-4">
@@ -349,7 +471,14 @@
 							<div class="font-semibold">Quick Settings</div>
 						</div>
 					</button>
-					<SettingsModal open={showSettingsModal} />
+					<SettingsModal
+						open={showSettingsModal}
+						bind:publicGuestListEnabled
+						bind:postEventFeedbackEnabled
+						bind:waitlistEnabled
+						bind:donationsEnabled
+						bind:customLinkSlug
+					/>
 				</div>
 			</div>
 		</div>
@@ -370,10 +499,17 @@
 						on:click={() => (openCollectionModal = !openCollectionModal)}
 					>
 						<img src="/face-1.svg" alt="profile icon" class="inline h-5 w-5 rounded-full" />
-						<span class="">Personal Collection</span>
+						<span class="">{selectedCollectionName}</span>
 						<span>{@html arrowDown}</span>
 					</button>
-					<CollectionModal open={openCollectionModal} />
+					<CollectionModal
+						open={openCollectionModal}
+						on:select={(e) => {
+							selectedCollectionId = e.detail.id;
+							selectedCollectionName = e.detail.label;
+							openCollectionModal = false;
+						}}
+					/>
 				</div>
 				<div
 					class="relative"
@@ -409,9 +545,9 @@
 
 			<div class="relative h-[360px] w-full overflow-hidden rounded-xl lg:hidden">
 				<button class="w-full" on:click={() => (showImageSelectorModal = !showImageSelectorModal)}>
-					<img src="/events.png" alt="" class="w-full cursor-pointer" />
+					<img src={eventImageUrl} alt="" class="w-full cursor-pointer" />
 				</button>
-				<ImageSelectorModal bind:open={showImageSelectorModal} />
+				<ImageSelectorModal bind:open={showImageSelectorModal} on:select={handleImageSelect} />
 			</div>
 
 			<!-- Date & Time -->
@@ -605,11 +741,11 @@
 								/>
 							</svg>
 
-							<p>Event Type</p>
+							<p>{eventType}</p>
 						</div>
 						<span>{@html arrowDown}</span>
 					</button>
-					<EventTypeModal open={showEventTypeModal} />
+					<EventTypeModal open={showEventTypeModal} bind:selected={eventType} />
 				</div>
 				<div class="relative w-full">
 					<button
@@ -644,11 +780,11 @@
 								/>
 							</svg>
 
-							<p>Event Category</p>
+							<p>{eventCategories.length > 0 ? eventCategories[0] + (eventCategories.length > 1 ? ` +${eventCategories.length - 1}` : '') : 'Event Category'}</p>
 						</div>
 						<span>{@html arrowDown}</span>
 					</button>
-					<CategoryModal bind:open={showCategoryModal} />
+					<CategoryModal bind:open={showCategoryModal} bind:selected={eventCategories} />
 				</div>
 			</div>
 
@@ -701,10 +837,10 @@
 						class="custom-scrollbar block max-w-sm overflow-x-auto px-3 md:max-w-md lg:max-w-full"
 						style="color: {selectedColor.lightText}"
 					>
-						{location ? location : 'Offline location or virtual link'}
+						{location || physicalAddress ? [location, physicalAddress].filter(Boolean).join(' · ') : 'Offline location or virtual link'}
 					</p>
 				</button>
-				<EventLocationModal open={openEventLocationModal} bind:link={location} />
+				<EventLocationModal open={openEventLocationModal} bind:link={location} bind:address={physicalAddress} {eventType} />
 			</div>
 
 			<!-- Description -->
@@ -770,13 +906,17 @@
 
 					<!-- Textarea -->
 					<p
-						class="h-10 w-full resize-none rounded-md py-2 pr-3 pl-9 text-left focus:outline-none"
+						class="h-10 w-full resize-none rounded-md py-2 pr-3 pl-9 text-left focus:outline-none truncate"
 						style="background-color: {selectedColor.cover}; color: {selectedColor.lightText}"
 					>
-						{description ? description : 'Add Description'}
+						{#if description}
+							{description.replace(/<[^>]*>/g, '').slice(0, 60)}{description.replace(/<[^>]*>/g, '').length > 60 ? '…' : ''}
+						{:else}
+							Add Description
+						{/if}
 					</p>
 				</button>
-				<DescriptionModal open={openDescriptionModal} />
+				<DescriptionModal open={openDescriptionModal} bind:description />
 			</div>
 
 			<!-- Event Options -->
@@ -810,7 +950,7 @@
 						</div>
 						<div class="relative" use:clickOutside={() => (openTicketModal = false)}>
 							<div class="flex items-center gap-1">
-								<span class="" style="color: {selectedColor.lightText};">Free</span>
+								<span class="" style="color: {selectedColor.lightText};">{registrationType === 'PAID' ? 'Paid' : 'Free'}</span>
 								<button
 									aria-label="edit"
 									class="flex items-center gap-1"
@@ -854,7 +994,7 @@
 									</svg>
 								</button>
 							</div>
-							<TicketModal open={openTicketModal} />
+							<TicketModal open={openTicketModal} bind:registrationType />
 						</div>
 					</div>
 
@@ -943,7 +1083,7 @@
 						</div>
 						<div class="relative" use:clickOutside={() => (openCapacityModal = false)}>
 							<div class="flex items-center gap-1">
-								<span class="" style="color: {selectedColor.lightText};">Unlimited</span>
+								<span class="" style="color: {selectedColor.lightText};">{maxAttendees ?? 'Unlimited'}</span>
 								<button
 									aria-label="edit"
 									class="flex items-center gap-1"
@@ -987,7 +1127,7 @@
 									</svg>
 								</button>
 							</div>
-							<CapacityModal open={openCapacityModal} />
+							<CapacityModal open={openCapacityModal} bind:maxAttendees bind:waitlistEnabled />
 						</div>
 					</div>
 				</div>
@@ -1183,18 +1323,32 @@
 							<div class="font-semibold">Quick Settings</div>
 						</div>
 					</button>
-					<SettingsModal open={showSettingsModal} />
+					<SettingsModal
+						open={showSettingsModal}
+						bind:publicGuestListEnabled
+						bind:postEventFeedbackEnabled
+						bind:waitlistEnabled
+						bind:donationsEnabled
+						bind:customLinkSlug
+					/>
 				</div>
 			</div>
 
 			<!-- Submit -->
+			{#if submitError}
+				<p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{submitError}</p>
+			{/if}
 			<button
-				on:click={()=> goto('events/1')}
-				class="h-[49.5px] w-full rounded-[9.75px] py-2 font-semibold transition"
+				on:click={handleCreateEvent}
+				disabled={submitting}
+				class="h-[49.5px] w-full rounded-[9.75px] py-2 font-semibold transition disabled:opacity-60"
 				style="background-color: {selectedColor.button}; color: {selectedColor.buttonText}"
 			>
-				Create Event
+				{submitting ? 'Creating...' : 'Create Event'}
 			</button>
 		</div>
 	</main>
 </div>
+
+<!-- Auth modal for unauthenticated users -->
+<AuthModal bind:open={showAuthModal} on:authenticated={onAuthenticated} />

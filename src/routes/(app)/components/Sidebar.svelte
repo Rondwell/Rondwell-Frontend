@@ -8,10 +8,15 @@
 	import { onMount } from 'svelte';
 	import ProfileMenu from './ProfileMenu.svelte';
 
+	import { authState } from '$lib/stores/auth.store';
+
 	export let background_color = '';
 	export let show = true;
 	let showMenu = false;
 	let activeItem = '';
+
+	$: activeProfile = $authState.activeProfile;
+	$: avatarUrl = activeProfile?.profilePictureUrl || '/you-rondwell.png';
 
 	function goHome() {
 		goto('/overview');
@@ -130,14 +135,13 @@
 {#if isMobile}
 	<div class="z-50">
 		<div class="items-center justify-between px-4 py-3 md:hidden {show ? 'flex' : 'hidden'}">
-			<!-- <img src="/face-1.svg" alt="" /> -->
 			<div use:clickOutside={() => (showMenu = false)}>
 				<button
 					on:click={() => {
 						showMenu = !showMenu;
 					}}
 				>
-					<img src="/you-rondwell.png" alt="profile" class="h-9 w-9 rounded-full object-cover" />
+					<img src={avatarUrl} alt="profile" class="h-9 w-9 rounded-full object-cover" />
 				</button>
 				<ProfileMenu bind:showMenu className="absolute top-15 left-5 md:hidden" />
 			</div>
@@ -284,7 +288,7 @@
 						showMenu = !showMenu;
 					}}
 				>
-					<img src="/you-rondwell.png" alt="profile" class="h-9 w-9 rounded-full object-cover" />
+					<img src={avatarUrl} alt="profile" class="h-9 w-9 rounded-full object-cover" />
 				</button>
 				<ProfileMenu bind:showMenu />
 			</div>

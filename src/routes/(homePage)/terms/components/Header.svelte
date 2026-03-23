@@ -1,7 +1,10 @@
 <!-- src/lib/components/Header.svelte -->
 <script>
 	import Button from '$lib/components/Button.svelte';
+	import { authState, isAuthenticated } from '$lib/stores/auth.store';
+	import { clickOutside } from '$lib/utils/constant';
 	import { onDestroy } from 'svelte';
+	import ProfileMenu from '../../../(app)/components/ProfileMenu.svelte';
 
 	let now = new Date().toLocaleString('en-GB', {
 		weekday: 'short',
@@ -28,6 +31,10 @@
 
 	// mobile menu toggle
 	let isOpen = false;
+	let showMenu = false;
+
+	$: activeProfile = $authState.activeProfile;
+	$: avatarUrl = activeProfile?.profilePictureUrl || '/you-rondwell.png';
 </script>
 
 <div
@@ -61,12 +68,29 @@
 					<img src="/send-icon.png" alt="send icon" class="h-4 w-4" />
 				</a>
 
-				<!-- Sign in (always visible) -->
-				<Button
-					class="cursor-pointer justify-end rounded-full bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] px-4 py-2 text-white shadow-md md:hidden"
-				>
-					<a href="/auth" class="w-full"> Sign in </a>
-				</Button>
+				<!-- Sign in / Avatar -->
+				{#if $isAuthenticated}
+					<div use:clickOutside={() => (showMenu = false)} class="relative">
+						<button
+							class="cursor-pointer"
+							on:click={() => (showMenu = !showMenu)}
+							aria-label="Profile menu"
+						>
+							<img
+								src={avatarUrl}
+								alt="profile"
+								class="h-[34px] w-[34px] rounded-full object-cover"
+							/>
+						</button>
+						<ProfileMenu bind:showMenu className="absolute right-0 top-12" />
+					</div>
+				{:else}
+					<Button
+						class="cursor-pointer justify-end rounded-full bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] px-4 py-2 text-white shadow-md md:hidden"
+					>
+						<a href="/auth" class="w-full"> Sign in </a>
+					</Button>
+				{/if}
 
 				<!-- Toggle (mobile only) -->
 				<button

@@ -7,6 +7,7 @@ import { clickOutside } from '$lib/utils/constant';
 import Icon from '@iconify/svelte';
 import { onMount } from 'svelte';
 import InviteGuestsModal from './components/InviteGuestsModal.svelte';
+import SendPostModal from './components/SendPostModal.svelte';
 
 $: eventId = $page.params.id;
 
@@ -99,6 +100,7 @@ return new Date(event.startDateTime).getTime() > Date.now();
 $: eventIsFuture = eventData ? isFutureEvent(eventData) : true;
 $: value = eventData?.attendees?.length ? 100 / eventData.attendees.length : 0;
 let showInviteGuestsModal = false;
+	let showSendPostModal = false;
 
 async function handleChangePhoto() {
 photoInput?.click();
@@ -331,6 +333,7 @@ $: eventLink = eventData?.customLinkSlug
 				</div>
 
 				<button
+					on:click={() => (showSendPostModal = !showSendPostModal)}
 					class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium sm:min-w-70 md:w-fit"
 				>
 					<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#F2E4F8]">
@@ -349,6 +352,7 @@ $: eventLink = eventData?.customLinkSlug
 					</div>
 					Send a Post
 				</button>
+				<SendPostModal bind:open={showSendPostModal} eventTitle={eventData?.title ?? ''} />
 
 				<button
 					class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
@@ -576,7 +580,7 @@ $: eventLink = eventData?.customLinkSlug
 					</button>
 				</div>
 				<p class="hidden text-sm text-[#737577] lg:block">
-					Thank you for hosting. We trust it was a huge success!
+					Thank you for Organizing. We trust it was a huge success!
 				</p>
 			</div>
 
@@ -586,39 +590,45 @@ $: eventLink = eventData?.customLinkSlug
 					<div class="flex items-center justify-between">
 						<p class="text-xs text-[#A9AAAA]">EVENT RECAP</p>
 
-						<svg
-							width="13"
-							height="13"
-							viewBox="0 0 13 13"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
+						<button
+							on:click={() => goto(`/events/${eventId}/edit`)}
+							class="cursor-pointer"
+							aria-label="Edit event"
 						>
-							<path
-								d="M7.09062 1.65712L1.53353 7.28009C1.32196 7.49416 1.1104 7.91517 1.06809 8.22201L0.764845 10.3699C0.652011 11.1477 1.19503 11.69 1.96371 11.5829L4.0864 11.2761C4.38259 11.2333 4.79867 11.0192 5.01729 10.8052L10.5744 5.18218C11.5335 4.21172 11.9848 3.08427 10.5744 1.65712C9.16394 0.229967 8.04971 0.686655 7.09062 1.65712Z"
-								stroke="#A9AAAA"
-								stroke-width="1.49844"
-								stroke-miterlimit="10"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-							<path
-								d="M6.29297 2.46094C6.76546 4.16638 8.08421 5.50077 9.77673 5.986"
-								stroke="#A9AAAA"
-								stroke-width="1.49844"
-								stroke-miterlimit="10"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-							<rect
-								x="8.15757"
-								y="11.099"
-								width="4.22292"
-								height="0.713575"
-								fill="#A9AAAA"
-								stroke="#A9AAAA"
-								stroke-width="0.713575"
-							/>
-						</svg>
+							<svg
+								width="13"
+								height="13"
+								viewBox="0 0 13 13"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									d="M7.09062 1.65712L1.53353 7.28009C1.32196 7.49416 1.1104 7.91517 1.06809 8.22201L0.764845 10.3699C0.652011 11.1477 1.19503 11.69 1.96371 11.5829L4.0864 11.2761C4.38259 11.2333 4.79867 11.0192 5.01729 10.8052L10.5744 5.18218C11.5335 4.21172 11.9848 3.08427 10.5744 1.65712C9.16394 0.229967 8.04971 0.686655 7.09062 1.65712Z"
+									stroke="#A9AAAA"
+									stroke-width="1.49844"
+									stroke-miterlimit="10"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+								<path
+									d="M6.29297 2.46094C6.76546 4.16638 8.08421 5.50077 9.77673 5.986"
+									stroke="#A9AAAA"
+									stroke-width="1.49844"
+									stroke-miterlimit="10"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+								<rect
+									x="8.15757"
+									y="11.099"
+									width="4.22292"
+									height="0.713575"
+									fill="#A9AAAA"
+									stroke="#A9AAAA"
+									stroke-width="0.713575"
+								/>
+							</svg>
+						</button>
 					</div>
 					<div class="my-3 flex flex-col items-start gap-2">
 						<div class="flex items-center gap-2">
@@ -1011,7 +1021,7 @@ $: eventLink = eventData?.customLinkSlug
 								{admin.role}
 							</div>
 							<div class="flex items-center gap-1">
-								<img src="/edit-icon.svg" alt="edit icon" class="h-4 w-4" />
+								<img src="/edit.svg" alt="edit icon" class="h-4 w-4" />
 
 								<p class="text-sm text-gray-400 lg:hidden">Edit</p>
 							</div>

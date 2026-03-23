@@ -1,12 +1,14 @@
 <!-- src/lib/components/Sidebar.svelte -->
 <script>
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
+	import { clickOutside } from '$lib/utils/constant';
 	import { onMount } from 'svelte';
 	import ProfileMenu from './ProfileMenu.svelte';
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
-	import { clickOutside } from '$lib/utils/constant';
-	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
+
+	import { authState } from '$lib/stores/auth.store';
 
 	export let background_color = '';
 	export let show = true;
@@ -14,6 +16,9 @@
 
 	let showMenu = false;
 	let activeItem = '';
+
+	$: activeProfile = $authState.activeProfile;
+	$: avatarUrl = activeProfile?.profilePictureUrl || '/you-rondwell.png';
 
 	function goHome() {
 		goto('/overview');
@@ -116,7 +121,7 @@
 		<div class="items-center justify-between px-4 py-3 md:hidden {show ? 'flex' : 'hidden'}">
 			<div use:clickOutside={() => (showMenu = false)}>
 				<button onclick={() => (showMenu = !showMenu)}>
-					<img src="/face-1.svg" alt="Profile" />
+					<img src={avatarUrl} alt="Profile" class="h-9 w-9 rounded-full object-cover" />
 				</button>
 				<ProfileMenu bind:showMenu className="absolute top-15 left-5 md:hidden" />
 			</div>
@@ -214,9 +219,9 @@
 				<div use:clickOutside={() => (showMenu = false)} class="relative">
 					<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 					<img
-						src="/face-1.svg"
+						src={avatarUrl}
 						alt="profile"
-						class="h-[27px] w-[27px] cursor-pointer"
+						class="h-[27px] w-[27px] cursor-pointer rounded-full object-cover"
 						onclick={() => (showMenu = !showMenu)}
 						onkeydown={(e) => e.key === 'Enter' && (showMenu = !showMenu)}
 						role="button"

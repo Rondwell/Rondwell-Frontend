@@ -484,7 +484,7 @@
 
 					<div class="flex items-center justify-between gap-3">
 						<button class="text-gray-400 hover:text-gray-600">
-							<img src="/edit-icon.svg" alt="" class="h-4 w-4 text-gray-500" />
+							<img src="/edit.svg" alt="" class="h-4 w-4 text-gray-500" />
 						</button>
 						<!-- Actions menu -->
 						<button class="text-gray-400 hover:text-gray-600">

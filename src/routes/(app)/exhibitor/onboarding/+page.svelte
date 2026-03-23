@@ -1250,7 +1250,7 @@
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(1)}
 							>
-								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+								<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
 						</div>
 
@@ -1279,7 +1279,7 @@
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(1)}
 							>
-								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+								<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
 						</div>
 
@@ -1300,7 +1300,7 @@
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(1)}
 							>
-								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+								<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
 						</div>
 
@@ -1321,7 +1321,7 @@
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(1)}
 							>
-								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+								<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
 						</div>
 
@@ -1341,7 +1341,7 @@
 									class="text-gray-400 transition-colors hover:text-gray-600"
 									onclick={() => editField(1)}
 								>
-									<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+									<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 								</button>
 							</div>
 						{/if}
@@ -1365,7 +1365,7 @@
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(2)}
 							>
-								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+								<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
 						</div>
 
@@ -1388,7 +1388,7 @@
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(2)}
 							>
-								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+								<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
 						</div>
 					</div>

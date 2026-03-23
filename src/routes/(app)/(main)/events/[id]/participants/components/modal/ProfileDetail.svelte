@@ -210,7 +210,7 @@
 							on:click={toggleEditAboutMe}
 							class="text-gray-500 transition-colors hover:text-gray-700"
 						>
-							<img src="/edit-icon.svg" alt="" />
+							<img src="/edit.svg" alt="" />
 						</button>
 					</div>
 

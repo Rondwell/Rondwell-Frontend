@@ -1,6 +1,9 @@
 <script>
 	import Button from '$lib/components/Button.svelte';
+	import { authState, isAuthenticated } from '$lib/stores/auth.store';
+	import { clickOutside } from '$lib/utils/constant';
 	import { onDestroy } from 'svelte';
+	import ProfileMenu from '../../components/ProfileMenu.svelte';
 
 	// live time
 	let now = new Date().toLocaleString('en-GB', {
@@ -28,6 +31,10 @@
 
 	// mobile menu toggle
 	let isOpen = false;
+	let showMenu = false;
+
+	$: activeProfile = $authState.activeProfile;
+	$: avatarUrl = activeProfile?.profilePictureUrl || '/you-rondwell.png';
 </script>
 
 <div class="relative z-50 h-[70px] w-full p-2 md:px-4 lg:border-b lg:border-[#909EA3] lg:p-0">
@@ -63,18 +70,52 @@
 					Create Event
 				</a>
 
-				<!-- Sign in (always visible) -->
-				<Button
-					class="hidden cursor-pointer rounded-full px-4 py-2 text-white shadow-md hover:bg-gradient-to-r lg:block lg:bg-[#ECEDED] lg:text-[#777779]"
-				>
-					<a href="/auth" class="w-full"> Sign in </a>
-				</Button>
+				{#if $isAuthenticated}
+					<!-- Logged in: show avatar with profile dropdown -->
+					<div use:clickOutside={() => (showMenu = false)} class="relative hidden lg:block">
+						<button
+							class="cursor-pointer"
+							on:click={() => (showMenu = !showMenu)}
+							aria-label="Profile menu"
+						>
+							<img
+								src={avatarUrl}
+								alt="profile"
+								class="h-[34px] w-[34px] rounded-full object-cover"
+							/>
+						</button>
+						<ProfileMenu bind:showMenu className="absolute right-0 top-12" />
+					</div>
 
-				<Button
-					class="cursor-pointer rounded-full bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] px-4 py-2 text-white shadow-md hover:bg-gradient-to-r lg:hidden"
-				>
-					<a href="/auth" class="w-full"> Sign in </a>
-				</Button>
+					<!-- Mobile: avatar -->
+					<div use:clickOutside={() => (showMenu = false)} class="relative lg:hidden">
+						<button
+							class="cursor-pointer"
+							on:click={() => (showMenu = !showMenu)}
+							aria-label="Profile menu"
+						>
+							<img
+								src={avatarUrl}
+								alt="profile"
+								class="h-[34px] w-[34px] rounded-full object-cover"
+							/>
+						</button>
+						<ProfileMenu bind:showMenu className="absolute right-0 top-12" />
+					</div>
+				{:else}
+					<!-- Not logged in: show Sign in -->
+					<Button
+						class="hidden cursor-pointer rounded-full px-4 py-2 text-white shadow-md hover:bg-gradient-to-r lg:block lg:bg-[#ECEDED] lg:text-[#777779]"
+					>
+						<a href="/auth" class="w-full"> Sign in </a>
+					</Button>
+
+					<Button
+						class="cursor-pointer rounded-full bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] px-4 py-2 text-white shadow-md hover:bg-gradient-to-r lg:hidden"
+					>
+						<a href="/auth" class="w-full"> Sign in </a>
+					</Button>
+				{/if}
 
 				<!-- Toggle (mobile only) -->
 				<button

@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import SendMail from './SendMail.svelte';
-	import RemoveParticipant from './RemoveParticipant.svelte';
-	import ProfileDetail from './ProfileDetail.svelte';
-	import Assign from './Assign.svelte';
-	import SendReminder from './SendReminder.svelte';
 	import ApproveParticipant from './ApproveParticipant.svelte';
+	import Assign from './Assign.svelte';
+	import CreateOrder from './CreateOrder.svelte';
 	import DeclineParticipant from './DeclineParticipant.svelte';
 	import ManageContribution from './ManageContribution.svelte';
-	import CreateOrder from './CreateOrder.svelte';
+	import ProfileDetail from './ProfileDetail.svelte';
+	import RemoveParticipant from './RemoveParticipant.svelte';
+	import SendMail from './SendMail.svelte';
+	import SendReminder from './SendReminder.svelte';
 
 	export let open = false;
 	export let participant = 'speaker';
@@ -33,7 +33,7 @@
 	if (participant === 'speaker') {
 		items = [
 			{ label: 'View Details', icon: '/eye.svg' },
-			{ label: 'Edit Details', icon: '/edit-icon-2.svg' },
+			{ label: 'Edit Details', icon: '/edit.svg' },
 			{ label: 'Assign Session', icon: '/profile.svg' },
 			{ label: 'Manage Visibility', icon: '' },
 			{ label: 'Send Message', icon: '/message-text.svg' },
@@ -44,7 +44,7 @@
 	} else if (participant === 'exhibitor') {
 		items = [
 			{ label: 'View Details', icon: '/eye.svg' },
-			{ label: 'Edit Details', icon: '/edit-icon-2.svg' },
+			{ label: 'Edit Details', icon: '/edit.svg' },
 			{ label: 'Approve Application', icon: '/clipboard-tick.svg' },
 			{ label: 'Decline Invitation', icon: '/clipboard-close.svg' },
 			{ label: 'Manage Contribution/Payment', icon: '/setting.svg' },
@@ -58,7 +58,7 @@
 	} else if (participant === 'vendor') {
 		items = [
 			{ label: 'View Details', icon: '/eye.svg' },
-			{ label: 'Edit Details', icon: '/edit-icon-2.svg' },
+			{ label: 'Edit Details', icon: '/edit.svg' },
 			{ label: 'Create Order', icon: '/box-tick.svg' },
 			{ label: 'Request Quote', icon: '/receipt-edit.svg' },
 			{ label: 'View All Orders', icon: '/document-search.svg' },

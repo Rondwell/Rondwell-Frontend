@@ -352,14 +352,14 @@
                 <span
                   class="ml-2 inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-500"
                 >
-                  <img src="/edit-icon-2.svg" class="h-3 w-3 opacity-60" />
+                  <img src="/edit.svg" class="h-3 w-3 opacity-60" />
                   {product.type}
                 </span>
               </div>
 
               <div class="flex flex-wrap gap-2">
                 <button class="flex items-center gap-1.5 rounded-lg bg-black px-3 py-1.5 text-[10px] font-bold text-white">
-                  <img src="/edit-icon-2.svg" class="h-3 w-3 brightness-0 invert" />
+                  <img src="/edit.svg" class="h-3 w-3 brightness-0 invert" />
                   Active
                 </button>
 

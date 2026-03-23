@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
-	import EditStatus from '../../components/EditStatus.svelte';
 	import AddTag from '../../components/AddTag.svelte';
-	import Report from '../../components/Report.svelte';
+	import EditStatus from '../../components/EditStatus.svelte';
 	import EmailModal from '../../components/EmailModal.svelte';
+	import Report from '../../components/Report.svelte';
 
 	export let open = false;
 	let showEditStatus = false;
@@ -223,7 +223,7 @@
 							on:click={() => (showEditStatus = !showEditStatus)}
 						>
 							{attendee.status}
-							<img src="/edit-icon.svg" alt="" />
+							<img src="/edit.svg" alt="" />
 						</button>
 						<EditStatus bind:open={showEditStatus} {attendee} />
 					</div>
@@ -274,7 +274,7 @@
 						<button
 							class="flex items-center gap-1 rounded-md bg-[#DCDCDC] px-3 py-1 text-xs text-[#A9AAAA]"
 						>
-							<img src="/edit-icon.svg" alt="" />
+							<img src="/edit.svg" alt="" />
 							Edit
 						</button>
 					</div>

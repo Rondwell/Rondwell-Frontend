@@ -2,12 +2,15 @@
 	import { page } from '$app/stores';
 	import { getEventById, updateEvent, uploadEventPhoto } from '$lib/services/event.services';
 	import { colors, type Color } from '$lib/utils/colors';
+	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import PlaceholderExtension from '@tiptap/extension-placeholder';
 	import StarterKit from '@tiptap/starter-kit';
 	import { onDestroy, onMount } from 'svelte';
 	import { createEditor, Editor, EditorContent } from 'svelte-tiptap';
 	import type { Readable } from 'svelte/store';
+	import DatePickerModal from '../../../../create-event/components/DatePickerModal.svelte';
+	import TimeModal from '../../../../create-event/components/TimeModal.svelte';
 
 	$: eventId = $page.params.id ?? '';
 
@@ -30,6 +33,17 @@
 	let links: Record<SocialLinkKey, string> = {
 		instagram: '', x: '', youtube: '', tiktok: '', linkedin: '', website: ''
 	};
+
+	// Date & Time state
+	let startDate: Date = new Date();
+	let endDate: Date = new Date();
+	let startTime = '1:30 AM';
+	let endTime = '2:30 AM';
+	let timezone = '';
+	let openStartDatePicker = false;
+	let openEndDatePicker = false;
+	let openStartTimePicker = false;
+	let openEndTimePicker = false;
 
 	// Rich text editor
 	let descEditor: Readable<Editor>;
@@ -61,6 +75,19 @@
 				website: sl.website ?? ''
 			};
 			socialPreviewImage = event.coverPictureUrl ?? event.displayPictureUrl ?? null;
+
+			// Parse date & time from event
+			if (event.startDateTime) {
+				const sd = new Date(event.startDateTime);
+				startDate = sd;
+				startTime = sd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+			}
+			if (event.endDateTime) {
+				const ed = new Date(event.endDateTime);
+				endDate = ed;
+				endTime = ed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+			}
+			timezone = event.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 		} catch (e: any) {
 			saveError = e.message ?? 'Failed to load event';
 		} finally {
@@ -83,6 +110,28 @@
 		$descEditor?.destroy();
 	});
 
+	function buildDateTime(date: Date, timeStr: string): string {
+		const [timePart, meridiem] = timeStr.split(' ');
+		let [hours, minutes] = timePart.split(':').map(Number);
+		if (meridiem === 'PM' && hours !== 12) hours += 12;
+		if (meridiem === 'AM' && hours === 12) hours = 0;
+		const d = new Date(date);
+		d.setHours(hours, minutes, 0, 0);
+		return d.toISOString();
+	}
+
+	function formatDate(date: Date) {
+		return date.toLocaleDateString('en-US', {
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric'
+		});
+	}
+
+	function formatTime(timeStr: string) {
+		return timeStr;
+	}
+
 	async function saveChanges() {
 		saving = true;
 		saveError = '';
@@ -94,6 +143,9 @@
 				themeColor: selectedColor.name,
 				customLinkSlug: publicUrl || undefined,
 				socialLinks: links,
+				startDateTime: buildDateTime(startDate, startTime),
+				endDateTime: buildDateTime(endDate, endTime),
+				timeZone: timezone || undefined,
 			} as any);
 			saveSuccess = true;
 			setTimeout(() => (saveSuccess = false), 3000);
@@ -251,6 +303,69 @@
 						</div>
 					{/if}
 				</div>
+			</div>
+		</div>
+
+		<!-- Date & Time -->
+		<div class="mb-6 rounded-lg bg-[#FDFDFD] p-4">
+			<h2 class="mb-3 text-2xl font-semibold">Date & Time</h2>
+			<p class="mb-4 text-xs text-gray-400">Change the date and time to reopen an ended event.</p>
+
+			<div class="flex w-full flex-col gap-4 sm:flex-row">
+				<!-- Start -->
+				<div class="flex-1">
+					<label class="mb-2 block text-sm font-medium text-gray-700">Start</label>
+					<div class="flex gap-2">
+						<div class="relative flex-1" use:clickOutside={() => (openStartDatePicker = false)}>
+							<button
+								on:click={() => (openStartDatePicker = !openStartDatePicker)}
+								class="w-full rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2.5 text-left text-sm font-medium text-gray-700"
+							>
+								{formatDate(startDate)}
+							</button>
+							<DatePickerModal open={openStartDatePicker} bind:selectedDate={startDate} />
+						</div>
+						<div class="relative w-[130px]" use:clickOutside={() => (openStartTimePicker = false)}>
+							<button
+								on:click={() => (openStartTimePicker = !openStartTimePicker)}
+								class="w-full rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2.5 text-left text-sm font-medium text-gray-700"
+							>
+								{startTime}
+							</button>
+							<TimeModal open={openStartTimePicker} bind:selectedTime={startTime} />
+						</div>
+					</div>
+				</div>
+
+				<!-- End -->
+				<div class="flex-1">
+					<label class="mb-2 block text-sm font-medium text-gray-700">End</label>
+					<div class="flex gap-2">
+						<div class="relative flex-1" use:clickOutside={() => (openEndDatePicker = false)}>
+							<button
+								on:click={() => (openEndDatePicker = !openEndDatePicker)}
+								class="w-full rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2.5 text-left text-sm font-medium text-gray-700"
+							>
+								{formatDate(endDate)}
+							</button>
+							<DatePickerModal open={openEndDatePicker} bind:selectedDate={endDate} {startDate} />
+						</div>
+						<div class="relative w-[130px]" use:clickOutside={() => (openEndTimePicker = false)}>
+							<button
+								on:click={() => (openEndTimePicker = !openEndTimePicker)}
+								class="w-full rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2.5 text-left text-sm font-medium text-gray-700"
+							>
+								{endTime}
+							</button>
+							<TimeModal open={openEndTimePicker} bind:selectedTime={endTime} referenceTime={startTime} />
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Timezone -->
+			<div class="mt-3">
+				<span class="text-xs text-gray-400">Timezone: {timezone}</span>
 			</div>
 		</div>
 

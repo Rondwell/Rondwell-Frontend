@@ -2,8 +2,8 @@
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher } from 'svelte';
-	import EditStatus from '../../../components/EditStatus.svelte';
 	import AddTag from '../../../components/AddTag.svelte';
+	import EditStatus from '../../../components/EditStatus.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -152,7 +152,7 @@
 							on:click={() => (showEditStatus = !showEditStatus)}
 						>
 							{attendee.status}
-							<img src="/edit-icon.svg" alt="" />
+							<img src="/edit.svg" alt="" />
 						</button>
 						<EditStatus bind:open={showEditStatus} {attendee} />
 					</div>

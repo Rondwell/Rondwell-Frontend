@@ -373,7 +373,7 @@
 							<div class="relative">
 								<div class="flex w-8 items-center gap-2 self-start md:w-auto">
 									<img src="/delete-icon.svg" alt="" />
-									<img src="/edit-icon.svg" alt="" />
+									<img src="/edit.svg" alt="" />
 								</div>
 							</div>
 						</div>

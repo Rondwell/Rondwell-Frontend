@@ -143,7 +143,7 @@
 									<div class="flex flex-row gap-1 md:flex-col md:items-center">
 										<span class="mr-3 text-gray-400">{admin.dateJoined}</span>
 
-										<img src="/edit-icon.svg" alt="edit icon" class="h-4 w-4" />
+										<img src="/edit.svg" alt="edit icon" class="h-4 w-4" />
 									</div>
 								</div>
 							</div>

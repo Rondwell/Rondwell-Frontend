@@ -1148,7 +1148,7 @@ let isCurrencyDropdownOpen = $state(false);
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(1)}
 							>
-								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+								<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
 						</div>
 						<!-- Professional Title/Affiliation -->
@@ -1168,7 +1168,7 @@ let isCurrencyDropdownOpen = $state(false);
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(1)}
 							>
-								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+								<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
 						</div>
 						<!-- Expertise Type/Category -->
@@ -1201,7 +1201,7 @@ let isCurrencyDropdownOpen = $state(false);
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(1)}
 							>
-								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+								<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
 						</div>
 						<!-- Social Media Links -->
@@ -1253,7 +1253,7 @@ let isCurrencyDropdownOpen = $state(false);
 		class="text-gray-400 transition-colors hover:text-gray-600"
 		onclick={() => editField(1)}
 	>
-		<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+		<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 	</button>
 </div>
 						<!-- Speaking Portfolio -->
@@ -1313,7 +1313,7 @@ let isCurrencyDropdownOpen = $state(false);
 		class="text-gray-400 transition-colors hover:text-gray-600"
 		onclick={() => editField(1)}
 	>
-		<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+		<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 	</button>
 </div>
      <!-- <p><strong>Portfolio Links:</strong></p>
@@ -1340,7 +1340,7 @@ let isCurrencyDropdownOpen = $state(false);
 								class="text-gray-400 transition-colors hover:text-gray-600"
 								onclick={() => editField(2)}
 							>
-								<img src="/edit-icon.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
+								<img src="/edit.svg" alt="edit" class="h-[11.42px] w-[11.98px]" />
 							</button>
 						</div>
 	  </div>	

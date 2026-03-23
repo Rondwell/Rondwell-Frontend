@@ -76,9 +76,9 @@
 		token = currentToken;
 		try {
 			const [user, ap, sess] = await Promise.all([
-				getMe(currentToken),
-				getActiveProfile(currentToken),
-				getActiveSessions(currentToken)
+				getMe(),
+				getActiveProfile(),
+				getActiveSessions()
 			]);
 			userEmail = user.email ?? '';
 			userPhone = user.phoneNumber ?? '';
@@ -151,7 +151,7 @@
 						const file = (e.target as HTMLInputElement).files?.[0];
 						if (!file || !profileId) return;
 						try {
-							const result = await uploadProfilePicture(token, profileId, file);
+							const result = await uploadProfilePicture(profileId, file);
 							profile.profilePicture = result.profilePictureUrl;
 							showToast('Profile picture updated');
 						} catch (err: any) { showToast(err.message, 'error'); }
@@ -190,7 +190,7 @@
 			if (!profileId) return;
 			saving = true;
 			try {
-				await updatePersonalInfo(token, profileId, { name: profile.name, username: profile.username, bio: profile.bio });
+				await updatePersonalInfo(profileId, { name: profile.name, username: profile.username, bio: profile.bio });
 				showToast('Profile saved');
 			} catch (e: any) { showToast(e.message, 'error'); } finally { saving = false; }
 		}} disabled={saving} class="flex items-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white hover:bg-gray-800 disabled:opacity-50">
@@ -200,7 +200,7 @@
 			if (!profileId) return;
 			savingLinks = true;
 			try {
-				await updateSocialLinks(token, profileId, socialLinks);
+				await updateSocialLinks(profileId, socialLinks);
 				showToast('Social links saved');
 			} catch (e: any) { showToast(e.message, 'error'); } finally { savingLinks = false; }
 		}} disabled={savingLinks} class="flex items-center gap-2 rounded-md bg-gray-700 px-4 py-2 font-medium text-white hover:bg-gray-800 disabled:opacity-50">
@@ -241,7 +241,7 @@
 					if (!newEmailInput) return;
 					changingEmail = true;
 					try {
-						await changePrimaryEmail(token, newEmailInput);
+						await changePrimaryEmail(newEmailInput);
 						showToast('Verification sent to new email');
 						showChangeEmailInput = false; newEmailInput = '';
 					} catch (e: any) { showToast(e.message, 'error'); } finally { changingEmail = false; }
@@ -261,7 +261,7 @@
 			<button on:click={async () => {
 				updatingPhone = true;
 				try {
-					await updatePhoneNumber(token, phoneInput);
+					await updatePhoneNumber(phoneInput);
 					showToast('Verification sent to new number');
 				} catch (e: any) { showToast(e.message, 'error'); } finally { updatingPhone = false; }
 			}} disabled={updatingPhone} class="h-full rounded-md bg-[#939596] px-3 py-2 font-medium text-white hover:bg-gray-700 disabled:opacity-50">
@@ -292,7 +292,7 @@
 			<button on:click={async () => {
 				requestingPassword = true;
 				try {
-					await requestPasswordSetup(token);
+					await requestPasswordSetup();
 					showToast('Password setup link sent to your email');
 				} catch (e: any) { showToast(e.message, 'error'); } finally { requestingPassword = false; }
 			}} disabled={requestingPassword} class="rounded bg-black px-3 py-1 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
@@ -317,7 +317,7 @@
 				<button on:click={async () => {
 					twoFALoading = true;
 					try {
-						const data = await begin2FASetup(token);
+						const data = await begin2FASetup();
 						twoFAQr = data.qrCode;
 						twoFAStep = 'qr';
 					} catch (e: any) { showToast(e.message, 'error'); } finally { twoFALoading = false; }
@@ -340,7 +340,7 @@
 					<button on:click={async () => {
 						twoFALoading = true;
 						try {
-							const result = await confirm2FASetup(token, twoFACode);
+							const result = await confirm2FASetup(twoFACode);
 							twoFABackupCodes = result.backupCodes;
 							twoFactorEnabled = true;
 							twoFAStep = 'idle';
@@ -368,7 +368,7 @@
 					<button on:click={async () => {
 						twoFALoading = true;
 						try {
-							await disable2FA(token, disableCode);
+							await disable2FA(disableCode);
 							twoFactorEnabled = false; twoFAStep = 'idle'; disableCode = '';
 							showToast('2FA disabled');
 						} catch (e: any) { showToast(e.message, 'error'); } finally { twoFALoading = false; }
@@ -409,7 +409,7 @@
 					{#if i !== 0}
 						<button on:click={async () => {
 							try {
-								await invalidateSession(token, session._id);
+								await invalidateSession(session._id);
 								sessions = sessions.filter((_: any, idx: number) => idx !== i);
 								showToast('Session removed');
 							} catch (e: any) { showToast(e.message, 'error'); }
@@ -427,7 +427,7 @@
 		<button on:click={async () => {
 			if (!confirm('Are you sure you want to permanently delete your account? This action cannot be undone.')) return;
 			try {
-				await deleteAccountApi(token);
+				await deleteAccountApi();
 				clearUser();
 				goto('/auth');
 			} catch (e: any) { showToast(e.message, 'error'); }

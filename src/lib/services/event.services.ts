@@ -1,4 +1,4 @@
-import { getToken } from '$lib/stores/auth.store';
+import { authFetch } from '$lib/services/api.client';
 
 const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
 
@@ -42,15 +42,9 @@ export interface CreateEventResponse {
 }
 
 export async function createEvent(payload: CreateEventPayload): Promise<CreateEventResponse> {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const res = await fetch(`${EVENT_URL}/api/v1/events/create`, {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/create`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
 
@@ -60,39 +54,27 @@ export async function createEvent(payload: CreateEventPayload): Promise<CreateEv
 }
 
 export async function getMyCollections(): Promise<any[]> {
-  const token = getToken();
-  if (!token) return [];
-
-  const res = await fetch(`${EVENT_URL}/api/v1/collections`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.collections ?? data ?? [];
+  try {
+    const res = await authFetch(`${EVENT_URL}/api/v1/collections`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.collections ?? data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getEventById(eventId: string): Promise<any> {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to fetch event');
   return data.event;
 }
 
 export async function updateEvent(eventId: string, payload: Partial<CreateEventPayload>): Promise<any> {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}`, {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
   const data = await res.json();
@@ -101,12 +83,8 @@ export async function updateEvent(eventId: string, payload: Partial<CreateEventP
 }
 
 export async function publishEvent(eventId: string): Promise<any> {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/publish`, {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/publish`, {
     method: 'PUT',
-    headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to publish event');
@@ -114,9 +92,6 @@ export async function publishEvent(eventId: string): Promise<any> {
 }
 
 export async function uploadEventPhoto(eventId: string, file: File, category: 'COVER' | 'DISPLAY' = 'DISPLAY'): Promise<string> {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
   const formData = new FormData();
   formData.append('file', file);
   formData.append('type', 'IMAGE');
@@ -124,15 +99,13 @@ export async function uploadEventPhoto(eventId: string, file: File, category: 'C
   formData.append('isPublic', 'true');
   formData.append('title', category === 'COVER' ? 'Cover Photo' : 'Display Photo');
 
-  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/media`, {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/media`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to upload photo');
 
-  // Fire-and-forget: update the event's picture URL in the background
   const pictureField = category === 'COVER' ? 'coverPictureUrl' : 'displayPictureUrl';
   updateEvent(eventId, { [pictureField]: data.url } as any).catch(() => {});
 
@@ -140,36 +113,29 @@ export async function uploadEventPhoto(eventId: string, file: File, category: 'C
 }
 
 export async function getEventAttendees(eventId: string): Promise<any[]> {
-  const token = getToken();
-  if (!token) return [];
-
-  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/participants`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.participants ?? data ?? [];
+  try {
+    const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.participants ?? data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getEventGuests(eventId: string): Promise<any[]> {
-  const token = getToken();
-  if (!token) return [];
-
-  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/guests`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.guests ?? data ?? [];
+  try {
+    const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/guests`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.guests ?? data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getMyEvents(): Promise<any[]> {
-  const token = getToken();
-  if (!token) throw new Error('Not authenticated');
-
-  const res = await fetch(`${EVENT_URL}/api/v1/events/organizer/all`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/organizer/all`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to fetch events');
   return data.events ?? [];

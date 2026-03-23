@@ -36,8 +36,8 @@
 		loading = true;
 		try {
 			const [active, all] = await Promise.all([
-				getActiveProfile(token),
-				getAllProfiles(token),
+				getActiveProfile(),
+				getAllProfiles(),
 			]);
 			setActiveProfile(active);
 			allProfiles = all;
@@ -62,7 +62,7 @@
 			// Switch to this profile
 			if (token) {
 				try {
-					const result = await switchProfile(token, profile._id);
+					const result = await switchProfile(profile._id);
 					if (result?.newToken) {
 						// Update token in store
 						authState.update((s) => ({ ...s, token: result.newToken }));

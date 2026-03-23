@@ -1,15 +1,11 @@
-const BASE_URL = import.meta.env.VITE_API_URL;
+import { authFetch } from '$lib/services/api.client';
 
-function authHeaders(token: string) {
-  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-}
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 // ─── User (account-level) ─────────────────────────────────────────────────────
 
-export async function getMe(token: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/user/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getMe() {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/user/me`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to fetch user');
   return data.data as {
@@ -26,10 +22,10 @@ export async function getMe(token: string) {
 
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
-export async function updatePersonalInfo(token: string, profileId: string, data: { name?: string; username?: string; bio?: string }) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/${profileId}/personal`, {
+export async function updatePersonalInfo(profileId: string, data: { name?: string; username?: string; bio?: string }) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/${profileId}/personal`, {
     method: 'PUT',
-    headers: authHeaders(token),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
   const json = await res.json();
@@ -37,10 +33,10 @@ export async function updatePersonalInfo(token: string, profileId: string, data:
   return json.data;
 }
 
-export async function updateSocialLinks(token: string, profileId: string, links: Record<string, string>) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/${profileId}/social-links`, {
+export async function updateSocialLinks(profileId: string, links: Record<string, string>) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/${profileId}/social-links`, {
     method: 'PUT',
-    headers: authHeaders(token),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(links),
   });
   const json = await res.json();
@@ -48,12 +44,11 @@ export async function updateSocialLinks(token: string, profileId: string, links:
   return json.data;
 }
 
-export async function uploadProfilePicture(token: string, profileId: string, file: File) {
+export async function uploadProfilePicture(profileId: string, file: File) {
   const form = new FormData();
   form.append('file', file);
-  const res = await fetch(`${BASE_URL}/api/v1/profile/${profileId}/profile-picture`, {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/${profileId}/profile-picture`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
     body: form,
   });
   const json = await res.json();
@@ -63,10 +58,10 @@ export async function uploadProfilePicture(token: string, profileId: string, fil
 
 // ─── Email / Phone ────────────────────────────────────────────────────────────
 
-export async function changePrimaryEmail(token: string, newEmail: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/email/primary`, {
+export async function changePrimaryEmail(newEmail: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/email/primary`, {
     method: 'PUT',
-    headers: authHeaders(token),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ newEmail }),
   });
   const json = await res.json();
@@ -74,10 +69,10 @@ export async function changePrimaryEmail(token: string, newEmail: string) {
   return json;
 }
 
-export async function updatePhoneNumber(token: string, phoneNumber: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/phone`, {
+export async function updatePhoneNumber(phoneNumber: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/phone`, {
     method: 'PUT',
-    headers: authHeaders(token),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phoneNumber }),
   });
   const json = await res.json();
@@ -87,20 +82,19 @@ export async function updatePhoneNumber(token: string, phoneNumber: string) {
 
 // ─── Password ─────────────────────────────────────────────────────────────────
 
-export async function requestPasswordSetup(token: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/password/setup-request`, {
+export async function requestPasswordSetup() {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/password/setup-request`, {
     method: 'POST',
-    headers: authHeaders(token),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Failed to send setup link');
   return json;
 }
 
-export async function changePassword(token: string, currentPassword: string, newPassword: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/password/change`, {
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/password/change`, {
     method: 'PUT',
-    headers: authHeaders(token),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ currentPassword, newPassword }),
   });
   const json = await res.json();
@@ -110,20 +104,19 @@ export async function changePassword(token: string, currentPassword: string, new
 
 // ─── 2FA ──────────────────────────────────────────────────────────────────────
 
-export async function begin2FASetup(token: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/2fa/enable/begin`, {
+export async function begin2FASetup() {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/2fa/enable/begin`, {
     method: 'POST',
-    headers: authHeaders(token),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Failed to begin 2FA setup');
   return json.data as { secret: string; qrCode: string };
 }
 
-export async function confirm2FASetup(token: string, code: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/2fa/enable/confirm`, {
+export async function confirm2FASetup(code: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/2fa/enable/confirm`, {
     method: 'POST',
-    headers: authHeaders(token),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code }),
   });
   const json = await res.json();
@@ -131,10 +124,10 @@ export async function confirm2FASetup(token: string, code: string) {
   return json.data as { backupCodes: string[] };
 }
 
-export async function disable2FA(token: string, code: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/2fa/disable`, {
+export async function disable2FA(code: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/2fa/disable`, {
     method: 'POST',
-    headers: authHeaders(token),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code }),
   });
   const json = await res.json();
@@ -144,10 +137,8 @@ export async function disable2FA(token: string, code: string) {
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 
-export async function getActiveSessions(token: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/sessions/all`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getActiveSessions() {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/sessions/all`);
   const json = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Failed to fetch sessions');
   return json.data as Array<{
@@ -158,10 +149,9 @@ export async function getActiveSessions(token: string) {
   }>;
 }
 
-export async function invalidateSession(token: string, sessionId: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/sessions/${sessionId}`, {
+export async function invalidateSession(sessionId: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/sessions/${sessionId}`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Failed to invalidate session');
@@ -170,10 +160,9 @@ export async function invalidateSession(token: string, sessionId: string) {
 
 // ─── Delete Account ───────────────────────────────────────────────────────────
 
-export async function deleteAccount(token: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/profile/delete`, {
+export async function deleteAccount() {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/delete`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Failed to delete account');

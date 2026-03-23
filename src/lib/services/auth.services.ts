@@ -13,7 +13,7 @@ function parseApiError(res: Response, data: any): string {
   return data.message ?? 'Something went wrong.';
 }
 
-// ─── Registration ────────────────────────────────────────────────────────────
+// ─── Registrations ────────────────────────────────────────────────────────────
 
 export async function requestRegistrationOTP(emailOrPhone: string, isPhone = false) {
   const body = isPhone ? { phoneNumber: emailOrPhone } : { email: emailOrPhone };
@@ -69,10 +69,10 @@ export async function verifyLoginOTP(emailOrPhone: string, otp: string, isPhone 
   return data;
 }
 
-// ─── Smart OTP (tries register first, falls back to login) ───────────────────
+// ─── Smart OTP (single unified endpoint) ─────────────────────────────────────
 
 /**
- * Sends OTP — tries register first. If user already exists, falls back to login.
+ * Sends OTP via the unified endpoint — works for both new and existing users.
  * Returns { isNewUser: boolean }
  */
 export async function smartRequestOTP(
@@ -82,19 +82,20 @@ export async function smartRequestOTP(
   setLoading(true);
   setError('');
   try {
-    await requestRegistrationOTP(emailOrPhone, isPhone);
+    const body = isPhone ? { phoneNumber: emailOrPhone } : { email: emailOrPhone };
+    const res = await fetch(`${BASE_URL}/api/v1/auth/otp-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(parseApiError(res, data));
     toast.success('OTP sent! Check your inbox.');
-    return { isNewUser: true };
+    return { isNewUser: data.isNewUser ?? true };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : '';
-    if (msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('user already')) {
-      await requestLoginOTP(emailOrPhone, isPhone);
-      toast.success('OTP sent! Check your inbox.');
-      return { isNewUser: false };
-    }
-    const errorMsg = msg || 'Failed to send OTP';
-    setError(errorMsg);
-    toast.error(errorMsg);
+    const msg = err instanceof Error ? err.message : 'Failed to send OTP';
+    setError(msg);
+    toast.error(msg);
     throw err;
   } finally {
     setLoading(false);
@@ -102,37 +103,24 @@ export async function smartRequestOTP(
 }
 
 /**
- * Verifies OTP — tries register verify first, falls back to login verify.
+ * Verifies OTP — uses isNewUser flag to call the correct endpoint directly.
  * Saves auth state on success.
  */
 export async function smartVerifyOTP(
   emailOrPhone: string,
   otp: string,
-  isPhone = false
+  isPhone = false,
+  isNewUser = true
 ): Promise<{ token: string; refreshToken: string; user: any; isNewUser: boolean }> {
   setLoading(true);
   setError('');
   try {
     let data: any;
-    let isNewUser = false;
 
-    try {
+    if (isNewUser) {
       data = await verifyRegistrationOTP(emailOrPhone, otp, isPhone);
-      isNewUser = true;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : '';
-      // If registration verify fails because user exists or OTP was for login
-      if (
-        msg.toLowerCase().includes('already exists') ||
-        msg.toLowerCase().includes('not found') ||
-        msg.toLowerCase().includes('invalid') ||
-        msg.toLowerCase().includes('expired')
-      ) {
-        data = await verifyLoginOTP(emailOrPhone, otp, isPhone);
-        isNewUser = false;
-      } else {
-        throw err;
-      }
+    } else {
+      data = await verifyLoginOTP(emailOrPhone, otp, isPhone);
     }
 
     const { token, refreshToken, user } = data;

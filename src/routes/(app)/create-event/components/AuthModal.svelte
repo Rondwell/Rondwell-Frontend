@@ -10,6 +10,7 @@
 	let step: 'email' | 'otp' = 'email';
 	let contact = '';
 	let otp = '';
+	let isNewUser = true;
 	let loading = false;
 	let error = '';
 	let resendTimer = 0;
@@ -28,7 +29,8 @@
 		if (!contact.trim()) { error = 'Please enter your email or phone'; return; }
 		loading = true; error = '';
 		try {
-			await smartRequestOTP(contact.trim());
+			const result = await smartRequestOTP(contact.trim());
+			isNewUser = result.isNewUser;
 			step = 'otp';
 			startTimer();
 		} catch (e: any) {
@@ -42,7 +44,7 @@
 		if (!otp.trim()) { error = 'Please enter the OTP'; return; }
 		loading = true; error = '';
 		try {
-			await smartVerifyOTP(contact.trim(), otp.trim());
+			await smartVerifyOTP(contact.trim(), otp.trim(), false, isNewUser);
 			dispatch('authenticated');
 			open = false;
 		} catch (e: any) {
@@ -56,7 +58,8 @@
 		if (resendTimer > 0) return;
 		loading = true; error = '';
 		try {
-			await smartRequestOTP(contact.trim());
+			const result = await smartRequestOTP(contact.trim());
+			isNewUser = result.isNewUser;
 			startTimer();
 		} catch (e: any) {
 			error = e.message ?? 'Failed to resend OTP';

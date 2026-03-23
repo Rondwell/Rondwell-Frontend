@@ -10,6 +10,7 @@
   let code = Array(6).fill('');
   let email = '';
   let isPhone = false;
+  let isNewUser = true;
   let message = '';
   let loading = false;
   let seconds = 45;
@@ -18,6 +19,7 @@
   onMount(async () => {
     email = $page.url.searchParams.get('email') || localStorage.getItem('pending-email') || '';
     isPhone = localStorage.getItem('pending-is-phone') === '1';
+    isNewUser = localStorage.getItem('pending-is-new-user') === '1';
 
     if (!email) {
       message = 'No contact found. Please go back and try again.';
@@ -35,7 +37,9 @@
     loading = true;
     message = '';
     try {
-      await smartRequestOTP(email, isPhone);
+      const result = await smartRequestOTP(email, isPhone);
+      isNewUser = result.isNewUser;
+      localStorage.setItem('pending-is-new-user', isNewUser ? '1' : '0');
       message = 'OTP resent successfully';
       startTimer();
     } catch (err) {
@@ -76,7 +80,7 @@
     loading = true;
     message = '';
     try {
-      const { token } = await smartVerifyOTP(email, otp, isPhone);
+      const { token } = await smartVerifyOTP(email, otp, isPhone, isNewUser);
       localStorage.removeItem('pending-email');
       localStorage.removeItem('pending-is-phone');
       localStorage.removeItem('pending-is-new-user');

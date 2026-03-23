@@ -1,15 +1,10 @@
-import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import adapter from '@sveltejs/adapter-netlify';
 
 export default defineConfig({
 	plugins: [
-		adapter({
-			edge: false,
-			split: false
-		}),
 		tailwindcss(),
 		sveltekit(),
 		VitePWA({

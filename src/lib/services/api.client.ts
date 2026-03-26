@@ -35,7 +35,7 @@ async function refreshAccessToken(): Promise<string | null> {
 
     if (!res.ok) {
       clearUser();
-      if (browser) window.location.href = '/login';
+      if (browser) window.location.href = '/auth';
       return null;
     }
 
@@ -46,7 +46,7 @@ async function refreshAccessToken(): Promise<string | null> {
     return newToken;
   } catch {
     clearUser();
-    if (browser) window.location.href = '/login';
+    if (browser) window.location.href = '/auth';
     return null;
   }
 }

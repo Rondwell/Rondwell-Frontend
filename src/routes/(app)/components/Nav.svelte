@@ -14,7 +14,7 @@
 <!-- Navigation Tabs -->
 <div class="mb-10">
 	<nav
-		class="custom-scrollbar flex space-x-4 overflow-x-auto border-b border-gray-400 md:space-x-8"
+		class="custom-scrollbar flex space-x-0 overflow-x-auto border-b border-gray-400"
 	>
 		{#each tabs as tab}
 			<button

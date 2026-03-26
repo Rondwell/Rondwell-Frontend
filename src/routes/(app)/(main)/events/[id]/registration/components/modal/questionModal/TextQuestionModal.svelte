@@ -20,7 +20,8 @@
 
 	export let open = false;
 	export let isEditing = false;
-	let questionData: QuestionData = {
+	export let ticketOptions: string[] = [];
+	export let questionData: QuestionData = {
 		id: null,
 		type: 'text',
 		question: '',
@@ -28,8 +29,24 @@
 		isRequired: false,
 		helpText: 'Ask for a free-form response',
 		ticketIds: [],
-		ticketOptions: ['Early Bird Ticket', 'Investors Only', 'Standard In...', 'Accelerate...']
+		ticketOptions: []
 	};
+
+	$: questionData.ticketOptions = ticketOptions;
+
+	// Reset form when modal opens
+	$: if (open && !isEditing) {
+		questionData = {
+			id: null,
+			type: 'text',
+			question: '',
+			responseLength: 'short',
+			isRequired: false,
+			helpText: 'Ask for a free-form response',
+			ticketIds: [],
+			ticketOptions
+		};
+	}
 
 	// For edit mode, we need to track original data for comparison
 	let originalData = {};
@@ -51,12 +68,19 @@
 		questionData.responseLength = length;
 	}
 
-	function saveQuestion() {
+	let buttonOpen = false;
+
+	let addingQuestion = false;
+
+	async function saveQuestion() {
+		addingQuestion = true;
+		await new Promise((r) => setTimeout(r, 600));
 		if (isEditing) {
 			dispatch('save', questionData);
 		} else {
 			dispatch('add', questionData);
 		}
+		addingQuestion = false;
 		closeModal();
 	}
 
@@ -64,8 +88,6 @@
 		dispatch('delete', questionData.id);
 		closeModal();
 	}
-
-	let buttonOpen = false;
 
 	function toggleTicket(opt: any) {
 		if (questionData.ticketIds.includes(opt)) {
@@ -96,7 +118,7 @@
 					<img src="/arrow-right.svg" alt="arrow back" />
 				</button>
 
-				<h2 class="text-xl font-bold">Add Question</h2>
+				<h2 class="text-xl font-bold">{isEditing ? 'Edit Question' : 'Add Question'}</h2>
 
 				<button
 					on:click={() => (open = false)}
@@ -260,9 +282,17 @@
 
 					<button
 						on:click={saveQuestion}
-						class="w-full rounded-md bg-black px-4 py-3 font-medium text-white transition-colors hover:bg-gray-800"
+						disabled={addingQuestion}
+						class="w-full rounded-md bg-black px-4 py-3 font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-60"
 					>
-						Add Question
+						{#if addingQuestion}
+							<span class="flex items-center justify-center gap-2">
+								<Icon icon="mdi:loading" class="h-5 w-5 animate-spin" />
+								Adding...
+							</span>
+						{:else}
+							{isEditing ? 'Save Changes' : 'Add Question'}
+						{/if}
 					</button>
 				</div>
 			</div>

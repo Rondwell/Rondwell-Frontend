@@ -1,60 +1,37 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+	import { getEventById, getMyCollections } from '$lib/services/event.services';
+	import { onMount } from 'svelte';
 	import Nav from '../../../../components/Nav.svelte';
 	import CollaborationRequest from './components/CollaborationRequest.svelte';
 	import Exhibitors from './components/Exhibitors.svelte';
 	import Speakers from './components/Speakers.svelte';
 	import Vendors from './components/Vendors.svelte';
-	import { goto } from '$app/navigation';
 
-	let eventData = {
-		title: 'Megaexe Party',
-		collection: 'John Collection',
-		status: 'Ticket',
-		tickets: [
-			{
-				id: 1,
-				type: 'Standard',
-				price: 'Free',
-				requireApproval: false,
-				available: 2,
-				registered: 2,
-				status: 'Available',
-				availableUntil: 'Oct 25',
-				capacity: '250'
-			},
-			{
-				id: 2,
-				type: 'Standard',
-				price: 'Free',
-				requireApproval: false,
-				available: 0,
-				registered: 2,
-				status: 'Available',
-				availableUntil: '',
-				capacity: ''
-			}
-		],
-		registrationEmails: [
-			{
-				id: 1,
-				type: 'Pending Approval / Waitlist',
-				status: 'Pending',
-				icon: 'gray'
-			},
-			{
-				id: 2,
-				type: 'Confirmation Email',
-				status: 'Active',
-				icon: 'check'
-			},
-			{
-				id: 3,
-				type: 'Decline Email',
-				status: 'Inactive',
-				icon: 'cancel'
-			}
-		]
-	};
+	$: eventId = $page.params.id;
+
+	let eventData: any = null;
+	let loading = true;
+
+	onMount(async () => {
+		try {
+			const [event, collections] = await Promise.all([
+				getEventById(eventId!),
+				getMyCollections().catch(() => []),
+			]);
+			const collectionName = collections.find((c: any) => c._id === event.collectionId || c.id === event.collectionId)?.name ?? 'My Collection';
+			eventData = {
+				title: event.title ?? 'Untitled Event',
+				collection: collectionName,
+				collectionId: event.collectionId ?? '',
+			};
+		} catch (e: any) {
+			console.error('Failed to load event:', e);
+			eventData = { title: 'Event', collection: 'Collection', collectionId: '' };
+		} finally {
+			loading = false;
+		}
+	});
 
 	let activeTab = 'speakers';
 
@@ -113,8 +90,8 @@
 <div class="max-w-6xl">
 	<div class="mb-6">
 		<div class="mb-2 flex items-center justify-between">
-			<div class="flex items-center gap-2">
-				<span class="text-sm text-[#83808D]">John Collection</span>
+			<a href="/collection/{eventData?.collectionId ?? ''}/events" class="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-[#F0EFF1]">
+				<span class="text-sm text-[#83808D]">{eventData?.collection ?? 'Collection'}</span>
 				<svg
 					width="11"
 					height="11"
@@ -140,9 +117,9 @@
 						stroke-width="0.37461"
 					/>
 				</svg>
-			</div>
-			<button
-				on:click={()=> goto('events/1')}
+			</a>
+			<a
+				href="/event-page/{eventId}"
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
 			>
 				Event Page
@@ -171,19 +148,19 @@
 						stroke-width="0.37461"
 					/>
 				</svg>
-			</button>
+			</a>
 		</div>
-		<h1 class="mb-10 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
+		<h1 class="mb-10 text-3xl font-bold md:text-4xl">{eventData?.title ?? 'Loading...'}</h1>
 
 		<Nav {tabs} bind:activeTab />
 	</div>
 	{#if activeTab === 'speakers'}
-		<Speakers />
+		<Speakers eventTitle={eventData?.title ?? ''} />
 	{:else if activeTab === 'exhibitors'}
-		<Exhibitors />
+		<Exhibitors eventTitle={eventData?.title ?? ''} />
 	{:else if activeTab === 'vendors'}
-		<Vendors />
+		<Vendors eventTitle={eventData?.title ?? ''} />
 	{:else if activeTab === 'collaboration_request'}
-		<CollaborationRequest />
+		<CollaborationRequest eventTitle={eventData?.title ?? ''} />
 	{/if}
 </div>

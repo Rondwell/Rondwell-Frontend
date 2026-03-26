@@ -1,8 +1,12 @@
 <script lang="ts">
-	import { StackedAreaChart, DonutChart } from '@carbon/charts-svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { DonutChart, StackedAreaChart } from '@carbon/charts-svelte';
 	import '@carbon/charts-svelte/styles.css';
 	import Icon from '@iconify/svelte';
-	import { goto } from '$app/navigation';
+	import Nav from '../../../../components/Nav.svelte';
+
+	$: eventId = $page.params.id;
 
 	const eventData = {
 		title: 'Megaexe Party',
@@ -10,6 +14,20 @@
 	};
 
 	let searchQuery = '';
+	let activeTab = 'analytics';
+
+	const tabs = [
+		{
+			id: 'analytics',
+			label: 'Analytics',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 18.3307H12.5C16.6667 18.3307 18.3333 16.6641 18.3333 12.4974V7.4974C18.3333 3.33073 16.6667 1.66406 12.5 1.66406H7.5C3.33333 1.66406 1.66667 3.33073 1.66667 7.4974V12.4974C1.66667 16.6641 3.33333 18.3307 7.5 18.3307Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.25 12.1849L8.15833 9.60156L10.3333 11.3516L12.2 8.85156" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+		},
+		{
+			id: 'surveys',
+			label: 'Surveys & Feedback',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.3327 8.33073V12.4974C18.3327 16.6641 16.666 18.3307 12.4993 18.3307H7.49935C3.33268 18.3307 1.66602 16.6641 1.66602 12.4974V7.4974C1.66602 3.33073 3.33268 1.66406 7.49935 1.66406H11.666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.3327 8.33073H14.9993C12.4993 8.33073 11.666 7.4974 11.666 4.9974V1.66406L18.3327 8.33073Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.83398 10.8359H10.834" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.83398 14.1641H9.16732" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+		}
+	];
 
 	// Chart data for Page Views line chart
 	const pageViewsData = [
@@ -169,9 +187,12 @@
 				</svg>
 			</button>
 		</div>
-		<h1 class="mb-10 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
+		<h1 class="mb-4 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
+
+		<Nav {tabs} bind:activeTab />
 	</div>
 
+	{#if activeTab === 'analytics'}
 	<div class="mb-6 flex flex-col">
 		<div class="mb-1 flex items-center justify-between gap-4">
 			<h2 class="text-xl font-semibold">Page Views</h2>
@@ -401,4 +422,12 @@
 			</button>
 		</div>
 	</div>
+	{:else if activeTab === 'surveys'}
+	<!-- Surveys & Feedback Tab -->
+	<div class="flex h-70 flex-col items-center justify-center">
+		<Icon icon="mdi:clipboard-text-outline" class="mb-3 text-6xl text-gray-300" />
+		<p class="text-lg font-medium text-[#A2ACB2]">Surveys & Feedback</p>
+		<p class="mt-1 text-center text-sm text-gray-400">Create surveys and collect feedback from your event attendees. Coming soon.</p>
+	</div>
+	{/if}
 </div>

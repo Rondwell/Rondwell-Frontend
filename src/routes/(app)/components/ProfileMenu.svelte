@@ -19,6 +19,8 @@
 	let allProfiles: UserProfileData[] = [];
 	let showAll = false;
 	let loading = false;
+	let showWalletBalance = true;
+	let walletBalance = 200000;
 
 	$: user = $authState.user;
 	$: activeProfile = $authState.activeProfile;
@@ -32,6 +34,10 @@
 	$: displayedOtherProfiles = showAll ? otherProfiles : otherProfiles.slice(0, 2);
 
 	$: avatarUrl = activeProfile?.profilePictureUrl || '/you-rondwell.png';
+
+	$: formattedBalance = showWalletBalance
+		? `N${walletBalance.toLocaleString()}`
+		: '••••••';
 
 	onMount(async () => {
 		if (!token) return;
@@ -61,12 +67,10 @@
 		} else if (profile.onboardingStatus === 'INCOMPLETE') {
 			goto(`/${rolePath}/onboarding`);
 		} else {
-			// Switch to this profile
 			if (token) {
 				try {
 					const result = await switchProfile(profile._id);
 					if (result?.newToken) {
-						// Update token in store
 						authState.update((s) => ({ ...s, token: result.newToken }));
 						localStorage.setItem('auth_token', result.newToken);
 					}
@@ -90,9 +94,23 @@
 		if (profile.onboardingStatus === 'INCOMPLETE') return 'wrapup';
 		return 'done';
 	}
+
+	function toggleWalletVisibility() {
+		showWalletBalance = !showWalletBalance;
+	}
 </script>
 
 {#if showMenu}
+	<!-- Blur backdrop -->
+	<div
+		class="fixed inset-0 z-20 bg-black/10 backdrop-blur-[2px]"
+		on:click={onClose}
+		on:keydown={(e) => e.key === 'Escape' && onClose()}
+		role="button"
+		tabindex="-1"
+		aria-label="Close profile menu"
+	></div>
+
 	<div
 		class="triangle bg custom-scrollbar z-30 max-h-[540px] w-83 overflow-y-auto rounded-xl p-6 text-sm md:w-90 {className}"
 	>
@@ -172,8 +190,58 @@
 
 			<!-- Menu Actions -->
 			<div class="mt-4 space-y-3">
+				<!-- Dashboard -->
+				<a href="/overview" on:click={onClose} class="flex cursor-pointer items-center gap-2">
+					<div class="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-[#E2E8FC]">
+						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M6.765 2.13L2.7225 5.2875C2.0475 5.8125 1.5 6.9075 1.5 7.7625V13.3275C1.5 15.0975 2.9325 16.5375 4.7025 16.5375H13.2975C15.0675 16.5375 16.5 15.0975 16.5 13.335V7.875C16.5 6.9575 15.8925 5.8125 15.15 5.295L10.515 2.04C9.465 1.305 7.7775 1.3425 6.765 2.13Z" stroke="#2A2D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+							<path d="M9 13.5375V11.2875" stroke="#2A2D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+						</svg>
+					</div>
+					<span>Dashboard</span>
+				</a>
+
+				<!-- Wallet -->
+				<div class="flex cursor-pointer items-center gap-2">
+					<div class="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-[#E3F4E1]">
+						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M9.75 6.9375H5.25" stroke="#2A2D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+							<path d="M16.5 8.49V9.5175C16.5 9.8325 16.2525 10.0875 15.93 10.1025H14.4075C13.785 10.1025 13.215 9.6375 13.1625 9.015C13.1275 8.6475 13.2675 8.3025 13.5075 8.0625C13.72 7.845 14.0125 7.72 14.3325 7.72H15.93C16.2525 7.735 16.5 7.99 16.5 8.49Z" stroke="#2A2D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+							<path d="M13.5075 8.0625C13.2675 8.3025 13.1275 8.6475 13.1625 9.015C13.215 9.6375 13.785 10.1025 14.4075 10.1025H15.93V11.25C15.93 13.5 14.43 15 12.18 15H5.25C3 15 1.5 13.5 1.5 11.25V6.75C1.5 4.7025 2.7525 3.27 4.6425 3.045C4.8375 3.015 5.04 3 5.25 3H12.18C12.375 3 12.5625 3.0075 12.7425 3.0375C14.655 3.2475 15.93 4.68 15.93 6.75V7.72H14.3325C14.0125 7.72 13.72 7.845 13.5075 8.0625Z" stroke="#2A2D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+						</svg>
+					</div>
+					<div class="flex flex-1 items-center justify-between">
+						<div class="flex items-center gap-2">
+							<span>Wallet</span>
+							<span class="text-xs font-semibold text-[#3CBD2C]">{formattedBalance}</span>
+						</div>
+						<button
+							on:click|stopPropagation={toggleWalletVisibility}
+							class="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+							aria-label={showWalletBalance ? 'Hide wallet balance' : 'Show wallet balance'}
+						>
+							{#if showWalletBalance}
+								<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<path d="M11.6849 9C11.6849 10.485 10.4849 11.685 8.99994 11.685C7.51494 11.685 6.31494 10.485 6.31494 9C6.31494 7.515 7.51494 6.315 8.99994 6.315C10.4849 6.315 11.6849 7.515 11.6849 9Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M9.00006 15.2025C11.6476 15.2025 14.1151 13.6425 15.8326 10.9425C16.5076 9.88504 16.5076 8.10754 15.8326 7.05004C14.1151 4.35004 11.6476 2.79004 9.00006 2.79004C6.35256 2.79004 3.88506 4.35004 2.16756 7.05004C1.49256 8.10754 1.49256 9.88504 2.16756 10.9425C3.88506 13.6425 6.35256 15.2025 9.00006 15.2025Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+								</svg>
+							{:else}
+								<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<path d="M10.9425 7.0575L7.0575 10.9425C6.585 10.47 6.3 9.8325 6.3 9.105C6.3 7.6425 7.4925 6.45 8.955 6.45C9.6825 6.45 10.32 6.735 10.9425 7.0575Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M13.3575 4.3275C12.0375 3.3375 10.5375 2.7975 9 2.7975C6.3525 2.7975 3.885 4.3575 2.1675 7.0575C1.4925 8.115 1.4925 9.8925 2.1675 10.95C2.76 11.8725 3.4425 12.675 4.185 13.32" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M6.3 14.6475C7.1475 15.0375 8.0625 15.2475 9 15.2475C11.6475 15.2475 14.115 13.6875 15.8325 10.9875C16.5075 9.93 16.5075 8.1525 15.8325 7.095C15.585 6.7125 15.315 6.3525 15.0375 6.015" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M11.6325 9.525C11.4375 10.575 10.575 11.4375 9.525 11.6325" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M7.0575 10.9425L1.5 16.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+									<path d="M16.5 1.5L10.9425 7.0575" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+								</svg>
+							{/if}
+						</button>
+					</div>
+				</div>
+
+				<!-- Settings -->
 				<a href="/settings" on:click={onClose} class="flex cursor-pointer items-center gap-2">
-					<div class="flex h-[36px] w-[36px] items-center rounded-full bg-[#E2E4E5] p-2">
+					<div class="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-[#E2E4E5]">
 						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<path d="M2.25 6.83594V11.1634C2.25 12.7534 2.25 12.7534 3.75 13.7659L7.875 16.1509C8.4975 16.5109 9.51 16.5109 10.125 16.1509L14.25 13.7659C15.75 12.7534 15.75 12.7534 15.75 11.1709V6.83594C15.75 5.25344 15.75 5.25344 14.25 4.24094L10.125 1.85594C9.51 1.49594 8.4975 1.49594 7.875 1.85594L3.75 4.24094C2.25 5.25344 2.25 5.25344 2.25 6.83594Z" stroke="#2A2D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
 							<path d="M9 11.25C10.2426 11.25 11.25 10.2426 11.25 9C11.25 7.75736 10.2426 6.75 9 6.75C7.75736 6.75 6.75 7.75736 6.75 9C6.75 10.2426 7.75736 11.25 9 11.25Z" stroke="#2A2D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>

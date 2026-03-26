@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+	import { getEventById, getMyCollections } from '$lib/services/event.services';
+	import { onMount } from 'svelte';
 	import Nav from '../../../../components/Nav.svelte';
 	import Admin from './components/Admin.svelte';
 	import Agenda from './components/Agenda.svelte';
@@ -6,8 +9,31 @@
 	import Media from './components/Media.svelte';
 	import Rooms from './components/Rooms.svelte';
 	import Sessions from './components/Sessions.svelte';
-	import Surveys from './components/Surveys.svelte';
-	import { goto } from '$app/navigation';
+
+	$: eventId = $page.params.id;
+
+	let eventData: any = null;
+	let loading = true;
+
+	onMount(async () => {
+		try {
+			const [event, collections] = await Promise.all([
+				getEventById(eventId!),
+				getMyCollections().catch(() => []),
+			]);
+			const collectionName = collections.find((c: any) => c._id === event.collectionId || c.id === event.collectionId)?.name ?? 'My Collection';
+			eventData = {
+				title: event.title ?? 'Untitled Event',
+				collection: collectionName,
+				collectionId: event.collectionId ?? '',
+			};
+		} catch (e: any) {
+			console.error('Failed to load event:', e);
+			eventData = { title: 'Event', collection: 'Collection', collectionId: '' };
+		} finally {
+			loading = false;
+		}
+	});
 
 	const tabs = [
 		{
@@ -76,17 +102,6 @@
 </svg>
 `
 		},
-		{
-			id: 'surveys',
-			label: 'Surveys & Feedback',
-			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M18.3327 8.33073V12.4974C18.3327 16.6641 16.666 18.3307 12.4993 18.3307H7.49935C3.33268 18.3307 1.66602 16.6641 1.66602 12.4974V7.4974C1.66602 3.33073 3.33268 1.66406 7.49935 1.66406H11.666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M18.3327 8.33073H14.9993C12.4993 8.33073 11.666 7.4974 11.666 4.9974V1.66406L18.3327 8.33073Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M5.83398 10.8359H10.834" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M5.83398 14.1641H9.16732" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
-`
-		}
 	];
 
 	let activeTab = 'rooms';
@@ -95,8 +110,8 @@
 <div class="max-w-6xl">
 	<div class="mb-6">
 		<div class="mb-2 flex items-center justify-between">
-			<div class="flex items-center gap-2">
-				<span class="text-sm text-[#83808D]">John Collection</span>
+			<a href="/collection/{eventData?.collectionId ?? ''}/events" class="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-[#F0EFF1]">
+				<span class="text-sm text-[#83808D]">{eventData?.collection ?? 'Collection'}</span>
 				<svg
 					width="11"
 					height="11"
@@ -122,9 +137,9 @@
 						stroke-width="0.37461"
 					/>
 				</svg>
-			</div>
-			<button
-				on:click={()=> goto('/event-page/1')}
+			</a>
+			<a
+				href="/event-page/{eventId}"
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
 			>
 				Event Page
@@ -153,25 +168,23 @@
 						stroke-width="0.37461"
 					/>
 				</svg>
-			</button>
+			</a>
 		</div>
-		<h1 class="mb-10 text-3xl font-bold md:text-4xl">Megaexe Party</h1>
+		<h1 class="mb-10 text-3xl font-bold md:text-4xl">{eventData?.title ?? 'Loading...'}</h1>
 
 		<Nav {tabs} bind:activeTab />
 	</div>
 	{#if activeTab === 'rooms'}
-		<Rooms />
+		<Rooms eventTitle={eventData?.title ?? ''} />
 	{:else if activeTab === 'sessions'}
-		<Sessions />
+		<Sessions eventTitle={eventData?.title ?? ''} />
 	{:else if activeTab === 'agenda'}
-		<Agenda />
+		<Agenda eventTitle={eventData?.title ?? ''} />
 	{:else if activeTab === 'community'}
-		<Community />
+		<Community eventTitle={eventData?.title ?? ''} />
 	{:else if activeTab === 'media'}
-		<Media />
+		<Media eventTitle={eventData?.title ?? ''} />
 	{:else if activeTab === 'admin'}
-		<Admin />
-	{:else if activeTab === 'surveys'}
-		<Surveys />
+		<Admin eventTitle={eventData?.title ?? ''} />
 	{/if}
 </div>

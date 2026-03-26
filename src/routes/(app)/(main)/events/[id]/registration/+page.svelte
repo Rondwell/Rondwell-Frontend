@@ -1,59 +1,40 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { getEventById, getMyCollections } from '$lib/services/event.services';
+	import { onMount } from 'svelte';
 	import Nav from '../../../../components/Nav.svelte';
 	import EventForm from './components/EventForm.svelte';
 	import SeatCapacity from './components/SeatCapacity.svelte';
 	import Tickets from './components/Tickets.svelte';
-	import { goto } from '$app/navigation';
 
-	let eventData = {
-		title: 'Megaexe Party',
-		collection: 'John Collection',
-		status: 'Ticket',
-		tickets: [
-			{
-				id: 1,
-				type: 'Standard',
-				price: 'Free',
-				requireApproval: false,
-				available: 2,
-				registered: 2,
-				status: 'Available',
-				availableUntil: 'Oct 25',
-				capacity: '250'
-			},
-			{
-				id: 2,
-				type: 'Standard',
-				price: 'Free',
-				requireApproval: false,
-				available: 0,
-				registered: 2,
-				status: 'Available',
-				availableUntil: '',
-				capacity: ''
-			}
-		],
-		registrationEmails: [
-			{
-				id: 1,
-				type: 'Pending Approval / Waitlist',
-				status: 'Pending',
-				icon: 'gray'
-			},
-			{
-				id: 2,
-				type: 'Confirmation Email',
-				status: 'Active',
-				icon: 'check'
-			},
-			{
-				id: 3,
-				type: 'Decline Email',
-				status: 'Inactive',
-				icon: 'cancel'
-			}
-		]
-	};
+	$: eventId = $page.params.id as string;
+
+	let eventData: any = null;
+	let collectionName = '';
+	let collectionId = '';
+	let loading = true;
+	let error = '';
+
+	onMount(async () => {
+		try {
+			const [event, collections] = await Promise.all([
+				getEventById(eventId),
+				getMyCollections().catch(() => [])
+			]);
+			collectionName =
+				collections.find(
+					(c: any) => c._id === event.collectionId || c.id === event.collectionId
+				)?.name ?? 'My Collection';
+			collectionId = event.collectionId ?? '';
+			eventData = event;
+		} catch (e: any) {
+			error = e.message ?? 'Failed to load event';
+			eventData = { title: 'Untitled Event', collectionId: '' };
+		} finally {
+			loading = false;
+		}
+	});
 
 	let activeTab = 'ticket';
 
@@ -99,79 +80,129 @@
 </script>
 
 <div class="max-w-6xl">
-	<!-- Event Header -->
-	<div class="mb-6">
-		<div class="mb-2 flex items-center justify-between">
-			<div class="flex items-center gap-2">
-				<span class="text-sm text-[#83808D]">John Collection</span>
-				<svg
-					width="11"
-					height="11"
-					viewBox="0 0 11 11"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z"
-						fill="#83808D"
-						stroke="#83808D"
-						stroke-width="0.37461"
-					/>
-					<rect
-						x="5.0584"
-						y="5.85137"
-						width="3.37149"
-						height="1.12383"
-						rx="0.561915"
-						transform="rotate(-180 5.0584 5.85137)"
-						fill="#83808D"
-						stroke="#83808D"
-						stroke-width="0.37461"
-					/>
-				</svg>
+	{#if loading}
+		<div class="max-w-6xl animate-pulse">
+			<!-- Header skeleton -->
+			<div class="mb-6">
+				<div class="mb-2 flex items-center justify-between">
+					<div class="h-4 w-32 rounded bg-gray-200"></div>
+					<div class="h-8 w-24 rounded-md bg-gray-200"></div>
+				</div>
+				<div class="mb-10 h-9 w-3/4 rounded bg-gray-200"></div>
+				<!-- Tabs render immediately (static) -->
+				<Nav {tabs} bind:activeTab />
 			</div>
-			<button
-				on:click={()=> goto('/event-page/1')}
-				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
-			>
-				Event Page
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M1.24306 6.4387C1.40611 5.40243 2.12888 4.62786 3.0931 4.47826L9.69034 3.43935L9.8408 3.42097C10.5948 3.35739 11.3249 3.72187 11.7721 4.3912C12.2195 5.06073 12.3131 5.92902 12.0244 6.68931L11.9618 6.83923L9.01457 13.3413L9.01326 13.3411C8.84871 13.7088 8.61528 14.0066 8.33157 14.2308C7.8792 14.5883 7.31432 14.7405 6.72781 14.6481C5.77143 14.4963 5.05093 13.7247 4.89305 12.6922L4.591 10.7138C4.53659 10.3578 4.3245 10.0403 4.02548 9.86912L4.02494 9.8683L2.3872 8.94152C1.53287 8.45922 1.08026 7.47484 1.24306 6.4387ZM2.76439 5.88928C2.52769 6.07636 2.39626 6.36366 2.35324 6.63719L2.35378 6.638C2.28828 7.04462 2.40721 7.57568 2.91465 7.86476L4.55152 8.78851L4.66279 8.85692C5.17357 9.19045 5.53909 9.73754 5.67294 10.3689L5.69839 10.5051L6.00044 12.4835L6.00098 12.4843C6.09306 13.0997 6.52266 13.3845 6.9 13.4426C7.27991 13.5012 7.75745 13.3662 8.00792 12.8142L10.9559 6.31145C11.1348 5.91836 11.1012 5.47237 10.8636 5.11651C10.6258 4.7606 10.2457 4.58735 9.84651 4.65089L9.84575 4.6515L3.24253 5.68148C3.04601 5.71271 2.88934 5.79056 2.76439 5.88928Z"
-						fill="#5D646F"
-						stroke="#5D646F"
-						stroke-width="0.37461"
-					/>
-					<rect
-						x="7.25931"
-						y="8.68484"
-						width="3.5114"
-						height="1.15881"
-						rx="0.579404"
-						transform="rotate(144 7.25931 8.68484)"
-						fill="#5D646F"
-						stroke="#5D646F"
-						stroke-width="0.37461"
-					/>
-				</svg>
-			</button>
+			<!-- Tickets skeleton -->
+			<div class="mb-6 flex w-full flex-wrap gap-3">
+				<div class="h-[60px] w-full rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
+				<div class="h-[60px] w-full rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
+				<div class="h-[60px] w-full rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
+			</div>
+			<div class="mb-4 flex items-center justify-between">
+				<div class="h-5 w-20 rounded bg-gray-200"></div>
+				<div class="flex gap-2">
+					<div class="h-9 w-32 rounded-md bg-gray-200"></div>
+					<div class="h-9 w-9 rounded bg-gray-200"></div>
+				</div>
+			</div>
+			<div class="flex flex-wrap gap-4">
+				{#each [1, 2] as _}
+					<div class="w-full rounded-lg bg-[#FDFDFD] p-4 md:max-w-[400px]">
+						<div class="mb-2 h-4 w-32 rounded bg-gray-200"></div>
+						<div class="mb-3 h-7 w-16 rounded bg-gray-200"></div>
+						<div class="mb-3 flex items-center justify-between">
+							<div class="h-4 w-28 rounded bg-gray-200"></div>
+							<div class="h-6 w-10 rounded-full bg-gray-200"></div>
+						</div>
+						<div class="mt-3 flex items-center justify-between border-t pt-3">
+							<div class="h-3 w-16 rounded bg-gray-200"></div>
+							<div class="h-3 w-20 rounded bg-gray-200"></div>
+						</div>
+					</div>
+				{/each}
+			</div>
 		</div>
-		<h1 class="mb-10 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
+	{:else}
+		{#if error}
+			<div class="mb-4 flex items-center justify-between rounded-lg bg-red-50 px-4 py-3">
+				<p class="text-sm text-red-600">{error}</p>
+				<button on:click={() => (error = '')} class="text-red-400 hover:text-red-600">✕</button>
+			</div>
+		{/if}
+		<!-- Event Header -->
+		<div class="mb-6">
+			<div class="mb-2 flex items-center justify-between">
+				<a href="/collection/{collectionId}/events" class="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-[#F0EFF1]">
+					<span class="text-sm text-[#83808D]">{collectionName}</span>
+					<svg
+						width="11"
+						height="11"
+						viewBox="0 0 11 11"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+					>
+						<path
+							d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z"
+							fill="#83808D"
+							stroke="#83808D"
+							stroke-width="0.37461"
+						/>
+						<rect
+							x="5.0584"
+							y="5.85137"
+							width="3.37149"
+							height="1.12383"
+							rx="0.561915"
+							transform="rotate(-180 5.0584 5.85137)"
+							fill="#83808D"
+							stroke="#83808D"
+							stroke-width="0.37461"
+						/>
+					</svg>
+				</a>
+				<button
+					on:click={() => goto(`/event-page/${eventId}`)}
+					class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
+				>
+					Event Page
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+					>
+						<path
+							d="M1.24306 6.4387C1.40611 5.40243 2.12888 4.62786 3.0931 4.47826L9.69034 3.43935L9.8408 3.42097C10.5948 3.35739 11.3249 3.72187 11.7721 4.3912C12.2195 5.06073 12.3131 5.92902 12.0244 6.68931L11.9618 6.83923L9.01457 13.3413L9.01326 13.3411C8.84871 13.7088 8.61528 14.0066 8.33157 14.2308C7.8792 14.5883 7.31432 14.7405 6.72781 14.6481C5.77143 14.4963 5.05093 13.7247 4.89305 12.6922L4.591 10.7138C4.53659 10.3578 4.3245 10.0403 4.02548 9.86912L4.02494 9.8683L2.3872 8.94152C1.53287 8.45922 1.08026 7.47484 1.24306 6.4387ZM2.76439 5.88928C2.52769 6.07636 2.39626 6.36366 2.35324 6.63719L2.35378 6.638C2.28828 7.04462 2.40721 7.57568 2.91465 7.86476L4.55152 8.78851L4.66279 8.85692C5.17357 9.19045 5.53909 9.73754 5.67294 10.3689L5.69839 10.5051L6.00044 12.4835L6.00098 12.4843C6.09306 13.0997 6.52266 13.3845 6.9 13.4426C7.27991 13.5012 7.75745 13.3662 8.00792 12.8142L10.9559 6.31145C11.1348 5.91836 11.1012 5.47237 10.8636 5.11651C10.6258 4.7606 10.2457 4.58735 9.84651 4.65089L9.84575 4.6515L3.24253 5.68148C3.04601 5.71271 2.88934 5.79056 2.76439 5.88928Z"
+							fill="#5D646F"
+							stroke="#5D646F"
+							stroke-width="0.37461"
+						/>
+						<rect
+							x="7.25931"
+							y="8.68484"
+							width="3.5114"
+							height="1.15881"
+							rx="0.579404"
+							transform="rotate(144 7.25931 8.68484)"
+							fill="#5D646F"
+							stroke="#5D646F"
+							stroke-width="0.37461"
+						/>
+					</svg>
+				</button>
+			</div>
+			<h1 class="mb-10 text-3xl font-bold md:text-4xl">{eventData?.title ?? 'Untitled Event'}</h1>
 
-		<!-- Navigation Tabs -->
-		<Nav {tabs} bind:activeTab />
-	</div>
-	{#if activeTab === 'ticket'}
-		<Tickets />
-	{:else if activeTab === 'event_forms'}
-		<EventForm/>
-	{:else if activeTab === 'seat_capacity'}
-		<SeatCapacity />
+			<!-- Navigation Tabs -->
+			<Nav {tabs} bind:activeTab />
+		</div>
+		{#if activeTab === 'ticket'}
+			<Tickets {eventId} {eventData} />
+		{:else if activeTab === 'event_forms'}
+			<EventForm {eventId} {eventData} />
+		{:else if activeTab === 'seat_capacity'}
+			<SeatCapacity {eventData} />
+		{/if}
 	{/if}
 </div>

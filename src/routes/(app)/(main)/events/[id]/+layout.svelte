@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { showSubMenu, subMenuItems, activeSubItem } from '$lib/stores/uiStore.js';
+	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 	import { get } from 'svelte/store';
 
 	const eventsIcon = {
@@ -81,7 +81,7 @@
 			},
 			{ label: 'Planning', icon: eventsIcon.planningIcon, nav: `/events/${eventId}/planning` },
 			{ label: 'Insights', icon: eventsIcon.insightsIcon, nav: `/events/${eventId}/insights` },
-			{ label: 'More', icon: eventsIcon.moreIcon, nav: `/events/${eventId}/more` }
+			{ label: 'Settings', icon: eventsIcon.moreIcon, nav: `/events/${eventId}/more` }
 		]);
 	}
 

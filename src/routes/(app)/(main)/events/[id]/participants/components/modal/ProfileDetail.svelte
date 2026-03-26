@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { updateSpeakerDetails } from '$lib/services/event.services';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -6,277 +7,163 @@
 
 	export let open = false;
 	export let participant = 'Speaker';
+	export let speakerData: any = null;
+	export let eventId = '';
+	export let eventTitle = '';
 	participant = participant.charAt(0).toUpperCase() + participant.slice(1);
 
-	let speakerData = {
-		id: null,
-		name: 'Edima Atahnasius',
-		avatar: '/face-2.svg',
-		aboutMe:
-			'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint...',
-		email: 'arthur@gmail.com',
-		phone: '+1 (012) 345-6789',
-		bio: 'UX Designer, 8+ years of experience in fintech...',
-		sessions: [
-			{ id: 1, title: 'Opening Prayer', assigned: true },
-			{ id: 2, title: 'Opening Remark', assigned: true },
-			{ id: 3, title: 'Taking of the Toast', assigned: true }
-		],
-		isPublic: true
-	};
-
-	let editingAboutMe = false;
-	let editingBio = false;
+	let editDisplayName = '';
+	let editBio = '';
+	let editIsPublic = true;
 	let isSaving = false;
+	let saveError = '';
+
+	$: if (speakerData && open) {
+		editDisplayName = speakerData.displayName || '';
+		editBio = speakerData.bio || '';
+		editIsPublic = speakerData.isPublic ?? true;
+	}
 
 	function closeModal() {
 		open = false;
 		dispatch('close');
 	}
 
-	function toggleEditAboutMe() {
-		editingAboutMe = !editingAboutMe;
-	}
-
-	function toggleEditBio() {
-		editingBio = !editingBio;
-	}
-
-	function updateAboutMe(e: any) {
-		speakerData.aboutMe = e.target.value;
-	}
-
-	function updateBio(e: any) {
-		speakerData.bio = e.target.value;
-	}
-
-	function updateEmail(e: any) {
-		speakerData.email = e.target.value;
-	}
-
-	function updatePhone(e: any) {
-		speakerData.phone = e.target.value;
-	}
-
-	function togglePublicVisibility() {
-		speakerData.isPublic = !speakerData.isPublic;
-	}
-
-	function saveChanges() {
-		if (isSaving) return;
+	async function saveChanges() {
+		if (isSaving || !speakerData?.id || !eventId) return;
 		isSaving = true;
-		setTimeout(() => {
+		saveError = '';
+		try {
+			await updateSpeakerDetails(eventId, speakerData.id, {
+				displayName: editDisplayName,
+				bio: editBio,
+				isPublic: editIsPublic,
+			});
+			dispatch('save');
+			closeModal();
+		} catch (e: any) {
+			saveError = e.message || 'Failed to save changes';
+		} finally {
 			isSaving = false;
-			dispatch('save', speakerData);
-		}, 800);
+		}
 	}
 
-	function sendMessage() {
-		dispatch('sendMessage', speakerData.id);
+	function getDisplayName(): string {
+		return speakerData?.displayName || speakerData?.applicationDetails?.contactEmail || 'Unknown Speaker';
 	}
 
-	function manageSession(sessionId: any) {
-		dispatch('manageSession', sessionId);
+	function getEmail(): string {
+		return speakerData?.applicationDetails?.contactEmail || 'Not provided';
+	}
+
+	function getSessions(): any[] {
+		return (speakerData?.assignedSessions || []).map((id: string, i: number) => ({
+			id, title: `Session ${i + 1}`
+		}));
 	}
 </script>
 
-{#if open}
-	<div
-		on:click={() => (open = false)}
-		class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-3 py-10"
-	>
-		<!-- Modal container -->
+{#if open && speakerData}
+	<div on:click={() => (open = false)} class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 px-3 py-10">
 		<div class="h-155 w-full max-w-xl rounded-xl overflow-hidden bg-[#F4F5F6] shadow-xl" on:click|stopPropagation>
 			<!-- Header -->
 			<div class="flex items-start md:items-center justify-between border-b border-gray-200 px-6 py-4">
 				<div class="flex flex-col gap-3 md:flex-row md:items-center">
 					<div class="flex items-center gap-3">
-						<button aria-label="Close" on:click={() => (open = false)}>
-							<svg
-								width="16"
-								height="15"
-								viewBox="0 0 16 15"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<rect
-									y="12.8203"
-									width="9.9258"
-									height="1.96151"
-									rx="0.980754"
-									transform="rotate(-45 0 12.8203)"
-									fill="#68696B"
-								/>
-								<rect
-									x="1.38867"
-									width="10.0318"
-									height="1.96151"
-									rx="0.980754"
-									transform="rotate(45 1.38867 0)"
-									fill="#68696B"
-								/>
-								<rect
-									x="7.10547"
-									y="12.8203"
-									width="9.9258"
-									height="1.96151"
-									rx="0.980754"
-									transform="rotate(-45 7.10547 12.8203)"
-									fill="#68696B"
-								/>
-								<rect
-									x="8.49414"
-									width="10.0318"
-									height="1.96151"
-									rx="0.980754"
-									transform="rotate(45 8.49414 0)"
-									fill="#68696B"
-								/>
+						<button aria-label="Close" on:click={closeModal}>
+							<svg width="16" height="15" viewBox="0 0 16 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<rect y="12.8203" width="9.9258" height="1.96151" rx="0.980754" transform="rotate(-45 0 12.8203)" fill="#68696B"/>
+								<rect x="1.38867" width="10.0318" height="1.96151" rx="0.980754" transform="rotate(45 1.38867 0)" fill="#68696B"/>
+								<rect x="7.10547" y="12.8203" width="9.9258" height="1.96151" rx="0.980754" transform="rotate(-45 7.10547 12.8203)" fill="#68696B"/>
+								<rect x="8.49414" width="10.0318" height="1.96151" rx="0.980754" transform="rotate(45 8.49414 0)" fill="#68696B"/>
 							</svg>
 						</button>
 						<p>{participant} Details</p>
 					</div>
 					<div class="flex items-center gap-3">
-						<button
-							class="flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white"
-						>
-							Send Message
+						<button on:click={saveChanges} disabled={isSaving} class="flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
+							{isSaving ? 'Saving...' : 'Save Changes'}
 						</button>
-						<button
-							class="flex items-center gap-1 rounded-lg bg-[#F0F1F1] px-3 py-1.5 text-sm font-medium text-[#727375]"
-						>
-							Save Changes
+						<button on:click={closeModal} class="flex items-center gap-1 rounded-lg bg-[#F0F1F1] px-3 py-1.5 text-sm font-medium text-[#727375]">
+							Close
 						</button>
 					</div>
-				</div>
-
-				<div class="flex gap-2">
-					<button
-						aria-label="revert"
-						class="bg-[#F5F5F5] p-1 text-[#68696B] transition-transform duration-300"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-4 w-4 rotate-90"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-							stroke-width="2"
-						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-						</svg>
-					</button>
-					<button
-						aria-label="forward"
-						class="bg-[#F5F5F5] p-1 text-[#68696B] transition-transform duration-300"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-4 w-4 -rotate-90"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-							stroke-width="2"
-						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-						</svg>
-					</button>
 				</div>
 			</div>
 
 			<!-- Content -->
 			<div class="custom-scrollbar h-134 space-y-6 overflow-hidden overflow-y-auto px-4 md:px-6 py-6">
+				{#if saveError}
+					<p class="text-sm text-red-500">{saveError}</p>
+				{/if}
+
 				<!-- Speaker Avatar and Name -->
 				<div class="flex flex-col items-start space-x-4 border-b pb-2">
-					<img
-						src={speakerData.avatar}
-						alt={speakerData.name}
-						class="h-18 w-18 rounded-full object-cover"
-					/>
+					{#if speakerData.profilePictureUrl}
+						<img src={speakerData.profilePictureUrl} alt={getDisplayName()} class="h-18 w-18 rounded-full object-cover" />
+					{:else}
+						<div class="flex h-18 w-18 items-center justify-center rounded-full bg-purple-100 text-2xl font-medium text-purple-600">
+							{getDisplayName().charAt(0).toUpperCase()}
+						</div>
+					{/if}
 					<div>
-						<h1 class="mt-3 text-xl font-bold">{speakerData.name}</h1>
+						<h1 class="mt-3 text-xl font-bold">{getDisplayName()}</h1>
 					</div>
 				</div>
 
-				<!-- About Me Section -->
+				<!-- Editable Display Name -->
 				<div class="rounded-lg bg-gray-50 p-4">
 					<h3 class="mb-6 text-2xl font-medium">{participant} profile details</h3>
 
-					<div class="mb-2 flex items-center justify-between">
-						<p>About me</p>
-
-						<!-- Edit Button -->
-						<button
-							on:click={toggleEditAboutMe}
-							class="text-gray-500 transition-colors hover:text-gray-700"
-						>
-							<img src="/edit.svg" alt="" />
-						</button>
+					<div class="mb-4">
+						<label class="mb-1 block font-medium" for="edit_display_name">Display Name</label>
+						<input id="edit_display_name" type="text" bind:value={editDisplayName} placeholder="Speaker's display name for this event" class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none" />
 					</div>
 
-					<p class="font-medium whitespace-pre-wrap text-[#919293]">
-						{speakerData.aboutMe}
-					</p>
-
-					<!-- Contact Details -->
+					<!-- Contact Details (Read-only) -->
 					<div class="mt-6">
-						<!-- Email -->
 						<div class="mb-4 flex items-start gap-2">
 							<Icon icon="mdi:email-outline" width="22" class="text-[#919293]" />
-
-							<div class="">
+							<div>
 								<p class="font-medium">Email Address</p>
-								<p class="text-[#919293]">{speakerData.email}</p>
+								<p class="text-[#919293]">{getEmail()}</p>
 							</div>
 						</div>
 
-						<!-- Phone -->
-						<div class="mb-4 flex items-start gap-2">
-							<Icon icon="mdi:phone-outline" width="22" class="text-[#919293]" />
-
-							<div class="">
-								<p class="font-medium">Phone Number</p>
-								<p class="text-[#919293]">{speakerData.phone}</p>
+						{#if speakerData.socialLinks}
+							<div class="mt-3 flex items-center gap-4">
+								{#if speakerData.socialLinks.twitter}
+									<a href="https://x.com/{speakerData.socialLinks.twitter}" target="_blank" rel="noopener noreferrer">
+										<Icon icon="simple-icons:x" width="24" class="cursor-pointer text-black" />
+									</a>
+								{/if}
+								{#if speakerData.socialLinks.linkedin}
+									<a href="https://linkedin.com/in/{speakerData.socialLinks.linkedin}" target="_blank" rel="noopener noreferrer">
+										<Icon icon="simple-icons:linkedin" width="24" class="cursor-pointer text-black" />
+									</a>
+								{/if}
+								{#if speakerData.socialLinks.website}
+									<a href={speakerData.socialLinks.website.startsWith('http') ? speakerData.socialLinks.website : `https://${speakerData.socialLinks.website}`} target="_blank" rel="noopener noreferrer">
+										<Icon icon="mdi:web" width="24" class="cursor-pointer text-black" />
+									</a>
+								{/if}
 							</div>
-						</div>
-
-						<!-- Social Icons -->
-						<div class="mt-3 flex items-center gap-4">
-							<Icon icon="simple-icons:x" width="24" class="cursor-pointer text-black" />
-							<Icon icon="simple-icons:facebook" width="24" class="cursor-pointer text-black" />
-							<Icon icon="simple-icons:instagram" width="24" class="cursor-pointer text-black" />
-							<Icon icon="simple-icons:youtube" width="26" class="cursor-pointer text-black" />
-						</div>
+						{/if}
 					</div>
 				</div>
 
-				<!-- Speaker Bio Section -->
+				<!-- Speaker Bio Section (Editable) -->
 				<div class="space-y-6 rounded-lg bg-gray-50 p-4">
-					<!-- Speaker Bio -->
 					<div>
 						<div class="flex items-center gap-1">
-							<h3 class="font-medium">{participant} Bio*</h3>
-							<span class="text-sm text-gray-400">(Optional)</span>
+							<h3 class="font-medium">{participant} Bio</h3>
+							<span class="text-sm text-gray-400">(Editable for this event)</span>
 						</div>
-
 						<div class="relative">
-							<textarea
-								bind:value={speakerData.bio}
-								on:input={updateBio}
-								rows="3"
-								maxlength="200"
-								placeholder="UX Designer, 8+ years of experience in fintech…"
-								class="mt-2 w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-gray-800
-				   focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
-							></textarea>
+							<textarea bind:value={editBio} rows="3" maxlength="2000" placeholder="Speaker bio for this event..." class="mt-2 w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
 							<div class="absolute right-2 bottom-3 text-xs text-gray-500">
-								{speakerData.bio.length}/200
+								{editBio.length}/2000
 							</div>
-						</div>
-
-						<div class="mt-1 flex items-center gap-1 text-xs font-light text-gray-700">
-							<Icon icon="mdi:information-outline" width="14" class="text-gray-400" />
-							<span>You can describe your company briefly.</span>
 						</div>
 					</div>
 
@@ -286,26 +173,18 @@
 							<h3 class="font-medium">Assigned Sessions</h3>
 							<Icon icon="mdi:information-outline" width="14" class="text-gray-400" />
 						</div>
-
-						<div class="overflow-hidden rounded-lg border border-gray-200">
-							{#each speakerData.sessions as session, i}
-								<div
-									class="flex items-center justify-between border p-4 text-sm"
-									class:bg-[#EFEFEF]={i === 0}
-									class:bg-white={i !== 0}
-									class:border-t={i !== speakerData.sessions.length - 1}
-								>
-									<span>{session.title}</span>
-
-									<button
-										class="text-[#909EA3] underline"
-										on:click={() => manageSession(session.id)}
-									>
-										Manage Sessions
-									</button>
-								</div>
-							{/each}
-						</div>
+						{#if getSessions().length > 0}
+							<div class="overflow-hidden rounded-lg border border-gray-200">
+								{#each getSessions() as session, i}
+									<div class="flex items-center justify-between border p-4 text-sm" class:bg-[#EFEFEF]={i === 0} class:bg-white={i !== 0}>
+										<span>{session.title}</span>
+										<button class="text-[#909EA3] underline">Manage Sessions</button>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<p class="text-sm text-gray-400">No sessions assigned yet.</p>
+						{/if}
 					</div>
 
 					<!-- Public Visibility -->
@@ -317,20 +196,9 @@
 							</div>
 							<p class="mb-2 text-xs font-light text-gray-700">Show on Public Event Page</p>
 						</div>
-
-						<!-- Toggle Switch -->
 						<label class="relative inline-flex cursor-pointer items-center">
-							<button
-								aria-label="toggle"
-								class="relative h-6 w-10 rounded-full transition-colors duration-300"
-								class:bg-gray-300={!speakerData.isPublic}
-								class:bg-gray-800={speakerData.isPublic}
-								on:click={togglePublicVisibility}
-							>
-								<span
-									class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300"
-									class:translate-x-4={speakerData.isPublic}
-								></span>
+							<button aria-label="toggle" class="relative h-6 w-10 rounded-full transition-colors duration-300" class:bg-gray-300={!editIsPublic} class:bg-gray-800={editIsPublic} on:click={() => (editIsPublic = !editIsPublic)}>
+								<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" class:translate-x-4={editIsPublic}></span>
 							</button>
 						</label>
 					</div>
@@ -341,15 +209,7 @@
 {/if}
 
 <style>
-	/* Scrollbar styling for webkit */
-	::-webkit-scrollbar {
-		width: 6px;
-	}
-	::-webkit-scrollbar-thumb {
-		background: rgba(107, 114, 128, 0.5);
-		border-radius: 3px;
-	}
-	::-webkit-scrollbar-thumb:hover {
-		background: rgba(107, 114, 128, 0.8);
-	}
+	::-webkit-scrollbar { width: 6px; }
+	::-webkit-scrollbar-thumb { background: rgba(107, 114, 128, 0.5); border-radius: 3px; }
+	::-webkit-scrollbar-thumb:hover { background: rgba(107, 114, 128, 0.8); }
 </style>

@@ -16,6 +16,9 @@ export const statusStyles = {
 	Fulfilled: { bg: '#FFDDFA', text: '#DB3EC6' },
 
 	ManualAdd: { bg: '#EBECED', text: '#000000' },
+	'Manual Add': { bg: '#EBECED', text: '#000000' },
+	'Order Pending': { bg: '#FFFBD4', text: '#FFE500' },
+	'Order Confirmed': { bg: '#C7FFFF', text: '#008080' },
 
 	Default: { bg: '#EBECED', text: '#000000' }
 } as const;

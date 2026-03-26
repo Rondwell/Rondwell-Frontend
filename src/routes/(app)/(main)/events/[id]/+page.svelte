@@ -28,6 +28,7 @@ eventData = {
 id: event._id ?? event.id,
 title: event.title ?? 'Untitled Event',
 collection: collectionName,
+collectionId: event.collectionId ?? '',
 date: formatEventDate(event.startDateTime),
 time: formatEventTime(event.startDateTime, event.endDateTime, event.timeZone),
 location: getLocationLabel(event),
@@ -53,6 +54,31 @@ socialLinks: event.socialLinks ?? {},
 };
 } catch (e: any) {
 error = e.message ?? 'Failed to load event';
+eventData = {
+	id: eventId,
+	title: 'Event',
+	collection: 'Collection',
+	collectionId: '',
+	date: 'Date TBD',
+	time: '',
+	location: 'Location TBD',
+	description: '',
+	organizer: '',
+	approvalRequired: false,
+	displayPictureUrl: null,
+	coverPictureUrl: null,
+	eventStatus: 'DRAFT',
+	visibility: { collection: 'Collection', status: 'Public' },
+	invites: { accepted: 0, opened: 0, declined: 0 },
+	attendees: [],
+	admins: [],
+	customLinkSlug: '',
+	startDateTime: '',
+	endDateTime: '',
+	meetingLink: null,
+	venueAddress: null,
+	socialLinks: {},
+};
 } finally {
 loading = false;
 }
@@ -122,7 +148,7 @@ input.value = '';
 }
 }
 
-$: eventImageSrc = eventData?.displayPictureUrl ?? eventData?.coverPictureUrl ?? '/event_pic1.png';
+$: eventImageSrc = eventData?.coverPictureUrl || eventData?.displayPictureUrl || '/event_pic1.png';
 $: eventLink = eventData?.customLinkSlug
 ? `rondwell.com/${eventData.customLinkSlug}`
 : `rondwell.com/events/${eventId}`;
@@ -136,135 +162,45 @@ $: eventLink = eventData?.customLinkSlug
 	on:change={onPhotoSelected}
 />
 
-{#if loading}
-	<div class="max-w-6xl animate-pulse">
-		<!-- Header skeleton -->
-		<div class="mb-6">
-			<div class="mb-2 flex items-center justify-between">
-				<div class="h-4 w-32 rounded bg-gray-200"></div>
-				<div class="h-8 w-28 rounded-md bg-gray-200"></div>
-			</div>
-			<div class="mb-4 h-9 w-3/4 rounded bg-gray-200"></div>
-			<!-- Action buttons skeleton -->
-			<div class="mb-4 flex flex-wrap gap-3">
-				<div class="h-[60px] w-full rounded-[12.75px] bg-gray-200 sm:w-[200px]"></div>
-				<div class="h-[60px] w-full rounded-[12.75px] bg-gray-200 sm:w-[200px]"></div>
-				<div class="h-[60px] w-full rounded-[12.75px] bg-gray-200 sm:w-[200px]"></div>
-			</div>
-		</div>
-
-		<!-- Event details card skeleton -->
-		<div class="mb-12 rounded-lg bg-[#FDFDFD] p-4 shadow-md">
-			<div class="flex flex-col gap-6 lg:flex-row">
-				<!-- Left: image skeleton -->
-				<div class="w-full lg:w-1/2">
-					<div class="mb-4 h-70 w-full rounded-lg bg-gray-200"></div>
-					<div class="flex items-center justify-between">
-						<div class="h-4 w-20 rounded bg-gray-200"></div>
-						<div class="flex gap-2">
-							<div class="h-5 w-5 rounded bg-gray-200"></div>
-							<div class="h-5 w-5 rounded bg-gray-200"></div>
-							<div class="h-5 w-5 rounded bg-gray-200"></div>
-							<div class="h-5 w-5 rounded bg-gray-200"></div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Right: when & where skeleton -->
-				<div class="flex w-full flex-col gap-4 rounded-md md:p-4 lg:w-1/2">
-					<div class="h-5 w-32 rounded bg-gray-200"></div>
-					<!-- Date row -->
-					<div class="flex items-center gap-3">
-						<div class="h-[49px] w-[49px] rounded-md bg-gray-200"></div>
-						<div class="flex flex-col gap-2">
-							<div class="h-4 w-40 rounded bg-gray-200"></div>
-							<div class="h-3 w-28 rounded bg-gray-200"></div>
-						</div>
-					</div>
-					<!-- Location row -->
-					<div class="flex items-center gap-3">
-						<div class="h-[49px] w-[49px] rounded-md bg-gray-200"></div>
-						<div class="flex flex-col gap-2">
-							<div class="h-4 w-36 rounded bg-gray-200"></div>
-							<div class="h-3 w-52 rounded bg-gray-200"></div>
-						</div>
-					</div>
-					<!-- Buttons -->
-					<div class="mt-4 flex gap-2">
-						<div class="h-9 w-28 rounded-md bg-gray-200"></div>
-						<div class="h-9 w-28 rounded-md bg-gray-200"></div>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Invites section skeleton -->
-		<div class="mb-12">
-			<div class="mb-4 flex items-center justify-between">
-				<div class="h-5 w-20 rounded bg-gray-200"></div>
-				<div class="h-8 w-32 rounded-md bg-gray-200"></div>
-			</div>
-			<div class="flex flex-col gap-4 lg:flex-row">
-				<div class="h-32 w-full rounded-md bg-gray-200 lg:max-w-[284px]"></div>
-				<div class="h-32 w-full rounded-md bg-gray-200"></div>
-			</div>
-		</div>
-
-		<!-- Attendees section skeleton -->
-		<div class="mb-12 border-t pt-12">
-			<div class="mb-3 h-5 w-24 rounded bg-gray-200"></div>
-			<div class="mb-6 h-8 w-full max-w-2xl rounded-full bg-gray-200"></div>
-			<div class="flex flex-col gap-3 rounded-md bg-[#FDFDFD] p-3">
-				{#each [1, 2, 3] as _}
-					<div class="flex items-center justify-between border-b py-3 last:border-b-0">
-						<div class="flex items-center gap-2">
-							<div class="h-6 w-6 rounded-full bg-gray-200"></div>
-							<div class="h-4 w-32 rounded bg-gray-200"></div>
-						</div>
-						<div class="h-6 w-20 rounded-full bg-gray-200"></div>
-					</div>
-				{/each}
-			</div>
-		</div>
-	</div>
-{:else if error}
-	<div class="flex h-64 items-center justify-center text-red-500">{error}</div>
-{:else if eventData}
 <div class="max-w-6xl">
 	<!-- Event Header -->
 	<div class="mb-6">
 		<div class="mb-2 flex items-center justify-between">
-			<div class="flex items-center gap-2">
-				<span class="text-sm text-[#83808D]">{eventData.collection}</span>
-				<svg
-					width="11"
-					height="11"
-					viewBox="0 0 11 11"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z"
-						fill="#83808D"
-						stroke="#83808D"
-						stroke-width="0.37461"
-					/>
-					<rect
-						x="5.0584"
-						y="5.85137"
-						width="3.37149"
-						height="1.12383"
-						rx="0.561915"
-						transform="rotate(-180 5.0584 5.85137)"
-						fill="#83808D"
-						stroke="#83808D"
-						stroke-width="0.37461"
-					/>
-				</svg>
-			</div>
+			{#if loading}
+				<div class="h-4 w-32 animate-pulse rounded bg-gray-200"></div>
+			{:else}
+				<a href="/collection/{eventData.collectionId}/events" class="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-[#F0EFF1]">
+					<span class="text-sm text-[#83808D]">{eventData.collection}</span>
+					<svg
+						width="11"
+						height="11"
+						viewBox="0 0 11 11"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+					>
+						<path
+							d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z"
+							fill="#83808D"
+							stroke="#83808D"
+							stroke-width="0.37461"
+						/>
+						<rect
+							x="5.0584"
+							y="5.85137"
+							width="3.37149"
+							height="1.12383"
+							rx="0.561915"
+							transform="rotate(-180 5.0584 5.85137)"
+							fill="#83808D"
+							stroke="#83808D"
+							stroke-width="0.37461"
+						/>
+					</svg>
+				</a>
+			{/if}
 			<button
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
-					on:click={()=> goto('/event-page/1')}
+					on:click={()=> goto(`/event-page/${eventId}`)}
 			>
 				Event Page
 				<svg
@@ -294,7 +230,96 @@ $: eventLink = eventData?.customLinkSlug
 				</svg>
 			</button>
 		</div>
-		<h1 class="mb-4 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
+		{#if loading}
+			<div class="mb-4 h-9 w-3/4 animate-pulse rounded bg-gray-200"></div>
+		{:else if eventData}
+			<h1 class="mb-4 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
+		{/if}
+	</div>
+
+	{#if error}
+		<div class="mb-4 flex items-center justify-between rounded-lg bg-red-50 px-4 py-3">
+			<p class="text-sm text-red-600">{error}</p>
+			<button on:click={() => (error = '')} class="text-red-400 hover:text-red-600"><Icon icon="mdi:close" class="text-lg" /></button>
+		</div>
+	{/if}
+
+	{#if loading}
+		<!-- Action button skeletons -->
+		<div class="mb-4 flex flex-wrap gap-3">
+			<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[200px]"></div>
+			<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[200px]"></div>
+			<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[200px]"></div>
+		</div>
+
+		<!-- Event details card skeleton -->
+		<div class="mb-12 animate-pulse rounded-lg bg-[#FDFDFD] p-4 shadow-md">
+			<div class="flex flex-col gap-6 lg:flex-row">
+				<div class="w-full lg:w-1/2">
+					<div class="mb-4 h-70 w-full rounded-lg bg-gray-200"></div>
+					<div class="flex items-center justify-between">
+						<div class="h-4 w-20 rounded bg-gray-200"></div>
+						<div class="flex gap-2">
+							<div class="h-5 w-5 rounded bg-gray-200"></div>
+							<div class="h-5 w-5 rounded bg-gray-200"></div>
+							<div class="h-5 w-5 rounded bg-gray-200"></div>
+							<div class="h-5 w-5 rounded bg-gray-200"></div>
+						</div>
+					</div>
+				</div>
+				<div class="flex w-full flex-col gap-4 rounded-md md:p-4 lg:w-1/2">
+					<div class="h-5 w-32 rounded bg-gray-200"></div>
+					<div class="flex items-center gap-3">
+						<div class="h-[49px] w-[49px] rounded-md bg-gray-200"></div>
+						<div class="flex flex-col gap-2">
+							<div class="h-4 w-40 rounded bg-gray-200"></div>
+							<div class="h-3 w-28 rounded bg-gray-200"></div>
+						</div>
+					</div>
+					<div class="flex items-center gap-3">
+						<div class="h-[49px] w-[49px] rounded-md bg-gray-200"></div>
+						<div class="flex flex-col gap-2">
+							<div class="h-4 w-36 rounded bg-gray-200"></div>
+							<div class="h-3 w-52 rounded bg-gray-200"></div>
+						</div>
+					</div>
+					<div class="mt-4 flex gap-2">
+						<div class="h-9 w-28 rounded-md bg-gray-200"></div>
+						<div class="h-9 w-28 rounded-md bg-gray-200"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Invites section skeleton -->
+		<div class="mb-12 animate-pulse">
+			<div class="mb-4 flex items-center justify-between">
+				<div class="h-5 w-20 rounded bg-gray-200"></div>
+				<div class="h-8 w-32 rounded-md bg-gray-200"></div>
+			</div>
+			<div class="flex flex-col gap-4 lg:flex-row">
+				<div class="h-32 w-full rounded-md bg-gray-200 lg:max-w-[284px]"></div>
+				<div class="h-32 w-full rounded-md bg-gray-200"></div>
+			</div>
+		</div>
+
+		<!-- Attendees section skeleton -->
+		<div class="mb-12 animate-pulse border-t pt-12">
+			<div class="mb-3 h-5 w-24 rounded bg-gray-200"></div>
+			<div class="mb-6 h-8 w-full max-w-2xl rounded-full bg-gray-200"></div>
+			<div class="flex flex-col gap-3 rounded-md bg-[#FDFDFD] p-3">
+				{#each [1, 2, 3] as _}
+					<div class="flex items-center justify-between border-b py-3 last:border-b-0">
+						<div class="flex items-center gap-2">
+							<div class="h-6 w-6 rounded-full bg-gray-200"></div>
+							<div class="h-4 w-32 rounded bg-gray-200"></div>
+						</div>
+						<div class="h-6 w-20 rounded-full bg-gray-200"></div>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{:else if eventData}
 
 		{#if eventIsFuture}
 			<!-- Action Buttons -->
@@ -355,47 +380,19 @@ $: eventLink = eventData?.customLinkSlug
 				<SendPostModal bind:open={showSendPostModal} eventTitle={eventData?.title ?? ''} />
 
 				<button
+					on:click={() => goto(`/events/${eventId}/earnings`)}
 					class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
 				>
-					<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#FBDEEC]">
-						<svg
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M21.1082 12.7701C20.693 12.7701 20.3434 12.4533 20.2887 12.0381C20.0265 9.56879 18.6935 7.32894 16.6394 5.90855C16.2679 5.64632 16.1805 5.14372 16.4318 4.77223C16.694 4.40074 17.2076 4.31333 17.5681 4.56463C20.0156 6.25818 21.5889 8.92415 21.9058 11.8633C21.9495 12.3113 21.6327 12.7155 21.1738 12.7701C21.1628 12.7701 21.1301 12.7701 21.1082 12.7701Z"
-								fill="#F31A7C"
-							/>
-							<path
-								d="M2.39563 12.8285C2.36286 12.8285 2.341 12.8285 2.30822 12.8285C1.86025 12.7739 1.53247 12.3696 1.57617 11.9217C1.87118 8.98254 3.43361 6.32749 5.84829 4.61209C6.21978 4.34987 6.7333 4.43728 6.99553 4.80876C7.25776 5.18025 7.17035 5.69378 6.79886 5.95601C4.7666 7.38733 3.45547 9.62718 3.20417 12.0965C3.17139 12.5117 2.81083 12.8285 2.39563 12.8285Z"
-								fill="#F31A7C"
-							/>
-							<path
-								d="M11.7537 23.1937C10.1366 23.1937 8.59604 22.8222 7.15379 22.1011C6.74952 21.8935 6.58563 21.4018 6.79323 20.9975C7.00082 20.5933 7.4925 20.4294 7.89677 20.637C10.2568 21.8279 13.0976 21.8498 15.4795 20.7025C15.8838 20.5059 16.3754 20.6807 16.5721 21.0849C16.7688 21.4892 16.594 21.9809 16.1897 22.1776C14.7911 22.855 13.3052 23.1937 11.7537 23.1937Z"
-								fill="#F31A7C"
-							/>
-							<path
-								d="M11.7573 7.71384C9.62672 7.71384 7.90039 5.98751 7.90039 3.85692C7.90039 1.72633 9.62672 0 11.7573 0C13.8879 0 15.6142 1.72633 15.6142 3.85692C15.6142 5.98751 13.877 7.71384 11.7573 7.71384ZM11.7573 1.64984C10.5336 1.64984 9.53931 2.64412 9.53931 3.86785C9.53931 5.09157 10.5336 6.08585 11.7573 6.08585C12.981 6.08585 13.9753 5.09157 13.9753 3.86785C13.9753 2.64412 12.9701 1.64984 11.7573 1.64984Z"
-								fill="#F31A7C"
-							/>
-							<path
-								d="M3.85692 21.0732C1.72633 21.0732 0 19.3469 0 17.2163C0 15.0966 1.72633 13.3594 3.85692 13.3594C5.98751 13.3594 7.71384 15.0857 7.71384 17.2163C7.71384 19.336 5.98751 21.0732 3.85692 21.0732ZM3.85692 14.9983C2.63319 14.9983 1.63892 15.9926 1.63892 17.2163C1.63892 18.44 2.63319 19.4343 3.85692 19.4343C5.08064 19.4343 6.07492 18.44 6.07492 17.2163C6.07492 15.9926 5.08064 14.9983 3.85692 14.9983Z"
-								fill="#F31A7C"
-							/>
-							<path
-								d="M19.5229 21.0732C17.3923 21.0732 15.666 19.3469 15.666 17.2163C15.666 15.0966 17.3923 13.3594 19.5229 13.3594C21.6535 13.3594 23.3799 15.0857 23.3799 17.2163C23.3689 19.336 21.6426 21.0732 19.5229 21.0732ZM19.5229 14.9983C18.2992 14.9983 17.3049 15.9926 17.3049 17.2163C17.3049 18.44 18.2992 19.4343 19.5229 19.4343C20.7467 19.4343 21.7409 18.44 21.7409 17.2163C21.73 15.9926 20.7467 14.9983 19.5229 14.9983Z"
-								fill="#F31A7C"
-							/>
-						</svg>
-					</div>
-					Share Event
+					<svg width="44" height="44" viewBox="0 0 47 47" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<rect width="46.713" height="46.713" rx="8.99063" fill="#F2E4F8"/>
+						<path opacity="0.4" d="M33.0463 24.247C33.4891 24.247 33.8411 23.8837 33.8411 23.4295V22.4304C33.8411 17.9683 32.4786 16.6172 28.0279 16.6172H20.875V19.3762C21.3178 19.3762 21.6811 19.7395 21.6811 20.1823V23.2251C21.6811 23.6679 21.3178 24.0313 20.875 24.0313V26.8811C21.3178 26.8811 21.6811 27.2444 21.6811 27.6872V30.73C21.6811 31.1728 21.3178 31.5362 20.875 31.5362V34.2724H28.0279C32.4786 34.2724 33.8411 32.91 33.8411 28.4593C33.8411 28.0165 33.4891 27.6531 33.0463 27.6531C32.0926 27.6531 31.3319 26.8924 31.3319 25.9501C31.3319 25.0077 32.0926 24.247 33.0463 24.247Z" fill="#AB46DD"/>
+						<path opacity="0.4" d="M26.5848 16.9033H19.5078L21.789 14.6221C23.6497 12.7614 24.584 12.7614 26.4447 14.6221L26.9118 15.0892C26.4213 15.5797 26.3046 16.3038 26.5848 16.9033Z" stroke="#AB46DD" stroke-width="1.12383" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M20.0706 20.2803V23.3232C20.0706 23.766 20.4339 24.1293 20.8767 24.1293V26.9791C20.4339 26.9791 20.0706 27.3424 20.0706 27.7852V30.8281C20.0706 31.2709 20.4339 31.6342 20.8767 31.6342V34.3705H17.9929C13.5422 34.3705 12.1797 33.008 12.1797 28.5573V28.0691C12.1797 27.6149 12.5317 27.2629 12.9745 27.2629C13.9282 27.2629 14.6889 26.4909 14.6889 25.5485C14.6889 24.6061 13.9282 23.8341 12.9745 23.8341C12.5317 23.8341 12.1797 23.4821 12.1797 23.028V22.5397C12.1797 18.0777 13.5422 16.7266 17.9929 16.7266H20.8654V19.4856C20.4339 19.4856 20.0706 19.8489 20.0706 20.2803Z" fill="#AB46DD"/>
+					</svg>
+					Earnings <span class="text-[#838485]">|</span> <span class="font-semibold">N200,000</span>
 				</button>
 			</div>
 		{/if}
-	</div>
 
 	<!-- Event Details Section -->
 	{#if eventIsFuture}
@@ -1239,5 +1236,5 @@ $: eventLink = eventData?.customLinkSlug
 			</div>
 		</div>
 	</div>
-</div>
 {/if}
+</div>

@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { createEventDispatcher } from 'svelte';
 	export let open = false;
 	export let participant = 'speaker';
+
+	const dispatch = createEventDispatcher();
 
 	let items: any[];
 
@@ -35,14 +38,12 @@
 </script>
 
 {#if open}
-	<div
-		class="absolute right-0 z-50 mt-2 w-48 rounded-xl bg-white p-2 text-[15px] text-[#768387] shadow-lg"
-	>
+	<div class="absolute right-0 z-50 mt-2 w-48 rounded-xl bg-white p-2 text-[15px] text-[#768387] shadow-lg">
 		{#each items as item}
-			<div class="flex cursor-pointer items-center justify-between p-2 hover:bg-[#EBECED]">
+			<button on:click={() => dispatch('select', item.label)} class="flex w-full cursor-pointer items-center justify-between p-2 hover:bg-[#EBECED]">
 				<span>{item.label}</span>
 				<img src={item.icon} alt="" />
-			</div>
+			</button>
 		{/each}
 	</div>
 {/if}

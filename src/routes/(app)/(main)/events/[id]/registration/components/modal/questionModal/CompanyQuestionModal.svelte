@@ -15,12 +15,13 @@
 	};
 
 	export let open = false;
+	export let isEditing = false;
 	export let questionData: QuestionData = {
 		question: '',
 		isRequired: false,
 		helpText: "We'll automatically get this information from their profile if available",
 		ticketIds: [],
-		ticketOptions: ['Early Bird Ticket', 'Investors Only', 'Standard In...', 'Accelerate...']
+		ticketOptions: []
 	};
 
 	function closeModal() {
@@ -28,8 +29,17 @@
 		dispatch('close');
 	}
 
-	function addQuestion() {
-		dispatch('add', questionData);
+	let addingQuestion = false;
+
+	async function addQuestion() {
+		addingQuestion = true;
+		await new Promise((r) => setTimeout(r, 600));
+		if (isEditing) {
+			dispatch('save', { ...questionData, type: 'company' });
+		} else {
+			dispatch('add', { ...questionData, type: 'company' });
+		}
+		addingQuestion = false;
 		closeModal();
 	}
 
@@ -71,7 +81,7 @@
 					<img src="/arrow-right.svg" alt="arrow back" />
 				</button>
 
-				<h2 class="text-xl font-bold">Add Question</h2>
+				<h2 class="text-xl font-bold">{isEditing ? 'Edit Question' : 'Add Question'}</h2>
 
 				<button
 					on:click={() => (open = false)}
@@ -177,9 +187,17 @@
 
 				<button
 					on:click={addQuestion}
-					class="w-full rounded-md bg-black px-4 py-3 font-medium text-white transition-colors hover:bg-gray-800"
+					disabled={addingQuestion}
+					class="w-full rounded-md bg-black px-4 py-3 font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-60"
 				>
-					Add Question
+					{#if addingQuestion}
+						<span class="flex items-center justify-center gap-2">
+							<Icon icon="mdi:loading" class="h-5 w-5 animate-spin" />
+							{isEditing ? 'Saving...' : 'Adding...'}
+						</span>
+					{:else}
+						{isEditing ? 'Save Changes' : 'Add Question'}
+					{/if}
 				</button>
 			</div>
 		</div>

@@ -40,15 +40,28 @@
 	{#if seo}
 		<title>{seo.title}</title>
 		<meta name="description" content={seo.description} />
+
+		<!-- Open Graph (Facebook, WhatsApp, Telegram, LinkedIn) -->
 		<meta property="og:title" content={seo.title} />
 		<meta property="og:description" content={seo.description} />
 		<meta property="og:image" content={seo.image} />
+		<meta property="og:image:secure_url" content={seo.image} />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:type" content="image/jpeg" />
+		<meta property="og:image:alt" content={seo.title} />
 		<meta property="og:url" content={seo.url} />
 		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Rondwell" />
+		<meta property="og:locale" content="en_US" />
+
+		<!-- Twitter -->
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content={seo.title} />
 		<meta name="twitter:description" content={seo.description} />
 		<meta name="twitter:image" content={seo.image} />
+		<meta name="twitter:site" content="@rondwell" />
+
 		<link rel="canonical" href={seo.url} />
 	{/if}
 </svelte:head>

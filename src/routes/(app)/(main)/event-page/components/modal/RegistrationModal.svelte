@@ -41,6 +41,9 @@
 	let submitError = '';
 	let selectedGateway: 'PAYSTACK' | 'FLUTTERWAVE' = 'PAYSTACK';
 
+	// Terms expand/collapse state per field
+	let termsExpanded: Record<string, boolean> = {};
+
 	// Registration form settings from event
 	$: phoneEnabled = eventData?.registrationFormSettings?.phoneEnabled ?? 'OFF';
 	$: ethAddressEnabled = eventData?.registrationFormSettings?.ethAddressEnabled ?? 'OFF';
@@ -146,7 +149,7 @@
 		})).filter((a: any) => a.answer_value);
 
 		try {
-			// Step 1: Create attendee entry
+			// Step 1: Create attendee entry (returns existing if already registered)
 			const attendeeRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/register`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -158,7 +161,21 @@
 			});
 			const attendeeData = await attendeeRes.json();
 			if (!attendeeRes.ok) throw new Error(attendeeData.message ?? 'Failed to create attendee');
-			const guestId = attendeeData.data?._id ?? attendeeData.data?.id ?? attendeeData.attendeeId;
+
+			// Check if attendee already has a registration (early duplicate detection)
+			const existingAttendee = attendeeData.data;
+			if (existingAttendee?.registrationId || attendeeData.message === 'Attendee already exists') {
+				// Verify they actually have a registration record
+				const checkRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/event/${eventId}/guest/${existingAttendee._id || existingAttendee.id}`);
+				if (checkRes.ok) {
+					const checkData = await checkRes.json();
+					if (checkData && (checkData.registration_id || checkData._id)) {
+						throw new Error('This email is already registered for this event. Please use a different email address.');
+					}
+				}
+			}
+
+			const guestId = existingAttendee?._id ?? existingAttendee?.id ?? attendeeData.attendeeId;
 
 			// Step 2: Create registration
 			const regRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/register`, {
@@ -423,6 +440,9 @@
 							</label>
 
 						{:else if field.fieldType === 'TERMS_CHECKBOX'}
+							{@const termsText = field.termsContent || ''}
+							{@const isLong = termsText.replace(/<[^>]*>/g, '').split(/\s+/).length > 200}
+							{@const isExpanded = termsExpanded[fid] ?? false}
 							<div class="mt-2 space-y-3">
 								{#if field.contentType === 'link' && field.termsLink}
 									<div class="rounded-lg p-3" style="background-color: {themeColor.cover};">
@@ -430,10 +450,21 @@
 											View Terms and Conditions
 										</a>
 									</div>
-								{:else if field.termsContent}
-									<div class="max-h-32 overflow-y-auto rounded-lg border p-3 text-sm" style="background-color: {themeColor.cover}; border-color: {themeColor.toggle}; color: {themeColor.text};">
-										{@html field.termsContent}
+								{:else if termsText}
+									<div class="terms-content rounded-lg border p-3 text-sm transition-all"
+										style="background-color: {themeColor.cover}; border-color: {themeColor.toggle}; color: {themeColor.text}; {isLong && !isExpanded ? 'max-height: 120px; overflow: hidden;' : ''}">
+										{@html termsText}
 									</div>
+									{#if isLong}
+										<button
+											type="button"
+											on:click={() => { termsExpanded[fid] = !isExpanded; termsExpanded = termsExpanded; }}
+											class="text-xs font-medium transition-colors hover:opacity-80"
+											style="color: {themeColor.button};"
+										>
+											{isExpanded ? 'See less' : 'See more'}
+										</button>
+									{/if}
 								{/if}
 								<label class="flex items-center gap-3 cursor-pointer select-none rounded-lg px-3 py-2.5 transition-colors hover:opacity-80"
 									style="background-color: {themeColor.cover};">
@@ -458,7 +489,7 @@
 						{:else if field.fieldType === 'OPTIONS' && field.selectionType === 'single'}
 							<div class="mt-2">
 								<Dropdown
-									options={(field.options ?? []).map((o) => ({ value: o, label: o }))}
+									options={(field.options ?? []).map((o: string) => ({ value: o, label: o }))}
 									value={answers[fid] ?? null}
 									placeholder="Select an option"
 									{themeColor}
@@ -469,7 +500,7 @@
 						{:else if (field.fieldType === 'OPTIONS' && field.selectionType === 'multiple') || field.fieldType === 'MULTI_SELECT'}
 							<div class="mt-2">
 								<Dropdown
-									options={(field.options ?? []).map((o) => ({ value: o, label: o }))}
+									options={(field.options ?? []).map((o: string) => ({ value: o, label: o }))}
 									value={answers[fid] ?? []}
 									placeholder="Select options"
 									multiple={true}
@@ -724,4 +755,14 @@
 		from { opacity: 0; transform: scale(0.97); }
 		to { opacity: 1; transform: scale(1); }
 	}
+	/* Rich text terms content styling */
+	.terms-content :global(h1) { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+	.terms-content :global(h2) { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem; }
+	.terms-content :global(h3) { font-size: 1rem; font-weight: 600; margin-bottom: 0.375rem; }
+	.terms-content :global(p) { margin-bottom: 0.5rem; line-height: 1.6; }
+	.terms-content :global(ul) { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+	.terms-content :global(ol) { list-style: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; }
+	.terms-content :global(li) { margin-bottom: 0.25rem; }
+	.terms-content :global(strong) { font-weight: 600; }
+	.terms-content :global(em) { font-style: italic; }
 </style>

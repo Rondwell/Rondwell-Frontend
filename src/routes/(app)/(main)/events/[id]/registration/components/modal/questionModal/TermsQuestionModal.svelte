@@ -1,9 +1,12 @@
 <!-- src/lib/components/TermsQuestionModal.svelte -->
 <script lang="ts">
-	import TextEditor from '$lib/components/TextEditor.svelte';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
-	import { createEventDispatcher } from 'svelte';
+	import PlaceholderExtension from '@tiptap/extension-placeholder';
+	import StarterKit from '@tiptap/starter-kit';
+	import { createEventDispatcher, onDestroy } from 'svelte';
+	import { createEditor, Editor, EditorContent } from 'svelte-tiptap';
+	import type { Readable } from 'svelte/store';
 
 	const dispatch = createEventDispatcher();
 
@@ -29,6 +32,40 @@
 		ticketOptions: []
 	};
 
+	// TipTap editor for terms content
+	let termsEditor: Readable<Editor>;
+	let editorInitialized = false;
+
+	function initEditor(content: string = '') {
+		if (termsEditor && $termsEditor) $termsEditor.destroy();
+		termsEditor = createEditor({
+			extensions: [
+				StarterKit,
+				PlaceholderExtension.configure({
+					placeholder: 'Enter your terms and conditions...'
+				})
+			],
+			content,
+			onUpdate: ({ editor }) => {
+				questionData.termsContent = editor.getHTML();
+			}
+		});
+		editorInitialized = true;
+	}
+
+	$: if (open && questionData.contentType === 'text' && !editorInitialized) {
+		initEditor(questionData.termsContent || '');
+	}
+
+	// Reset when modal closes so it re-inits next time
+	$: if (!open) {
+		editorInitialized = false;
+	}
+
+	onDestroy(() => {
+		if (termsEditor && $termsEditor) $termsEditor.destroy();
+	});
+
 	function closeModal() {
 		open = false;
 		dispatch('close');
@@ -38,6 +75,10 @@
 
 	async function addQuestion() {
 		addingQuestion = true;
+		// Get latest content from editor
+		if (termsEditor && $termsEditor && questionData.contentType === 'text') {
+			questionData.termsContent = $termsEditor.getHTML();
+		}
 		await new Promise((r) => setTimeout(r, 600));
 		const payload = { ...questionData, type: 'terms', question: 'Terms and Conditions', fieldName: 'Terms and Conditions' };
 		if (isEditing) {
@@ -51,21 +92,14 @@
 
 	function updateContentType(type: string) {
 		questionData.contentType = type;
-	}
-
-	function updateTermsContent(e: any) {
-		questionData.termsContent = e.target.value;
-	}
-
-	function updateTermsLink(e: any) {
-		questionData.termsLink = e.target.value;
+		if (type === 'text') {
+			editorInitialized = false; // will trigger re-init
+		}
 	}
 
 	function toggleSignature() {
 		questionData.collectSignature = !questionData.collectSignature;
 	}
-
-	let showDropdown = false;
 
 	let buttonOpen = false;
 
@@ -77,9 +111,9 @@
 		}
 	}
 
-	function handleReturn (){
+	function handleReturn() {
 		open = false;
-		dispatch('return')
+		dispatch('return');
 	}
 </script>
 
@@ -157,35 +191,48 @@
 				</div>
 
 				{#if questionData.contentType === 'text'}
-					<div class="relative">
-						<label for="" class="mb-1 block text-sm font-medium text-[#696B6D]">Terms Content</label
-						>
-
-						<div
-							class=""
-							use:clickOutside={() => {
-								showDropdown = false;
-							}}
-						>
-							<!-- + button -->
-							<button
-								class="absolute top-10 -left-3 mr-2 rounded-sm bg-[#939597] p-1 text-lg font-bold text-white"
-								on:click={() => (showDropdown = !showDropdown)}
-							>
-								<Icon icon="mdi:plus" class="text-xl" />
-							</button>
-
-							<!-- Dropdown -->
-							<TextEditor open={showDropdown} className="-top-10 left-5" />
+					<div>
+						<label for="" class="mb-1 block text-sm font-medium text-[#696B6D]">Terms Content</label>
+						<div class="overflow-hidden rounded-md border border-gray-200">
+							<!-- Toolbar -->
+							<div class="flex flex-wrap items-center gap-0.5 border-b border-gray-100 bg-[#F8F9FA] px-2 py-1">
+								{#if termsEditor && $termsEditor}
+									<button type="button" title="Bold"
+										on:click={() => $termsEditor.chain().focus().toggleBold().run()}
+										class="rounded px-2 py-1 text-sm font-bold hover:bg-gray-200 {$termsEditor.isActive('bold') ? 'bg-gray-800 text-white' : 'text-gray-700'}">B</button>
+									<button type="button" title="Italic"
+										on:click={() => $termsEditor.chain().focus().toggleItalic().run()}
+										class="rounded px-2 py-1 text-sm italic hover:bg-gray-200 {$termsEditor.isActive('italic') ? 'bg-gray-800 text-white' : 'text-gray-700'}">I</button>
+									<div class="mx-1 h-4 w-px bg-gray-300"></div>
+									<button type="button" title="Bullet list"
+										on:click={() => $termsEditor.chain().focus().toggleBulletList().run()}
+										class="rounded px-2 py-1 text-xs hover:bg-gray-200 {$termsEditor.isActive('bulletList') ? 'bg-gray-800 text-white' : 'text-gray-700'}">
+										<Icon icon="mdi:format-list-bulleted" class="text-base" />
+									</button>
+									<button type="button" title="Ordered list"
+										on:click={() => $termsEditor.chain().focus().toggleOrderedList().run()}
+										class="rounded px-2 py-1 text-xs hover:bg-gray-200 {$termsEditor.isActive('orderedList') ? 'bg-gray-800 text-white' : 'text-gray-700'}">
+										<Icon icon="mdi:format-list-numbered" class="text-base" />
+									</button>
+									<div class="mx-1 h-4 w-px bg-gray-300"></div>
+									<button type="button" title="Heading"
+										on:click={() => $termsEditor.chain().focus().toggleHeading({ level: 3 }).run()}
+										class="rounded px-2 py-1 text-xs hover:bg-gray-200 {$termsEditor.isActive('heading', { level: 3 }) ? 'bg-gray-800 text-white' : 'text-gray-700'}">
+										<Icon icon="mdi:format-header-3" class="text-base" />
+									</button>
+									<button type="button" title="Undo"
+										on:click={() => $termsEditor.chain().focus().undo().run()}
+										class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-200">↩</button>
+									<button type="button" title="Redo"
+										on:click={() => $termsEditor.chain().focus().redo().run()}
+										class="rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-200">↪</button>
+								{/if}
+							</div>
+							<!-- Editor area -->
+							<div class="min-h-[120px] max-h-[200px] overflow-y-auto p-3 text-sm text-gray-800">
+								<EditorContent editor={$termsEditor} />
+							</div>
 						</div>
-
-						<!-- textarea -->
-						<textarea
-							rows="4"
-							placeholder="Enter your terms and conditions..."
-							bind:value={questionData.termsContent}
-							class="w-full resize-none rounded-sm border border-gray-300 p-2 text-sm outline-none focus:ring-0"
-						></textarea>
 					</div>
 				{:else}
 					<div>
@@ -193,8 +240,7 @@
 						<input
 							type="url"
 							bind:value={questionData.termsLink}
-							on:input={updateTermsLink}
-							placeholder=""
+							placeholder="https://example.com/terms"
 							class="w-full rounded-sm border border-gray-300 p-3 focus:ring-0 focus:outline-none"
 						/>
 					</div>
@@ -284,3 +330,49 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	:global(.ProseMirror) {
+		outline: none;
+		min-height: 100px;
+		font-weight: 300;
+		color: #4b5563;
+	}
+	:global(.ProseMirror p) {
+		margin: 0 0 0.5em;
+		font-weight: 300;
+	}
+	:global(.ProseMirror p.is-editor-empty:first-child::before) {
+		color: #adb5bd;
+		content: attr(data-placeholder);
+		float: left;
+		height: 0;
+		pointer-events: none;
+	}
+	:global(.ProseMirror strong) {
+		font-weight: 600;
+	}
+	:global(.ProseMirror h3) {
+		font-size: 1.05rem;
+		font-weight: 700;
+		margin: 0.75em 0 0.375em;
+		color: #1f2937;
+	}
+	:global(.ProseMirror ul) {
+		list-style: disc;
+		padding-left: 1.25rem;
+		font-weight: 300;
+	}
+	:global(.ProseMirror ol) {
+		list-style: decimal;
+		padding-left: 1.25rem;
+		font-weight: 300;
+	}
+	:global(.ProseMirror li) {
+		margin-bottom: 0.2em;
+	}
+	:global(.ProseMirror a) {
+		color: #6d28d9;
+		text-decoration: underline;
+	}
+</style>

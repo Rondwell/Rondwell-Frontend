@@ -50,6 +50,7 @@
 	let showSortDropdown = false;
 	let showModal = false;
 	let selectedAttendeeId = '';
+	let selectedAttendeeData: any = null;
 	let showInviteGuestsModal = false;
 	let openShowAttendeeList = false;
 
@@ -231,7 +232,7 @@
 		{/if}
 
 		<!-- At a Glance Section -->
-		<div class={loading || totalGuests > 0 ? 'mb-12' : ''}>
+		<div class="mb-12">
 			{#if loading}
 				<div class="mt-2 mb-5 h-8 w-48 animate-pulse rounded bg-gray-200"></div>
 				<div class="mb-1 h-3 w-16 animate-pulse rounded bg-gray-200"></div>
@@ -243,8 +244,8 @@
 					<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
 					<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
 				</div>
-			{:else if totalGuests > 0 || !guestsLoading}
-				<h1 class="mt-2 mb-5 text-2xl font-semibold">At a Glannce</h1>
+			{:else}
+				<h1 class="mt-2 mb-5 text-2xl font-semibold">At a Glance</h1>
 
 				<!-- Attendee Progress Bar -->
 				<div class="mb-6 w-full max-w-2xl text-xs font-medium text-green-600">
@@ -440,10 +441,10 @@
 						{#each guests as guest}
 							<button
 								class="flex items-center justify-between rounded-md border-b py-3 last:border-b-0"
-								on:click={() => { selectedAttendeeId = guest._id || guest.id; showModal = true; }}
+								on:click={() => { selectedAttendeeId = guest._id || guest.id; selectedAttendeeData = guest; showModal = true; }}
 							>
 								<div class="flex items-start gap-2">
-									<img src={guest.profilePictureUrl || '/rondwell-attendee.png'} alt="profile icon" class="h-6 w-6 rounded-full object-cover" />
+									<img src={guest.profilePictureUrl || '/rondwell-attendee.png'} alt="" class="h-6 w-6 rounded-full object-cover" on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/rondwell-attendee.png'; }} />
 									<div class="flex flex-col items-start gap-1 lg:flex-row lg:items-center">
 										<span class="flex items-center gap-1">
 											<p class="font-medium">{getAttendeeDisplayName(guest)}</p>
@@ -461,7 +462,7 @@
 							</button>
 						{/each}
 					</div>
-					<AttendeeDetailModal bind:open={showModal} attendeeId={selectedAttendeeId} {eventId} />
+					<AttendeeDetailModal bind:open={showModal} attendeeId={selectedAttendeeId} {eventId} attendeeData={selectedAttendeeData} />
 				</div>
 
 				<!-- Pagination -->

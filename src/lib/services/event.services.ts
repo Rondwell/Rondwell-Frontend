@@ -1324,3 +1324,54 @@ export async function updateEventTag(eventId: string, tagId: string, name: strin
   if (!res.ok) throw new Error(data.message ?? 'Failed to update tag');
   return data.data;
 }
+
+// ==================== EVENT SETTINGS APIs (Clone, Transfer, Cancel, Delete) ====================
+
+export async function cloneEvent(eventId: string, payload: {
+  collectionId: string;
+  startDateTime: string;
+  endDateTime: string;
+  timeZone?: string;
+  visibility?: 'PUBLIC' | 'PRIVATE';
+}): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/clone`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to clone event');
+  return data;
+}
+
+export async function transferEventCollection(eventId: string, newCollectionId: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/transfer-collection`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newCollectionId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to transfer event');
+  invalidateEventCache(eventId);
+  return data;
+}
+
+export async function cancelEvent(eventId: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/cancel`, {
+    method: 'PUT',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to cancel event');
+  invalidateEventCache(eventId);
+  return data;
+}
+
+export async function deleteEvent(eventId: string): Promise<void> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message ?? 'Failed to delete event');
+  }
+}

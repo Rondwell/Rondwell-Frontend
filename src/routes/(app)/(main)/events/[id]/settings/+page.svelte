@@ -5,6 +5,10 @@
 	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Icon from '@iconify/svelte';
 	import Nav from '../../../../components/Nav.svelte';
+	import CancelEventModal from './components/CancelEventModal.svelte';
+	import CloneEventModal from './components/CloneEventModal.svelte';
+	import DeleteEventModal from './components/DeleteEventModal.svelte';
+	import TransferEventModal from './components/TransferEventModal.svelte';
 
 	$: eventId = $page.params.id;
 
@@ -93,31 +97,65 @@
 			});
 	};
 
-	const updatePublicUrl = () => {
-		console.log('Updating public URL...');
+	let urlUpdating = false;
+	let urlSuccess = '';
+
+	const updatePublicUrl = async () => {
+		if (!eventData) return;
+		urlUpdating = true;
+		urlSuccess = '';
+		try {
+			const { updateEvent } = await import('$lib/services/event.services');
+			const slug = eventData.publicUrl.replace('rondwell.com/', '');
+			await updateEvent(eventId!, { customLinkSlug: slug } as any);
+			urlSuccess = 'URL updated successfully';
+			setTimeout(() => { urlSuccess = ''; }, 3000);
+		} catch (e: any) {
+			urlSuccess = e.message || 'Failed to update URL';
+		} finally {
+			urlUpdating = false;
+		}
 	};
 
 	const cloneEvent = () => {
-		console.log('Cloning event...');
+		showCloneModal = true;
 	};
 
 	const transferEvent = () => {
-		console.log('Transferring event...');
+		showTransferModal = true;
 	};
 
 	const cancelEvent = () => {
-		if (
-			confirm(
-				'Are you sure you want to permanently delete this event? This operation cannot be undone.'
-			)
-		) {
-			console.log('Canceling event...');
-		}
+		showCancelModal = true;
 	};
+
+	let showCloneModal = false;
+	let showTransferModal = false;
+	let showCancelModal = false;
+	let showDeleteModal = false;
 </script>
 
 {#if error}
-	<div class="flex h-64 items-center justify-center text-red-500">{error}</div>
+	<div class="max-w-6xl">
+		<div class="mb-6 sm:mb-8">
+			<div class="mb-2 flex items-center justify-between">
+				<div class="h-4 w-32 animate-pulse rounded bg-gray-200"></div>
+				<div class="h-8 w-24 rounded-md bg-gray-200"></div>
+			</div>
+			<div class="mb-10 h-9 w-3/4 animate-pulse rounded bg-gray-200"></div>
+			<Nav {tabs} bind:activeTab />
+		</div>
+		<div class="space-y-6">
+			<div class="h-6 w-32 animate-pulse rounded bg-gray-200"></div>
+			<div class="h-4 w-full max-w-lg animate-pulse rounded bg-gray-200"></div>
+			<div class="h-10 w-36 animate-pulse rounded bg-gray-200"></div>
+			<div class="mt-6 border-t pt-6">
+				<div class="h-6 w-28 animate-pulse rounded bg-gray-200"></div>
+				<div class="mt-3 h-4 w-full max-w-lg animate-pulse rounded bg-gray-200"></div>
+				<div class="mt-3 h-12 w-full max-w-sm animate-pulse rounded bg-gray-200"></div>
+			</div>
+		</div>
+	</div>
 {:else if loading}
 	<div class="max-w-6xl">
 		<div class="mb-6 sm:mb-8">
@@ -130,13 +168,13 @@
 	<!-- Event Header -->
 	<div class="mb-6 sm:mb-8">
 		<div class="mb-2 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-			<div class="flex items-center gap-2">
+			<a href="/collection/{eventData.collectionId}/events" class="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-[#F0EFF1]">
 				<span class="text-xs text-[#83808D] sm:text-sm">{eventData.collection}</span>
 				<svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
 					<path d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z" fill="#83808D" stroke="#83808D" stroke-width="0.37461"/>
 					<rect x="5.0584" y="5.85137" width="3.37149" height="1.12383" rx="0.561915" transform="rotate(-180 5.0584 5.85137)" fill="#83808D" stroke="#83808D" stroke-width="0.37461"/>
 				</svg>
-			</div>
+			</a>
 			<button
 				on:click={() => goto(`/event-page/${eventId}`)}
 				class="flex w-full items-center justify-center gap-1 rounded-md bg-[#DCE4EE] px-3 py-2 text-xs font-medium text-[#5D646F] transition-colors hover:bg-[#ccd6e0] sm:w-auto sm:justify-start sm:text-sm"
@@ -200,26 +238,29 @@
 				</button>
 			</div>
 		</div>
-		<div class="w-full sm:max-w-60">
+		<div class="w-full sm:max-w-96">
 			<label for="url" class="mb-2 block text-xs font-medium text-gray-700 sm:text-sm">Public URL</label>
 			<div class="flex items-center">
-				<span class="rounded-l-md bg-[#EBECED] px-3 py-2.5 text-xs sm:rounded-l-md sm:text-sm">ron.d/</span>
+				<span class="rounded-l-md bg-[#EBECED] px-3 py-2.5 text-xs sm:rounded-l-md sm:text-sm">rondwell.com/</span>
 				<input
 					type="text"
-					value={eventData.publicUrl.split('/')[1] ?? eventData.publicUrl}
+					value={eventData.publicUrl}
 					on:input={(e) => {
 						const target = e.target as HTMLInputElement | null;
-						if (target) eventData.publicUrl = `ron.d/${target.value}`;
+						if (target) eventData.publicUrl = target.value;
 					}}
-					class="rounded-r-md border border-gray-300 bg-[#F4F5F6] px-3 py-2 text-xs focus:ring-0 focus:outline-none sm:rounded-r-md sm:text-sm"
+					class="flex-1 rounded-r-md border border-gray-300 bg-[#F4F5F6] px-3 py-2 text-xs focus:ring-0 focus:outline-none sm:rounded-r-md sm:text-sm"
 				/>
 				<button
 					on:click={updatePublicUrl}
-					class="w-fit rounded-md bg-[#939596] px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-gray-700 ml-1 sm:w-auto sm:text-sm"
+					disabled={true}
+					title="Upgrade to Rondwell Plus to customize your event URL"
+					class="ml-1 w-fit cursor-not-allowed rounded-md bg-[#939596] px-3 py-2 text-xs font-medium text-white opacity-50 sm:w-auto sm:text-sm"
 				>
 					Update
 				</button>
 			</div>
+			<p class="mt-1 text-xs text-gray-400">Upgrade to Rondwell Plus to customize your event URL</p>
 		</div>
 	</div>
 
@@ -253,8 +294,7 @@
 	<div class="mt-6 mb-6 border-t pt-6 sm:mt-8 sm:pt-8">
 		<h2 class="mb-2 text-lg font-semibold sm:mb-3 sm:text-xl">Cancel Event</h2>
 		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm lg:max-w-[70%]">
-			Cancel and permanently delete this event. This operation cannot be undone. If there are any
-			registered guests, we will notify them that the event has been canceled.
+			Cancel this event. If there are any registered guests, we will notify them that the event has been canceled.
 		</p>
 		<button
 			on:click={cancelEvent}
@@ -266,6 +306,21 @@
 				<circle cx="8.24142" cy="8.24142" r="7.4922" stroke="white" stroke-width="1.49844"/>
 			</svg>
 			Cancel Event
+		</button>
+	</div>
+
+	<!-- Delete Event Section -->
+	<div class="mt-6 mb-6 border-t pt-6 sm:mt-8 sm:pt-8">
+		<h2 class="mb-2 text-lg font-semibold text-[#D92D20] sm:mb-3 sm:text-xl">Delete Event</h2>
+		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm lg:max-w-[70%]">
+			Permanently delete this event and all associated data including registrations, tickets, and analytics. This operation cannot be undone.
+		</p>
+		<button
+			on:click={() => (showDeleteModal = true)}
+			class="flex w-full items-center justify-center gap-2 rounded-md border-2 border-red-600 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 sm:w-auto sm:py-2"
+		>
+			<Icon icon="mdi:delete-forever-outline" class="text-lg" />
+			Delete Event Permanently
 		</button>
 	</div>
 
@@ -408,3 +463,8 @@ const registrations = await rondwell.events.registrations('EVENT_ID');</code></p
 	{/if}
 </div>
 {/if}
+
+<CloneEventModal bind:open={showCloneModal} {eventId} eventTitle={eventData?.title || ''} />
+<TransferEventModal bind:open={showTransferModal} {eventId} currentCollectionName={eventData?.collection || ''} />
+<CancelEventModal bind:open={showCancelModal} {eventId} eventTitle={eventData?.title || ''} />
+<DeleteEventModal bind:open={showDeleteModal} {eventId} eventTitle={eventData?.title || ''} />

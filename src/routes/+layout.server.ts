@@ -1,2 +1,2 @@
 export const prerender = false;
-export const ssr = false;
+// SSR is now enabled globally — individual routes opt out via their own +layout.ts

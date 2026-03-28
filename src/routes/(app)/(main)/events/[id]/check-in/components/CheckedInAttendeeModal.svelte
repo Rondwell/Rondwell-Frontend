@@ -140,7 +140,7 @@
 					<!-- Attendee Info -->
 					<div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 						<div class="flex items-center gap-3">
-							<div class="flex h-11 w-11 items-center justify-center rounded-full bg-purple-100 text-sm font-medium text-purple-600">{attendeeName.charAt(0).toUpperCase()}</div>
+							<img src={attendee?.profilePictureUrl || '/rondwell-attendee.png'} alt="" class="h-11 w-11 rounded-full object-cover" on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/rondwell-attendee.png'; }} />
 							<div>
 								<p class="font-semibold text-gray-900">{attendeeName}</p>
 								<p class="text-xs text-gray-400">{attendee.email}</p>

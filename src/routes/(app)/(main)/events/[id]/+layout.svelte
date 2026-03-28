@@ -81,7 +81,7 @@
 			},
 			{ label: 'Planning', icon: eventsIcon.planningIcon, nav: `/events/${eventId}/planning` },
 			{ label: 'Insights', icon: eventsIcon.insightsIcon, nav: `/events/${eventId}/insights` },
-			{ label: 'Settings', icon: eventsIcon.moreIcon, nav: `/events/${eventId}/more` }
+			{ label: 'Settings', icon: eventsIcon.moreIcon, nav: `/events/${eventId}/settings` }
 		]);
 	}
 

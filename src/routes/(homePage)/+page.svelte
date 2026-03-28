@@ -6,6 +6,33 @@
 	import EventSlide from './home/EventSlide.svelte';
 </script>
 
+<svelte:head>
+	<title>Rondwell — Smart Event Management Platform</title>
+	<meta name="description" content="Create, manage, and grow unforgettable events with Rondwell. AI-powered event management with ticketing, check-in, community chat, analytics, and more." />
+	<meta property="og:title" content="Rondwell — Smart Event Management Platform" />
+	<meta property="og:description" content="Create, manage, and grow unforgettable events. AI-powered ticketing, check-in, community, and analytics." />
+	<meta property="og:image" content="https://rondwell.com/og-default.png" />
+	<meta property="og:url" content="https://rondwell.com" />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="Rondwell" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Rondwell — Smart Event Management Platform" />
+	<meta name="twitter:description" content="Create, manage, and grow unforgettable events. AI-powered ticketing, check-in, community, and analytics." />
+	<meta name="twitter:image" content="https://rondwell.com/og-default.png" />
+	<link rel="canonical" href="https://rondwell.com" />
+	{@html `<script type="application/ld+json">${JSON.stringify({
+		"@context": "https://schema.org",
+		"@type": "WebApplication",
+		"name": "Rondwell",
+		"url": "https://rondwell.com",
+		"description": "AI-powered event management platform with ticketing, check-in, community chat, analytics, and more.",
+		"applicationCategory": "EventManagement",
+		"operatingSystem": "Web",
+		"offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "description": "Free plan available" },
+		"creator": { "@type": "Organization", "name": "Rondwell", "url": "https://rondwell.com" }
+	})}</script>`}
+</svelte:head>
+
 <main class="relative w-full">
 	<div class="hero-section">
 		<div class="highlight highlight-1"></div>

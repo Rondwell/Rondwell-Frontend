@@ -10,6 +10,9 @@
 	import RegistrationModal from '../components/modal/RegistrationModal.svelte';
 	import OrganiserList from '../components/OrganiserList.svelte';
 
+	export let data: any = {};
+	$: seo = data?.seo;
+
 	$: eventId = $page.params.id ?? '';
 
 	let selectedTicket = '';
@@ -180,6 +183,47 @@
 		? event.socialLinks.website
 		: (organizers.length > 0 ? organizers[0].email : '');
 </script>
+
+<!-- SEO Meta Tags (server-rendered) -->
+<svelte:head>
+	{#if seo}
+		<title>{seo.title}</title>
+		<meta name="description" content={seo.description} />
+		<meta property="og:title" content={seo.title} />
+		<meta property="og:description" content={seo.description} />
+		<meta property="og:image" content={seo.image} />
+		<meta property="og:url" content={seo.url} />
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Rondwell" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={seo.title} />
+		<meta name="twitter:description" content={seo.description} />
+		<meta name="twitter:image" content={seo.image} />
+		<link rel="canonical" href={seo.url} />
+		{#if seo.event}
+			<!-- JSON-LD Structured Data for Events -->
+			{@html `<script type="application/ld+json">${JSON.stringify({
+				"@context": "https://schema.org",
+				"@type": "Event",
+				"name": seo.event.name,
+				"startDate": seo.event.startDate,
+				"endDate": seo.event.endDate,
+				"eventAttendanceMode": seo.event.eventType === 'VIRTUAL' ? "https://schema.org/OnlineEventAttendanceMode" : seo.event.eventType === 'HYBRID' ? "https://schema.org/MixedEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
+				"location": seo.event.eventType === 'VIRTUAL' ? { "@type": "VirtualLocation", "url": seo.url } : { "@type": "Place", "name": seo.event.location },
+				"image": seo.image,
+				"description": seo.description,
+				"organizer": { "@type": "Organization", "name": seo.event.organizer, "url": "https://rondwell.com" },
+				"offers": { "@type": "Offer", "url": seo.url, "availability": "https://schema.org/InStock" },
+				"eventStatus": "https://schema.org/EventScheduled"
+			})}</script>`}
+		{/if}
+	{:else if event}
+		<title>{event.title} | Rondwell</title>
+		<meta name="description" content={event.description?.replace(/<[^>]*>/g, '').slice(0, 160) || `Join ${event.title} on Rondwell`} />
+	{:else}
+		<title>Event | Rondwell</title>
+	{/if}
+</svelte:head>
 
 <!-- Payment Success Banner -->
 {#if paymentSuccess}

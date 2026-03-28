@@ -561,7 +561,9 @@
 						type="text"
 						placeholder="some-event-slug"
 						bind:value={publicUrl}
-						class="flex-1 rounded-r-md border border-gray-300 bg-[#FFFFFF] p-3 text-sm focus:ring-0 focus:outline-none"
+						disabled
+						title="Upgrade to Rondwell Plus to customize your event URL"
+						class="flex-1 cursor-not-allowed rounded-r-md border border-gray-300 bg-[#F4F4F4] p-3 text-sm text-gray-400 focus:ring-0 focus:outline-none"
 					/>
 				</div>
 			</div>

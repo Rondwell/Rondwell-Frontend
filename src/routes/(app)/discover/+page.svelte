@@ -14,6 +14,20 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Discover Events | Rondwell</title>
+	<meta name="description" content="Discover and explore upcoming events near you. Find conferences, meetups, workshops, and more on Rondwell." />
+	<meta property="og:title" content="Discover Events | Rondwell" />
+	<meta property="og:description" content="Discover and explore upcoming events near you. Find conferences, meetups, workshops, and more." />
+	<meta property="og:image" content="https://rondwell.com/og-default.png" />
+	<meta property="og:url" content="https://rondwell.com/discover" />
+	<meta property="og:type" content="website" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Discover Events | Rondwell" />
+	<meta name="twitter:description" content="Discover and explore upcoming events near you." />
+	<link rel="canonical" href="https://rondwell.com/discover" />
+</svelte:head>
+
 <div class="relative flex min-h-screen bg-[#F4F5F6] text-sm font-medium">
 	<!-- Sidebar -->
 	<div class="relative md:min-w-[117px] {show ? '' : 'hidden'}">

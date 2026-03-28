@@ -58,6 +58,7 @@
 
 		return {
 			id: e._id ?? e.id,
+			slug: e.customLinkSlug || '',
 			time: e.startDateTime
 				? new Date(e.startDateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
 				  new Date(e.startDateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -105,8 +106,8 @@
 	<main class="h-full py-5">
 		<div class="mb-8 grid gap-4 lg:grid-cols-2">
 			{#each displayEvents as event (event.id)}
-				<a href="/event-page/{event.id}" class="no-underline">
-					<EventCard {event} eventId={event.id} />
+				<a href={event.slug ? `/${event.slug}` : `/event-page/${event.id}`} class="no-underline">
+					<EventCard {event} eventId={event.id} slug={event.slug} />
 				</a>
 			{/each}
 		</div>

@@ -32,6 +32,7 @@
 
 		return {
 			id: e._id ?? e.id,
+			slug: e.customLinkSlug || '',
 			time: e.startDateTime
 				? new Date(e.startDateTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
 				  new Date(e.startDateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -75,7 +76,7 @@
 				{/each}
 			{:else if events.length > 0}
 				{#each events as event (event.id)}
-					<EventCard {event} eventId={event.id} />
+					<EventCard {event} eventId={event.id} slug={event.slug} />
 				{/each}
 			{:else}
 				<div class="col-span-2 py-12 text-center text-gray-400">

@@ -7,6 +7,9 @@
 	export let variant: 'default' | 'subscriber' = 'default';
 	// Optional: pass an eventId to make the card link to the event page
 	export let eventId: string = '';
+	export let slug: string = '';
+
+	$: eventHref = slug ? `/${slug}` : eventId ? `/event-page/${eventId}` : undefined;
 </script>
 
 {#if variant === 'subscriber'}
@@ -42,8 +45,8 @@
 {:else}
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<svelte:element
-		this={eventId ? 'a' : 'div'}
-		href={eventId ? `/event-page/${eventId}` : undefined}
+		this={eventHref ? 'a' : 'div'}
+		href={eventHref}
 		class="flex cursor-pointer flex-col gap-4 rounded-md bg-[#FDFDFD] p-3 no-underline md:flex-row md:p-6"
 	>
 		<div class="flex-1 space-y-1">

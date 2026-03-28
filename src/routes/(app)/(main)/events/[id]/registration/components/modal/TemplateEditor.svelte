@@ -38,7 +38,7 @@
 								showMenu = !showMenu;
 							}}
 						>
-							<img src="/face-1.svg" alt="" />
+							<img src="/rondwell-attendee.png" alt="" />
 						</button>
 
 						<ProfileMenu bind:showMenu className="absolute top-15 left-5 md:hidden" />

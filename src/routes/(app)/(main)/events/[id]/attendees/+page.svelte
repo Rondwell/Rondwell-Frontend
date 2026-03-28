@@ -2,12 +2,11 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import {
-		getEventById,
-		getEventGuestsPaginated,
-		getMyCollections,
+		getEventAttendeesPaginated,
 		updateEvent,
-		type PaginatedGuestsResponse
+		type PaginatedAttendeesResponse
 	} from '$lib/services/event.services';
+	import { getEventCache } from '$lib/stores/eventCache.store';
 	import { clickOutside } from '$lib/utils/constant';
 	import { onMount } from 'svelte';
 	import AttendeeDetailModal from '../components/AttendeeDetailModal.svelte';
@@ -16,12 +15,21 @@
 
 	$: eventId = $page.params.id as string;
 
-	let collectionName = '';
-	let collectionId = '';
-	let eventData: any = null;
-	let loading = true;
+	// Use cached event data
+	$: ({ event: eventStore, collections: collectionsStore, loading: loadingStore, error: errorStore } = getEventCache(eventId));
+	$: rawEvent = $eventStore;
+	$: cachedCollections = $collectionsStore;
+	$: loading = $loadingStore;
+	$: error = $errorStore;
+
+	$: collectionName = cachedCollections.find(
+		(c: any) => c._id === rawEvent?.collectionId || c.id === rawEvent?.collectionId
+	)?.name ?? 'My Collection';
+	$: collectionId = rawEvent?.collectionId ?? '';
+	$: maxAttendees = rawEvent?.maxAttendees ?? 0;
+	$: eventData = rawEvent;
+
 	let guestsLoading = true;
-	let error = '';
 
 	// Guests data
 	let guests: any[] = [];
@@ -41,11 +49,11 @@
 	let showStatusDropdown = false;
 	let showSortDropdown = false;
 	let showModal = false;
+	let selectedAttendeeId = '';
 	let showInviteGuestsModal = false;
 	let openShowAttendeeList = false;
 
 	// Capacity
-	let maxAttendees = 0;
 	let attendingCount = 0;
 
 	const statusOptions = [
@@ -69,32 +77,13 @@
 	$: selectedSortLabel = sortOptions.find((s) => s.value === sortBy)?.label ?? 'Register Time';
 
 	onMount(async () => {
-		try {
-			const [event, collections] = await Promise.all([
-				getEventById(eventId),
-				getMyCollections().catch(() => [])
-			]);
-			collectionName =
-				collections.find(
-					(c: any) => c._id === event.collectionId || c.id === event.collectionId
-				)?.name ?? 'My Collection';
-			collectionId = event.collectionId ?? '';
-			maxAttendees = event.maxAttendees ?? 0;
-			eventData = event;
-			loading = false;
-			await fetchGuests();
-		} catch (e: any) {
-			error = e.message ?? 'Failed to load event';
-			eventData = { title: 'Event' };
-			loading = false;
-			guestsLoading = false;
-		}
+		await fetchAttendees();
 	});
 
-	async function fetchGuests() {
+	async function fetchAttendees() {
 		guestsLoading = true;
 		try {
-			const result: PaginatedGuestsResponse = await getEventGuestsPaginated(eventId, {
+			const result: PaginatedAttendeesResponse = await getEventAttendeesPaginated(eventId, {
 				page: currentPage,
 				limit,
 				search: searchQuery || undefined,
@@ -102,7 +91,7 @@
 				sortBy,
 				sortOrder
 			});
-			guests = result.guests;
+			guests = result.attendees;
 			totalGuests = result.total;
 			totalPages = result.totalPages;
 			attendingCount = totalGuests;
@@ -118,7 +107,7 @@
 		clearTimeout(searchTimeout);
 		searchTimeout = setTimeout(() => {
 			currentPage = 1;
-			fetchGuests();
+			fetchAttendees();
 		}, 300);
 	}
 
@@ -126,7 +115,7 @@
 		statusFilter = value;
 		showStatusDropdown = false;
 		currentPage = 1;
-		fetchGuests();
+		fetchAttendees();
 	}
 
 	function selectSort(value: string) {
@@ -138,20 +127,20 @@
 		}
 		showSortDropdown = false;
 		currentPage = 1;
-		fetchGuests();
+		fetchAttendees();
 	}
 
 	function goToPage(p: number) {
 		if (p < 1 || p > totalPages) return;
 		currentPage = p;
-		fetchGuests();
+		fetchAttendees();
 	}
 
-	function getGuestDisplayName(guest: any): string {
-		if (guest.firstName || guest.lastName) {
-			return `${guest.firstName ?? ''} ${guest.lastName ?? ''}`.trim();
+	function getAttendeeDisplayName(attendee: any): string {
+		if (attendee.firstName || attendee.lastName) {
+			return `${attendee.firstName ?? ''} ${attendee.lastName ?? ''}`.trim();
 		}
-		return guest.email?.split('@')[0] ?? 'Unknown';
+		return attendee.email?.split('@')[0] ?? 'Unknown';
 	}
 
 	function getStatusLabel(status: string): string {
@@ -451,13 +440,13 @@
 						{#each guests as guest}
 							<button
 								class="flex items-center justify-between rounded-md border-b py-3 last:border-b-0"
-								on:click={() => (showModal = !showModal)}
+								on:click={() => { selectedAttendeeId = guest._id || guest.id; showModal = true; }}
 							>
 								<div class="flex items-start gap-2">
-									<img src="/face-1.svg" alt="profile icon" class="h-6 w-6" />
+									<img src={guest.profilePictureUrl || '/rondwell-attendee.png'} alt="profile icon" class="h-6 w-6 rounded-full object-cover" />
 									<div class="flex flex-col items-start gap-1 lg:flex-row lg:items-center">
 										<span class="flex items-center gap-1">
-											<p class="font-medium">{getGuestDisplayName(guest)}</p>
+											<p class="font-medium">{getAttendeeDisplayName(guest)}</p>
 											<span class="h-2 w-2 rounded-full bg-[#EAAB26]"></span>
 										</span>
 										<p class="text-xs text-gray-500 md:text-sm">{guest.email}</p>
@@ -472,7 +461,7 @@
 							</button>
 						{/each}
 					</div>
-					<AttendeeDetailModal bind:open={showModal} />
+					<AttendeeDetailModal bind:open={showModal} attendeeId={selectedAttendeeId} {eventId} />
 				</div>
 
 				<!-- Pagination -->

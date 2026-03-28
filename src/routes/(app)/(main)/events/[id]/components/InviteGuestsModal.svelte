@@ -421,7 +421,7 @@
 														on:click={() => toggleSelect(person)}
 													>
 														<div class="flex items-center gap-2">
-															<img src="/face-1.svg" alt="" class="h-7 w-7" />
+															<img src="/rondwell-attendee.png" alt="" class="h-7 w-7 rounded-full" />
 
 															<div
 																class="flex flex-col items-start text-sm {person.selected

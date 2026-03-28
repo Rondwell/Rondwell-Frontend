@@ -36,6 +36,7 @@
 	let hasPassword = false;
 	let twoFactorEnabled = false;
 	let sessions: any[] = [];
+	let showAllSessions = false;
 
 	// UI state
 	let saving = false;
@@ -191,20 +192,11 @@
 			saving = true;
 			try {
 				await updatePersonalInfo(profileId, { name: profile.name, username: profile.username, bio: profile.bio });
-				showToast('Profile saved');
+				await updateSocialLinks(profileId, socialLinks);
+				showToast('Changes saved');
 			} catch (e: any) { showToast(e.message, 'error'); } finally { saving = false; }
 		}} disabled={saving} class="flex items-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white hover:bg-gray-800 disabled:opacity-50">
 			{saving ? 'Saving...' : 'Save Changes'}
-		</button>
-		<button on:click={async () => {
-			if (!profileId) return;
-			savingLinks = true;
-			try {
-				await updateSocialLinks(profileId, socialLinks);
-				showToast('Social links saved');
-			} catch (e: any) { showToast(e.message, 'error'); } finally { savingLinks = false; }
-		}} disabled={savingLinks} class="flex items-center gap-2 rounded-md bg-gray-700 px-4 py-2 font-medium text-white hover:bg-gray-800 disabled:opacity-50">
-			{savingLinks ? 'Saving...' : 'Save Links'}
 		</button>
 	</div>
 </div>
@@ -391,7 +383,7 @@
 		{#if sessions.length === 0}
 			<p class="text-sm text-gray-400">No active sessions found.</p>
 		{/if}
-		{#each sessions as session, i}
+		{#each (showAllSessions ? sessions : sessions.slice(0, 3)) as session, i}
 			<div class="mb-3 rounded-lg bg-[#FDFDFD] p-4">
 				<div class="flex items-center justify-between gap-3">
 					<div class="flex items-center gap-3">
@@ -418,6 +410,21 @@
 				</div>
 			</div>
 		{/each}
+
+		{#if sessions.length > 3}
+		<button
+			on:click={() => showAllSessions = !showAllSessions}
+			class="mt-2 flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+		>
+			{#if showAllSessions}
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 15l7-7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				View Less
+			{:else}
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19 9l-7 7-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				Load More ({sessions.length - 3} more)
+			{/if}
+		</button>
+		{/if}
 	</div>
 
 	<!-- Delete Account -->

@@ -498,7 +498,7 @@
 						style="background-color: {selectedColor.cover};"
 						on:click={() => (openCollectionModal = !openCollectionModal)}
 					>
-						<img src="/face-1.svg" alt="profile icon" class="inline h-5 w-5 rounded-full" />
+						<img src="/rondwell-attendee.png" alt="profile icon" class="inline h-5 w-5 rounded-full" />
 						<span class="">{selectedCollectionName}</span>
 						<span>{@html arrowDown}</span>
 					</button>

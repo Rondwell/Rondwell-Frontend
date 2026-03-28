@@ -25,7 +25,7 @@
 			options = collections.map((c: any) => ({
 				id: c._id ?? c.id,
 				label: c.name ?? 'Unnamed Collection',
-				icon: c.profilePictureUrl ?? c.coverBannerUrl ?? '/face-1.svg'
+				icon: c.profilePictureUrl ?? c.coverBannerUrl ?? '/rondwell-attendee.png'
 			}));
 			// Default to first collection
 			if (options.length > 0 && !selectedId) {

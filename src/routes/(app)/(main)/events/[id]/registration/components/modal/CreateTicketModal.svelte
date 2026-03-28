@@ -172,7 +172,7 @@
 				isFree,
 				currency: isFree ? 'USD' : currency,
 				price: isFree ? 0 : Number(price),
-				tags: tags.length > 0 ? tags : undefined,
+				tags,
 				quantityAvailable: totalTickets ? Number(totalTickets) : undefined,
 			};
 
@@ -351,30 +351,28 @@
 					{/if}
 				</div>
 
-				<!-- Tags -->
-				{#if !isFree}
-					<div class="mb-4">
-						<label class="mb-1.5 block text-xs font-medium text-[#666769]">Tags (optional)</label>
-						<div class="flex flex-wrap items-center gap-2 rounded-md border border-gray-200 bg-[#F8F8F9] px-3 py-2">
-							{#each tags as tag}
-								<span class="flex items-center gap-1 rounded-full bg-[#F8EFDD] px-2 py-0.5 text-xs font-medium text-[#D69814]">
-									{tag}
-									<button on:click={() => removeTag(tag)} class="text-[#D69814] hover:text-red-500">
-										<Icon icon="mdi:close" class="h-3 w-3" />
-									</button>
-								</span>
-							{/each}
-							<input
-								type="text"
-								bind:value={newTag}
-								on:keydown={handleTagKeydown}
-								placeholder={tags.length === 0 ? 'e.g. Early Bird, Limited Time' : 'Add tag...'}
-								class="min-w-[100px] flex-1 border-none bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
-							/>
-						</div>
-						<p class="mt-1 text-xs text-gray-400">Press Enter to add a tag</p>
+				<!-- Tags (available for all ticket types) -->
+				<div class="mb-4">
+					<label class="mb-1.5 block text-xs font-medium text-[#666769]">Tags (optional)</label>
+					<div class="flex flex-wrap items-center gap-2 rounded-md border border-gray-200 bg-[#F8F8F9] px-3 py-2">
+						{#each tags as tag}
+							<span class="flex items-center gap-1 rounded-full bg-[#F8EFDD] px-2 py-0.5 text-xs font-medium text-[#D69814]">
+								{tag}
+								<button on:click={() => removeTag(tag)} class="text-[#D69814] hover:text-red-500">
+									<Icon icon="mdi:close" class="h-3 w-3" />
+								</button>
+							</span>
+						{/each}
+						<input
+							type="text"
+							bind:value={newTag}
+							on:keydown={handleTagKeydown}
+							placeholder={tags.length === 0 ? 'e.g. VIP, Limited, Workshop' : 'Add tag...'}
+							class="min-w-[100px] flex-1 border-none bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
+						/>
 					</div>
-				{/if}
+					<p class="mt-1 text-xs text-gray-400">Press Enter to add a tag</p>
+				</div>
 
 				<!-- Require Approval -->
 				<div class="mb-4 flex items-center justify-between rounded-lg border border-gray-100 bg-[#F8F8F9] p-3">

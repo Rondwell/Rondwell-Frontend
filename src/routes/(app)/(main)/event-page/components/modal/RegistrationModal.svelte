@@ -1,317 +1,715 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { getPublicEventPage, getPublicSeats } from '$lib/services/event.services';
+	import { isAuthenticated } from '$lib/stores/auth.store';
+	import { getEventTheme } from '$lib/stores/eventTheme';
+	import type { Color } from '$lib/utils/colors';
+	import { colors } from '$lib/utils/colors';
 	import Icon from '@iconify/svelte';
 	import Dropdown from '../Dropdown.svelte';
+	import SeatSelector from '../SeatSelector.svelte';
 
 	export let open = false;
+	export let eventData: any = null;
+	export let selectedTicketId: string = '';
+	export let ticketTypes: any[] = [];
+	export let registrationFields: any[] = [];
 
-	  const profileOptions = [
-    { value: 'founder', label: 'Founder' },
-    { value: 'investor', label: 'Investor' },
-    { value: 'operator', label: 'Operator' },
-    { value: 'student', label: 'Student' },
-    { value: 'other', label: 'Other' }
-  ];
+	$: eventId = $page.params.id ?? '';
+	$: themeColor = eventId ? getEventTheme(eventId) : colors[0];
+	$: selectedTicket = ticketTypes.find((t: any) => t._id === selectedTicketId) ?? null;
 
-  const defaultSelectOption = [
-	{ value: 'yes', label: 'Yes' },
-	{ value: 'no', label: 'No' }
-  ]
+	// Filter registration fields for the selected ticket type
+	$: filteredFields = registrationFields
+		.filter((f: any) => {
+			if (!f.ticketTypeIds || f.ticketTypeIds.length === 0) return true;
+			return f.ticketTypeIds.includes(selectedTicketId);
+		})
+		.sort((a: any, b: any) => a.order - b.order);
 
-	let form = {
-		name: '',
-		email: '',
-		company: '',
-		website: '',
-		location: '',
-		pitchSession1: false,
-		pitchSession2: false,
-		profileType: '',
-		invest: '',
-		attend: '',
-	};
-
+	// Form state
+	let firstName = '';
+	let lastName = '';
+	let email = '';
+	let phone = '';
+	let ethAddress = '';
+	let solAddress = '';
+	let answers: Record<string, any> = {};
 	let errors: Record<string, string> = {};
+	let submitting = false;
+	let submitError = '';
+	let selectedGateway: 'PAYSTACK' | 'FLUTTERWAVE' = 'PAYSTACK';
 
-	function isValidEmail(email: string) {
-		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+	// Registration form settings from event
+	$: phoneEnabled = eventData?.registrationFormSettings?.phoneEnabled ?? 'OFF';
+	$: ethAddressEnabled = eventData?.registrationFormSettings?.ethAddressEnabled ?? 'OFF';
+	$: solAddressEnabled = eventData?.registrationFormSettings?.solAddressEnabled ?? 'OFF';
+
+	// Steps: 'form' | 'seats' | 'payment' | 'confirmation'
+	let step: 'form' | 'seats' | 'payment' | 'confirmation' = 'form';
+	let registrationResult: any = null;
+	let selectedSeatId = '';
+	let selectedSeatNumber = '';
+	let hasSeatLayout = false;
+
+	function resetForm() {
+		firstName = '';
+		lastName = '';
+		email = '';
+		phone = '';
+		ethAddress = '';
+		solAddress = '';
+		answers = {};
+		errors = {};
+		submitting = false;
+		submitError = '';
+		step = 'form';
+		registrationResult = null;
+		selectedSeatId = '';
+		selectedSeatNumber = '';
+		hasSeatLayout = false;
 	}
 
-	function validate() {
-  		errors = {};
+	$: if (open) {
+		resetForm();
+		// Check if this ticket type has a seat layout
+		if (eventId && selectedTicketId) {
+			getPublicSeats(eventId, selectedTicketId).then(data => {
+				hasSeatLayout = !!(data.layout && data.layout.elements?.length > 0);
+			}).catch(() => { hasSeatLayout = false; });
+		}
+	}
 
-  		if (!form.name.trim()) {
-  		  errors.name = 'Name is required.';
-  		}
+	function isValidEmail(e: string) {
+		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+	}
 
-  		const requiredSelectFields: (keyof typeof form)[] = ['profileType','invest','attend'];
+	function validate(): boolean {
+		errors = {};
+		if (!firstName.trim()) errors['firstName'] = 'First name is required.';
+		if (!email.trim()) errors['email'] = 'Email is required.';
+		else if (!isValidEmail(email)) errors['email'] = 'Please enter a valid email.';
 
-  		requiredSelectFields.forEach((field) => {
-    	if (!form[field] || !form[field].toString().trim()) {
-    	  errors[field] = 'This field is required.';
-    	}
-		});	
+		if (phoneEnabled === 'REQUIRED' && !phone.trim()) errors['phone'] = 'Phone number is required.';
+		if (ethAddressEnabled === 'REQUIRED' && !ethAddress.trim()) errors['ethAddress'] = 'Ethereum address is required.';
+		if (solAddressEnabled === 'REQUIRED' && !solAddress.trim()) errors['solAddress'] = 'Solana address is required.';
 
-		if (!form.email.trim()) {
-		  errors.email = 'Email is required.';
-		} else if (!isValidEmail(form.email)) {
-		  errors.email = 'Please enter a valid email address.';
-		}	
+		for (const field of filteredFields) {
+			if (field.isRequired) {
+				const val = answers[field._id ?? field.formId];
+				if (!val || (typeof val === 'string' && !val.trim())) {
+					errors[field._id ?? field.formId] = `${field.fieldName} is required.`;
+				}
+				if (Array.isArray(val) && val.length === 0) {
+					errors[field._id ?? field.formId] = `${field.fieldName} is required.`;
+				}
+			}
+		}
 		return Object.keys(errors).length === 0;
 	}
 
-	function submitForm() {
+	function formatPrice(ticket: any): string {
+		if (!ticket || ticket.isFree || !ticket.price) return 'FREE';
+		const currency = ticket.currency ?? 'NGN';
+		return new Intl.NumberFormat('en-NG', { style: 'currency', currency, minimumFractionDigits: 0 }).format(ticket.price);
+	}
+
+	function formatDate(dt: string): string {
+		if (!dt) return '';
+		const d = new Date(dt);
+		return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+	}
+
+	async function handleSubmit() {
 		if (!validate()) return;
 
-		console.log('Form Data:', form);
+		// If seat layout exists, go to seat selection first
+		if (hasSeatLayout && step === 'form') {
+			step = 'seats';
+			return;
+		}
 
-		// clear form data after submission 
-		form = {
-			name: '',
-			email: '',
-			company: '',
-			website: '',
-			location: '',
-			pitchSession1: false,
-			pitchSession2: false,
-			profileType: '',
-			invest: '',
-			attend: '',
-		};
+		await proceedToRegistration();
+	}
 
+	async function proceedToRegistration() {
+		submitting = true;
+		submitError = '';
 
-		// Close modal (optional)
-		open = false;
+		const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
+		const formAnswers = filteredFields.map((f: any) => ({
+			field_id: f._id ?? f.formId,
+			answer_value: Array.isArray(answers[f._id ?? f.formId])
+				? answers[f._id ?? f.formId].join(', ')
+				: String(answers[f._id ?? f.formId] ?? ''),
+		})).filter((a: any) => a.answer_value);
+
+		try {
+			// Step 1: Create attendee entry
+			const attendeeRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/register`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					email: email.trim().toLowerCase(),
+					firstName: firstName.trim(),
+					lastName: lastName.trim(),
+				}),
+			});
+			const attendeeData = await attendeeRes.json();
+			if (!attendeeRes.ok) throw new Error(attendeeData.message ?? 'Failed to create attendee');
+			const guestId = attendeeData.data?._id ?? attendeeData.data?.id ?? attendeeData.attendeeId;
+
+			// Step 2: Create registration
+			const regRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/register`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					eventId,
+					guestId,
+					guest_details: {
+						email: email.trim().toLowerCase(),
+						firstName: firstName.trim(),
+						lastName: lastName.trim(),
+					},
+					ticketTypeId: selectedTicketId,
+					form_answers: formAnswers,
+					linked_seat_id: selectedSeatId || undefined,
+				}),
+			});
+			const regData = await regRes.json();
+			if (!regRes.ok) throw new Error(regData.message ?? 'Registration failed');
+
+			registrationResult = regData.registration;
+
+			// Step 3: Check if paid ticket
+			const isPaid = selectedTicket && !selectedTicket.isFree && selectedTicket.price && selectedTicket.price > 0;
+
+			if (isPaid) {
+				// Go to payment gateway selection — don't finalize yet
+				step = 'payment';
+			} else {
+				// Free ticket — finalize immediately
+				const finalizeRes = await fetch(
+					`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`,
+					{ method: 'POST', headers: { 'Content-Type': 'application/json' } }
+				);
+				if (finalizeRes.ok) {
+					registrationResult.guest_status = 'ATTENDING';
+				}
+				step = 'confirmation';
+			}
+		} catch (e: any) {
+			submitError = e.message ?? 'Something went wrong. Please try again.';
+		} finally {
+			submitting = false;
+		}
+	}
+
+	function getFieldInputType(fieldType: string): string {
+		switch (fieldType) {
+			case 'EMAIL': return 'email';
+			case 'PHONE': return 'tel';
+			case 'WEBSITE': return 'url';
+			default: return 'text';
+		}
+	}
+
+	function toggleMultiSelect(fieldId: string, option: string) {
+		const current = answers[fieldId] ?? [];
+		if (current.includes(option)) {
+			answers[fieldId] = current.filter((o: string) => o !== option);
+		} else {
+			answers[fieldId] = [...current, option];
+		}
+	}
+
+	async function handlePayment() {
+		if (!registrationResult) return;
+		submitting = true;
+		submitError = '';
+
+		const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
+		const PAYMENT_URL = import.meta.env.VITE_PAYMENT_API_URL || EVENT_URL.replace('/events', '/payment').replace(':5000', ':5005');
+
+		try {
+			const paymentRes = await fetch(`${PAYMENT_URL}/api/v1/payment/ticketPayment/ticket-purchase-initiate/`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					guestId: registrationResult.guestId,
+					geustEmail: email.trim().toLowerCase(),
+					eventId,
+					organizerId: eventData?.organizerId ?? '',
+					ticketDetails: {
+						ticketTypeId: selectedTicketId,
+						quantity: 1,
+						unitPrice: selectedTicket?.price ?? 0,
+					},
+					paymentMethodDetails: {
+						payment_gateway: selectedGateway,
+						cardToken: '',
+						currency: selectedTicket?.currency ?? 'NGN',
+					},
+					isGroupPurchase: false,
+					successCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=success&reg=${registrationResult.registration_id}`,
+					failureCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=failed&reg=${registrationResult.registration_id}`,
+					returnWalletPaymentLink: false,
+					registrationIds: [registrationResult.registration_id],
+				}),
+			});
+			const paymentData = await paymentRes.json();
+			if (!paymentRes.ok) throw new Error(paymentData.message ?? 'Payment initiation failed');
+
+			if (paymentData.checkoutUrl) {
+				window.location.href = paymentData.checkoutUrl;
+			} else {
+				throw new Error('No checkout URL received');
+			}
+		} catch (e: any) {
+			submitError = e.message ?? 'Payment failed. Please try again.';
+		} finally {
+			submitting = false;
+		}
 	}
 </script>
 
 {#if open}
-<div class="fixed inset-0 z-50 flex items-center justify-center ">
-	<div
-		class="animate-fadeIn h-full w-full bg-[#FDFCFB]/80 backdrop-blur-3xl 
-		       flex flex-col items-center justify-start px-5 overflow-y-auto"
-	>
+<div class="fixed inset-0 z-50 flex items-center justify-center">
+	<div class="animate-fadeIn h-full w-full flex flex-col items-center justify-start px-5 overflow-y-auto"
+		style="background-color: {themeColor.bg}CC; backdrop-filter: blur(24px);">
+
+		<!-- Close button -->
 		<button
-			class="absolute right-5 top-6.5 flex h-8 w-8 items-center justify-center
-			       rounded-full bg-[#EBECED] text-gray-700"
+			class="absolute right-5 top-6 flex h-8 w-8 items-center justify-center rounded-full transition-colors"
+			style="background-color: {themeColor.smallCover}; color: {themeColor.text};"
 			on:click={() => (open = false)}
+			aria-label="Close registration"
 		>
 			<Icon icon="mdi:close" class="text-lg font-bold" />
 		</button>
 
-		<div class="mt-[77px] mb-13 flex flex-col md:flex-row-reverse  gap-8 md:gap-11 items-start justify-start">
-			<div class='max-w-107.5 w-full flex flex-col gap-[19px] border border-[#EAEAEA] bg-[#FDFCFC] rounded-[15px] p-[24px_22.5px_18px_17px]'>
-			<div class=" flex">
-				<img src="/eventpage_sample.svg" class="size-16 rounded-lg mr-3" alt='event_img' />
-				<div class='space-y-[11px]'>
-					<h2 class="text-[#131517] text-xl">Megaexe Party, in mapi</h2>
-					<p class="text-[#B3B4B4] text-sm">May 2, 12:30PM</p>
-				</div>
-			</div>
-			<hr class="border-[#FDFCFC]"  />
-			<div class="flex justify-between items-center">
-				<p class="text-[#B3B4B4] text-[17px]">Ticket</p>
-				<p class="text-[#131517] text-[18px]">Investor Only -In Person</p>
-				<svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
-					<path d="M0.778564 0.749023C1.43327 0.110033 2.3809 -0.0324866 3.1936 0.397461H3.19263L8.83521 3.36621H8.83423C9.51667 3.72318 9.9426 4.42698 9.94263 5.19824C9.94263 5.96952 9.51668 6.67231 8.83423 7.0293L8.83521 7.03027L3.19263 10L3.19165 9.99902C2.87809 10.166 2.54766 10.2461 2.21704 10.2461C1.69022 10.246 1.18051 10.0399 0.778564 9.64844C0.123296 9.00889 -0.0343667 8.06168 0.374268 7.24414L1.16333 5.66699C1.28957 5.41451 1.3054 5.11485 1.21021 4.84668L1.16333 4.73438L0.374268 3.15234C-0.034219 2.33498 0.123643 1.38853 0.778564 0.749023ZM2.22192 1.18164C1.96931 1.18177 1.74153 1.28396 1.56958 1.42578L1.49927 1.48926C1.23326 1.74668 1.04849 2.19918 1.29517 2.69727L2.08423 4.27441V4.27539C2.33646 4.78472 2.36812 5.37398 2.17896 5.90332L2.08423 6.12695L1.29517 7.7041V7.70508C1.04472 8.20195 1.23234 8.65379 1.49927 8.91211C1.76771 9.17181 2.21976 9.35055 2.71216 9.0918L8.35474 6.12207C8.70473 5.93854 8.91235 5.595 8.91235 5.20313C8.91233 4.81127 8.70471 4.4677 8.35474 4.28418L2.71216 1.30469V1.30566C2.54003 1.21531 2.3741 1.18164 2.22192 1.18164Z" fill="#A9AAAA" stroke="#A9AAAA" stroke-width="0.3"/>
-				</svg>
-			</div>
-			<hr class="border-[#EAEAEA]" />
-			<div class="flex justify-between items-center">
-				<p class="text-[#B3B4B4] text-[17px]">Total</p>
-				<p class="text-[#131517] text-[20px]">FREE</p>
-			</div>
-			</div>
+		<div class="mt-[77px] mb-13 flex flex-col md:flex-row-reverse gap-8 md:gap-11 items-start justify-start w-full max-w-[900px]">
 
-			<div class="max-w-107.5 w-full rounded-lg">
-			<h3 class="mb-6 text-2xl font-normal text-black">Attendance Registration</h3>
-			<div class="mb-[33px] flex justify-start items-center gap-3">
-				<img src="/user1-icon.svg" alt='user-avatar' class="size-[50px] rounded-full" />
-				<div class="">
-					<h3 class="text-[#27292B] font-normal text-lg inline-flex gap-3 justify-center items-center">JOHN NEBRASKA NEVADA JAMES <span> <img src="/edit.svg" alt='editIcon' class="size-4" /></span> </h3>
-					<p class="text-[#6A6B6D] text-[15px] font-normal">johnmedoc23@gmail.com</p>
-				</div>
-			</div>
-			<form class="flex w-full flex-col gap-8" on:submit|preventDefault={submitForm}>
-				<!-- Form -->
-				<div class="w-full">
-					<label class="text-[15px] text-[#696B6D]" for="name">
-						Name *
-					</label>
-					<input
-						bind:value={form.name}
-						type="text"
-						placeholder="James Brown"
-						class="mt-2 w-full rounded-[9px] bg-white border px-5 py-3 text-sm text-[#3C3D3F]
-						       {errors.name ? 'border-red-500' : 'border-[#ECEDED]'}"
-					/>
-					{#if errors.name}
-						<p class="mt-1 text-sm text-red-500">{errors.name}</p>
+			<!-- Ticket Summary Card -->
+			<div class="max-w-[430px] w-full flex flex-col gap-[19px] rounded-[15px] p-5"
+				style="background-color: {themeColor.cover}; border: 1px solid {themeColor.toggle};">
+				<div class="flex">
+					{#if eventData?.displayPictureUrl || eventData?.coverPictureUrl}
+					<img src={eventData.displayPictureUrl || eventData.coverPictureUrl} class="size-16 rounded-lg mr-3 object-cover" alt="event" />
+					{:else}
+					<div class="size-16 rounded-lg mr-3 flex items-center justify-center text-2xl" style="background-color: {themeColor.smallCover};">🎪</div>
 					{/if}
+					<div class="space-y-1">
+						<h2 class="text-xl font-medium" style="color: {themeColor.text};">{eventData?.title ?? 'Event'}</h2>
+						<p class="text-sm" style="color: {themeColor.lightText};">{formatDate(eventData?.startDateTime)}</p>
+					</div>
 				</div>
+				<hr style="border-color: {themeColor.toggle};" />
+				<div class="flex justify-between items-center">
+					<p class="text-base" style="color: {themeColor.lightText};">Ticket</p>
+					<p class="text-base font-medium" style="color: {themeColor.text};">{selectedTicket?.name ?? 'Standard'}</p>
+				</div>
+				<hr style="border-color: {themeColor.toggle};" />
+				<div class="flex justify-between items-center">
+					<p class="text-base" style="color: {themeColor.lightText};">Total</p>
+					<p class="text-xl font-semibold" style="color: {themeColor.text};">{formatPrice(selectedTicket)}</p>
+				</div>
+			</div>
 
-				<!-- Email -->
-				<div class="w-full">
-					<label class="text-[15px] text-[#696B6D]" for="email">
-						Email *
-					</label>
-					<input
-						bind:value={form.email}
-						type="email"
-						placeholder="jamesbrown@email.com"
-						class="mt-2 w-full rounded-[9px] bg-white border px-5 py-3 text-sm text-[#3C3D3F]
-						       {errors.email ? 'border-red-500' : 'border-[#ECEDED]'}"
-					/>
-					{#if errors.email}
-						<p class="mt-1 text-sm text-red-500">{errors.email}</p>
+			<!-- Form / Confirmation -->
+			<div class="max-w-[430px] w-full">
+
+			{#if step === 'form'}
+				<h3 class="mb-6 text-2xl font-normal" style="color: {themeColor.text};">Attendance Registration</h3>
+
+				{#if submitError}
+				<div class="mb-4 rounded-lg p-3 text-sm" style="background-color: #fee2e2; color: #dc2626;">
+					{submitError}
+				</div>
+				{/if}
+
+				<form class="flex w-full flex-col gap-6" on:submit|preventDefault={handleSubmit}>
+					<!-- First Name (always required) -->
+					<div class="w-full">
+						<label class="text-sm" style="color: {themeColor.lightText};">First Name *</label>
+						<input bind:value={firstName} type="text" placeholder="John"
+							class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+							style="background-color: {themeColor.cover}; border-color: {errors.firstName ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+						{#if errors.firstName}<p class="mt-1 text-xs text-red-500">{errors.firstName}</p>{/if}
+					</div>
+
+					<!-- Last Name -->
+					<div class="w-full">
+						<label class="text-sm" style="color: {themeColor.lightText};">Last Name</label>
+						<input bind:value={lastName} type="text" placeholder="Doe"
+							class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+							style="background-color: {themeColor.cover}; border-color: {themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+					</div>
+
+					<!-- Email (always required) -->
+					<div class="w-full">
+						<label class="text-sm" style="color: {themeColor.lightText};">Email *</label>
+						<input bind:value={email} type="email" placeholder="john@example.com"
+							class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+							style="background-color: {themeColor.cover}; border-color: {errors.email ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+						{#if errors.email}<p class="mt-1 text-xs text-red-500">{errors.email}</p>{/if}
+					</div>
+
+					<!-- Phone (from registrationFormSettings) -->
+					{#if phoneEnabled !== 'OFF'}
+					<div class="w-full">
+						<label class="text-sm" style="color: {themeColor.lightText};">Phone Number {phoneEnabled === 'REQUIRED' ? '*' : ''}</label>
+						<input bind:value={phone} type="tel" placeholder="+234..."
+							class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+							style="background-color: {themeColor.cover}; border-color: {errors.phone ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+						{#if errors.phone}<p class="mt-1 text-xs text-red-500">{errors.phone}</p>{/if}
+					</div>
 					{/if}
-				</div>
 
-				<!-- Checkboxes -->
-				<div class="flex flex-col gap-3">
-					<label class="flex items-center gap-3 cursor-pointer select-none">
-						<input
-						   type="checkbox"
-						   bind:checked={form.pitchSession1}
-						   class="peer hidden"
-						 />
+					<!-- Ethereum Address (from registrationFormSettings) -->
+					{#if ethAddressEnabled !== 'OFF'}
+					<div class="w-full">
+						<label class="text-sm" style="color: {themeColor.lightText};">Ethereum Address {ethAddressEnabled === 'REQUIRED' ? '*' : ''}</label>
+						<input bind:value={ethAddress} type="text" placeholder="0x..."
+							class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+							style="background-color: {themeColor.cover}; border-color: {errors.ethAddress ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+						{#if errors.ethAddress}<p class="mt-1 text-xs text-red-500">{errors.ethAddress}</p>{/if}
+					</div>
+					{/if}
 
-						   <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg" class="peer-checked:hidden">
-								<rect x="0.5" y="0.5" width="21.5006" height="21.5006" rx="4.75013" fill="white" stroke="black"/>
-							</svg>
+					<!-- Solana Address (from registrationFormSettings) -->
+					{#if solAddressEnabled !== 'OFF'}
+					<div class="w-full">
+						<label class="text-sm" style="color: {themeColor.lightText};">Solana Address {solAddressEnabled === 'REQUIRED' ? '*' : ''}</label>
+						<input bind:value={solAddress} type="text" placeholder="Enter SOL address..."
+							class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+							style="background-color: {themeColor.cover}; border-color: {errors.solAddress ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+						{#if errors.solAddress}<p class="mt-1 text-xs text-red-500">{errors.solAddress}</p>{/if}
+					</div>
+					{/if}
 
-						   <!-- Checked SVG -->
-						   <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg" class=" hidden peer-checked:block">
-								<rect width="22.5006" height="22.5006" rx="5.25013" fill="#131517"/>
-								<path d="M9.46325 15.7502C9.10468 15.7502 8.7461 15.5827 8.47717 15.3194L5.6534 12.3033C5.11553 11.7288 5.11553 10.7714 5.6534 10.1969C6.19126 9.62241 7.0877 9.62241 7.62556 10.1969L9.46325 12.1597L14.1247 7.18086C14.6626 6.60638 15.559 6.60638 16.0969 7.18086C16.6347 7.75534 16.6347 8.71281 16.0969 9.2873L10.4493 15.3194C10.1804 15.6066 9.82183 15.7502 9.46325 15.7502Z" fill="white"/>
-							</svg>
-						<span class="text-sm text-[#132B3C]">I am interested in Pitching for Session #1</span>
-					</label>
+					<!-- Dynamic Custom Fields -->
+					{#each filteredFields as field (field._id ?? field.formId)}
+					{@const fid = field._id ?? field.formId}
+					<div class="w-full">
+						<label class="text-sm" style="color: {themeColor.lightText};">
+							{field.fieldName} {field.isRequired ? '*' : ''}
+						</label>
 
-					<label class="flex items-center gap-3 cursor-pointer select-none">
-						<input
-						   type="checkbox"
-						   bind:checked={form.pitchSession2}
-						   class="peer hidden"
-						 />
+						{#if field.fieldType === 'TEXT' || field.fieldType === 'SHORT_TEXT' || field.fieldType === 'COMPANY' || field.fieldType === 'EMAIL' || field.fieldType === 'PHONE' || field.fieldType === 'WEBSITE' || field.fieldType === 'WEB3_ETH_ADDRESS' || field.fieldType === 'WEB3_SOL_ADDRESS' || field.fieldType === 'SOCIAL_PROFILE'}
+							<input
+								bind:value={answers[fid]}
+								type={getFieldInputType(field.fieldType)}
+								placeholder={field.fieldType === 'PHONE' ? '+234...' : field.fieldType === 'WEB3_ETH_ADDRESS' ? '0x...' : field.fieldType === 'SOCIAL_PROFILE' ? `Enter your ${field.platform || 'profile'} URL` : ''}
+								class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+								style="background-color: {themeColor.cover}; border-color: {errors[fid] ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
 
-						   <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg" class="peer-checked:hidden">
-								<rect x="0.5" y="0.5" width="21.5006" height="21.5006" rx="4.75013" fill="white" stroke="black"/>
-							</svg>
+						{:else if field.fieldType === 'LONG_TEXT' || field.fieldType === 'CUSTOM_TEXT'}
+							<textarea
+								bind:value={answers[fid]}
+								rows="3"
+								class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm resize-none transition-all focus:outline-none focus:ring-2"
+								style="background-color: {themeColor.cover}; border-color: {errors[fid] ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;">
+							</textarea>
 
-						   <!-- Checked SVG -->
-						   <svg width="23" height="23" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg" class=" hidden peer-checked:block">
-								<rect width="22.5006" height="22.5006" rx="5.25013" fill="#131517"/>
-								<path d="M9.46325 15.7502C9.10468 15.7502 8.7461 15.5827 8.47717 15.3194L5.6534 12.3033C5.11553 11.7288 5.11553 10.7714 5.6534 10.1969C6.19126 9.62241 7.0877 9.62241 7.62556 10.1969L9.46325 12.1597L14.1247 7.18086C14.6626 6.60638 15.559 6.60638 16.0969 7.18086C16.6347 7.75534 16.6347 8.71281 16.0969 9.2873L10.4493 15.3194C10.1804 15.6066 9.82183 15.7502 9.46325 15.7502Z" fill="white"/>
-							</svg>
-						<span class="text-sm text-[#132B3C]">I am interested in Pitching for Session #2</span>
-					</label>
-				</div>
+						{:else if field.fieldType === 'CHECKBOX'}
+							<label class="mt-2 flex items-center gap-3 cursor-pointer select-none rounded-lg px-3 py-2.5 transition-colors hover:opacity-80"
+								style="background-color: {themeColor.cover};">
+								<input type="checkbox" bind:checked={answers[fid]}
+									class="h-5 w-5 rounded border-2 transition-colors cursor-pointer"
+									style="accent-color: {themeColor.button};" />
+								<span class="text-sm" style="color: {themeColor.text};">{field.fieldName}</span>
+							</label>
 
-				<!-- Company -->
-				<div class="w-full">
-					<label class="text-[15px] text-[#696B6D]" for="company">
-						What is the name of your company?
-					</label>
-					<input
-						bind:value={form.company}
-						type="text"
-						class="mt-2 w-full rounded-[9px] bg-white border border-[#ECEDED] px-5 py-3 text-sm text-[#3C3D3F]"
+						{:else if field.fieldType === 'TERMS_CHECKBOX'}
+							<div class="mt-2 space-y-3">
+								{#if field.contentType === 'link' && field.termsLink}
+									<div class="rounded-lg p-3" style="background-color: {themeColor.cover};">
+										<a href={field.termsLink} target="_blank" rel="noopener" class="text-sm underline" style="color: {themeColor.button};">
+											View Terms and Conditions
+										</a>
+									</div>
+								{:else if field.termsContent}
+									<div class="max-h-32 overflow-y-auto rounded-lg border p-3 text-sm" style="background-color: {themeColor.cover}; border-color: {themeColor.toggle}; color: {themeColor.text};">
+										{@html field.termsContent}
+									</div>
+								{/if}
+								<label class="flex items-center gap-3 cursor-pointer select-none rounded-lg px-3 py-2.5 transition-colors hover:opacity-80"
+									style="background-color: {themeColor.cover};">
+									<input type="checkbox" bind:checked={answers[fid]}
+										class="h-5 w-5 rounded border-2 cursor-pointer"
+										style="accent-color: {themeColor.button};" />
+									<span class="text-sm" style="color: {themeColor.text};">I accept the terms and conditions</span>
+								</label>
+								{#if field.collectSignature && answers[fid]}
+									<div class="mt-2">
+										<label class="text-xs" style="color: {themeColor.lightText};">Type your name as signature</label>
+										<input
+											bind:value={answers[fid + '_signature']}
+											type="text"
+											placeholder="Type your full name"
+											class="mt-1 w-full rounded-[9px] border px-4 py-3 text-lg italic transition-all focus:outline-none focus:ring-2"
+											style="background-color: {themeColor.cover}; border-color: {themeColor.toggle}; color: {themeColor.text}; font-family: 'Dancing Script', 'Brush Script MT', 'Segoe Script', cursive; --tw-ring-color: {themeColor.button}40;" />
+									</div>
+								{/if}
+							</div>
+
+						{:else if field.fieldType === 'OPTIONS' && field.selectionType === 'single'}
+							<div class="mt-2">
+								<Dropdown
+									options={(field.options ?? []).map((o) => ({ value: o, label: o }))}
+									value={answers[fid] ?? null}
+									placeholder="Select an option"
+									{themeColor}
+									on:change={(e) => answers[fid] = e.detail.value ?? ''}
+								/>
+							</div>
+
+						{:else if (field.fieldType === 'OPTIONS' && field.selectionType === 'multiple') || field.fieldType === 'MULTI_SELECT'}
+							<div class="mt-2">
+								<Dropdown
+									options={(field.options ?? []).map((o) => ({ value: o, label: o }))}
+									value={answers[fid] ?? []}
+									placeholder="Select options"
+									multiple={true}
+									{themeColor}
+									on:change={(e) => answers[fid] = e.detail.value ?? []}
+								/>
+							</div>
+
+						{:else if field.fieldType === 'UPLOAD'}
+							<input type="file" class="mt-2 w-full text-sm" style="color: {themeColor.lightText};"
+								on:change={(e) => { const f = e.currentTarget?.files?.[0]; if (f) answers[fid] = f.name; }} />
+
+						{:else if field.fieldType === 'SIGNATURE'}
+							<input bind:value={answers[fid]} type="text" placeholder="Type your signature"
+								class="mt-2 w-full rounded-[9px] border px-4 py-3 text-lg italic transition-all focus:outline-none focus:ring-2"
+								style="background-color: {themeColor.cover}; border-color: {errors[fid] ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; font-family: 'Dancing Script', 'Brush Script MT', 'Segoe Script', cursive; --tw-ring-color: {themeColor.button}40;" />
+
+						{:else}
+							<input bind:value={answers[fid]} type="text"
+								class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+								style="background-color: {themeColor.cover}; border-color: {errors[fid] ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+						{/if}
+
+						{#if errors[fid]}<p class="mt-1 text-xs text-red-500">{errors[fid]}</p>{/if}
+					</div>
+					{/each}
+
+					<!-- Submit -->
+					<button type="submit" disabled={submitting}
+						class="w-full rounded-lg py-3 text-base font-medium transition-all disabled:opacity-60"
+						style="background-color: {themeColor.button}; color: {themeColor.buttonText};">
+						{#if submitting}
+							<span class="inline-flex items-center gap-2">
+								<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+								Registering...
+							</span>
+						{:else}
+							{selectedTicket?.requiresApproval ? 'Request to Get In' : 'Register'}
+						{/if}
+					</button>
+				</form>
+
+			{:else if step === 'seats'}
+				<!-- Seat Selection Step -->
+				<div class="flex flex-col gap-4">
+					<h3 class="text-xl font-normal" style="color: {themeColor.text};">Choose Your Seat</h3>
+					<p class="text-sm" style="color: {themeColor.lightText};">
+						Select a seat from the layout below. Available seats are highlighted.
+					</p>
+
+					{#if submitError}
+					<div class="rounded-lg p-3 text-sm" style="background-color: #fee2e2; color: #dc2626;">
+						{submitError}
+					</div>
+					{/if}
+
+					<SeatSelector
+						{eventId}
+						ticketTypeId={selectedTicketId}
+						{themeColor}
+						on:select={(e) => {
+							selectedSeatId = e.detail.seatId;
+							selectedSeatNumber = e.detail.seatNumber;
+						}}
 					/>
+
+					<div class="flex gap-3">
+						<button
+							class="flex-1 rounded-lg py-3 text-base font-medium transition-all disabled:opacity-60"
+							style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+							disabled={submitting || !selectedSeatId}
+							on:click={proceedToRegistration}
+						>
+							{#if submitting}
+								<span class="inline-flex items-center gap-2 justify-center">
+									<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+									Processing...
+								</span>
+							{:else}
+								Continue with Seat {selectedSeatNumber || ''}
+							{/if}
+						</button>
+					</div>
+
+					<button class="text-sm underline" style="color: {themeColor.lightText};" on:click={() => { step = 'form'; submitError = ''; }}>
+						Back to form
+					</button>
+
+					<!-- Skip seat selection -->
+					<button class="text-xs" style="color: {themeColor.lightText};"
+						on:click={() => { selectedSeatId = ''; selectedSeatNumber = ''; proceedToRegistration(); }}>
+						Skip seat selection
+					</button>
 				</div>
 
-				<!-- Website -->
-				<div class="w-full">
-					<label class="text-[15px] text-[#696B6D]" for="website">
-						What is your company’s website?
-					</label>
-					<input
-						bind:value={form.website}
-						type="text"
-						class="mt-2 w-full rounded-[9px] bg-white border border-[#ECEDED] px-5 py-3 text-sm text-[#3C3D3F]"
-					/>
+			{:else if step === 'payment'}
+				<!-- Payment Gateway Selection -->
+				<div class="flex flex-col items-center gap-6">
+					<h3 class="text-2xl font-normal" style="color: {themeColor.text};">Choose Payment Method</h3>
+					<p class="text-sm" style="color: {themeColor.lightText};">
+						Select your preferred payment gateway to complete your ticket purchase.
+					</p>
+
+					<div class="w-full flex flex-col gap-3">
+						<button
+							class="flex items-center gap-4 w-full rounded-xl p-4 border-2 transition-all"
+							style="background-color: {themeColor.cover}; border-color: {selectedGateway === 'PAYSTACK' ? themeColor.button : themeColor.toggle};"
+							on:click={() => selectedGateway = 'PAYSTACK'}
+						>
+							<div class="flex h-12 w-12 items-center justify-center rounded-lg" style="background-color: {themeColor.smallCover};">
+								<span class="text-lg font-bold" style="color: {themeColor.button};">P</span>
+							</div>
+							<div class="text-left">
+								<p class="text-sm font-medium" style="color: {themeColor.text};">Paystack</p>
+								<p class="text-xs" style="color: {themeColor.lightText};">Pay with card, bank transfer, or USSD</p>
+							</div>
+						</button>
+
+						<button
+							class="flex items-center gap-4 w-full rounded-xl p-4 border-2 transition-all"
+							style="background-color: {themeColor.cover}; border-color: {selectedGateway === 'FLUTTERWAVE' ? themeColor.button : themeColor.toggle};"
+							on:click={() => selectedGateway = 'FLUTTERWAVE'}
+						>
+							<div class="flex h-12 w-12 items-center justify-center rounded-lg" style="background-color: {themeColor.smallCover};">
+								<span class="text-lg font-bold" style="color: #F5A623;">F</span>
+							</div>
+							<div class="text-left">
+								<p class="text-sm font-medium" style="color: {themeColor.text};">Flutterwave</p>
+								<p class="text-xs" style="color: {themeColor.lightText};">Pay with card, mobile money, or bank</p>
+							</div>
+						</button>
+					</div>
+
+					<div class="w-full rounded-xl p-4" style="background-color: {themeColor.smallCover};">
+						<div class="flex justify-between mb-2">
+							<span class="text-sm" style="color: {themeColor.lightText};">Ticket</span>
+							<span class="text-sm font-medium" style="color: {themeColor.text};">{selectedTicket?.name}</span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-sm" style="color: {themeColor.lightText};">Amount</span>
+							<span class="text-lg font-bold" style="color: {themeColor.text};">{formatPrice(selectedTicket)}</span>
+						</div>
+					</div>
+
+					<button
+						class="w-full rounded-lg py-3 text-base font-medium transition-all disabled:opacity-60"
+						style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+						disabled={submitting}
+						on:click={handlePayment}
+					>
+						{#if submitting}
+							<span class="inline-flex items-center gap-2">
+								<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+								Processing...
+							</span>
+						{:else}
+							Pay {formatPrice(selectedTicket)}
+						{/if}
+					</button>
+
+					<button class="text-sm underline" style="color: {themeColor.lightText};" on:click={() => step = 'form'}>
+						Back to form
+					</button>
 				</div>
 
-				<!-- Location -->
-				<div class="w-full">
-					<label class="text-[15px] text-[#696B6D]" for="location">
-						Where is your company based? (City, State)
-					</label>
-					<input
-						bind:value={form.location}
-						type="text"
-						class="mt-2 w-full rounded-[9px] bg-white border border-[#ECEDED] px-5 py-3 text-sm text-[#3C3D3F]"
-					/>
+			{:else if step === 'confirmation'}
+				<!-- Confirmation Page -->
+				<div class="flex flex-col items-center text-center gap-6">
+					<div class="flex h-20 w-20 items-center justify-center rounded-full" style="background-color: {themeColor.smallCover};">
+						<svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="{themeColor.button}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="10" stroke="{themeColor.button}" stroke-width="2"/></svg>
+					</div>
+
+					<h2 class="text-2xl font-semibold" style="color: {themeColor.text};">
+						{selectedTicket?.requiresApproval ? 'Request Submitted' : 'Registration Confirmed'}
+					</h2>
+					<p class="text-sm leading-relaxed" style="color: {themeColor.lightText};">
+						{selectedTicket?.requiresApproval
+							? 'Your request has been submitted. The organizer will review and approve your registration.'
+							: `You're registered for ${eventData?.title ?? 'this event'}. Check your email for confirmation details.`}
+					</p>
+
+					{#if registrationResult}
+					<div class="w-full rounded-xl p-4 text-left space-y-3" style="background-color: {themeColor.cover}; border: 1px solid {themeColor.toggle};">
+						<div class="flex justify-between">
+							<span class="text-sm" style="color: {themeColor.lightText};">Name</span>
+							<span class="text-sm font-medium" style="color: {themeColor.text};">{firstName} {lastName}</span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-sm" style="color: {themeColor.lightText};">Email</span>
+							<span class="text-sm font-medium" style="color: {themeColor.text};">{email}</span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-sm" style="color: {themeColor.lightText};">Ticket</span>
+							<span class="text-sm font-medium" style="color: {themeColor.text};">{selectedTicket?.name}</span>
+						</div>
+						{#if selectedSeatNumber}
+						<div class="flex justify-between">
+							<span class="text-sm" style="color: {themeColor.lightText};">Seat</span>
+							<span class="text-sm font-medium" style="color: {themeColor.button};">{selectedSeatNumber}</span>
+						</div>
+						{/if}
+						{#if registrationResult.event_passcode}
+						<div class="flex justify-between">
+							<span class="text-sm" style="color: {themeColor.lightText};">Passcode</span>
+							<span class="text-sm font-mono font-bold tracking-wider" style="color: {themeColor.button};">{registrationResult.event_passcode}</span>
+						</div>
+						{/if}
+					</div>
+
+					{#if registrationResult.qr_code_data}
+					<div class="flex flex-col items-center gap-2">
+						<p class="text-xs" style="color: {themeColor.lightText};">Your QR Code</p>
+						<img src={registrationResult.qr_code_data} alt="QR Code" class="h-32 w-32 rounded-lg" />
+					</div>
+					{/if}
+					{/if}
+
+					<!-- CTA -->
+					{#if !$isAuthenticated}
+					<div class="w-full rounded-xl p-4" style="background-color: {themeColor.smallCover};">
+						<p class="text-sm mb-3" style="color: {themeColor.text};">Verify your email to access the event page and manage your registration.</p>
+						<button class="w-full rounded-lg py-2.5 text-sm font-medium"
+							style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+							on:click={() => goto('/discover?show=true')}>
+							Verify Email & Create Account
+						</button>
+					</div>
+					{:else}
+					<button class="w-full rounded-lg py-2.5 text-sm font-medium"
+						style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+						on:click={() => { open = false; goto(`/event-page/${eventId}`); }}>
+						Go to Event Page
+					</button>
+					{/if}
+
+					<button class="text-sm underline" style="color: {themeColor.lightText};" on:click={() => (open = false)}>
+						Close
+					</button>
 				</div>
-
-				<!-- How would you describe yourself -->
-				<div class="w-full relative">
-				  <label class="text-[15px] text-[#696B6D]" for='profileType'>
-				    How would you describe yourself? *
-				  </label>
-			  
-				   <div class="relative mt-2 ">
-
-					
-				  <Dropdown
-  options={profileOptions}
-  value={form.profileType}
-  placeholder="Select an option"
-  on:change ={(e) => form.profileType = e.detail.value || ''}
-/>
-				   </div>
-
-
-				  {#if errors.profileType}
-				    <p class="mt-1 text-sm text-red-500">{errors.profileType}</p>
-				  {/if}
-				</div>
-
-				<div class="w-full relative">
-				  <label class="text-[15px] text-[#696B6D]" for='invest'>
-				   Are you interested in investing with us? *
-				  </label>
-			  
-				   <div class="mt-2 ">
-									  <Dropdown
-  options={defaultSelectOption}
-  value={form.invest}
-  placeholder="Select an option"
-  on:change ={(e) => form.invest = defaultSelectOption.find(opt => opt.value === e.detail.value)?.value || ''}
-/>
-					
-				   </div>
-
-				  {#if errors.invest}
-				    <p class="mt-1 text-sm text-red-500">{errors.invest}</p>
-				  {/if}
-				</div>
-
-				<div class="w-full relative">
-				  <label class="text-[15px] text-[#696B6D]" for='attend'>
-				    Have you previously attended the Invest in the Future Summit? *
-				  </label>
-			  
-				   <div class="relative mt-2 ">
-									  <Dropdown
-  options={defaultSelectOption}
-  value={form.attend}
-  placeholder="Select an option"
-  on:change ={(e) => form.attend = defaultSelectOption.find(opt => opt.value === e.detail.value)?.value || ''}
-/>
-				   </div>
-
-				  {#if errors.attend}
-				    <p class="mt-1 text-sm text-red-500">{errors.attend}</p>
-				  {/if}
-				</div>
-
-				<button
-				type='submit'
-					class="w-full rounded-md bg-[#333537] py-[10px] text-white"
-				>
-					Register
-				</button>
-			</form>
+			{/if}
 			</div>
 		</div>
 	</div>
@@ -323,13 +721,7 @@
 		animation: fade 0.15s ease-out;
 	}
 	@keyframes fade {
-		from {
-			opacity: 0;
-			transform: scale(0.97);
-		}
-		to {
-			opacity: 1;
-			transform: scale(1);
-		}
+		from { opacity: 0; transform: scale(0.97); }
+		to { opacity: 1; transform: scale(1); }
 	}
 </style>

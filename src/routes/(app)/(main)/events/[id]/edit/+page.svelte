@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { getEventById, updateEvent, uploadEventPhoto } from '$lib/services/event.services';
+	import AddressAutocomplete from '$lib/components/AddressAutocomplete.svelte';
+	import { updateEvent, uploadEventPhoto } from '$lib/services/event.services';
+	import { getEventCache } from '$lib/stores/eventCache.store';
 	import { colors, type Color } from '$lib/utils/colors';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
@@ -10,7 +12,10 @@
 	import { createEditor, Editor, EditorContent } from 'svelte-tiptap';
 	import type { Readable } from 'svelte/store';
 	import DatePickerModal from '../../../../create-event/components/DatePickerModal.svelte';
+	import EventLocationModal from '../../../../create-event/components/EventLocationModal.svelte';
+	import EventTypeModal from '../../../../create-event/components/EventTypeModal.svelte';
 	import TimeModal from '../../../../create-event/components/TimeModal.svelte';
+	import VisibilityModal from '../../../../create-event/components/VisibilityModal.svelte';
 
 	$: eventId = $page.params.id ?? '';
 
@@ -45,6 +50,19 @@
 	let openStartTimePicker = false;
 	let openEndTimePicker = false;
 
+	// Event Type & Location state
+	let eventType: 'Virtual' | 'Physical' | 'Hybrid' = 'Virtual';
+	let virtualLink = '';
+	let physicalAddress = '';
+	let showEventTypeModal = false;
+	let showLocationModal = false;
+	let showVisibilityModal = false;
+	let visibility = 'Public';
+	let visibilityIcon = 'mdi:web';
+	let resolvedLat = 0;
+	let resolvedLng = 0;
+	let venueName = '';
+
 	// Rich text editor
 	let descEditor: Readable<Editor>;
 
@@ -53,14 +71,18 @@
 	}
 
 	onMount(async () => {
-		try {
-			const event = await getEventById(eventId);
+		// Use cached event data
+		const { event: eventStore, loading: loadingStore } = getEventCache(eventId);
+		
+		// Wait for cache to load if needed
+		const unsubLoading = loadingStore.subscribe(() => {});
+		const unsubEvent = eventStore.subscribe((event) => {
+			if (!event) return;
 			rawEvent = event;
 			name = event.title ?? '';
 			descriptionHtml = event.description ?? '';
-			// Match themeColor name to a color object (case-insensitive)
 			const matched = colors.find(
-				c => c.name.toLowerCase() === (event.themeColor ?? '').toLowerCase()
+				(c: Color) => c.name.toLowerCase() === (event.themeColor ?? '').toLowerCase()
 				  || c.bg.toLowerCase() === (event.themeColor ?? '').toLowerCase()
 			);
 			selectedColor = matched ?? colors[0];
@@ -76,7 +98,6 @@
 			};
 			socialPreviewImage = event.coverPictureUrl ?? event.displayPictureUrl ?? null;
 
-			// Parse date & time from event
 			if (event.startDateTime) {
 				const sd = new Date(event.startDateTime);
 				startDate = sd;
@@ -88,11 +109,27 @@
 				endTime = ed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 			}
 			timezone = event.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-		} catch (e: any) {
-			saveError = e.message ?? 'Failed to load event';
-		} finally {
+
+			// Event type & location
+			const et = (event.eventType ?? 'VIRTUAL').toUpperCase();
+			eventType = et === 'VIRTUAL' ? 'Virtual' : et === 'PHYSICAL' ? 'Physical' : et === 'HYBRID' ? 'Hybrid' : 'Virtual';
+			virtualLink = event.locationDetails?.virtual?.meetingLink ?? '';
+			physicalAddress = event.locationDetails?.physical?.venueAddress
+				?? event.locationDetails?.physical?.resolvedAddress?.formatted_address
+				?? event.locationDetails?.physical?.venueName
+				?? '';
+			venueName = event.locationDetails?.physical?.venueName ?? '';
+			resolvedLat = event.locationDetails?.physical?.resolvedAddress?.lat ?? 0;
+			resolvedLng = event.locationDetails?.physical?.resolvedAddress?.lng ?? 0;
+			visibility = (event.visibility ?? 'PUBLIC').toUpperCase() === 'PRIVATE' ? 'Private' : 'Public';
+			visibilityIcon = visibility === 'Private' ? 'mdi:sparkles' : 'mdi:web';
+
 			loading = false;
-		}
+			
+			// Unsubscribe after first data load to avoid overwriting user edits
+			unsubEvent();
+			unsubLoading();
+		});
 
 		descEditor = createEditor({
 			extensions: [
@@ -137,6 +174,20 @@
 		saveError = '';
 		saveSuccess = false;
 		try {
+			const etMap: Record<string, string> = { 'Virtual': 'VIRTUAL', 'Physical': 'PHYSICAL', 'Hybrid': 'HYBRID' };
+			const locationDetails: any = {};
+			if (eventType === 'Virtual' || eventType === 'Hybrid') {
+				const platform = virtualLink.includes('zoom') ? 'Zoom' : virtualLink.includes('meet.google') ? 'Google Meet' : virtualLink.includes('teams') ? 'Microsoft Teams' : 'Virtual';
+				locationDetails.virtual = { platform, meetingLink: virtualLink, calendarIntegrations: [] };
+			}
+			if (eventType === 'Physical' || eventType === 'Hybrid') {
+				locationDetails.physical = {
+					venueName: venueName || physicalAddress.split(',')[0]?.trim() || physicalAddress,
+					venueAddress: physicalAddress,
+					resolvedAddress: { lat: resolvedLat, lng: resolvedLng, formatted_address: physicalAddress },
+				};
+			}
+
 			await updateEvent(eventId, {
 				title: name,
 				description: descriptionHtml,
@@ -146,6 +197,9 @@
 				startDateTime: buildDateTime(startDate, startTime),
 				endDateTime: buildDateTime(endDate, endTime),
 				timeZone: timezone || undefined,
+				eventType: etMap[eventType] ?? 'VIRTUAL',
+				locationDetails,
+				visibility: visibility === 'Private' ? 'PRIVATE' : 'PUBLIC',
 			} as any);
 			saveSuccess = true;
 			setTimeout(() => (saveSuccess = false), 3000);
@@ -366,6 +420,105 @@
 			<!-- Timezone -->
 			<div class="mt-3">
 				<span class="text-xs text-gray-400">Timezone: {timezone}</span>
+			</div>
+		</div>
+
+		<!-- Event Type & Location -->
+		<div class="mb-6 rounded-lg bg-[#FDFDFD] p-4">
+			<h2 class="mb-3 text-2xl font-semibold">Event Type & Location</h2>
+			<p class="mb-4 text-xs text-gray-400">Change the event format and update venue details.</p>
+
+			<!-- Event Type Selector -->
+			<div class="mb-5">
+				<label class="mb-2 block text-sm font-medium text-gray-700">Event Type</label>
+				<div class="flex gap-3">
+					{#each [{ label: 'Virtual', icon: 'mdi:video-outline', desc: 'Online event' }, { label: 'Physical', icon: 'mdi:map-marker-outline', desc: 'In-person venue' }, { label: 'Hybrid', icon: 'mdi:monitor-cellphone', desc: 'Both online & in-person' }] as opt}
+					<button
+						class="flex flex-1 flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all hover:shadow-sm"
+						style="border-color: {eventType === opt.label ? '#1a1a1a' : '#e5e7eb'}; background-color: {eventType === opt.label ? '#f9fafb' : 'white'};"
+						on:click={() => { eventType = opt.label as 'Virtual' | 'Physical' | 'Hybrid'; }}
+					>
+						<Icon icon={opt.icon} class="text-2xl {eventType === opt.label ? 'text-gray-900' : 'text-gray-400'}" />
+						<span class="text-sm font-medium {eventType === opt.label ? 'text-gray-900' : 'text-gray-500'}">{opt.label}</span>
+						<span class="text-xs text-gray-400">{opt.desc}</span>
+					</button>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Virtual Link -->
+			{#if eventType === 'Virtual' || eventType === 'Hybrid'}
+			<div class="mb-4">
+				<label class="mb-1.5 block text-sm font-medium text-gray-700">
+					<Icon icon="mdi:video-outline" class="mr-1 inline text-base text-gray-400" />
+					Virtual Meeting Link
+				</label>
+				<input
+					type="url"
+					bind:value={virtualLink}
+					placeholder="https://meet.google.com/abc-defg-hij"
+					class="w-full rounded-md border border-gray-200 bg-[#F8F8F9] px-3 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:border-gray-400 focus:outline-none"
+				/>
+				{#if virtualLink}
+				{@const platform = virtualLink.includes('zoom') ? 'Zoom' : virtualLink.includes('meet.google') ? 'Google Meet' : virtualLink.includes('teams') ? 'Microsoft Teams' : ''}
+				{#if platform}
+				<p class="mt-1 flex items-center gap-1 text-xs text-green-600">
+					<Icon icon="mdi:check-circle" class="text-sm" /> Detected: {platform}
+				</p>
+				{/if}
+				{/if}
+			</div>
+			{/if}
+
+			<!-- Physical Address -->
+			{#if eventType === 'Physical' || eventType === 'Hybrid'}
+			<div class="mb-4">
+				<label class="mb-1.5 block text-sm font-medium text-gray-700">
+					<Icon icon="mdi:map-marker-outline" class="mr-1 inline text-base text-gray-400" />
+					Venue Address
+				</label>
+				<AddressAutocomplete
+					bind:value={physicalAddress}
+					placeholder="e.g. 7 Ibiyinka Olorunbe, Victoria Island, Lagos"
+					on:select={(e) => {
+						physicalAddress = e.detail.formatted_address;
+						venueName = e.detail.venueName;
+						resolvedLat = e.detail.lat;
+						resolvedLng = e.detail.lng;
+					}}
+				/>
+			</div>
+			{/if}
+		</div>
+
+		<!-- Visibility -->
+		<div class="mb-6 rounded-lg bg-[#FDFDFD] p-4">
+			<h2 class="mb-3 text-2xl font-semibold">Visibility</h2>
+			<p class="mb-4 text-xs text-gray-400">Control who can see and find your event.</p>
+
+			<div class="flex gap-3">
+				<button
+					class="flex flex-1 items-center gap-3 rounded-xl border-2 p-4 transition-all"
+					style="border-color: {visibility === 'Public' ? '#1a1a1a' : '#e5e7eb'}; background-color: {visibility === 'Public' ? '#f9fafb' : 'white'};"
+					on:click={() => { visibility = 'Public'; visibilityIcon = 'mdi:web'; }}
+				>
+					<Icon icon="mdi:web" class="text-2xl {visibility === 'Public' ? 'text-gray-900' : 'text-gray-400'}" />
+					<div class="text-left">
+						<p class="text-sm font-medium {visibility === 'Public' ? 'text-gray-900' : 'text-gray-500'}">Public</p>
+						<p class="text-xs text-gray-400">Shown on your collection and eligible to be featured on Discover.</p>
+					</div>
+				</button>
+				<button
+					class="flex flex-1 items-center gap-3 rounded-xl border-2 p-4 transition-all"
+					style="border-color: {visibility === 'Private' ? '#1a1a1a' : '#e5e7eb'}; background-color: {visibility === 'Private' ? '#f9fafb' : 'white'};"
+					on:click={() => { visibility = 'Private'; visibilityIcon = 'mdi:sparkles'; }}
+				>
+					<Icon icon="mdi:lock-outline" class="text-2xl {visibility === 'Private' ? 'text-gray-900' : 'text-gray-400'}" />
+					<div class="text-left">
+						<p class="text-sm font-medium {visibility === 'Private' ? 'text-gray-900' : 'text-gray-500'}">Private</p>
+						<p class="text-xs text-gray-400">Unlisted. Only people with the link can register.</p>
+					</div>
+				</button>
 			</div>
 		</div>
 

@@ -1,8 +1,8 @@
 <!-- src/routes/settings/preferences/+page.svelte -->
 <script lang="ts">
+	import { applyTheme, theme } from '$lib/stores/theme';
 	import { clickOutside } from '$lib/utils/constant';
 	import { onMount } from 'svelte';
-	import { theme, applyTheme } from '$lib/stores/theme';
 
 	let selectedTheme = 'light';
 
@@ -259,7 +259,7 @@
 					{#if notification.type === 'event'}
 						<img src="/face.svg" alt="icon" class="h-6 w-6" />
 					{:else}
-						<img src="/face-1.svg" alt="icon" class="h-6 w-6" />
+						<img src="/rondwell-attendee.png" alt="icon" class="h-6 w-6 rounded-full" />
 					{/if}
 					<span class="font-medium">{notification.name}</span>
 				</div>

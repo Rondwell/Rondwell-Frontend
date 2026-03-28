@@ -124,7 +124,7 @@
 				<div class="flex w-full items-center justify-between">
 					<!-- Avatar -->
 					<div class="flex items-center gap-2">
-						<img src="/face-1.svg" alt="profile icon" class="h-10 w-10" />
+						<img src="/rondwell-attendee.png" alt="profile icon" class="h-10 w-10 rounded-full" />
 						<div>
 							<p class="font-semibold text-gray-900">{subscriber.name || 'Anonymous'}</p>
 							<p class="text-xs text-[#828486]">{subscriber.email}</p>

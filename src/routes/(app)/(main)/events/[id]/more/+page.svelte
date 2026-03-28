@@ -2,16 +2,34 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getEventById, getMyCollections } from '$lib/services/event.services';
+	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Icon from '@iconify/svelte';
-	import { onMount } from 'svelte';
 	import Nav from '../../../../components/Nav.svelte';
 
 	$: eventId = $page.params.id;
 
-	let eventData: any = null;
-	let loading = true;
-	let error = '';
+	// Use cached event data
+	$: ({ event: eventStore, collections: collectionsStore, loading: loadingStore, error: errorStore } = getEventCache(eventId!));
+	$: rawEvent = $eventStore;
+	$: cachedCollections = $collectionsStore;
+	$: loading = $loadingStore;
+	$: error = $errorStore;
+
+	$: collectionName = cachedCollections.find(
+		(c: any) => c._id === rawEvent?.collectionId || c.id === rawEvent?.collectionId
+	)?.name ?? 'My Collection';
+
+	$: eventData = rawEvent ? (() => {
+		const eid = rawEvent._id ?? rawEvent.id;
+		return {
+			id: eid,
+			title: rawEvent.title ?? 'Untitled Event',
+			collection: collectionName,
+			collectionId: rawEvent.collectionId ?? '',
+			publicUrl: rawEvent.customLinkSlug ?? 'applikhek',
+			embedCode: `\n<a\n  href="https://rondwell.com/event/${eid}"\n  class="rondwell-checkout--button"\n  data-rondwell-action="checkout"\n  data-rondwell-event-id="${eid}"\n>\n  Register for Event\n</a>\n\n<script id="rondwell-checkout" src="https://embed.rondwell.com/checkout-button.js"><\/script>\n`
+		};
+	})() : null;
 	let activeTab = 'event-settings';
 
 	const tabs = [
@@ -54,32 +72,6 @@
 	];
 
 	$: selectedEmbed = embedAs[0].name;
-
-	onMount(async () => {
-		try {
-			const [event, collections] = await Promise.all([
-				getEventById(eventId!),
-				getMyCollections().catch(() => [])
-			]);
-			const collectionName =
-				collections.find(
-					(c: any) => c._id === event.collectionId || c.id === event.collectionId
-				)?.name ?? 'My Collection';
-			const eid = event._id ?? event.id;
-			eventData = {
-				id: eid,
-				title: event.title ?? 'Untitled Event',
-				collection: collectionName,
-				collectionId: event.collectionId ?? '',
-				publicUrl: event.customLinkSlug ?? 'applikhek',
-				embedCode: `\n<a\n  href="https://rondwell.com/event/${eid}"\n  class="rondwell-checkout--button"\n  data-rondwell-action="checkout"\n  data-rondwell-event-id="${eid}"\n>\n  Register for Event\n</a>\n\n<script id="rondwell-checkout" src="https://embed.rondwell.com/checkout-button.js"><\/script>\n`
-			};
-		} catch (e: any) {
-			error = e.message ?? 'Failed to load event';
-		} finally {
-			loading = false;
-		}
-	});
 
 	function escapeHtml(str: any) {
 		return str

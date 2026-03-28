@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import CheckedInAttendeeModal from './CheckedInAttendeeModal.svelte';
 
 	export let open = false;
@@ -177,7 +177,7 @@
 					<div class="custom-scrollbar max-h-80 overflow-y-auto rounded-lg border p-4 md:h-60">
 						<!-- Attendee Info -->
 						<div class="flex items-center gap-3">
-							<img src="/face-1.svg" alt="profile icon" class="h-12 w-12" />
+							<img src="/rondwell-attendee.png" alt="profile icon" class="h-12 w-12 rounded-full" />
 							<div>
 								<p class="font-semibold text-gray-900">John Odoemenem</p>
 								<p class="text-sm text-gray-500">johnmedoc23@gmail.com</p>

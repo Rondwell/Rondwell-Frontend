@@ -35,7 +35,7 @@
 			<!-- Admin indicator  -->
 			{#if type === 'mine'}
 				<div class="flex items-center gap-1 text-xs text-[#616265]">
-					<img src="/face-1.svg" alt="profile icon" class="h-6 w-6" />
+					<img src="/rondwell-attendee.png" alt="profile icon" class="h-6 w-6 rounded-full" />
 					{adminsCount} Admin{adminsCount > 1 ? 's' : ''}
 				</div>
 			{/if}

@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { getEventAgenda, getEventById, getEventRooms } from '$lib/services/event.services';
+	import { getEventAgenda, getEventRooms } from '$lib/services/event.services';
+	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import CustomizeAgenda from './modal/CustomizeAgenda.svelte';
 
 	export let eventTitle = '';
@@ -20,11 +22,12 @@
 		if (!eventId) return;
 		loading = true;
 		try {
-			const [agenda, roomList, event] = await Promise.all([
+			const [agenda, roomList] = await Promise.all([
 				getEventAgenda(eventId),
 				getEventRooms(eventId),
-				getEventById(eventId),
 			]);
+			const { event: eventStore } = getEventCache(eventId);
+			const event = get(eventStore);
 			agendaData = agenda;
 			rooms = roomList;
 			agendaSettings = event?.agendaSettings || {};

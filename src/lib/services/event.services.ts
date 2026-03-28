@@ -1,4 +1,5 @@
 import { authFetch } from '$lib/services/api.client';
+import { invalidateEventCache } from '$lib/stores/eventCache.store';
 
 const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
 
@@ -73,6 +74,80 @@ export async function getEventById(eventId: string): Promise<any> {
   return data.event;
 }
 
+/** Discover public events — no auth required */
+export async function discoverEvents(options?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  eventType?: string;
+  registrationType?: string;
+}): Promise<{ events: any[]; pagination: any }> {
+  const params = new URLSearchParams();
+  if (options?.page) params.set('page', String(options.page));
+  if (options?.limit) params.set('limit', String(options.limit));
+  if (options?.search) params.set('search', options.search);
+  if (options?.category) params.set('category', options.category);
+  if (options?.eventType) params.set('eventType', options.eventType);
+  if (options?.registrationType) params.set('registrationType', options.registrationType);
+  const res = await fetch(`${EVENT_URL}/api/v1/events/discover?${params.toString()}`);
+  const data = await res.json();
+  if (!res.ok) return { events: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+  return data;
+}
+
+/** Public event page data — no auth required */
+export async function getPublicEventPage(eventId: string): Promise<{
+  event: any;
+  ticketTypes: any[];
+  organizers: any[];
+  attendeeCount: number;
+  attendingSample: any[];
+  collection: any;
+  registrationFields: any[];
+  organizerProfile: any;
+}> {
+  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/public`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch event page');
+  return data;
+}
+
+/** Public agenda — no auth required */
+export async function getPublicAgenda(eventId: string): Promise<{ dates: any[]; rooms: any[] }> {
+  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/public/agenda`);
+  const data = await res.json();
+  if (!res.ok) return { dates: [], rooms: [] };
+  return data;
+}
+
+/** Public participants — no auth required */
+export async function getPublicParticipants(eventId: string): Promise<{ speakers: any[]; exhibitors: any[]; vendors: any[] }> {
+  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/public/participants`);
+  const data = await res.json();
+  if (!res.ok) return { speakers: [], exhibitors: [], vendors: [] };
+  return data;
+}
+
+/** Public media and FAQs — no auth required */
+export async function getPublicMediaFaqs(eventId: string): Promise<{ media: any[]; faqs: any[] }> {
+  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/public/media-faqs`);
+  const data = await res.json();
+  if (!res.ok) return { media: [], faqs: [] };
+  return data;
+}
+
+/** Public seats for a ticket type — no auth required */
+export async function getPublicSeats(eventId: string, ticketTypeId?: string): Promise<{ layout: any; seats: any[] }> {
+  const url = ticketTypeId
+    ? `${EVENT_URL}/api/v1/events/${eventId}/public/seats?ticketTypeId=${ticketTypeId}`
+    : `${EVENT_URL}/api/v1/events/${eventId}/public/seats`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!res.ok) return { layout: null, seats: [] };
+  return data;
+}
+
 export async function updateEvent(eventId: string, payload: Partial<CreateEventPayload>): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}`, {
     method: 'PUT',
@@ -81,6 +156,7 @@ export async function updateEvent(eventId: string, payload: Partial<CreateEventP
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to update event');
+  invalidateEventCache(eventId);
   return data.event;
 }
 
@@ -90,6 +166,7 @@ export async function publishEvent(eventId: string): Promise<any> {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to publish event');
+  invalidateEventCache(eventId);
   return data;
 }
 
@@ -114,7 +191,7 @@ export async function uploadEventPhoto(eventId: string, file: File, category: 'C
   return data.url;
 }
 
-export async function getEventAttendees(eventId: string): Promise<any[]> {
+export async function getEventParticipants(eventId: string): Promise<any[]> {
   try {
     const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants`);
     if (!res.ok) return [];
@@ -125,26 +202,26 @@ export async function getEventAttendees(eventId: string): Promise<any[]> {
   }
 }
 
-export async function getEventGuests(eventId: string): Promise<any[]> {
+export async function getEventAttendees(eventId: string): Promise<any[]> {
   try {
-    const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/guests`);
+    const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees`);
     if (!res.ok) return [];
     const data = await res.json();
-    return data.guests ?? data ?? [];
+    return data.data ?? data.attendees ?? [];
   } catch {
     return [];
   }
 }
 
-export interface PaginatedGuestsResponse {
-  guests: any[];
+export interface PaginatedAttendeesResponse {
+  attendees: any[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
 }
 
-export async function getEventGuestsPaginated(
+export async function getEventAttendeesPaginated(
   eventId: string,
   options: {
     page?: number;
@@ -154,7 +231,7 @@ export async function getEventGuestsPaginated(
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   } = {}
-): Promise<PaginatedGuestsResponse> {
+): Promise<PaginatedAttendeesResponse> {
   const params = new URLSearchParams();
   if (options.page) params.set('page', String(options.page));
   if (options.limit) params.set('limit', String(options.limit));
@@ -163,9 +240,9 @@ export async function getEventGuestsPaginated(
   if (options.sortBy) params.set('sortBy', options.sortBy);
   if (options.sortOrder) params.set('sortOrder', options.sortOrder);
 
-  const res = await authFetch(`${EVENT_URL}/api/v1/guests/${eventId}/paginated?${params.toString()}`);
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/paginated?${params.toString()}`);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch guests');
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch attendees');
   return data.data;
 }
 
@@ -260,7 +337,7 @@ export async function updateEventCapacity(eventId: string, maxAttendees: number 
 
 export async function getTicketRegistrationCount(eventId: string, ticketTypeId: string): Promise<number> {
   try {
-    const res = await authFetch(`${EVENT_URL}/api/v1/guests/${eventId}/paginated?limit=1&ticketTypeId=${ticketTypeId}`);
+    const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/paginated?limit=1&ticketTypeId=${ticketTypeId}`);
     const data = await res.json();
     if (!res.ok) return 0;
     return data.data?.total ?? 0;
@@ -1152,4 +1229,98 @@ export async function resendAdminInvite(eventId: string, adminId: string): Promi
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to resend invitation');
   return data;
+}
+
+// ==================== ATTENDEE DETAIL & TIMELINE APIs ====================
+
+export async function getAttendeeDetail(eventId: string, attendeeId: string): Promise<{
+  attendee: any;
+  registration: any;
+  formAnswers: Array<{ question: string; answer: string; fieldType: string }>;
+  ticketTypeName: string;
+}> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/detail`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch attendee detail');
+  return data.data;
+}
+
+export async function getAttendeeTimeline(eventId: string, attendeeId: string): Promise<any[]> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/timeline`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch timeline');
+  return data.data ?? [];
+}
+
+export async function updateAttendeeStatus(eventId: string, attendeeId: string, newStatus: string, notifyAttendee?: boolean, message?: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ newStatus, notifyAttendee, message }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to update status');
+  return data.data;
+}
+
+export async function reportAttendee(eventId: string, attendeeId: string, notes: string, blockForFutureEvents: boolean): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/report`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notes, blockForFutureEvents }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to report attendee');
+  return data.data;
+}
+
+// ==================== ATTENDEE TAG APIs ====================
+
+export async function addAttendeeTag(eventId: string, attendeeId: string, tagName: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/tags`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tagName }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to add tag');
+  return data.data;
+}
+
+export async function removeAttendeeTag(eventId: string, attendeeId: string, tagName: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/tags/${encodeURIComponent(tagName)}`, {
+    method: 'DELETE',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to remove tag');
+  return data.data;
+}
+
+export async function getEventTags(eventId: string): Promise<any[]> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/tags/all`);
+  const data = await res.json();
+  if (!res.ok) return [];
+  return data.data ?? [];
+}
+
+export async function createEventTag(eventId: string, name: string, color: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/tags/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, color }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to create tag');
+  return data.data;
+}
+
+export async function updateEventTag(eventId: string, tagId: string, name: string, color: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/tags/${tagId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, color }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to update tag');
+  return data.data;
 }

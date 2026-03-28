@@ -39,10 +39,11 @@
 	async function addQuestion() {
 		addingQuestion = true;
 		await new Promise((r) => setTimeout(r, 600));
+		const payload = { ...questionData, type: 'terms', question: 'Terms and Conditions', fieldName: 'Terms and Conditions' };
 		if (isEditing) {
-			dispatch('save', { ...questionData, type: 'terms' });
+			dispatch('save', payload);
 		} else {
-			dispatch('add', { ...questionData, type: 'terms' });
+			dispatch('add', payload);
 		}
 		addingQuestion = false;
 		closeModal();
@@ -181,7 +182,8 @@
 						<!-- textarea -->
 						<textarea
 							rows="4"
-							placeholder=""
+							placeholder="Enter your terms and conditions..."
+							bind:value={questionData.termsContent}
 							class="w-full resize-none rounded-sm border border-gray-300 p-2 text-sm outline-none focus:ring-0"
 						></textarea>
 					</div>

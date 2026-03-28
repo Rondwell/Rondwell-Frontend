@@ -2,31 +2,46 @@
 	export let organizerName: string;
 	export let organizerAvatar: string;
 	export let organizerSocial: boolean;
-
+	export let socialLinks: Record<string, string> = {};
 </script>
 
 <div class="flex items-center justify-between">
    <div class="flex items-center gap-[9px] justify-center">
-     <img src={organizerAvatar} alt={`${organizerName}-avatar`} class="size-[27px]  rounded-full outline outline-[#0D151C]/8" />
-     <h2 class="leading-6 text-[#0D151C] text-base font-normal">
-        {organizerName}
-     </h2>
+     <img src={organizerAvatar} alt={`${organizerName}-avatar`} class="size-[27px] rounded-full outline outline-[#0D151C]/8" on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/you-rondwell.png'; }} />
+     <h2 class="leading-6 text-[#0D151C] text-base font-normal">{organizerName}</h2>
    </div>
-			{#if organizerSocial}
-   <div class="flex items-center justify-center ">
-    <span class="size-7.5 inline-flex justify-center items-center">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M15.0525 4.27188C15.0525 4.62992 14.9103 4.9733 14.6571 5.22647C14.404 5.47964 14.0606 5.62188 13.7025 5.62188C13.3445 5.62188 13.0011 5.47964 12.7479 5.22647C12.4948 4.9733 12.3525 4.62992 12.3525 4.27188C12.3525 3.91383 12.4948 3.57046 12.7479 3.31728C13.0011 3.06411 13.3445 2.92188 13.7025 2.92188C14.0606 2.92188 14.404 3.06411 14.6571 3.31728C14.9103 3.57046 15.0525 3.91383 15.0525 4.27188Z" fill="#0D151C" fill-opacity="0.36"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M9 13.5C10.1935 13.5 11.3381 13.0259 12.182 12.182C13.0259 11.3381 13.5 10.1935 13.5 9C13.5 7.80653 13.0259 6.66193 12.182 5.81802C11.3381 4.97411 10.1935 4.5 9 4.5C7.80653 4.5 6.66193 4.97411 5.81802 5.81802C4.97411 6.66193 4.5 7.80653 4.5 9C4.5 10.1935 4.97411 11.3381 5.81802 12.182C6.66193 13.0259 7.80653 13.5 9 13.5ZM9 11.7C9.71608 11.7 10.4028 11.4155 10.9092 10.9092C11.4155 10.4028 11.7 9.71608 11.7 9C11.7 8.28392 11.4155 7.59716 10.9092 7.09081C10.4028 6.58446 9.71608 6.3 9 6.3C8.28392 6.3 7.59716 6.58446 7.09081 7.09081C6.58446 7.59716 6.3 8.28392 6.3 9C6.3 9.71608 6.58446 10.4028 7.09081 10.9092C7.59716 11.4155 8.28392 11.7 9 11.7Z" fill="#0D151C" fill-opacity="0.36"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M0 8.64C0 5.616 0 4.104 0.588375 2.9475C1.10651 1.93207 1.9327 1.10666 2.94863 0.5895C4.104 0 5.61375 0 8.64 0H9.36C12.384 0 13.896 0 15.0525 0.588375C16.0683 1.10632 16.8942 1.93253 17.4116 2.94863C18 4.104 18 5.61375 18 8.64V9.36C18 12.384 18 13.896 17.4116 15.0525C16.8937 16.0683 16.0675 16.8942 15.0514 17.4116C13.896 18 12.3862 18 9.36 18H8.64C5.616 18 4.104 18 2.9475 17.4116C1.93165 16.8937 1.10583 16.0675 0.588375 15.0514C0 13.896 0 12.3862 0 9.36V8.64ZM8.64 1.8H9.36C10.9012 1.8 11.9497 1.80112 12.7598 1.8675C13.5495 1.93163 13.9523 2.04862 14.2335 2.19263C14.9115 2.53734 15.4628 3.08791 15.8085 3.76537C15.9514 4.04662 16.0672 4.45162 16.1325 5.23913C16.1989 6.04913 16.2 7.09762 16.2 8.64V9.36C16.2 10.9012 16.1989 11.9497 16.1325 12.7598C16.0684 13.5495 15.9514 13.9523 15.8074 14.2335C15.4627 14.9115 14.9121 15.4628 14.2346 15.8085C13.9534 15.9514 13.5484 16.0672 12.7609 16.1325C11.9509 16.1989 10.9024 16.2 9.36 16.2H8.64C7.09875 16.2 6.05025 16.1989 5.24025 16.1325C4.4505 16.0684 4.04775 15.9514 3.7665 15.8074C3.08855 15.4627 2.53718 14.9121 2.1915 14.2346C2.04862 13.9534 1.93275 13.5484 1.8675 12.7609C1.80112 11.9509 1.8 10.9024 1.8 9.36V8.64C1.8 7.09875 1.80112 6.05025 1.8675 5.24025C1.93163 4.4505 2.04862 4.04775 2.19263 3.7665C2.53734 3.08855 3.08791 2.53718 3.76537 2.1915C4.04662 2.04862 4.45162 1.93275 5.23913 1.8675C6.04913 1.80112 7.09762 1.8 8.64 1.8Z" fill="#0D151C" fill-opacity="0.36"/>
-</svg>
-
-    </span>
-    <span class="size-7.5 inline-flex justify-center items-center">
-       <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M17 16.9998L10.3518 7.09197L10.3633 7.10139L16.3574 0H14.3543L9.47124 5.78L5.59359 0H0.340233L6.54683 9.25027L0 17H2.00315L7.43193 10.5694L11.7465 16.9998H17ZM4.79995 1.5455L14.1276 15.4543H12.5403L3.205 1.5455H4.79995Z" fill="#0D151C" fill-opacity="0.36"/>
-</svg>
-    </span>
+   {#if organizerSocial}
+   <div class="flex items-center justify-center gap-0.5">
+    {#if socialLinks.instagram}
+    <a href="https://instagram.com/{socialLinks.instagram}" target="_blank" rel="noopener" aria-label="Instagram" class="size-7.5 inline-flex justify-center items-center opacity-50 hover:opacity-100 transition-opacity">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M0 8.64C0 5.616 0 4.104.588 2.948A4.5 4.5 0 012.949.589C4.104 0 5.614 0 8.64 0h.72c3.024 0 4.536 0 5.693.588a4.5 4.5 0 012.359 2.36C18 4.104 18 5.614 18 8.64v.72c0 3.024 0 4.536-.588 5.693a4.5 4.5 0 01-2.36 2.359C13.896 18 12.386 18 9.36 18h-.72c-3.024 0-4.536 0-5.693-.588A4.5 4.5 0 01.589 15.052C0 13.896 0 12.386 0 9.36V8.64z" fill="#0D151C" fill-opacity=".36"/><path fill-rule="evenodd" clip-rule="evenodd" d="M9 13.5a4.5 4.5 0 100-9 4.5 4.5 0 000 9zm0-1.8a2.7 2.7 0 100-5.4 2.7 2.7 0 000 5.4z" fill="white"/><circle cx="13.7" cy="4.27" r="1.35" fill="white"/></svg>
+    </a>
+    {/if}
+    {#if socialLinks.x}
+    <a href="https://x.com/{socialLinks.x}" target="_blank" rel="noopener" aria-label="X" class="size-7.5 inline-flex justify-center items-center opacity-50 hover:opacity-100 transition-opacity">
+       <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><path d="M17 17L10.352 7.092l.011.01L16.357 0h-2.003l-4.883 5.78L5.594 0H.34l6.207 9.25L0 17h2.003l5.429-6.43L11.747 17H17zM4.8 1.546l9.328 13.908H12.54L3.205 1.546H4.8z" fill="#0D151C" fill-opacity=".36"/></svg>
+    </a>
+    {/if}
+    {#if socialLinks.youtube}
+    <a href="https://youtube.com/@{socialLinks.youtube}" target="_blank" rel="noopener" aria-label="YouTube" class="size-7.5 inline-flex justify-center items-center opacity-50 hover:opacity-100 transition-opacity">
+       <svg width="18" height="14" viewBox="0 0 18 14" fill="none"><path d="M17.624 2.18A2.26 2.26 0 0016.035.58C14.628.17 9 .17 9 .17S3.372.17 1.965.58A2.26 2.26 0 00.376 2.18C0 3.59 0 6.54 0 6.54s0 2.95.376 4.36a2.26 2.26 0 001.589 1.6C3.372 12.91 9 12.91 9 12.91s5.628 0 7.035-.41a2.26 2.26 0 001.589-1.6C18 9.49 18 6.54 18 6.54s0-2.95-.376-4.36zM7.2 9.35V3.73L11.88 6.54 7.2 9.35z" fill="#0D151C" fill-opacity=".36"/></svg>
+    </a>
+    {/if}
+    {#if socialLinks.linkedin}
+    <a href="https://linkedin.com/in/{socialLinks.linkedin}" target="_blank" rel="noopener" aria-label="LinkedIn" class="size-7.5 inline-flex justify-center items-center opacity-50 hover:opacity-100 transition-opacity">
+       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14.82 0H1.18C.53 0 0 .516 0 1.154v13.692C0 15.484.53 16 1.18 16h13.64c.652 0 1.18-.516 1.18-1.154V1.154C16 .516 15.472 0 14.82 0zM4.746 13.634H2.372V5.998h2.374v7.636zM3.56 4.955a1.376 1.376 0 110-2.752 1.376 1.376 0 010 2.752zm10.076 8.679h-2.372V9.922c0-.886-.016-2.025-1.234-2.025-1.234 0-1.423.964-1.423 1.96v3.777H6.234V5.998h2.278v1.043h.032c.317-.6 1.092-1.233 2.247-1.233 2.404 0 2.847 1.582 2.847 3.64v4.186z" fill="#0D151C" fill-opacity=".36"/></svg>
+    </a>
+    {/if}
+    {#if socialLinks.tiktok}
+    <a href="https://tiktok.com/@{socialLinks.tiktok}" target="_blank" rel="noopener" aria-label="TikTok" class="size-7.5 inline-flex justify-center items-center opacity-50 hover:opacity-100 transition-opacity">
+       <svg width="14" height="16" viewBox="0 0 14 16" fill="none"><path d="M10.08 0h1.44c.16 1.28.96 2.4 2.16 2.88v2.24c-1.12-.08-2.16-.48-3.04-1.12v4.96c0 2.48-2 4.48-4.48 4.48A4.48 4.48 0 011.68 11.2a4.48 4.48 0 014.48-4.48v2.4a2.08 2.08 0 00-2.08 2.08 2.08 2.08 0 002.08 2.08c1.12 0 2.08-.96 2.08-2.08V0h1.84z" fill="#0D151C" fill-opacity=".36"/></svg>
+    </a>
+    {/if}
+    {#if socialLinks.website}
+    <a href={socialLinks.website.startsWith('http') ? socialLinks.website : `https://${socialLinks.website}`} target="_blank" rel="noopener" aria-label="Website" class="size-7.5 inline-flex justify-center items-center opacity-50 hover:opacity-100 transition-opacity">
+       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#0D151C" stroke-opacity=".36" stroke-width="1.2"/><path d="M1 8h14M8 1a11 11 0 013 7 11 11 0 01-3 7 11 11 0 01-3-7 11 11 0 013-7z" stroke="#0D151C" stroke-opacity=".36" stroke-width="1.2"/></svg>
+    </a>
+    {/if}
    </div>
    {/if}
 </div>

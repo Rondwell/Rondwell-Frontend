@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { getEventById, getMyCollections } from '$lib/services/event.services';
-	import { onMount } from 'svelte';
+	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Nav from '../../../../components/Nav.svelte';
 	import CollaborationRequest from './components/CollaborationRequest.svelte';
 	import Exhibitors from './components/Exhibitors.svelte';
@@ -10,28 +9,17 @@
 
 	$: eventId = $page.params.id;
 
-	let eventData: any = null;
-	let loading = true;
+	// Use cached event data
+	$: ({ event: eventStore, collections: collectionsStore, loading: loadingStore } = getEventCache(eventId!));
+	$: rawEvent = $eventStore;
+	$: cachedCollections = $collectionsStore;
+	$: loading = $loadingStore;
 
-	onMount(async () => {
-		try {
-			const [event, collections] = await Promise.all([
-				getEventById(eventId!),
-				getMyCollections().catch(() => []),
-			]);
-			const collectionName = collections.find((c: any) => c._id === event.collectionId || c.id === event.collectionId)?.name ?? 'My Collection';
-			eventData = {
-				title: event.title ?? 'Untitled Event',
-				collection: collectionName,
-				collectionId: event.collectionId ?? '',
-			};
-		} catch (e: any) {
-			console.error('Failed to load event:', e);
-			eventData = { title: 'Event', collection: 'Collection', collectionId: '' };
-		} finally {
-			loading = false;
-		}
-	});
+	$: eventData = rawEvent ? {
+		title: rawEvent.title ?? 'Untitled Event',
+		collection: cachedCollections.find((c: any) => c._id === rawEvent.collectionId || c.id === rawEvent.collectionId)?.name ?? 'My Collection',
+		collectionId: rawEvent.collectionId ?? '',
+	} : null;
 
 	let activeTab = 'speakers';
 

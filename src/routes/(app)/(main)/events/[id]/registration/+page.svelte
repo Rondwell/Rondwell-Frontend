@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getEventById, getMyCollections } from '$lib/services/event.services';
-	import { onMount } from 'svelte';
+	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Nav from '../../../../components/Nav.svelte';
 	import EventForm from './components/EventForm.svelte';
 	import SeatCapacity from './components/SeatCapacity.svelte';
@@ -10,31 +9,18 @@
 
 	$: eventId = $page.params.id as string;
 
-	let eventData: any = null;
-	let collectionName = '';
-	let collectionId = '';
-	let loading = true;
-	let error = '';
+	// Use cached event data
+	$: ({ event: eventStore, collections: collectionsStore, loading: loadingStore, error: errorStore } = getEventCache(eventId));
+	$: rawEvent = $eventStore;
+	$: cachedCollections = $collectionsStore;
+	$: loading = $loadingStore;
+	$: error = $errorStore;
 
-	onMount(async () => {
-		try {
-			const [event, collections] = await Promise.all([
-				getEventById(eventId),
-				getMyCollections().catch(() => [])
-			]);
-			collectionName =
-				collections.find(
-					(c: any) => c._id === event.collectionId || c.id === event.collectionId
-				)?.name ?? 'My Collection';
-			collectionId = event.collectionId ?? '';
-			eventData = event;
-		} catch (e: any) {
-			error = e.message ?? 'Failed to load event';
-			eventData = { title: 'Untitled Event', collectionId: '' };
-		} finally {
-			loading = false;
-		}
-	});
+	$: collectionName = cachedCollections.find(
+		(c: any) => c._id === rawEvent?.collectionId || c.id === rawEvent?.collectionId
+	)?.name ?? 'My Collection';
+	$: collectionId = rawEvent?.collectionId ?? '';
+	$: eventData = rawEvent;
 
 	let activeTab = 'ticket';
 

@@ -1,16 +1,24 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getEventById, getMyCollections } from '$lib/services/event.services';
+	import { getEventCache } from '$lib/stores/eventCache.store';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
-	import { onMount } from 'svelte';
 
 	$: eventId = $page.params.id ?? '';
 
-	let eventData: any = null;
-	let loading = true;
-	let error = '';
+	// Use cached event data
+	$: ({ event: eventStore, collections: collectionsStore, loading: loadingStore, error: errorStore } = getEventCache(eventId));
+	$: rawEvent = $eventStore;
+	$: cachedCollections = $collectionsStore;
+	$: loading = $loadingStore;
+	$: error = $errorStore;
+
+	$: collectionName = cachedCollections.find(
+		(c: any) => c._id === rawEvent?.collectionId || c.id === rawEvent?.collectionId
+	)?.name ?? 'My Collection';
+	$: eventData = rawEvent ? { title: rawEvent.title ?? 'Untitled Event', collection: collectionName, collectionId: rawEvent.collectionId ?? '' } : null;
+
 	let searchQuery = '';
 	let statusFilter = 'All';
 	let showStatusDropdown = false;
@@ -40,18 +48,6 @@
 		}
 		if (statusFilter !== 'All' && e.status !== statusFilter.toUpperCase()) return false;
 		return true;
-	});
-
-	onMount(async () => {
-		try {
-			const [event, collections] = await Promise.all([
-				getEventById(eventId),
-				getMyCollections().catch(() => [])
-			]);
-			const collectionName = collections.find((c: any) => c._id === event.collectionId || c.id === event.collectionId)?.name ?? 'My Collection';
-			eventData = { title: event.title ?? 'Untitled Event', collection: collectionName, collectionId: event.collectionId ?? '' };
-		} catch (e: any) { error = e.message ?? 'Failed to load event'; }
-		finally { loading = false; }
 	});
 
 	function formatDate(dateStr: string): string {

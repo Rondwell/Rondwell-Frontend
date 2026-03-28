@@ -11,14 +11,33 @@
 	activeSubItem.set('');
 
 	let themeColor: Color = colors[0];
+	let themeReady = false;
 
 	$: {
 		const match = $page.url.pathname.match(/^\/event-page\/([^/]+)/);
 		if (match) {
-			themeColor = getEventTheme(match[1]);
-			activeEventPageTheme.set(themeColor);
+			const stored = getEventTheme(match[1]);
+			// If we have a stored theme (not the default), use it immediately
+			if (stored && stored.name !== colors[0].name) {
+				themeColor = stored;
+				activeEventPageTheme.set(themeColor);
+				themeReady = true;
+			}
+			// Also react to the activeEventPageTheme store (set by overview page after API fetch)
+			if ($activeEventPageTheme) {
+				themeColor = $activeEventPageTheme;
+				themeReady = true;
+			}
+			if (!themeReady) {
+				// No stored theme yet — will be set by the overview page after fetch
+				// Show a neutral state briefly
+				themeColor = colors[0];
+				activeEventPageTheme.set(themeColor);
+				themeReady = true; // don't block rendering
+			}
 		} else {
 			activeEventPageTheme.set(null);
+			themeReady = true;
 		}
 	}
 

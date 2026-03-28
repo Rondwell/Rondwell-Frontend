@@ -1,7 +1,12 @@
 <script lang="ts">
+	import AddressAutocomplete from '$lib/components/AddressAutocomplete.svelte';
+
 	export let open = false;
 	export let link = '';
 	export let address = '';
+	export let resolvedLat = 0;
+	export let resolvedLng = 0;
+	export let venueName = '';
 	export let eventType: 'Virtual' | 'Physical' | 'Hybrid' = 'Virtual';
 
 	function handleLinkInput(e: Event) {
@@ -9,13 +14,15 @@
 		link = target ? target.value.trim() : '';
 	}
 
-	function handleAddressInput(e: Event) {
-		const target = e.currentTarget as HTMLInputElement | null;
-		address = target ? target.value.trim() : '';
-	}
-
 	function closeModal() {
 		open = false;
+	}
+
+	function handleAddressSelect(detail: any) {
+		address = detail.formatted_address;
+		venueName = detail.venueName;
+		resolvedLat = detail.lat;
+		resolvedLng = detail.lng;
 	}
 
 	let platform = '';
@@ -31,7 +38,7 @@
 
 {#if open}
 	<div id="location" class="absolute top-full left-0 z-40 mt-2 w-full max-w-[662.8px]">
-		<div class="relative w-full max-w-[662.8px] overflow-hidden rounded-sm bg-[#FFFCFC] space-y-1">
+		<div class="relative w-full max-w-[662.8px] rounded-sm bg-[#FFFCFC] shadow-lg border border-gray-100 space-y-1">
 
 			{#if showVirtual}
 				<div class="p-1">
@@ -87,20 +94,26 @@
 			{#if showPhysical}
 				<div class="p-1">
 					<p class="px-2 pt-2 text-xs text-[#A7A9AA] font-medium">Physical Address</p>
-					<input
-						type="text"
-						class="h-[50px] w-full bg-[#E2E4E5] px-2 text-sm text-gray-800 focus:ring-0 focus:outline-none"
-						placeholder="Enter venue name or address"
-						value={address}
-						on:input={handleAddressInput}
-					/>
+					<div class="px-1">
+						<AddressAutocomplete
+							bind:value={address}
+							placeholder="Search for a venue or address..."
+							inputClass="!bg-[#E2E4E5] !rounded-none !border-none !h-[50px]"
+							on:select={(e) => handleAddressSelect(e.detail)}
+						/>
+					</div>
 					{#if address}
 						<button
 							class="mt-1 flex items-center gap-2 w-full rounded-[3.93px] bg-[#EEEFF0] p-2 text-left"
 							on:click={closeModal}
 						>
 							<img src="/location.svg" alt="icon" class="h-4 w-4" />
-							<p class="truncate text-[13px] text-[#5B5B5B]">{address}</p>
+							<div class="min-w-0 flex-1">
+								{#if venueName && venueName !== address}
+								<p class="truncate text-[13px] font-medium text-[#4A4A4A]">{venueName}</p>
+								{/if}
+								<p class="truncate text-[13px] text-[#5B5B5B]">{address}</p>
+							</div>
 						</button>
 					{/if}
 				</div>

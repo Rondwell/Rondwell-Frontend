@@ -9,8 +9,8 @@
 	import Sidebar from '../components/Sidebar.svelte';
 	import SideMenu from '../components/SideMenu.svelte';
 
-	// Auth guard
-	$: if (browser && !$isAuthenticated) {
+	// Auth guard — skip for public event pages
+	$: if (browser && !$isAuthenticated && !$page.url.pathname.startsWith('/event-page/')) {
 		goto('/auth');
 	}
 

@@ -59,7 +59,7 @@
 			linkedin: '',
 			website: ''
 		},
-		profilePicture: '/face-1.svg'
+		profilePicture: '/rondwell-attendee.png'
 	};
 	type EventData = {
 		name: string;

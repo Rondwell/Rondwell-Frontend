@@ -71,7 +71,12 @@
 					<div
 						class="flex items-center gap-2 font-['Merriweather_Sans'] text-[16px] leading-[17px] font-normal text-[#B9BABA]"
 					>
-						<img src="/moon.svg" alt="Featured" class="h-5 w-7" />
+						<img
+							src={event.organizerAvatar || '/you-rondwell.png'}
+							alt="Organizer"
+							class="h-6 w-6 rounded-full object-cover"
+							on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/you-rondwell.png'; }}
+						/>
 						<span>{event.organizers}</span>
 					</div>
 				{/if}
@@ -95,29 +100,28 @@
 					</div>
 				{/if}
 
-				<!-- Status + Attendees -->
-				<div class="relatve flex items-center {type !== 'mine' ? 'gap-4' : 'gap-3'}">
+				<!-- Status + Attendees + Collection -->
+				<div class="relatve flex flex-wrap items-center {type !== 'mine' ? 'gap-2.5' : 'gap-3'}">
 					{#if type !== 'mine'}
 						<span class="rounded-sm bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
 							{event.status}
 						</span>
-						<div class="relative flex items-center gap-1 text-sm text-gray-600">
-							<img src="/ppp.svg" alt="Featured" class="h-auto w-auto" />
-							<span
-								class="absolute top-0 left-8 rounded-[11.2503px] bg-[#F4F4F4] px-2 py-1 text-xs text-[#7F7F81]"
-								>{event.attendees}</span
-							>
+						<div class="flex items-center gap-1 rounded-full bg-[#F4F4F4] pl-1.5 pr-2.5 py-0.5">
+							<img src="/attendee-icon.svg" alt="Attendees" class="h-5 w-5" />
+							<span class="text-xs font-medium text-[#7F7F81]">{event.attendees}</span>
 						</div>
 					{:else}
-						<div class="flex items-center rounded-2xl bg-[#EFEFEF] px-1 py-0.5 text-[#A0A1A3]">
-							<Icon icon="mdi:plus" class="text-xl" />
-							Add Tag
+						{#if event.category}
+						<div class="flex items-center gap-1.5 rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-[#7F7F81]">
+							<span class="text-[10px]">#</span>
+							<span>{event.category}</span>
 						</div>
+						{/if}
 					{/if}
 					{#if event.tag}
-						<div class="{type !== 'mine' ? 'ml-7' : ''} flex items-center gap-1 text-sm">
-							<img src="/tech-icon.svg" alt="icon" class="" />
-							<span>{event.tag}</span>
+						<div class="flex items-center gap-1.5 text-sm">
+							<img src="/tech-icon.svg" alt="icon" class="h-4 w-4" />
+							<span class="text-[#7F7F81]">{event.tag}</span>
 						</div>
 					{/if}
 				</div>
@@ -164,6 +168,7 @@
 				src={event.image || '/favicon.png'}
 				alt={event.title}
 				class="h-full w-full object-cover"
+				on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/event_pic1.png'; }}
 			/>
 		</div>
 	</svelte:element>

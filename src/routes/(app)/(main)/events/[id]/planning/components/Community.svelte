@@ -1,12 +1,17 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { deleteEventRoom, enableEventCommunity, getEventById, getEventCommunity, getEventRooms, updateCommunitySettings, updateEvent, updateEventRoom } from '$lib/services/event.services';
+	import { deleteEventRoom, enableEventCommunity, getEventCommunity, getEventRooms, updateCommunitySettings, updateEvent, updateEventRoom } from '$lib/services/event.services';
+	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import AddChatRoom from './modal/AddChatRoom.svelte';
 
 	export let eventTitle = '';
 	$: eventId = $page.params.id ?? '';
+
+	// Use cached event data for communityEnabled state
+	$: ({ event: eventStore } = getEventCache(eventId));
+	$: cachedEvent = $eventStore;
 
 	let community: any = null;
 	let rooms: any[] = [];
@@ -28,15 +33,14 @@
 		if (!eventId) return;
 		loading = true;
 		try {
-			const [comm, roomList, event] = await Promise.all([
+			const [comm, roomList] = await Promise.all([
 				getEventCommunity(eventId).catch(() => null),
 				getEventRooms(eventId),
-				getEventById(eventId),
 			]);
 			community = comm;
 			rooms = roomList;
-			// Read community enabled state from event model (reliable) or community response
-			communityEnabled = event?.communityEnabled ?? (comm?.isEnabled ?? false);
+			// Read community enabled state from cached event (reliable) or community response
+			communityEnabled = cachedEvent?.communityEnabled ?? (comm?.isEnabled ?? false);
 			if (comm) {
 				const s = comm.settings || {};
 				allowPolls = s.allowPolls ?? false;
@@ -114,7 +118,7 @@
 		<div class="flex flex-col items-start justify-between gap-3 md:flex-row md:items-center">
 			<div class="flex flex-col items-start gap-2 md:flex-row md:items-center">
 				<div class="flex -space-x-3">
-					<img src="/face-1.svg" alt="" class="h-8 w-8 rounded-full border" />
+					<img src="/rondwell-attendee.png" alt="" class="h-8 w-8 rounded-full border" />
 					<img src="/face-2.svg" alt="" class="h-8 w-8 rounded-full border" />
 					<img src="/face.svg" alt="" class="h-8 w-8 rounded-full border" />
 					<p class="mx-2 flex h-8 w-8 items-center justify-center rounded-full text-gray-600">+ 4</p>

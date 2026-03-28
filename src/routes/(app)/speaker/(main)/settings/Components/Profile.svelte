@@ -24,7 +24,7 @@
 			linkedin: '',
 			website: ''
 		},
-		profilePicture: '/face-1.svg'
+		profilePicture: '/rondwell-attendee.png'
 	};
 
 	const socialLinks: { key: SocialLinkKey; icon: string; label: string; prefix: string }[] = [

@@ -57,9 +57,11 @@
 			locationIcon,
 			status: e.eventStatus ?? 'DRAFT',
 			availability: '',
-			attendees: e.maxAttendees ?? 0,
+			attendees: e.attendeeCount ?? 0,
 			image: e.displayPictureUrl ?? e.coverPictureUrl ?? '/event_pic1.png',
 			tag: e.tags?.[0] ?? '',
+			category: e.category ?? '',
+			organizerAvatar: e.organizerAvatarUrl ?? '',
 		};
 	}
 

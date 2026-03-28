@@ -80,7 +80,7 @@
         <div class="absolute left-2 top-2">
           <div class="h-12 w-12">
             <img
-              src="/face-1.svg"
+              src="/rondwell-attendee.png"
               alt="Profile"
               class="h-full w-full rounded-full object-cover"
             />

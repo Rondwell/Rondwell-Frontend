@@ -2,87 +2,118 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
-import { getEventById, getMyCollections, uploadEventPhoto } from '$lib/services/event.services';
+import { getEventAttendees, uploadEventPhoto } from '$lib/services/event.services';
+import { getEventCache } from '$lib/stores/eventCache.store';
 import { clickOutside } from '$lib/utils/constant';
 import Icon from '@iconify/svelte';
-import { onMount } from 'svelte';
 import InviteGuestsModal from './components/InviteGuestsModal.svelte';
 import SendPostModal from './components/SendPostModal.svelte';
 
 $: eventId = $page.params.id;
 
-let eventData: any = null;
-let loading = true;
-let error = '';
 let uploadingPhoto = false;
 let photoInput: HTMLInputElement;
+let attendeesLoading = true;
+let fetchedAttendees: any[] = [];
 
-onMount(async () => {
-try {
-const [event, collections] = await Promise.all([
-  getEventById(eventId!),
-  getMyCollections().catch(() => []),
-]);
-const collectionName = collections.find((c: any) => c._id === event.collectionId || c.id === event.collectionId)?.name ?? 'My Collection';
-eventData = {
-id: event._id ?? event.id,
-title: event.title ?? 'Untitled Event',
+// Use cached event data — no re-fetch on tab switch
+$: ({ event: eventStore, collections: collectionsStore, loading: loadingStore, error: errorStore } = getEventCache(eventId!));
+$: rawEvent = $eventStore;
+$: collections = $collectionsStore;
+$: loading = $loadingStore;
+$: error = $errorStore;
+
+// Fetch attendees when eventId is available
+$: if (eventId) {
+	fetchAttendees(eventId);
+}
+
+async function fetchAttendees(eid: string) {
+	attendeesLoading = true;
+	try {
+		const attendees = await getEventAttendees(eid);
+		fetchedAttendees = attendees.map((a: any) => ({
+			name: [a.firstName, a.lastName].filter(Boolean).join(' ') || a.email?.split('@')[0] || 'Unknown',
+			email: a.email ?? '',
+			status: a.attendeeStatus === 'ATTENDING' ? 'Attending' : a.attendeeStatus === 'PENDING' ? 'Pending' : a.attendeeStatus ?? 'Pending',
+			time: a.createdAt ? timeAgo(a.createdAt) : '',
+		}));
+	} catch {
+		fetchedAttendees = [];
+	} finally {
+		attendeesLoading = false;
+	}
+}
+
+function timeAgo(dateStr: string): string {
+	if (!dateStr) return '';
+	const now = new Date();
+	const date = new Date(dateStr);
+	const diffMs = now.getTime() - date.getTime();
+	const diffMins = Math.floor(diffMs / 60000);
+	if (diffMins < 1) return 'Just now';
+	if (diffMins < 60) return `${diffMins} Minutes Ago`;
+	const diffHours = Math.floor(diffMins / 60);
+	if (diffHours < 24) return `${diffHours} Hours Ago`;
+	const diffDays = Math.floor(diffHours / 24);
+	if (diffDays < 7) return `${diffDays} Days Ago`;
+	return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+$: collectionName = collections.find((c: any) => c._id === rawEvent?.collectionId || c.id === rawEvent?.collectionId)?.name ?? 'My Collection';
+
+$: eventData = rawEvent ? {
+id: rawEvent._id ?? rawEvent.id,
+title: rawEvent.title ?? 'Untitled Event',
 collection: collectionName,
-collectionId: event.collectionId ?? '',
-date: formatEventDate(event.startDateTime),
-time: formatEventTime(event.startDateTime, event.endDateTime, event.timeZone),
-location: getLocationLabel(event),
-description: event.description ?? '',
-organizer: event.eventOrganizerName ?? '',
+collectionId: rawEvent.collectionId ?? '',
+date: formatEventDate(rawEvent.startDateTime),
+time: formatEventTime(rawEvent.startDateTime, rawEvent.endDateTime, rawEvent.timeZone),
+location: getLocationLabel(rawEvent),
+description: rawEvent.description ?? '',
+organizer: rawEvent.eventOrganizerName ?? '',
 approvalRequired: false,
-displayPictureUrl: event.displayPictureUrl ?? null,
-coverPictureUrl: event.coverPictureUrl ?? null,
-eventStatus: event.eventStatus ?? 'DRAFT',
+displayPictureUrl: rawEvent.displayPictureUrl ?? null,
+coverPictureUrl: rawEvent.coverPictureUrl ?? null,
+eventStatus: rawEvent.eventStatus ?? 'DRAFT',
 visibility: {
 collection: collectionName,
-status: event.visibility === 'PUBLIC' ? 'Public' : 'Private'
+status: rawEvent.visibility === 'PUBLIC' ? 'Public' : 'Private'
 },
 invites: { accepted: 0, opened: 0, declined: 0 },
-attendees: [],
-admins: [],
-customLinkSlug: event.customLinkSlug ?? '',
-startDateTime: event.startDateTime,
-endDateTime: event.endDateTime,
-meetingLink: event.locationDetails?.virtual?.meetingLink ?? null,
-venueAddress: event.locationDetails?.physical?.venueAddress ?? event.locationDetails?.physical?.venueName ?? null,
-socialLinks: event.socialLinks ?? {},
+attendees: fetchedAttendees,
+admins: [] as any[],
+customLinkSlug: rawEvent.customLinkSlug ?? '',
+startDateTime: rawEvent.startDateTime,
+endDateTime: rawEvent.endDateTime,
+meetingLink: rawEvent.locationDetails?.virtual?.meetingLink ?? null,
+venueAddress: rawEvent.locationDetails?.physical?.venueAddress ?? rawEvent.locationDetails?.physical?.venueName ?? null,
+socialLinks: rawEvent.socialLinks ?? {},
+} : {
+id: eventId,
+title: 'Event',
+collection: 'Collection',
+collectionId: '',
+date: 'Date TBD',
+time: '',
+location: 'Location TBD',
+description: '',
+organizer: '',
+approvalRequired: false,
+displayPictureUrl: null,
+coverPictureUrl: null,
+eventStatus: 'DRAFT',
+visibility: { collection: 'Collection', status: 'Public' },
+invites: { accepted: 0, opened: 0, declined: 0 },
+attendees: fetchedAttendees,
+admins: [] as any[],
+customLinkSlug: '',
+startDateTime: '',
+endDateTime: '',
+meetingLink: null,
+venueAddress: null,
+socialLinks: {},
 };
-} catch (e: any) {
-error = e.message ?? 'Failed to load event';
-eventData = {
-	id: eventId,
-	title: 'Event',
-	collection: 'Collection',
-	collectionId: '',
-	date: 'Date TBD',
-	time: '',
-	location: 'Location TBD',
-	description: '',
-	organizer: '',
-	approvalRequired: false,
-	displayPictureUrl: null,
-	coverPictureUrl: null,
-	eventStatus: 'DRAFT',
-	visibility: { collection: 'Collection', status: 'Public' },
-	invites: { accepted: 0, opened: 0, declined: 0 },
-	attendees: [],
-	admins: [],
-	customLinkSlug: '',
-	startDateTime: '',
-	endDateTime: '',
-	meetingLink: null,
-	venueAddress: null,
-	socialLinks: {},
-};
-} finally {
-loading = false;
-}
-});
 
 function formatEventDate(dt: string): string {
 if (!dt) return 'Date TBD';
@@ -124,7 +155,7 @@ return new Date(event.startDateTime).getTime() > Date.now();
 }
 
 $: eventIsFuture = eventData ? isFutureEvent(eventData) : true;
-$: value = eventData?.attendees?.length ? 100 / eventData.attendees.length : 0;
+$: value = eventData?.attendees?.length ? (rawEvent?.maxAttendees > 0 ? Math.min((eventData.attendees.length / rawEvent.maxAttendees) * 100, 100) : 100) : 0;
 let showInviteGuestsModal = false;
 	let showSendPostModal = false;
 
@@ -864,7 +895,7 @@ $: eventLink = eventData?.customLinkSlug
 					<div class="w-full px-3">
 						{#each eventData.attendees as attendee}
 							<div class="flex items-start gap-2 border-b py-3 last:border-b-0">
-								<img src="/face-1.svg" alt="profile icon" class="h-6 w-6" />
+								<img src={attendee.profilePicture || '/rondwell-attendee.png'} alt="profile icon" class="h-6 w-6 rounded-full object-cover" />
 								<div class="flex flex-col items-start gap-1 md:flex-row">
 									<div class="flex items-center gap-1">
 										<div class="font-medium">{attendee.name}</div>
@@ -917,6 +948,7 @@ $: eventLink = eventData?.customLinkSlug
 			<div class="mb-3 flex items-center justify-between">
 				<h4 class="text-lg font-medium">Recent Registrations</h4>
 				<button
+					on:click={() => goto(`/events/${eventId}/attendees`)}
 					class="flex w-32 items-center gap-1 rounded-sm bg-[#EBECED] px-3 py-2 text-sm font-medium text-[#616265]"
 				>
 					<p>All Attendee</p>
@@ -928,7 +960,7 @@ $: eventLink = eventData?.customLinkSlug
 				{#each eventData.attendees as attendee}
 					<div class="flex items-center justify-between rounded-md border-b py-3 last:border-b-0">
 						<div class="flex items-start gap-2">
-							<img src="/face-1.svg" alt="profile icon" class="h-6 w-6" />
+							<img src={attendee.profilePicture || '/rondwell-attendee.png'} alt="profile icon" class="h-6 w-6 rounded-full object-cover" />
 							<div class="flex flex-col items-start gap-1 lg:flex-row lg:items-center">
 								<span class="flex items-center gap-1">
 									<p class="font-medium">{attendee.name}</p>
@@ -991,7 +1023,7 @@ $: eventLink = eventData?.customLinkSlug
 				{#each eventData.admins as admin}
 					<div class="flex items-center justify-between rounded-md border-b py-3 last:border-b-0">
 						<div class="flex items-start gap-2">
-							<img src="/face-1.svg" alt="profile icon" class="h-6 w-6" />
+							<img src="/rondwell-attendee.png" alt="profile icon" class="h-6 w-6 rounded-full" />
 							<div class="flex flex-col items-start gap-1 lg:flex-row lg:items-center">
 								<span class="flex items-center gap-1">
 									<p class="font-medium">{admin.name}</p>

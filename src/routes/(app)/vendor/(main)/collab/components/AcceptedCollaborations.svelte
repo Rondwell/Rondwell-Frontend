@@ -103,7 +103,7 @@
 					<div class="hidden md:grid md:grid-cols-12 md:items-center md:gap-3">
 						<!-- Organizer Name & Email - 2 cols -->
 						<div class="col-span-2 flex items-center gap-2">
-							<img src="/face-1.svg" alt={collab.organizerName} class="h-8 w-8 flex-shrink-0 rounded-full" />
+							<img src="/rondwell-attendee.png" alt={collab.organizerName} class="h-8 w-8 flex-shrink-0 rounded-full" />
 							<div class="min-w-0 flex-1">
 								<div class="truncate font-medium" title={collab.organizerName}>{collab.organizerName}</div>
 								<div class="truncate text-xs text-gray-500" title={collab.organizerEmail}>{collab.organizerEmail}</div>
@@ -203,7 +203,7 @@
 						<!-- Organizer Info -->
 						<div class="flex items-start justify-between">
 							<div class="flex items-center gap-2">
-								<img src="/face-1.svg" alt={collab.organizerName} class="h-8 w-8 flex-shrink-0 rounded-full" />
+								<img src="/rondwell-attendee.png" alt={collab.organizerName} class="h-8 w-8 flex-shrink-0 rounded-full" />
 								<div class="min-w-0">
 									<div class="font-medium">{collab.organizerName}</div>
 									<div class="text-xs text-gray-500">{collab.organizerEmail}</div>

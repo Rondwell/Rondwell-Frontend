@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { getEventById, updateEvent } from '$lib/services/event.services';
+	import { updateEvent } from '$lib/services/event.services';
+	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { get } from 'svelte/store';
 
 	const dispatch = createEventDispatcher();
 
@@ -28,7 +30,8 @@
 
 	async function loadSettings() {
 		try {
-			const event = await getEventById(eventId);
+			const { event: eventStore } = getEventCache(eventId);
+			const event = get(eventStore);
 			const s = event?.agendaSettings;
 			if (s) {
 				isPublic = s.isPublic ?? true;

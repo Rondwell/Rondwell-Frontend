@@ -154,7 +154,7 @@
 					on:click={() => openSubscriber(subscriber)}
 				>
 					<div class="flex items-start gap-2">
-						<img src="/face-1.svg" alt="profile icon" class="h-6 w-6" />
+						<img src="/rondwell-attendee.png" alt="profile icon" class="h-6 w-6 rounded-full" />
 
 						<div class="flex flex-col items-start gap-1 lg:flex-row lg:items-center">
 							<span class="flex items-center gap-1">

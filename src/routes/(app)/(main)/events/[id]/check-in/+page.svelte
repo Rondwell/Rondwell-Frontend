@@ -1,18 +1,23 @@
 <script>
-	import { clickOutside } from '$lib/utils/constant';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { clickOutside } from '$lib/utils/constant';
 	import CheckedInAttendeeModal from './components/CheckedInAttendeeModal.svelte';
 	import ScanAttendeeModal from './components/ScanAttendeeModal.svelte';
+
+	$: eventId = $page.params.id;
 
 	let searchQuery = '';
 	let showModal = false;
 	let showScanModal = false;
+	let selectedAttendeeId = '';
 
 	const eventData = {
 		title: 'Megaexe Party',
 		startTime: 'Starting in 2 Days',
 		checkedInAttendees: [
 			{
+				_id: '1',
 				name: 'Anonymous',
 				email: 'megaexenome@gmail.com',
 				ticketType: 'Standard Ticket',
@@ -20,6 +25,7 @@
 				time: 'this minute'
 			},
 			{
+				_id: '2',
 				name: 'John Mesbon',
 				email: 'megaexenome@gmail.com',
 				ticketType: 'Premium Ticket',
@@ -111,10 +117,10 @@
 						{#each eventData.checkedInAttendees as attendee}
 							<button
 								class="flex items-center justify-between rounded-md border-b py-3 last:border-b-0"
-								on:click={() => (showModal = !showModal)}
+								on:click={() => { selectedAttendeeId = attendee._id || ''; showModal = true; }}
 							>
 								<div class="flex items-start gap-2">
-									<img src="/face-1.svg" alt="profile icon" class="h-6 w-6" />
+									<img src="/rondwell-attendee.png" alt="profile icon" class="h-6 w-6 rounded-full" />
 									<div class="flex flex-col items-start gap-1">
 										<p class="font-medium">{attendee.name}</p>
 										<p class="text-xs text-gray-500">{attendee.email}</p>
@@ -132,7 +138,7 @@
 							</button>
 						{/each}
 					</div>
-					<CheckedInAttendeeModal bind:open={showModal} />
+					<CheckedInAttendeeModal bind:open={showModal} attendeeId={selectedAttendeeId} {eventId} />
 				</div>
 			{:else}
 				<div class="flex h-50 flex-col items-center justify-center">

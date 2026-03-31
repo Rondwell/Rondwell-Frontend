@@ -1,11 +1,12 @@
 <!-- src/routes/auth/+page.svelte -->
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { smartRequestOTP } from '$lib/services/auth.services';
   import { authState } from '$lib/stores/auth.store';
   import Header from './components/Header.svelte';
 
-  let email = '';
+  let email = $page.url.searchParams.get('email') || '';
   let phone = '';
   let usePhone = false;
   let errorMsg = '';

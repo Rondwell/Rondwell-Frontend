@@ -144,7 +144,27 @@
 		</div>
 
 	{:else if error}
-		<div class="flex h-40 items-center justify-center text-red-500">{error}</div>
+		<div class="flex h-[50vh] w-full items-center justify-center">
+			<div class="flex max-w-sm flex-col items-center text-center gap-4">
+				<div class="flex h-20 w-20 items-center justify-center rounded-full bg-gray-100">
+					<svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+						<path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="#D1D5DB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M12 8V13" stroke="#D1D5DB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M11.9945 16H12.0035" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
+				</div>
+				<h3 class="text-lg font-medium text-gray-700">Unable to load events</h3>
+				<p class="text-sm text-gray-400 leading-relaxed">
+					We're having trouble connecting right now. This is usually temporary — please try again in a moment.
+				</p>
+				<button
+					on:click={() => window.location.reload()}
+					class="mt-1 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+				>
+					Try Again
+				</button>
+			</div>
+		</div>
 
 	{:else if groupedEvents.size === 0}
 		<div class="flex h-40 flex-col items-center justify-center gap-2 text-gray-400">

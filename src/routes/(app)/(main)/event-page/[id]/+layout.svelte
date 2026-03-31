@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { afterNavigate } from '$app/navigation';
 	import { activeEventPageTheme, getEventTheme } from '$lib/stores/eventTheme';
+	import { eventSlugMap } from '$lib/stores/eventSlug';
+	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 	import type { Color } from '$lib/utils/colors';
 	import { colors } from '$lib/utils/colors';
@@ -54,6 +57,19 @@
 		return match ? match[1] : '1';
 	})();
 
+	// Rewrite URL to use slug after navigation to sub-pages
+	$: slug = $eventSlugMap[eventId] || '';
+	afterNavigate(() => {
+		if (slug && typeof window !== 'undefined') {
+			const path = $page.url.pathname;
+			const subPath = path.replace(`/event-page/${eventId}`, '');
+			const newUrl = `/${slug}${subPath}`;
+			if (window.location.pathname !== newUrl) {
+				window.history.replaceState(window.history.state, '', newUrl);
+			}
+		}
+	});
+
 	$: tabs = [
 		{ label: 'Overview', link: `/event-page/${eventId}`, icon: tabIcons.overview },
 		{ label: 'Agenda', link: `/event-page/${eventId}/agenda`, icon: tabIcons.agenda },
@@ -70,6 +86,10 @@
 		}
 		return currentPath.startsWith(link);
 	}
+
+	// Check if current page is a sub-page (not overview)
+	$: isSubPage = currentPath !== `/event-page/${eventId}` && currentPath.startsWith(`/event-page/${eventId}/`);
+	$: requiresAuth = isSubPage && !$isAuthenticated;
 </script>
 
 <!-- Themed tab navigation -->
@@ -97,4 +117,28 @@
 </nav>
 
 <!-- Page content -->
+{#if requiresAuth}
+<div class="flex flex-col items-center justify-center gap-6 rounded-2xl px-6 py-16 text-center"
+	style="background-color: {themeColor.cover}; border: 1px solid {themeColor.toggle};">
+	<div class="flex h-20 w-20 items-center justify-center rounded-full" style="background-color: {themeColor.smallCover};">
+		<svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+			<path d="M12 12a5 5 0 100-10 5 5 0 000 10zM20.59 22c0-3.87-3.85-7-8.59-7s-8.59 3.13-8.59 7" stroke="{themeColor.lightText}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+		</svg>
+	</div>
+	<div>
+		<h2 class="text-xl font-semibold" style="color: {themeColor.text};">Sign in to view this page</h2>
+		<p class="mt-2 text-sm leading-relaxed" style="color: {themeColor.lightText};">
+			You need to be signed in to access this section of the event. Sign in or create an account to continue.
+		</p>
+	</div>
+	<a
+		href="/auth?redirect=/event-page/{eventId}"
+		class="rounded-lg px-8 py-3 text-sm font-medium no-underline transition-opacity hover:opacity-90"
+		style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+	>
+		Sign In to Continue
+	</a>
+</div>
+{:else}
 <slot />
+{/if}

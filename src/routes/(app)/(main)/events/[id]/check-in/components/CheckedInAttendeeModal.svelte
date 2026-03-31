@@ -105,7 +105,7 @@
 		return { bg: '#ECECEC', color: '#A9AAAA' };
 	}
 
-	$: statusColors = getStatusColor(attendee?.guestStatus || '');
+	$: statusColors = getStatusColor(attendee?.attendeeStatus || '');
 	$: attendeeName = `${attendee?.firstName || ''} ${attendee?.lastName || ''}`.trim() || 'Anonymous';
 </script>
 
@@ -148,9 +148,9 @@
 						</div>
 						<div class="relative" use:clickOutside={() => { showEditStatus = false; }}>
 							<button class="flex items-center gap-1 rounded-md px-3 py-1 text-xs font-medium" style="background-color: {statusColors.bg}; color: {statusColors.text}" on:click={() => (showEditStatus = !showEditStatus)}>
-								{getStatusLabel(attendee.guestStatus)} <img src="/edit.svg" alt="" class="h-3 w-3" />
+								{getStatusLabel(attendee.attendeeStatus)} <img src="/edit.svg" alt="" class="h-3 w-3" />
 							</button>
-							<EditStatus bind:open={showEditStatus} attendee={{ ...attendee, name: attendeeName, status: attendee.guestStatus }} {eventId} on:updated={handleStatusUpdated} />
+							<EditStatus bind:open={showEditStatus} attendee={{ ...attendee, name: attendeeName, status: attendee.attendeeStatus }} {eventId} on:updated={handleStatusUpdated} />
 						</div>
 					</div>
 

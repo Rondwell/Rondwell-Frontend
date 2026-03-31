@@ -134,7 +134,7 @@
 </script>
 
 <div class="w-full">
-	<!-- Welcome Aboard Section -->
+	<!-- Welcome Aboard Sections -->
 	<div class="mb-8">
 		<h1 class="mb-4 text-3xl font-medium">Welcome Aboard</h1>
 

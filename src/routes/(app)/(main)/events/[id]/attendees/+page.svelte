@@ -70,7 +70,7 @@
 		{ label: 'Register Time', value: 'createdAt' },
 		{ label: 'Name', value: 'firstName' },
 		{ label: 'Email', value: 'email' },
-		{ label: 'Status', value: 'guestStatus' }
+		{ label: 'Status', value: 'attendeeStatus' }
 	];
 
 	$: progressValue = maxAttendees > 0 ? Math.min((attendingCount / maxAttendees) * 100, 100) : (attendingCount > 0 ? 100 : 0);
@@ -88,7 +88,7 @@
 				page: currentPage,
 				limit,
 				search: searchQuery || undefined,
-				guestStatus: statusFilter !== 'ALL' ? statusFilter : undefined,
+				attendeeStatus: statusFilter !== 'ALL' ? statusFilter : undefined,
 				sortBy,
 				sortOrder
 			});
@@ -454,8 +454,8 @@
 									</div>
 								</div>
 								<div class="flex flex-col items-center gap-1 lg:flex-row lg:gap-4">
-									<div class="flex items-center justify-center rounded-full px-2 py-1 text-xs {getStatusClass(guest.guestStatus)}">
-										{getStatusLabel(guest.guestStatus)}
+									<div class="flex items-center justify-center rounded-full px-2 py-1 text-xs {getStatusClass(guest.attendeeStatus)}">
+										{getStatusLabel(guest.attendeeStatus)}
 									</div>
 									<div class="text-xs text-gray-500">{timeAgo(guest.createdAt)}</div>
 								</div>

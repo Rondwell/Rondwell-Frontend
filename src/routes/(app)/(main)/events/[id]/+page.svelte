@@ -123,10 +123,18 @@ return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'nu
 
 function formatEventTime(start: string, end: string, tz: string): string {
 if (!start) return '';
-const s = new Date(start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-const e = end ? new Date(end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+const sDate = new Date(start);
+const s = sDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+if (!end) return tz ? `${s} ${tz}` : s;
+const eDate = new Date(end);
+const e = eDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 const tzLabel = tz ? ` ${tz}` : '';
-return e ? `${s} - ${e}${tzLabel}` : `${s}${tzLabel}`;
+const sameDay = sDate.getFullYear() === eDate.getFullYear() && sDate.getMonth() === eDate.getMonth() && sDate.getDate() === eDate.getDate();
+if (sameDay) {
+return `${s} – ${e}${tzLabel}`;
+}
+const endDateStr = eDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+return `${s} – ${endDateStr}, ${e}${tzLabel}`;
 }
 
 function getLocationLabel(event: any): string {
@@ -150,8 +158,9 @@ return new Date(dt).getDate().toString();
 }
 
 function isFutureEvent(event: any) {
-if (!event?.startDateTime) return true;
-return new Date(event.startDateTime).getTime() > Date.now();
+if (!event?.endDateTime) return true;
+if (event.eventStatus === 'ENDED' || event.eventStatus === 'CANCELLED') return false;
+return new Date(event.endDateTime).getTime() > Date.now();
 }
 
 $: eventIsFuture = eventData ? isFutureEvent(eventData) : true;

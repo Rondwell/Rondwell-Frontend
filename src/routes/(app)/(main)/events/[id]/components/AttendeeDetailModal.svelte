@@ -3,7 +3,8 @@
 		addAttendeeTag as addAttendeeTagApi,
 		getAttendeeDetail,
 		getAttendeeTimeline,
-		removeAttendeeTag
+		removeAttendeeTag,
+		updateAttendeeStatus
 	} from '$lib/services/event.services';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
@@ -22,6 +23,10 @@
 	let showCreateTagModal = false;
 	let showResendEmailModal = false;
 	let showViewEmail: any = null;
+	let showDeleteConfirm = false;
+	let deleting = false;
+	let approving = false;
+	let declining = false;
 
 	// Detail data (loaded async)
 	let detailLoading = true;
@@ -30,6 +35,9 @@
 	let registration: any = null;
 	let formAnswers: Array<{ question: string; answer: string; fieldType: string }> = [];
 	let ticketTypeName = '';
+	let ticketPrice = 0;
+	let ticketCurrency = 'NGN';
+	let seatInfo: any = null;
 	let timeline: any[] = [];
 
 	// Cache to avoid re-fetching
@@ -46,26 +54,15 @@
 			attendee = attendeeData;
 		}
 
-		// Check cache first
-		if (detailCache.has(attendeeId)) {
-			const cached = detailCache.get(attendeeId);
-			attendee = cached.attendee;
-			registration = cached.registration;
-			formAnswers = cached.formAnswers;
-			ticketTypeName = cached.ticketTypeName;
-			detailLoading = false;
-		} else {
-			detailLoading = true;
-			loadDetail();
-		}
+		// Always fetch fresh data (clear cache for this attendee)
+		detailCache.delete(attendeeId);
+		timelineCache.delete(attendeeId);
 
-		if (timelineCache.has(attendeeId)) {
-			timeline = timelineCache.get(attendeeId) || [];
-			timelineLoading = false;
-		} else {
-			timelineLoading = true;
-			loadTimeline();
-		}
+		detailLoading = true;
+		loadDetail();
+
+		timelineLoading = true;
+		loadTimeline();
 	}
 
 	async function loadDetail() {
@@ -75,6 +72,9 @@
 			registration = detail.registration;
 			formAnswers = detail.formAnswers;
 			ticketTypeName = detail.ticketTypeName;
+			ticketPrice = detail.ticketPrice || 0;
+			ticketCurrency = detail.ticketCurrency || 'NGN';
+			seatInfo = detail.seatInfo || null;
 			detailCache.set(attendeeId, detail);
 		} catch (e) { console.error('Failed to load detail:', e); }
 		finally { detailLoading = false; }
@@ -116,6 +116,45 @@
 		loadTimeline();
 	}
 
+	async function handleApprove() {
+		approving = true;
+		try {
+			await updateAttendeeStatus(eventId, attendeeId, 'ATTENDING', true);
+			handleStatusUpdated();
+		} catch (e: any) {
+			console.error('Failed to approve attendee:', e);
+		} finally {
+			approving = false;
+		}
+	}
+
+	async function handleDecline() {
+		declining = true;
+		try {
+			await updateAttendeeStatus(eventId, attendeeId, 'DECLINED', true);
+			handleStatusUpdated();
+		} catch (e: any) {
+			console.error('Failed to decline attendee:', e);
+		} finally {
+			declining = false;
+		}
+	}
+
+	async function handleDeleteAttendee() {
+		deleting = true;
+		try {
+			const { deleteAttendee } = await import('$lib/services/event.services');
+			await deleteAttendee(eventId, attendeeId);
+			open = false;
+			window.location.reload();
+		} catch (e: any) {
+			console.error('Failed to delete attendee:', e);
+		} finally {
+			deleting = false;
+			showDeleteConfirm = false;
+		}
+	}
+
 	function getStatusColor(s: string) {
 		switch (s) {
 			case 'CHECKED_IN': case 'ATTENDING': return { bg: '#E3F4E1', text: '#3CBD2C' };
@@ -144,7 +183,7 @@
 		return { bg: '#ECECEC', color: '#A9AAAA' };
 	}
 
-	$: statusColors = getStatusColor(attendee?.guestStatus || '');
+	$: statusColors = getStatusColor(attendee?.attendeeStatus || '');
 	$: attendeeName = `${attendee?.firstName || ''} ${attendee?.lastName || ''}`.trim() || 'Anonymous';
 </script>
 
@@ -185,10 +224,10 @@
 						<button class="flex items-center gap-1 rounded-md px-3 py-1 text-xs font-medium"
 							style="background-color: {statusColors.bg}; color: {statusColors.text}"
 							on:click={() => (showEditStatus = !showEditStatus)}>
-							{getStatusLabel(attendee?.guestStatus || '')}
+							{getStatusLabel(attendee?.attendeeStatus || '')}
 							<img src="/edit.svg" alt="" class="h-3 w-3" />
 						</button>
-						<EditStatus bind:open={showEditStatus} attendee={{ ...attendee, name: attendeeName, status: attendee?.guestStatus }} {eventId} on:updated={handleStatusUpdated} />
+						<EditStatus bind:open={showEditStatus} attendee={{ ...attendee, name: attendeeName, status: attendee?.attendeeStatus }} {eventId} on:updated={handleStatusUpdated} />
 					</div>
 				</div>
 
@@ -211,7 +250,11 @@
 						</div>
 						<div class="border-r border-gray-200 pr-6">
 							<p class="text-xs text-[#C1C2C2]">Amount Paid</p>
-							<p class="text-sm font-semibold text-black">$0.00</p>
+							<p class="text-sm font-semibold text-black">
+								{ticketPrice > 0
+									? new Intl.NumberFormat('en-NG', { style: 'currency', currency: ticketCurrency, minimumFractionDigits: 0 }).format(ticketPrice)
+									: 'Free'}
+							</p>
 						</div>
 						{#if ticketTypeName}
 							<div>
@@ -233,6 +276,47 @@
 							</button>
 						{/each}
 					</div>
+				{/if}
+
+				<!-- Approve/Decline buttons for UNAPPROVED attendees -->
+				{#if attendee?.attendeeStatus === 'UNAPPROVED' && !detailLoading}
+				<div class="mt-5 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+					<div class="flex-1">
+						<p class="text-sm font-medium text-amber-800">Pending Approval</p>
+						<p class="text-xs text-amber-600">This attendee is waiting for your approval to attend.</p>
+					</div>
+					<div class="flex gap-2">
+						<button
+							on:click={handleDecline}
+							disabled={declining || approving}
+							class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+						>
+							{declining ? 'Declining...' : 'Decline'}
+						</button>
+						<button
+							on:click={handleApprove}
+							disabled={approving || declining}
+							class="rounded-lg bg-green-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
+						>
+							{approving ? 'Approving...' : 'Approve'}
+						</button>
+					</div>
+				</div>
+				{/if}
+
+				<!-- Seat Info -->
+				{#if seatInfo && !detailLoading}
+				<div class="mt-5 flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+					<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18v-6a8 8 0 0116 0v6"/><path d="M2 18h20"/></svg>
+					</div>
+					<div>
+						<p class="text-xs text-[#C1C2C2]">Assigned Seat</p>
+						<p class="text-sm font-semibold text-gray-900">
+							{seatInfo.seatNumber}{seatInfo.row ? ` · Row ${seatInfo.row}` : ''}{seatInfo.section ? ` · ${seatInfo.section}` : ''}
+						</p>
+					</div>
+				</div>
 				{/if}
 
 				<!-- Registration Questions -->
@@ -264,7 +348,11 @@
 								<div>
 									<p class="text-sm text-[#B6B8BA]">{item.question}</p>
 									{#if item.answer}
-										{#if item.answer.startsWith('http')}
+										{#if item.fieldType === 'CHECKBOX'}
+											<p class="mt-1 text-sm font-medium text-gray-800">{item.answer === 'true' || item.answer === 'Yes' ? '✓ Yes' : '✗ No'}</p>
+										{:else if item.fieldType === 'TERMS_CHECKBOX'}
+											<p class="mt-1 text-sm font-medium text-green-700">{item.answer === 'true' ? '✓ Accepted' : item.answer}</p>
+										{:else if item.answer.startsWith('http')}
 											<a href={item.answer} target="_blank" rel="noopener" class="mt-1 text-sm font-medium text-[#D92D20] break-all">{item.answer}</a>
 										{:else}
 											<p class="mt-1 text-sm font-medium text-gray-800">{item.answer}</p>
@@ -274,6 +362,13 @@
 									{/if}
 								</div>
 							{/each}
+						</div>
+					</div>
+				{:else if !registration}
+					<div class="mt-6 border-t border-gray-200 pt-6">
+						<div class="flex flex-col items-center gap-2 py-4 text-center">
+							<p class="text-sm text-gray-400">No registration found for this attendee.</p>
+							<p class="text-xs text-gray-300">This attendee was added but hasn't completed registration yet.</p>
 						</div>
 					</div>
 				{/if}
@@ -362,7 +457,10 @@
 
 			<!-- Footer -->
 			<div class="flex items-center justify-between border-t border-gray-200 px-6 py-4">
-				<button on:click={() => (showReportModal = true)} class="text-xs font-semibold text-[#A6A7A7] transition hover:text-gray-600">Report Attendee</button>
+				<div class="flex items-center gap-4">
+					<button on:click={() => (showReportModal = true)} class="text-xs font-semibold text-[#A6A7A7] transition hover:text-gray-600">Report Attendee</button>
+					<button on:click={() => (showDeleteConfirm = true)} class="text-xs font-semibold text-red-400 transition hover:text-red-600">Delete Attendee</button>
+				</div>
 				<span class="text-xs text-[#C1C2C2]">{registration?.checkinDetails?.checkinLocation?.resolvedAddress || ''}</span>
 			</div>
 		</div>
@@ -372,3 +470,23 @@
 <ReportAttendeeModal bind:open={showReportModal} {eventId} {attendeeId} />
 <CreateTagModal bind:open={showCreateTagModal} {eventId} on:tagAssigned={handleTagAssigned} />
 <ResendEmailModal bind:open={showResendEmailModal} email={attendee?.email || ''} />
+
+{#if showDeleteConfirm}
+<div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm" on:click={() => showDeleteConfirm = false} on:keydown={(e) => e.key === 'Escape' && (showDeleteConfirm = false)} role="dialog" aria-modal="true" tabindex="-1">
+	<div class="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" on:click|stopPropagation on:keydown|stopPropagation role="document">
+		<div class="flex flex-col items-center gap-4 text-center">
+			<div class="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D92D20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+			</div>
+			<h3 class="text-lg font-semibold text-gray-900">Delete Attendee</h3>
+			<p class="text-sm text-gray-500">This will permanently delete this attendee's registration, form answers, and seat assignment. Transaction records will be kept for audit purposes. This action cannot be undone.</p>
+			<div class="mt-2 flex w-full gap-3">
+				<button on:click={() => showDeleteConfirm = false} class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">Cancel</button>
+				<button on:click={handleDeleteAttendee} disabled={deleting} class="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50">
+					{deleting ? 'Deleting...' : 'Delete'}
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+{/if}

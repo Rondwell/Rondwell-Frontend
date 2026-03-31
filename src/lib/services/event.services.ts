@@ -1239,14 +1239,14 @@ export async function getAttendeeDetail(eventId: string, attendeeId: string): Pr
   formAnswers: Array<{ question: string; answer: string; fieldType: string }>;
   ticketTypeName: string;
 }> {
-  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/detail`);
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/detail?_t=${Date.now()}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to fetch attendee detail');
   return data.data;
 }
 
 export async function getAttendeeTimeline(eventId: string, attendeeId: string): Promise<any[]> {
-  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/timeline`);
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/timeline?_t=${Date.now()}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to fetch timeline');
   return data.data ?? [];
@@ -1271,6 +1271,15 @@ export async function reportAttendee(eventId: string, attendeeId: string, notes:
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to report attendee');
+  return data.data;
+}
+
+export async function deleteAttendee(eventId: string, attendeeId: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}`, {
+    method: 'DELETE',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to delete attendee');
   return data.data;
 }
 

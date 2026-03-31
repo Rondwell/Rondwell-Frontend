@@ -8,15 +8,27 @@
 	import { onMount } from 'svelte';
 	import ProfileMenu from './ProfileMenu.svelte';
 
-	import { authState } from '$lib/stores/auth.store';
+	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 
 	export let background_color = '';
 	export let show = true;
 	let showMenu = false;
 	let activeItem = '';
+	let showSignInModal = false;
 
 	$: activeProfile = $authState.activeProfile;
 	$: avatarUrl = activeProfile?.profilePictureUrl || '/you-rondwell.png';
+
+	// Nav items that require authentication
+	const authRequiredIds = new Set(['event', 'collections', 'experience']);
+
+	function handleNavClick(item) {
+		if (authRequiredIds.has(item.id) && !$isAuthenticated) {
+			showSignInModal = true;
+			return;
+		}
+		goto(item.nav);
+	}
 
 	function goHome() {
 		goto('/overview');
@@ -160,9 +172,7 @@
 					<button
 						class={`flex h-full flex-col items-center justify-center text-gray-500`}
 						aria-label={item.label}
-						on:click={() => {
-							goto(item.nav);
-						}}
+						on:click={() => handleNavClick(item)}
 					>
 						{#if item.icon === 'plus'}
 							<div
@@ -262,9 +272,7 @@
 		<div class="custom-scrollbar space-y-5 overflow-y-auto">
 			{#each menuItems.slice(1) as item}
 				<button
-					on:click={() => {
-						goto(item.nav);
-					}}
+					on:click={() => handleNavClick(item)}
 					class="flex w-full flex-col items-center justify-center gap-1 p-2 {activeItem === item.id
 						? 'text-[#513BE2]'
 						: 'text-gray-500'} transition-colors"
@@ -298,6 +306,42 @@
 
 <!-- Spacer to prevent content overlap with fixed sidebar/bottom nav -->
 <!-- <div class={isMobile ? 'pb-20' : 'pl-16'}></div> -->
+
+<!-- Sign In Modal -->
+{#if showSignInModal}
+<div
+	class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+	on:click={() => (showSignInModal = false)}
+	on:keydown={(e) => e.key === 'Escape' && (showSignInModal = false)}
+	role="dialog"
+	aria-modal="true"
+	tabindex="-1"
+>
+	<div
+		class="mx-4 w-full max-w-[320px] rounded-2xl bg-white p-6 shadow-xl"
+		on:click|stopPropagation
+		on:keydown|stopPropagation
+		role="document"
+	>
+		<div class="flex flex-col items-center gap-4 text-center">
+			<p class="text-sm text-gray-500">You're not signed in</p>
+			<a
+				href="/auth"
+				on:click={() => (showSignInModal = false)}
+				class="flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium text-white no-underline"
+				style="background: linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%);"
+			>
+				<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M6.67578 5.66969C6.90828 2.96969 8.29578 1.86719 11.3333 1.86719H11.4308C14.7833 1.86719 16.1258 3.20969 16.1258 6.56219V11.4522C16.1258 14.8047 14.7833 16.1472 11.4308 16.1472H11.3333C8.31828 16.1472 6.93078 15.0597 6.68328 12.4047" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+					<path d="M11.2498 9H2.71484" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+					<path d="M4.3875 6.48438L1.875 8.99688L4.3875 11.5094" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				</svg>
+				Sign in
+			</a>
+		</div>
+	</div>
+</div>
+{/if}
 
 <style>
 	button {

@@ -141,12 +141,48 @@
 		submitError = '';
 
 		const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
-		const formAnswers = filteredFields.map((f: any) => ({
-			field_id: f._id ?? f.formId,
-			answer_value: Array.isArray(answers[f._id ?? f.formId])
-				? answers[f._id ?? f.formId].join(', ')
-				: String(answers[f._id ?? f.formId] ?? ''),
-		})).filter((a: any) => a.answer_value);
+		const formAnswers = filteredFields.flatMap((f: any) => {
+			const fid = f._id ?? f.formId;
+			const val = answers[fid];
+
+			// Skip empty answers
+			if (val === undefined || val === null || val === '') return [];
+
+			let answerValue = '';
+
+			if (f.fieldType === 'TERMS_CHECKBOX') {
+				// For terms, store "Accepted" + signature if provided
+				if (!val) return [];
+				const sig = answers[fid + '_signature'];
+				answerValue = sig ? `Accepted (Signed: ${sig})` : 'Accepted';
+			} else if (f.fieldType === 'CHECKBOX') {
+				answerValue = val ? 'Yes' : 'No';
+			} else if (Array.isArray(val)) {
+				// Multi-select: join selected values
+				const items = val.map((v: any) => typeof v === 'object' ? (v.value || v.label || String(v)) : String(v));
+				answerValue = items.join(', ');
+			} else {
+				answerValue = String(val);
+			}
+
+			if (!answerValue) return [];
+
+			const result: Array<{ field_id: string; answer_value: string }> = [
+				{ field_id: fid, answer_value: answerValue },
+			];
+
+			// Also save signature as a separate answer if present
+			if (f.fieldType === 'TERMS_CHECKBOX' && answers[fid + '_signature']) {
+				result.push({
+					field_id: fid + '_signature',
+					answer_value: answers[fid + '_signature'],
+				});
+			}
+
+			return result;
+		});
+
+		const isPaid = selectedTicket && !selectedTicket.isFree && selectedTicket.price && selectedTicket.price > 0;
 
 		try {
 			// Step 1: Create attendee entry (returns existing if already registered)
@@ -162,29 +198,17 @@
 			const attendeeData = await attendeeRes.json();
 			if (!attendeeRes.ok) throw new Error(attendeeData.message ?? 'Failed to create attendee');
 
-			// Check if attendee already has a registration (early duplicate detection)
 			const existingAttendee = attendeeData.data;
-			if (existingAttendee?.registrationId || attendeeData.message === 'Attendee already exists') {
-				// Verify they actually have a registration record
-				const checkRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/event/${eventId}/guest/${existingAttendee._id || existingAttendee.id}`);
-				if (checkRes.ok) {
-					const checkData = await checkRes.json();
-					if (checkData && (checkData.registration_id || checkData._id)) {
-						throw new Error('This email is already registered for this event. Please use a different email address.');
-					}
-				}
-			}
+			const attendeeId = existingAttendee?._id ?? existingAttendee?.id ?? attendeeData.attendeeId;
 
-			const guestId = existingAttendee?._id ?? existingAttendee?.id ?? attendeeData.attendeeId;
-
-			// Step 2: Create registration
+			// Step 2: Create or update registration (backend handles PENDING re-registration)
 			const regRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/register`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					eventId,
-					guestId,
-					guest_details: {
+					attendeeId,
+					attendee_details: {
 						email: email.trim().toLowerCase(),
 						firstName: firstName.trim(),
 						lastName: lastName.trim(),
@@ -199,9 +223,6 @@
 
 			registrationResult = regData.registration;
 
-			// Step 3: Check if paid ticket
-			const isPaid = selectedTicket && !selectedTicket.isFree && selectedTicket.price && selectedTicket.price > 0;
-
 			if (isPaid) {
 				// Go to payment gateway selection — don't finalize yet
 				step = 'payment';
@@ -212,12 +233,29 @@
 					{ method: 'POST', headers: { 'Content-Type': 'application/json' } }
 				);
 				if (finalizeRes.ok) {
-					registrationResult.guest_status = 'ATTENDING';
+					// Backend sets UNAPPROVED if ticket requires approval, ATTENDING otherwise
+					registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
 				}
 				step = 'confirmation';
 			}
 		} catch (e: any) {
-			submitError = e.message ?? 'Something went wrong. Please try again.';
+			const msg = e.message ?? '';
+			// Map backend errors to user-friendly messages
+			if (msg.includes('already registered')) {
+				submitError = "You're already registered for this event with this email address. Check your inbox for confirmation details.";
+			} else if (msg.includes('blocked from registering')) {
+				submitError = 'This email has been restricted from registering for events in this collection.';
+			} else if (msg.includes('Registration is closed') || msg.includes('event has ended')) {
+				submitError = 'Registration for this event is now closed.';
+			} else if (msg.includes('Registration is currently closed')) {
+				submitError = 'Registration is currently closed for this event. Please check back later.';
+			} else if (msg.includes('Ticket type not found')) {
+				submitError = 'This ticket type is no longer available. Please select a different ticket.';
+			} else {
+				submitError = msg || 'Something went wrong. Please try again.';
+			}
+			// Go back to form step so the user sees the error clearly
+			if (step === 'seats') step = 'form';
 		} finally {
 			submitting = false;
 		}
@@ -246,16 +284,16 @@
 		submitting = true;
 		submitError = '';
 
-		const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
-		const PAYMENT_URL = import.meta.env.VITE_PAYMENT_API_URL || EVENT_URL.replace('/events', '/payment').replace(':5000', ':5005');
+		const PAYMENT_URL = import.meta.env.VITE_PAYMENT_API_URL || import.meta.env.VITE_API_URL || import.meta.env.VITE_EVENT_API_URL;
 
 		try {
-			const paymentRes = await fetch(`${PAYMENT_URL}/api/v1/payment/ticketPayment/ticket-purchase-initiate/`, {
+			const paymentRes = await fetch(`${PAYMENT_URL}/api/v1/payment/ticketPayment/attendee-ticket-purchase/`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					guestId: registrationResult.guestId,
-					geustEmail: email.trim().toLowerCase(),
+					attendeeName: `${firstName.trim()} ${lastName.trim()}`.trim() || 'Attendee',
+					attendeeId: registrationResult.attendeeId,
+					attendeeEmail: email.trim().toLowerCase(),
 					eventId,
 					organizerId: eventData?.organizerId ?? '',
 					ticketDetails: {
@@ -279,15 +317,70 @@
 			if (!paymentRes.ok) throw new Error(paymentData.message ?? 'Payment initiation failed');
 
 			if (paymentData.checkoutUrl) {
-				window.location.href = paymentData.checkoutUrl;
+				if (selectedGateway === 'PAYSTACK') {
+					// Use Paystack inline popup instead of redirect
+					await loadPaystackScript();
+					const handler = (window as any).PaystackPop.setup({
+						key: paymentData.paystackPublicKey || import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
+						email: email.trim().toLowerCase(),
+						amount: paymentData.totalAmount,
+						currency: paymentData.currency || selectedTicket?.currency || 'NGN',
+						ref: paymentData.reference || '',
+						channels: ['card', 'bank', 'ussd', 'bank_transfer'],
+						callback: (response: any) => {
+							// Payment successful — verify and settle, then finalize
+							const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
+							const PAYMENT_URL = import.meta.env.VITE_PAYMENT_API_URL || import.meta.env.VITE_API_URL || EVENT_URL;
+
+							// Step 1: Verify and settle payment (creates wallets, credits organizer, etc.)
+							fetch(`${PAYMENT_URL}/api/v1/payment/ticketPayment/verify-and-settle/${paymentData.reference}`, {
+								method: 'POST', headers: { 'Content-Type': 'application/json' }
+							}).then(() => {
+								// Step 2: Finalize registration on event service
+								return fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`, {
+									method: 'POST', headers: { 'Content-Type': 'application/json' }
+								});
+							}).then(() => {
+								registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
+								step = 'confirmation';
+								submitting = false;
+							}).catch(() => {
+								// Settlement or finalize might be handled by webhook — still show confirmation
+								registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
+								step = 'confirmation';
+								submitting = false;
+							});
+						},
+						onClose: () => {
+							submitError = 'Payment window was closed. You can try again.';
+							submitting = false;
+						},
+					});
+					handler.openIframe();
+				} else {
+					// Flutterwave or others — redirect to checkout URL
+					window.location.href = paymentData.checkoutUrl;
+				}
 			} else {
-				throw new Error('No checkout URL received');
+				throw new Error('No checkout URL received from payment gateway');
 			}
 		} catch (e: any) {
+			console.error('Payment initiation error:', e);
 			submitError = e.message ?? 'Payment failed. Please try again.';
 		} finally {
 			submitting = false;
 		}
+	}
+
+	function loadPaystackScript(): Promise<void> {
+		return new Promise((resolve, reject) => {
+			if ((window as any).PaystackPop) { resolve(); return; }
+			const script = document.createElement('script');
+			script.src = 'https://js.paystack.co/v2/inline.js';
+			script.onload = () => resolve();
+			script.onerror = () => reject(new Error('Failed to load Paystack script'));
+			document.head.appendChild(script);
+		});
 	}
 </script>
 
@@ -341,8 +434,11 @@
 				<h3 class="mb-6 text-2xl font-normal" style="color: {themeColor.text};">Attendance Registration</h3>
 
 				{#if submitError}
-				<div class="mb-4 rounded-lg p-3 text-sm" style="background-color: #fee2e2; color: #dc2626;">
-					{submitError}
+				<div class="mb-4 flex items-start gap-3 rounded-xl p-4 text-sm" style="background-color: #fef2f2; border: 1px solid #fecaca;">
+					<svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+					</svg>
+					<span style="color: #991b1b;">{submitError}</span>
 				</div>
 				{/if}
 
@@ -552,8 +648,11 @@
 					</p>
 
 					{#if submitError}
-					<div class="rounded-lg p-3 text-sm" style="background-color: #fee2e2; color: #dc2626;">
-						{submitError}
+					<div class="flex items-start gap-3 rounded-xl p-4 text-sm" style="background-color: #fef2f2; border: 1px solid #fecaca;">
+						<svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+						</svg>
+						<span style="color: #991b1b;">{submitError}</span>
 					</div>
 					{/if}
 
@@ -603,6 +702,15 @@
 					<p class="text-sm" style="color: {themeColor.lightText};">
 						Select your preferred payment gateway to complete your ticket purchase.
 					</p>
+
+					{#if submitError}
+					<div class="w-full flex items-start gap-3 rounded-xl p-4 text-sm" style="background-color: #fef2f2; border: 1px solid #fecaca;">
+						<svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+						</svg>
+						<span style="color: #991b1b;">{submitError}</span>
+					</div>
+					{/if}
 
 					<div class="w-full flex flex-col gap-3">
 						<button
@@ -724,7 +832,7 @@
 						<p class="text-sm mb-3" style="color: {themeColor.text};">Verify your email to access the event page and manage your registration.</p>
 						<button class="w-full rounded-lg py-2.5 text-sm font-medium"
 							style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
-							on:click={() => goto('/discover?show=true')}>
+							on:click={() => goto(`/auth?email=${encodeURIComponent(email.trim().toLowerCase())}`)}>
 							Verify Email & Create Account
 						</button>
 					</div>

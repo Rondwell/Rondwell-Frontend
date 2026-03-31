@@ -84,7 +84,7 @@
 								class="h-[34px] w-[34px] rounded-full object-cover"
 							/>
 						</button>
-						<ProfileMenu bind:showMenu className="absolute right-0 top-12" />
+						<ProfileMenu bind:showMenu className="fixed top-16 right-4 left-4 md:absolute md:right-0 md:left-auto md:top-12" />
 					</div>
 
 					<!-- Mobile: avatar -->
@@ -100,7 +100,7 @@
 								class="h-[34px] w-[34px] rounded-full object-cover"
 							/>
 						</button>
-						<ProfileMenu bind:showMenu className="absolute right-0 top-12" />
+						<ProfileMenu bind:showMenu className="fixed top-16 right-4 left-4 md:absolute md:right-0 md:left-auto md:top-12" />
 					</div>
 				{:else}
 					<!-- Not logged in: show Sign in -->

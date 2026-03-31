@@ -65,7 +65,7 @@
 					<p class="text-xs text-gray-400">{attendee.email}</p>
 				</div>
 				<div class="flex items-center gap-1 rounded-md bg-[#DCDCDC] px-3 py-1 text-xs text-[#A9AAAA]">
-					{getStatusLabel(attendee.status || attendee.guestStatus)}
+					{getStatusLabel(attendee.status || attendee.attendeeStatus)}
 				</div>
 			</div>
 

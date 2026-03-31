@@ -180,8 +180,14 @@
 		let [hours, minutes] = timePart.split(':').map(Number);
 		if (meridiem === 'PM' && hours !== 12) hours += 12;
 		if (meridiem === 'AM' && hours === 12) hours = 0;
-		const d = new Date(date);
-		d.setHours(hours, minutes, 0, 0);
+		// Build a date string in the event's timezone context
+		const year = date.getFullYear();
+		const month = String(date.getMonth() + 1).padStart(2, '0');
+		const day = String(date.getDate()).padStart(2, '0');
+		const h = String(hours).padStart(2, '0');
+		const m = String(minutes).padStart(2, '0');
+		// Use the browser's local timezone (which matches the user's intent)
+		const d = new Date(`${year}-${month}-${day}T${h}:${m}:00`);
 		return d.toISOString();
 	}
 

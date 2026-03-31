@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { getPublicEventPage } from '$lib/services/event.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
+	import { setEventSlug } from '$lib/stores/eventSlug';
 	import { getEventTheme, setEventTheme } from '$lib/stores/eventTheme';
 	import type { Color } from '$lib/utils/colors';
 	import { colors } from '$lib/utils/colors';
@@ -66,6 +67,11 @@
 					themeColor = matched;
 				}
 			}
+
+			// Store slug for sub-page URL rewriting
+			if (event.customLinkSlug) {
+				setEventSlug(eventId, event.customLinkSlug);
+			}
 		} catch (e: any) {
 			const msg = e.message ?? '';
 			if (msg.includes('fetch') || msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('not running')) {
@@ -111,10 +117,19 @@
 
 	function formatEventTime(start: string, end: string, tz: string): string {
 		if (!start) return '';
-		const s = new Date(start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-		const e = end ? new Date(end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+		const sDate = new Date(start);
+		const s = sDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+		if (!end) return tz ? `${s} ${tz}` : s;
+		const eDate = new Date(end);
+		const e = eDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 		const tzLabel = tz ? ` ${tz}` : '';
-		return e ? `${s} - ${e}${tzLabel}` : `${s}${tzLabel}`;
+		// Show end date if it's a different day
+		const sameDay = sDate.getFullYear() === eDate.getFullYear() && sDate.getMonth() === eDate.getMonth() && sDate.getDate() === eDate.getDate();
+		if (sameDay) {
+			return `${s} – ${e}${tzLabel}`;
+		}
+		const endDateStr = eDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		return `${s} – ${endDateStr}, ${e}${tzLabel}`;
 	}
 
 	function getMonth(dt: string): string {
@@ -148,6 +163,9 @@
 
 	function isTicketAvailable(ticket: any): boolean {
 		const now = new Date();
+		// Block all tickets if event has ended
+		if (event?.eventStatus === 'ENDED' || event?.eventStatus === 'CANCELLED') return false;
+		if (event?.endDateTime && new Date(event.endDateTime) < now) return false;
 		if (ticket.salesEndDate && new Date(ticket.salesEndDate) < now) return false;
 		if (ticket.salesStartDate && new Date(ticket.salesStartDate) > now) return false;
 		return true;
@@ -179,9 +197,9 @@
 	$: attendingNames = attendingSample.map(g => [g.firstName, g.lastName].filter(Boolean).join(' ') || 'Guest').join(', ');
 	$: remainingCount = Math.max(0, attendeeCount - attendingSample.length);
 
-	$: organizerEmail = event?.socialLinks?.website
-		? event.socialLinks.website
-		: (organizers.length > 0 ? organizers[0].email : '');
+	$: organizerEmail = organizerProfile?.email
+		|| (organizers.length > 0 ? organizers[0].email : '')
+		|| '';
 </script>
 
 <!-- SEO Meta Tags (server-rendered) -->
@@ -369,7 +387,7 @@
 				<div class="rounded-2xl p-4" style="background-color: {themeColor.cover};">
 					<div class="flex items-center justify-between gap-3">
 						<div class="flex gap-3">
-							<div class="flex size-9 items-center justify-center rounded-[9px] text-lg" style="background-color: {themeColor.smallCover};">🎪</div>
+							<img src="/tech-icon.svg" alt="" class="size-9 rounded-[9px] object-cover" style="background-color: {themeColor.smallCover};" />
 							<div>
 								<p class="text-xs" style="color: {themeColor.lightText};">Presented by</p>
 								<a href="/collection/{collectionInfo._id}/events" class="flex items-center gap-1 text-sm font-medium no-underline hover:underline" style="color: {themeColor.text};">
@@ -548,7 +566,29 @@
 					Registration
 				</h2>
 
-				{#if !event.registrationOpen}
+				{#if event.eventStatus === 'ENDED' || event.eventStatus === 'CANCELLED' || (event.endDateTime && new Date(event.endDateTime) < new Date())}
+				<div class="flex flex-col px-5 py-5">
+					<div class="flex items-center gap-3">
+						<img src="/reg-closed.svg" alt="" class="h-[42px] w-[42px]" />
+						<h3 class="text-xl font-semibold" style="color: {themeColor.text};">
+							{event.eventStatus === 'CANCELLED' ? 'Event Cancelled' : 'Event Has Ended'}
+						</h3>
+					</div>
+					<p class="mt-3 text-sm leading-relaxed" style="color: {themeColor.lightText};">
+						{event.eventStatus === 'CANCELLED'
+							? 'This event has been cancelled by the organizer.'
+							: 'This event has ended. Registration is no longer available.'}
+					</p>
+					<a
+						href="mailto:{organizerEmail || 'info@rondwell.com'}"
+						class="mt-4 inline-flex items-center justify-center self-start rounded-lg px-16 py-3 text-sm font-medium transition-opacity hover:opacity-90"
+						style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+					>
+						Contact Organizer
+					</a>
+				</div>
+
+				{:else if !event.registrationOpen}
 				<div class="flex flex-col px-5 py-5">
 					<div class="flex items-center gap-3">
 						<img src="/reg-closed.svg" alt="" class="h-[42px] w-[42px]" />
@@ -558,7 +598,7 @@
 						This event is currently not taking registrations. You may contact the host or subscribe to receive updates.
 					</p>
 					<a
-						href="mailto:{event.organizerSocialLinks?.website || ''}"
+						href="mailto:{organizerEmail || 'info@rondwell.com'}"
 						class="mt-4 inline-flex items-center justify-center self-start rounded-lg px-16 py-3 text-sm font-medium transition-opacity hover:opacity-90"
 						style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
 					>
@@ -740,13 +780,27 @@
 				<div class="mb-4 rounded-2xl p-4" style="background-color: {themeColor.cover};">
 					<div class="flex items-center justify-between gap-3">
 						<div class="flex gap-3">
-							<div class="flex size-9 items-center justify-center rounded-[9px] text-lg" style="background-color: {themeColor.smallCover};">🎪</div>
+							<img src="/tech-icon.svg" alt="" class="size-9 rounded-[9px] object-cover" style="background-color: {themeColor.smallCover};" />
 							<div>
 								<p class="text-xs" style="color: {themeColor.lightText};">Presented by</p>
-								<h2 class="text-sm font-medium" style="color: {themeColor.text};">{collectionInfo.name}</h2>
+								<a href="/collection/{collectionInfo._id}/events" class="flex items-center gap-1 text-sm font-medium no-underline hover:underline" style="color: {themeColor.text};">
+									{collectionInfo.name}
+									<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3 1l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+								</a>
 							</div>
 						</div>
+						<button
+							class="rounded-full px-3.5 py-2 text-sm font-normal transition-colors"
+							style="background-color: {themeColor.smallCover}; color: {themeColor.text};"
+						>
+							Subscribe
+						</button>
 					</div>
+					{#if event.description}
+					<p class="mt-3 line-clamp-3 text-sm font-light leading-6" style="color: {themeColor.lightText};">
+						{@html event.description.replace(/<[^>]*>/g, '').slice(0, 150)}{event.description.length > 150 ? '...' : ''}
+					</p>
+					{/if}
 				</div>
 				{/if}
 

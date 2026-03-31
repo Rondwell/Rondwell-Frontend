@@ -1,8 +1,23 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+	import {
+		getCollectionById,
+		updateCollection,
+		uploadCollectionCoverBanner,
+		uploadCollectionProfilePicture
+	} from '$lib/services/event.services';
 	import { colors } from '$lib/utils/colors';
 	import Icon from '@iconify/svelte';
+	import PlaceholderExtension from '@tiptap/extension-placeholder';
+	import StarterKit from '@tiptap/starter-kit';
+	import { onDestroy, onMount } from 'svelte';
+	import { createEditor, Editor, EditorContent } from 'svelte-tiptap';
+	import type { Readable } from 'svelte/store';
+
+	$: collectionId = $page.params.id;
+
 	type SocialLinkKey = 'instagram' | 'x' | 'youtube' | 'tiktok' | 'linkedin' | 'website';
-	const socialLinks: { key: SocialLinkKey; icon: string; label: string; prefix: string }[] = [
+	const socialLinksMeta: { key: SocialLinkKey; icon: string; label: string; prefix: string }[] = [
 		{ key: 'instagram', icon: 'mdi:instagram', label: 'instagram.com/', prefix: '' },
 		{ key: 'x', icon: 'mdi:twitter', label: 'x.com/', prefix: '' },
 		{ key: 'youtube', icon: 'mdi:youtube', label: 'youtube.com/@', prefix: '' },
@@ -21,6 +36,92 @@
 	function handleDragOver(event: DragEvent) {
 		event.preventDefault();
 	}
+
+	let uploadingProfile = false;
+	let uploadingCover = false;
+	let saving = false;
+	let saveMessage = '';
+	let pageLoading = true;
+	let showDescEditor = false;
+	let descEditor: Readable<Editor>;
+
+	function stripHtml(html: string): string {
+		return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+	}
+
+	$: descPreview = stripHtml(eventData.description) || 'Add a short description';
+
+	async function handleCoverUpload(event: Event) {
+		const input = event.target as HTMLInputElement | null;
+		if (!input?.files?.[0] || !collectionId) return;
+		uploadingCover = true;
+		try {
+			const result = await uploadCollectionCoverBanner(collectionId, input.files[0]);
+			eventData.coverBannerUrl = result.coverBannerUrl;
+		} catch (e: any) {
+			console.error('Cover upload failed:', e);
+		} finally {
+			uploadingCover = false;
+		}
+	}
+
+	async function handleProfileUpload(event: Event) {
+		const input = event.target as HTMLInputElement | null;
+		if (!input?.files?.[0] || !collectionId) return;
+		uploadingProfile = true;
+		try {
+			const result = await uploadCollectionProfilePicture(collectionId, input.files[0]);
+			profile.profilePicture = result.profilePictureUrl;
+		} catch (e: any) {
+			console.error('Profile upload failed:', e);
+		} finally {
+			uploadingProfile = false;
+		}
+	}
+
+	// Load existing collection data
+	onMount(async () => {
+		if (!collectionId) { pageLoading = false; return; }
+		try {
+			const c = await getCollectionById(collectionId);
+			eventData.name = c.name ?? '';
+			eventData.description = c.description ?? '';
+			eventData.tintColor = c.themeColor ?? 'Light Rose';
+			eventData.publicUrl = c.slug ?? c.customLink ?? '';
+			eventData.coverBannerUrl = c.coverBannerUrl ?? '';
+			profile.profilePicture = c.profilePictureUrl ?? '';
+			profile.name = c.name ?? '';
+			if (c.socialLinks) {
+				profile.socialLinks = {
+					instagram: c.socialLinks.instagram ?? '',
+					x: c.socialLinks.twitter ?? c.socialLinks.x ?? '',
+					youtube: c.socialLinks.youtube ?? '',
+					tiktok: c.socialLinks.tiktok ?? '',
+					linkedin: c.socialLinks.linkedin ?? '',
+					website: c.socialLinks.website ?? ''
+				};
+			}
+		} catch (e) {
+			console.error('Failed to load collection:', e);
+		} finally {
+			pageLoading = false;
+		}
+
+		descEditor = createEditor({
+			extensions: [
+				StarterKit,
+				PlaceholderExtension.configure({ placeholder: 'Describe your collection...' }),
+			],
+			content: eventData.description || '',
+			onUpdate: ({ editor }) => {
+				eventData.description = editor.getHTML();
+			},
+		});
+	});
+
+	onDestroy(() => {
+		$descEditor?.destroy();
+	});
 
 	function handleFileUpload(event: Event) {
 		const input = event.target as HTMLInputElement | null;
@@ -46,9 +147,9 @@
 		reader.readAsDataURL(file);
 	}
 
-	// Mock data for the settings page
+	// Collection data — starts empty, populated from API
 	let profile: Profile = {
-		name: 'JOHN HOUSEMAN',
+		name: '',
 		username: '',
 		bio: '',
 		socialLinks: {
@@ -59,13 +160,14 @@
 			linkedin: '',
 			website: ''
 		},
-		profilePicture: '/rondwell-attendee.png'
+		profilePicture: ''
 	};
 	type EventData = {
 		name: string;
 		description: string;
 		tintColor: string;
 		publicUrl: string;
+		coverBannerUrl: string;
 		location: {
 			type: 'City' | 'Global';
 			city: string;
@@ -74,16 +176,17 @@
 	};
 
 	let eventData: EventData = {
-		name: 'John Doe',
+		name: '',
 		description: '',
-		tintColor: '#6B7280',
+		tintColor: 'Light Rose',
 		publicUrl: '',
-		location: { type: 'City', city: 'Lagos' },
+		coverBannerUrl: '',
+		location: { type: 'City', city: '' },
 		socialPreviewImage: null
 	};
 
-	function selectTintColor(color: string) {
-		eventData.tintColor = color;
+	function selectTintColor(colorName: string) {
+		eventData.tintColor = colorName;
 	}
 
 	let search = '';
@@ -117,45 +220,150 @@
 
 	function handlePublicUrlInput(e: Event) {
 		const value = (e.target as HTMLInputElement).value;
-		eventData.publicUrl = `ron.d/${value}`;
+		eventData.publicUrl = value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 	}
 
 	async function saveChanges() {
+		if (!collectionId) return;
+		saving = true;
+		saveMessage = '';
 		try {
-			// Add your API call here to save the collection settings
-			console.log('Saving changes:', { eventData, profile });
-			// Example: await fetch('/api/collection/settings', { method: 'POST', body: JSON.stringify({ eventData, profile }) })
-		} catch (error) {
-			console.error('Error saving changes:', error);
+			await updateCollection(collectionId, {
+				name: eventData.name,
+				description: eventData.description,
+				themeColor: eventData.tintColor,
+				slug: eventData.publicUrl || undefined,
+				socialLinks: {
+					instagram: profile.socialLinks.instagram || undefined,
+					twitter: profile.socialLinks.x || undefined,
+					youtube: profile.socialLinks.youtube || undefined,
+					tiktok: profile.socialLinks.tiktok || undefined,
+					linkedin: profile.socialLinks.linkedin || undefined,
+					website: profile.socialLinks.website || undefined,
+				},
+			});
+			saveMessage = 'Changes saved successfully';
+			setTimeout(() => (saveMessage = ''), 3000);
+		} catch (error: any) {
+			saveMessage = error.message ?? 'Failed to save changes';
+		} finally {
+			saving = false;
 		}
 	}
 </script>
 
 <div class="w-full space-y-5">
+	{#if pageLoading}
+		<!-- Skeleton loader -->
+		<div class="animate-pulse rounded-lg">
+			<div class="rounded-t-lg bg-[#FDFDFD]">
+				<div class="h-[191px] rounded-t-lg bg-gray-200"></div>
+				<div class="relative ml-5 -mt-8">
+					<div class="h-16 w-16 rounded-lg bg-gray-300"></div>
+				</div>
+				<div class="ml-4 mt-4 space-y-3 pb-4">
+					<div class="h-8 w-48 rounded bg-gray-200"></div>
+					<div class="h-5 w-72 rounded bg-gray-200"></div>
+				</div>
+			</div>
+			<div class="mt-4 rounded-lg bg-[#FDFDFD] p-4 space-y-4">
+				<div class="h-6 w-36 rounded bg-gray-200"></div>
+				<div class="flex gap-3">
+					{#each [1,2,3,4,5,6,7] as _}<div class="h-8 w-8 rounded-full bg-gray-200"></div>{/each}
+				</div>
+				<div class="h-5 w-24 rounded bg-gray-200"></div>
+				<div class="h-10 w-80 rounded bg-gray-200"></div>
+			</div>
+			<div class="mt-4 rounded-lg bg-[#FDFDFD] p-4 space-y-4">
+				<div class="h-5 w-24 rounded bg-gray-200"></div>
+				{#each [1,2,3] as _}<div class="h-10 w-full max-w-md rounded bg-gray-200"></div>{/each}
+			</div>
+		</div>
+	{:else}
 	<!-- HEADER CARD -->
 	<div class="rounded-lg">
-		<div class="relative mb-6 rounded-t-lg bg-[#FDFDFD]">
-			<div class="h-[191px] rounded-t-lg bg-[#D8D8DD]"></div>
-			<button
-				class="absolute right-3 top-2 rounded-md bg-[#E4E4E5] px-3 py-2 text-sm font-medium text-[#5D5E61]"
-			>
-				Change Cover
-			</button>
-			<img src="/edit-cover-photo.svg" alt="" class="absolute bottom-28 left-5 w-14" />
-			<div class="ml-4 mt-8 w-full">
+		<!-- Cover area with overlapping avatar -->
+		<div class="relative mb-10 rounded-t-lg bg-[#FDFDFD]">
+			<!-- Cover Banner -->
+			<div class="h-[191px] overflow-hidden rounded-t-lg bg-[#D8D8DD]">
+				{#if eventData.coverBannerUrl}
+					<img src={eventData.coverBannerUrl} alt="Cover" class="h-full w-full object-cover" />
+				{/if}
+			</div>
+			<label for="settings-cover-upload"
+				class="absolute right-3 top-2 z-10 cursor-pointer rounded-md bg-[#E4E4E5] px-3 py-2 text-sm font-medium text-[#5D5E61] transition hover:bg-[#d4d4d5]">
+				{uploadingCover ? 'Uploading...' : 'Change Cover'}
+			</label>
+			<input id="settings-cover-upload" type="file" accept="image/*" class="hidden" on:change={handleCoverUpload} />
+
+			<!-- Profile Picture — positioned at bottom-left of cover, overlapping -->
+			<div class="absolute left-5 z-20" style="top: 159px;">
+				<label for="settings-profile-upload" class="group relative block cursor-pointer">
+					<div class="h-16 w-16 overflow-hidden rounded-lg border-3 border-white bg-[#EBECED] shadow-md">
+						{#if profile.profilePicture}
+							<img src={profile.profilePicture} alt="Profile" class="h-full w-full object-cover" />
+						{:else}
+							<img src="/edit-cover-photo.svg" alt="Upload" class="h-full w-full p-2" />
+						{/if}
+					</div>
+					<div class="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow">
+						<Icon icon="mdi:camera" class="h-3 w-3 text-gray-500" />
+					</div>
+				</label>
+				<input id="settings-profile-upload" type="file" accept="image/*" class="hidden" on:change={handleProfileUpload} />
+			</div>
+
+			<div class="ml-4 mt-12 w-full">
 				<input
 					type="text"
 					placeholder="Collection name"
 					bind:value={eventData.name}
 					class="h-12 w-full px-4 py-2 text-3xl font-semibold focus:outline-none focus:ring-0"
 				/>
-				<div class="mt-2 border-t">
-					<input
-						type="text"
-						placeholder="Add a short description"
-						bind:value={eventData.description}
-						class="h-12 w-full px-4 py-2 focus:outline-none focus:ring-0"
-					/>
+				<div class="relative mt-2 border-t">
+					<button type="button"
+						class="flex h-12 w-full items-center px-4 py-2 text-left text-sm hover:bg-gray-50 focus:outline-none"
+						on:click={() => (showDescEditor = !showDescEditor)}>
+						<span class="truncate pr-6 {eventData.description ? 'text-gray-700' : 'text-gray-400'}">{descPreview}</span>
+						<Icon icon={showDescEditor ? 'mdi:chevron-up' : 'mdi:chevron-down'} class="absolute right-4 text-gray-400" />
+					</button>
+
+					{#if showDescEditor && descEditor}
+						<div class="absolute left-0 top-full z-40 w-full rounded-b-xl border border-t-0 border-gray-100 bg-white shadow-xl">
+							<div class="flex flex-wrap items-center gap-0.5 border-b border-gray-100 bg-[#F8F9FA] px-3 py-1.5">
+								{#if $descEditor}
+									<button type="button" on:click={() => $descEditor.chain().focus().toggleBold().run()}
+										class="rounded px-2 py-1 text-sm font-bold hover:bg-gray-200 {$descEditor.isActive('bold') ? 'bg-gray-800 text-white' : 'text-gray-700'}">B</button>
+									<button type="button" on:click={() => $descEditor.chain().focus().toggleItalic().run()}
+										class="rounded px-2 py-1 text-sm italic hover:bg-gray-200 {$descEditor.isActive('italic') ? 'bg-gray-800 text-white' : 'text-gray-700'}">I</button>
+									<button type="button" on:click={() => $descEditor.chain().focus().toggleStrike().run()}
+										class="rounded px-2 py-1 text-sm line-through hover:bg-gray-200 {$descEditor.isActive('strike') ? 'bg-gray-800 text-white' : 'text-gray-700'}">S</button>
+									<div class="mx-1 h-4 w-px bg-gray-300"></div>
+									<button type="button" on:click={() => $descEditor.chain().focus().toggleHeading({ level: 1 }).run()}
+										class="rounded px-2 py-1 text-xs font-semibold hover:bg-gray-200 {$descEditor.isActive('heading', { level: 1 }) ? 'bg-gray-800 text-white' : 'text-gray-700'}">H1</button>
+									<button type="button" on:click={() => $descEditor.chain().focus().toggleHeading({ level: 2 }).run()}
+										class="rounded px-2 py-1 text-xs font-semibold hover:bg-gray-200 {$descEditor.isActive('heading', { level: 2 }) ? 'bg-gray-800 text-white' : 'text-gray-700'}">H2</button>
+									<div class="mx-1 h-4 w-px bg-gray-300"></div>
+									<button type="button" on:click={() => $descEditor.chain().focus().toggleBulletList().run()}
+										class="rounded px-2 py-1 text-xs hover:bg-gray-200 {$descEditor.isActive('bulletList') ? 'bg-gray-800 text-white' : 'text-gray-700'}">• List</button>
+									<button type="button" on:click={() => $descEditor.chain().focus().toggleOrderedList().run()}
+										class="rounded px-2 py-1 text-xs hover:bg-gray-200 {$descEditor.isActive('orderedList') ? 'bg-gray-800 text-white' : 'text-gray-700'}">1. List</button>
+									<div class="mx-1 h-4 w-px bg-gray-300"></div>
+									<button type="button" on:click={() => $descEditor.chain().focus().undo().run()}
+										class="rounded px-2 py-1 text-sm hover:bg-gray-200 text-gray-700">↩</button>
+									<button type="button" on:click={() => $descEditor.chain().focus().redo().run()}
+										class="rounded px-2 py-1 text-sm hover:bg-gray-200 text-gray-700">↪</button>
+								{/if}
+							</div>
+							<div class="min-h-[160px] max-h-[280px] overflow-y-auto p-4 text-sm text-gray-800">
+								<EditorContent editor={$descEditor} />
+							</div>
+							<div class="flex justify-end border-t border-gray-100 bg-[#F8F9FA] px-4 py-2">
+								<button class="rounded-lg bg-gray-900 px-5 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+									on:click={() => (showDescEditor = false)}>Done</button>
+							</div>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -173,9 +381,9 @@
 							type="button"
 							class="h-8 w-8 rounded-full border-2"
 							style="background-color: {color.bg};"
-							class:border-black={eventData.tintColor === color.bg}
-							on:click={() => selectTintColor(color.bg)}
-							aria-label={`Select color ${color.bg}`}
+							class:border-black={eventData.tintColor === color.name || eventData.tintColor === color.bg}
+							on:click={() => selectTintColor(color.name)}
+							aria-label={`Select color ${color.name}`}
 						></button>
 					{/each}
 				</div>
@@ -183,17 +391,18 @@
 
 			<!-- Public URL -->
 			<div class="mb-4">
-				<label for="" class="mb-2 block text-sm font-medium text-gray-700">Public URL</label>
+				<label for="" class="mb-2 block text-sm font-medium text-gray-700">Public URL (Slug)</label>
 				<div class="flex max-w-xl items-center">
-					<span class="w-20 rounded-l-md bg-[#F4F4F4] p-3 text-sm">ron.d/</span>
+					<span class="flex h-[42px] items-center rounded-l-md bg-[#F4F4F4] px-3 text-sm text-gray-500">rondwell.com/c/</span>
 					<input
 						type="text"
-						placeholder="some calendar"
+						placeholder="my-collection"
 						bind:value={eventData.publicUrl}
 						on:input={handlePublicUrlInput}
-						class="flex-1 rounded-r-md border border-gray-300 bg-[#FFFFFF] p-3 text-sm focus:outline-none focus:ring-0"
+						class="h-[42px] flex-1 rounded-r-md border border-gray-300 bg-[#FFFFFF] px-3 text-sm focus:outline-none focus:ring-0"
 					/>
 				</div>
+				<p class="mt-1 text-xs text-gray-400">This is the shareable link for your collection page.</p>
 			</div>
 
 			<!-- Location -->
@@ -368,7 +577,7 @@
 		<div class="mt-6 flex flex-col bg-[#FDFDFD] p-4">
 			<h3 class="mb-3 text-sm font-medium text-[#000]">Links</h3>
 			<div class=" flex w-fit flex-col gap-6">
-				{#each socialLinks as { key, icon, label, prefix }}
+				{#each socialLinksMeta as { key, icon, label, prefix }}
 					<div class="flex items-center gap-2">
 						<!-- Icon -->
 						<div class="flex h-8 w-8 items-center justify-center rounded bg-gray-100">
@@ -438,9 +647,13 @@
 
 		<!-- Save -->
 		<div class="mt-6">
+			{#if saveMessage}
+				<p class="mb-3 text-sm {saveMessage.includes('success') ? 'text-green-600' : 'text-red-500'}">{saveMessage}</p>
+			{/if}
 			<button
 				on:click={saveChanges}
-				class="flex items-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white hover:bg-gray-800"
+				disabled={saving}
+				class="flex items-center gap-2 rounded-md bg-black px-4 py-2 font-medium text-white hover:bg-gray-800 disabled:opacity-50"
 			>
 				<svg
 					width="19"
@@ -481,5 +694,17 @@
 			</button>
 		</div>
 	</div>
+{/if}
 </div>
--->
+
+
+<style>
+	:global(.ProseMirror) { outline: none; min-height: 80px; line-height: 1.6; }
+	:global(.ProseMirror p.is-editor-empty:first-child::before) {
+		content: attr(data-placeholder); color: #9ca3af; pointer-events: none; float: left; height: 0;
+	}
+	:global(.ProseMirror h1) { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; }
+	:global(.ProseMirror h2) { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.4rem; }
+	:global(.ProseMirror ul) { list-style: disc; padding-left: 1.5rem; }
+	:global(.ProseMirror ol) { list-style: decimal; padding-left: 1.5rem; }
+</style>

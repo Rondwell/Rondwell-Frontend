@@ -227,7 +227,7 @@ export async function getEventAttendeesPaginated(
     page?: number;
     limit?: number;
     search?: string;
-    guestStatus?: string;
+    attendeeStatus?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   } = {}
@@ -236,7 +236,7 @@ export async function getEventAttendeesPaginated(
   if (options.page) params.set('page', String(options.page));
   if (options.limit) params.set('limit', String(options.limit));
   if (options.search) params.set('search', options.search);
-  if (options.guestStatus) params.set('guestStatus', options.guestStatus);
+  if (options.attendeeStatus) params.set('attendeeStatus', options.attendeeStatus);
   if (options.sortBy) params.set('sortBy', options.sortBy);
   if (options.sortOrder) params.set('sortOrder', options.sortOrder);
 
@@ -1238,6 +1238,9 @@ export async function getAttendeeDetail(eventId: string, attendeeId: string): Pr
   registration: any;
   formAnswers: Array<{ question: string; answer: string; fieldType: string }>;
   ticketTypeName: string;
+  ticketPrice: number;
+  ticketCurrency: string;
+  seatInfo: any;
 }> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/detail?_t=${Date.now()}`);
   const data = await res.json();
@@ -1383,4 +1386,182 @@ export async function deleteEvent(eventId: string): Promise<void> {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.message ?? 'Failed to delete event');
   }
+}
+
+
+// ── Collection API Services ───────────────────────────────────────────────
+
+export async function createCollection(payload: {
+  name: string;
+  description?: string;
+  themeColor?: string;
+  slug?: string;
+  location?: string;
+  socialLinks?: Record<string, string>;
+  visibility?: string;
+}): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to create collection');
+  return data.collection ?? data;
+}
+
+export async function updateCollection(collectionId: string, payload: Record<string, any>): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to update collection');
+  return data.collection ?? data;
+}
+
+export async function getCollectionById(collectionId: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch collection');
+  return data.collection ?? data;
+}
+
+export async function getCollectionEvents(collectionId: string, filter: 'upcoming' | 'past' = 'upcoming'): Promise<any[]> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/events?filter=${filter}`);
+  const data = await res.json();
+  if (!res.ok) return [];
+  return data.events ?? [];
+}
+
+export async function addExistingEventToCollection(collectionId: string, eventId: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/events/add-existing`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to add event to collection');
+  return data;
+}
+
+export async function resolveEventUrl(collectionId: string, url: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/events/resolve-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Could not resolve event from URL');
+  return data.event;
+}
+
+export async function addExternalEventToCollection(collectionId: string, payload: {
+  title: string;
+  description?: string;
+  startDateTime: string;
+  endDateTime: string;
+  timeZone?: string;
+  eventType?: string;
+  location?: string;
+  organizerName?: string;
+  sourceUrl?: string;
+}): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/events/external`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to add external event');
+  return data;
+}
+
+export async function getSelectableEventsForCollection(collectionId: string): Promise<any[]> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/events/selectable`);
+  const data = await res.json();
+  if (!res.ok) return [];
+  return data.events ?? [];
+}
+
+
+export async function uploadCollectionProfilePicture(collectionId: string, file: File): Promise<{ profilePictureUrl: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/profile-picture`, {
+    method: 'POST',
+    body: form,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to upload profile picture');
+  return data;
+}
+
+export async function uploadCollectionCoverBanner(collectionId: string, file: File): Promise<{ coverBannerUrl: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/cover-banner`, {
+    method: 'POST',
+    body: form,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to upload cover banner');
+  return data;
+}
+
+
+export async function getPublicCollectionBySlug(slug: string): Promise<{ collection: any; events: any[] }> {
+  const res = await fetch(`${EVENT_URL}/api/v1/collections/by-slug/${encodeURIComponent(slug)}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Collection not found');
+  return { collection: data.collection, events: data.events ?? [] };
+}
+
+
+export async function scrapeExternalEventUrl(url: string): Promise<{
+  title: string;
+  description: string;
+  image: string;
+  siteName: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  sourceUrl: string;
+}> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/scrape-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch URL');
+  return data;
+}
+
+
+// ==================== CHECK-IN APIs ====================
+
+/** Check in attendee via passcode */
+export async function checkinByPasscode(eventId: string, passcode: string): Promise<any> {
+  const res = await fetch(`${EVENT_URL}/api/v1/checkin/passcode`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId, passcode }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Check-in failed');
+  return data.data ?? data;
+}
+
+/** Check in attendee via QR code token */
+export async function checkinByQrCode(eventId: string, checkinToken: string): Promise<any> {
+  const res = await fetch(`${EVENT_URL}/api/v1/checkin/qr-scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId, checkinToken }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'QR check-in failed');
+  return data.data ?? data;
 }

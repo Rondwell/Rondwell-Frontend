@@ -560,7 +560,7 @@
 			<div class="mb-4">
 				<label for="public-url" class="mb-2 block text-sm font-medium text-gray-700">Public URL</label>
 				<div class="flex max-w-xl items-center">
-					<span class="w-32 rounded-l-md bg-[#F4F4F4] p-3 text-sm text-gray-500">rondwell.com/</span>
+					<span class="flex h-[42px] items-center rounded-l-md bg-[#F4F4F4] px-3 text-sm text-gray-500">rondwell.com/e/</span>
 					<input
 						id="public-url"
 						type="text"
@@ -568,7 +568,7 @@
 						bind:value={publicUrl}
 						disabled
 						title="Upgrade to Rondwell Plus to customize your event URL"
-						class="flex-1 cursor-not-allowed rounded-r-md border border-gray-300 bg-[#F4F4F4] p-3 text-sm text-gray-400 focus:ring-0 focus:outline-none"
+						class="h-[42px] flex-1 cursor-not-allowed rounded-r-md border border-gray-300 bg-[#F4F4F4] px-3 text-sm text-gray-400 focus:ring-0 focus:outline-none"
 					/>
 				</div>
 			</div>

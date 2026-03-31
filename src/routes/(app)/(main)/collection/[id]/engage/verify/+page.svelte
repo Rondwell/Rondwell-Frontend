@@ -1,4 +1,8 @@
 <script>
+	import { page } from '$app/stores';
+
+	$: collectionId = $page.params.id ?? '';
+
 	let estimatedAudience = 100;
 
 	let eventsInfo = '';
@@ -18,6 +22,18 @@
 </script>
 
 <div class="px-4 py-2">
+	<!-- Back button -->
+	<a
+		href="/collection/{collectionId}/engage"
+		class="mb-4 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[#616265] transition hover:bg-[#F4F4F4]"
+	>
+		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<line x1="19" y1="12" x2="5" y2="12"></line>
+			<polyline points="12 19 5 12 12 5"></polyline>
+		</svg>
+		Back to Engage
+	</a>
+
 	<!-- Header -->
 	<div class="mb-8">
 		<div class="flex items-center justify-between">
@@ -43,14 +59,14 @@
 		</div>
 		<div class="border-t pt-1 md:ml-10">
 			<p class="mt-2 text-sm text-gray-500">
-				To ensure timely verification, please <br class="block sm:hidden" />complete your calendar<br
+				To ensure timely verification, please <br class="block sm:hidden" />complete your Collection<br
 					class="hidden sm:block"
 				/>
 				information with a <br class="block sm:hidden" /> profile picture and description.
 			</p>
 
 			<button class="mt-2 flex items-center justify-center gap-1 text-sm font-medium text-pink-600">
-				<span>Complete Calendar Info</span>
+				<span>Complete Collection Info</span>
 				<svg
 					width="16"
 					height="16"

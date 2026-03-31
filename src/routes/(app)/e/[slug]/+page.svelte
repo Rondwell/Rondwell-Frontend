@@ -13,7 +13,7 @@
 	onMount(async () => {
 		if (data?.eventId) {
 			await goto(`/event-page/${data.eventId}`, { replaceState: true });
-			window.history.replaceState(window.history.state, '', `/${slug}`);
+			window.history.replaceState(window.history.state, '', `/e/${slug}`);
 			return;
 		}
 
@@ -27,7 +27,7 @@
 				const eventId = d.event?._id || d.event?.id || d.eventId;
 				if (eventId) {
 					await goto(`/event-page/${eventId}`, { replaceState: true });
-					window.history.replaceState(window.history.state, '', `/${slug}`);
+					window.history.replaceState(window.history.state, '', `/e/${slug}`);
 					return;
 				}
 			}
@@ -40,8 +40,6 @@
 	{#if seo}
 		<title>{seo.title}</title>
 		<meta name="description" content={seo.description} />
-
-		<!-- Open Graph (Facebook, WhatsApp, Telegram, LinkedIn) -->
 		<meta property="og:title" content={seo.title} />
 		<meta property="og:description" content={seo.description} />
 		<meta property="og:image" content={seo.image} />
@@ -54,14 +52,11 @@
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content="Rondwell" />
 		<meta property="og:locale" content="en_US" />
-
-		<!-- Twitter -->
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content={seo.title} />
 		<meta name="twitter:description" content={seo.description} />
 		<meta name="twitter:image" content={seo.image} />
 		<meta name="twitter:site" content="@rondwell" />
-
 		<link rel="canonical" href={seo.url} />
 	{/if}
 </svelte:head>

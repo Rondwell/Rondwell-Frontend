@@ -9,7 +9,7 @@
 	export let eventId: string = '';
 	export let slug: string = '';
 
-	$: eventHref = slug ? `/${slug}` : eventId ? `/event-page/${eventId}` : undefined;
+	$: eventHref = slug ? `/e/${slug}` : eventId ? `/event-page/${eventId}` : undefined;
 </script>
 
 {#if variant === 'subscriber'}

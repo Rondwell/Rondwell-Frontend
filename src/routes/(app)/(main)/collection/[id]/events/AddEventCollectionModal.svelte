@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { createEventDispatcher } from 'svelte';
+	import { page } from '$app/stores';
 	import { clickOutside } from '$lib/utils/constant';
+	import { createEventDispatcher } from 'svelte';
 
 	export let open: boolean = false;
 	const dispatch = createEventDispatcher();
-	
+
+	$: collectionId = $page.params.id ?? '';
 </script>
 
 {#if open}
@@ -107,7 +109,7 @@
 						<button
 							on:click={() => {
 								dispatch('close');
-								goto('/create-event');
+								goto(`/create-event?collectionId=${collectionId}`);
 							}}
 							class="button-purple-hover flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm"
 						>

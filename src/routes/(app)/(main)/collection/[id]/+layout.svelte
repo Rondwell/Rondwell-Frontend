@@ -1,8 +1,31 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { getCollectionById } from '$lib/services/event.services';
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore';
+	import { onMount, setContext } from 'svelte';
+	import { get, writable } from 'svelte/store';
 
-	import { get } from 'svelte/store';
+	// Shared collection data store — child pages can use getContext('collection')
+	const collectionStore = writable<any>(null);
+	setContext('collection', collectionStore);
+
+	let collectionName = '';
+	let collectionImage = '';
+	let collectionSlug = '';
+
+	onMount(async () => {
+		const id = $page.params.id;
+		if (!id) return;
+		try {
+			const c = await getCollectionById(id);
+			collectionName = c.name ?? '';
+			collectionImage = c.profilePictureUrl ?? '';
+			collectionSlug = c.slug ?? '';
+			collectionStore.set(c);
+		} catch {
+			// silent
+		}
+	});
 
 	const collectionIcon = {
 		eventIcon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -72,9 +95,9 @@
 				nav: `/collection/${collectionId}/people`
 			},
 			{
-				label: 'Newsletter',
+				label: 'Engage',
 				icon: collectionIcon.newsletterIcon,
-				nav: `/collection/${collectionId}/newsletter`
+				nav: `/collection/${collectionId}/engage`
 			},
 			{
 				label: 'Insight',
@@ -99,7 +122,7 @@
 
 			updateCollectionSubMenu(collectionId);
 			const currentMenu = get(subMenuItems);
-			let active = currentMenu.find((item) => path === item.nav)?.label ?? '';
+			let active = currentMenu.find((item) => path.startsWith(item.nav))?.label ?? '';
 			activeSubItem.set(active);
 			showSubMenu.set(true);
 		} else {
@@ -110,5 +133,37 @@
 		}
 	}
 </script>
+
+<!-- Collection Header — shared across all modules -->
+<div class="px-4 py-4">
+	<div class="mb-4 hidden items-center justify-between sm:flex">
+		<div class="flex items-center gap-2">
+			{#if collectionImage}
+				<img src={collectionImage} alt="" class="h-7 w-7 rounded-md object-cover" />
+			{:else}
+				<div class="h-7 w-7 rounded-md bg-gray-200"></div>
+			{/if}
+			<h1 class="text-lg font-medium lg:text-2xl">
+				{#if collectionName}
+					{collectionName}
+				{:else}
+					<span class="inline-block h-5 w-36 animate-pulse rounded bg-gray-200"></span>
+				{/if}
+			</h1>
+		</div>
+		<a
+			href={collectionSlug ? `/c/${collectionSlug}` : '#'}
+			target="_blank"
+			rel="noopener noreferrer"
+			class="flex w-fit items-center gap-2 whitespace-nowrap rounded-md bg-[#DCE4EE] px-3 py-1.5 text-sm text-[#5D646F] transition hover:bg-[#d0dae8]"
+		>
+			<span>Collection Page</span>
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+				<path d="M1.24306 6.4387C1.40611 5.40243 2.12888 4.62786 3.0931 4.47826L9.69034 3.43935L9.8408 3.42097C10.5948 3.35739 11.3249 3.72187 11.7721 4.3912C12.2195 5.06073 12.3131 5.92902 12.0244 6.68931L11.9618 6.83923L9.01457 13.3413L9.01326 13.3411C8.84871 13.7088 8.61528 14.0066 8.33157 14.2308C7.8792 14.5883 7.31432 14.7405 6.72781 14.6481C5.77143 14.4963 5.05093 13.7247 4.89305 12.6922L4.591 10.7138C4.53659 10.3578 4.3245 10.0403 4.02548 9.86912L4.02494 9.8683L2.3872 8.94152C1.53287 8.45922 1.08026 7.47484 1.24306 6.4387Z" fill="#5D646F" stroke="#5D646F" stroke-width="0.37461"/>
+				<rect x="7.25931" y="8.68484" width="3.5114" height="1.15881" rx="0.579404" transform="rotate(144 7.25931 8.68484)" fill="#5D646F" stroke="#5D646F" stroke-width="0.37461"/>
+			</svg>
+		</a>
+	</div>
+</div>
 
 <slot />

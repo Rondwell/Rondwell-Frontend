@@ -4,6 +4,7 @@
 
 	$: subscribersCount = collection?.subscribers?.length ?? 0;
 	$: adminsCount = collection?.admins?.length ?? 1;
+	$: eventCount = collection?.eventCount ?? collection?.events?.length ?? 0;
 </script>
 
 <div class="w-full rounded-md bg-[#FDFDFD] p-3 md:p-6">
@@ -23,13 +24,24 @@
 				{collection.name}
 			</div>
 
-			<!-- Subscribers -->
-			<div class="text-xs text-[#616265]">
-				{#if subscribersCount > 0}
-					{subscribersCount} Subscriber{subscribersCount > 1 ? 's' : ''}
-				{:else}
-					No subscribers
-				{/if}
+			<!-- Subscribers + Event count -->
+			<div class="flex flex-wrap items-center gap-2">
+				<span class="text-xs text-[#616265]">
+					{#if subscribersCount > 0}
+						{subscribersCount} Subscriber{subscribersCount > 1 ? 's' : ''}
+					{:else}
+						No subscribers
+					{/if}
+				</span>
+				<span class="inline-flex items-center gap-1 rounded-full bg-[#F0EAFF] px-2.5 py-0.5 text-[11px] font-medium text-[#7C3AED]">
+					<svg width="11" height="11" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path d="M6 1.5V3.75" stroke="#7C3AED" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M12 1.5V3.75" stroke="#7C3AED" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M2.625 6.8175H15.375" stroke="#7C3AED" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M15.75 6.375V12.75C15.75 15 14.625 16.5 12 16.5H6C3.375 16.5 2.25 15 2.25 12.75V6.375C2.25 4.125 3.375 2.625 6 2.625H12C14.625 2.625 15.75 4.125 15.75 6.375Z" stroke="#7C3AED" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
+					{eventCount} event{eventCount !== 1 ? 's' : ''}
+				</span>
 			</div>
 
 			<!-- Admin indicator  -->

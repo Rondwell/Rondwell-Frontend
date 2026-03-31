@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { createEvent, getMyCollections } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { setEventTheme } from '$lib/stores/eventTheme';
@@ -119,10 +120,17 @@
 	$: setEventTheme('pending', selectedColor);
 
 	onMount(async () => {
-		// Pre-load the most recent collection
+		// Pre-load collections and check for pre-selected collectionId from query params
 		try {
 			const collections = await getMyCollections();
-			if (collections.length > 0) {
+			const preselectedId = $page.url.searchParams.get('collectionId');
+			if (preselectedId && collections.length > 0) {
+				const match = collections.find((c: any) => (c._id ?? c.id) === preselectedId);
+				if (match) {
+					selectedCollectionId = match._id ?? match.id ?? '';
+					selectedCollectionName = match.name ?? 'Personal Collection';
+				}
+			} else if (collections.length > 0) {
 				const latest = collections[collections.length - 1];
 				selectedCollectionId = latest._id ?? latest.id ?? '';
 				selectedCollectionName = latest.name ?? 'Personal Collection';

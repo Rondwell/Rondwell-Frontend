@@ -31,6 +31,7 @@
 			image: c.profilePictureUrl ?? c.coverBannerUrl ?? '/eventcard.png',
 			subscribers: c.subscribers ?? [],
 			admins: c.admins ?? [],
+			eventCount: c.eventCount ?? 0,
 			events: (c.upcomingEvents ?? c.events ?? []).map((e: any) => ({
 				title: e.title ?? e.name ?? '',
 				date: e.startDateTime
@@ -68,7 +69,7 @@
 					<h2 class="font-mediun mb-1 text-xl">Welcome to Rondwell Collection</h2>
 					<p class="mb-3 max-w-[724px] text-sm text-[#B9BABA]">
 						Rondwell Collection lets you easily share and manage your events. Every event on
-						Rondwell is part of a calendar. Let's see how they work.
+						Rondwell is part of a collection. Users can subscribe to your collections. 
 					</p>
 				</span>
 

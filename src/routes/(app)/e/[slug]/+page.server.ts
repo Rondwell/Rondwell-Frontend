@@ -1,4 +1,3 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
 const EVENT_URL = process.env.VITE_EVENT_API_URL || 'http://localhost:3000';
@@ -28,7 +27,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 					title: `${title} | Rondwell`,
 					description,
 					image,
-					url: `https://rondwell.com/${slug}`,
+					url: `https://rondwell.com/e/${slug}`,
 					organizer: event.eventOrganizerName || 'Rondwell',
 					startDate: event.startDateTime ? new Date(event.startDateTime).toISOString() : '',
 				};

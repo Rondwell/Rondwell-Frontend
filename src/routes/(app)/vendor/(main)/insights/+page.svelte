@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import * as d3 from "d3";
   import Icon from "@iconify/svelte";
+  import * as d3 from "d3";
+  import { onMount } from "svelte";
 
   const user = {
     name: "Innocent James"
@@ -390,7 +390,7 @@ type StackKey = "pending" | "accepted" | "completed";
 
   <!-- Cover image -->
   <div class="w-20 h-20 bg-gray-200 rounded-lg">
-    <img src="/eventcard.png" alt="cover" class="object-cover w-full h-full rounded-lg" />
+    <img src="/events.png" alt="cover" class="object-cover w-full h-full rounded-lg" />
   </div>
 </div>
 

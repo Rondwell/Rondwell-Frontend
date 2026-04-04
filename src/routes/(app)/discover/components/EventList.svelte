@@ -70,7 +70,7 @@
 			status: e.registrationType === 'FREE' ? 'Free' : 'Paid',
 			availability: e.category ?? '',
 			attendees: e.attendeeCount > 0 ? `+${e.attendeeCount}` : '0',
-			image: e.displayPictureUrl ?? e.coverPictureUrl ?? '/event_pic1.png',
+			image: e.displayPictureUrl ?? e.coverPictureUrl ?? '/events.png',
 			tag: e.collectionName ?? '',
 			category: e.category ?? '',
 			organizerAvatar: e.organizerAvatarUrl ?? '',

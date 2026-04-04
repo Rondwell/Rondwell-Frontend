@@ -80,7 +80,7 @@
 			status: e.eventStatus ?? 'DRAFT',
 			availability: '',
 			attendees: e.attendeeCount ?? 0,
-			image: e.displayPictureUrl ?? e.coverPictureUrl ?? '/event_pic1.png',
+			image: e.displayPictureUrl ?? e.coverPictureUrl ?? '/events.png',
 			tag: e.tags?.[0] ?? '',
 		};
 	}
@@ -143,7 +143,7 @@
 	const collections = [
 		{
 			name: 'The GenAI Collective',
-			image: '/eventcard.png',
+			image: '/events.png',
 			events: [
 				{ title: '💕  GenAI Collective NTC 💕 Research Roundtable', date: 'Thu, Sep 19, 6:30 PM' },
 				{ title: '💕  GenAI Collective NTC 💕 Research Roundtable', date: 'Thu, Sep 19, 6:30 PM' }

@@ -28,7 +28,7 @@
 		return {
 			_id: c._id ?? c.id,
 			name: c.name ?? 'Unnamed Collection',
-			image: c.profilePictureUrl ?? c.coverBannerUrl ?? '/eventcard.png',
+			image: c.profilePictureUrl ?? c.coverBannerUrl ?? '/events.png',
 			subscribers: c.subscribers ?? [],
 			admins: c.admins ?? [],
 			eventCount: c.eventCount ?? 0,

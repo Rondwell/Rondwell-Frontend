@@ -55,7 +55,7 @@
 				location: event.eventType === 'HYBRID' ? 'Hybrid' : event.eventType === 'VIRTUAL' ? (event.locationDetails?.virtual?.platform ?? 'Virtual') : (event.locationDetails?.physical?.venueName ?? 'Physical'),
 				locationIcon: event.eventType === 'HYBRID' ? '/hybrid.svg' : event.eventType === 'VIRTUAL' ? '/zoom.svg' : '/location.svg',
 				attendees: event.attendeeCount ?? 0,
-				image: event.displayPictureUrl || event.coverPictureUrl || '/eventcard2.png',
+				image: event.displayPictureUrl || event.coverPictureUrl || '/events.png',
 				category: event.category ?? '',
 			});
 		}

@@ -145,13 +145,13 @@
 	</p>
 
 	<div class="mb-4 gap-3">
-		<div class="relative w-full">
+		<div class="relative mb-2 w-full">
 			<input
 				type="text"
 				bind:value={searchQuery}
 				on:input={handleSearch}
 				placeholder="Search"
-				class="mb-2 h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-[#C5C6C6] focus:ring-0 focus:outline-none"
+				class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-[#C5C6C6] focus:ring-0 focus:outline-none"
 			/>
 			<span class="absolute top-2.5 left-3 text-gray-400">
 				<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />
@@ -160,9 +160,9 @@
 				<img src="/search-download.svg" alt="" class="h-4 w-4" />
 			</span>
 		</div>
-		<div class="mb-3 flex items-center justify-between">
+		<div class="mb-3 flex items-center gap-2 overflow-x-auto">
 			<!-- Filter Dropdown -->
-			<div class="relative" use:clickOutside={() => { showFilterDropdown = false; }}>
+			<div class="relative flex-shrink-0" use:clickOutside={() => { showFilterDropdown = false; }}>
 				<button
 					on:click={() => { showFilterDropdown = !showFilterDropdown; }}
 					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
@@ -186,7 +186,7 @@
 			</div>
 
 			<!-- Sort Dropdown -->
-			<div class="relative" use:clickOutside={() => { showSortDropdown = false; }}>
+			<div class="relative flex-shrink-0" use:clickOutside={() => { showSortDropdown = false; }}>
 				<button
 					on:click={() => { showSortDropdown = !showSortDropdown; }}
 					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
@@ -246,24 +246,24 @@
 		<div class="flex flex-col rounded-md bg-[#FDFDFD] px-3">
 			{#each subscribers as subscriber}
 				<button
-					class="my-0.5 flex items-center justify-between rounded-md border-b py-3 last:border-b-0"
+					class="my-0.5 flex w-full items-center justify-between gap-2 rounded-md border-b py-3 last:border-b-0"
 					on:click={() => openSubscriber(subscriber)}
 				>
-					<div class="flex items-start gap-2">
-						<img src="/rondwell-attendee.png" alt="profile icon" class="h-6 w-6 rounded-full" />
-						<div class="flex flex-col items-start gap-1 lg:flex-row lg:items-center">
+					<div class="flex min-w-0 items-start gap-2">
+						<img src="/rondwell-attendee.png" alt="profile icon" class="h-6 w-6 flex-shrink-0 rounded-full" />
+						<div class="flex min-w-0 flex-col items-start gap-0.5">
 							<span class="flex items-center gap-1">
 								{#if !subscriber?.name}
-									<p class="font-medium text-gray-500">Anonymous</p>
+									<p class="truncate font-medium text-gray-500">Anonymous</p>
 								{:else}
-									<p class="font-medium">{subscriber.name}</p>
-									<span class="h-2 w-2 rounded-full bg-[#EAAB26]"></span>
+									<p class="truncate font-medium">{subscriber.name}</p>
+									<span class="h-2 w-2 flex-shrink-0 rounded-full bg-[#EAAB26]"></span>
 								{/if}
 							</span>
-							<p class="text-xs text-gray-500 md:text-sm">{subscriber?.email}</p>
+							<p class="truncate text-xs text-gray-500">{subscriber?.email}</p>
 						</div>
 					</div>
-					<div class="flex items-center gap-2">
+					<div class="flex flex-shrink-0 flex-col items-end gap-0.5 sm:flex-row sm:items-center sm:gap-2">
 						{#if subscriber.verificationStatus === 'PENDING_VERIFICATION'}
 							<span class="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">Pending</span>
 						{:else if subscriber.verificationStatus === 'EXPIRED'}

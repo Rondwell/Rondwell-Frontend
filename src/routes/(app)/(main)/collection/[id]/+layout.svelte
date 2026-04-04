@@ -136,14 +136,14 @@
 
 <!-- Collection Header — shared across all modules -->
 <div class="px-4 py-4">
-	<div class="mb-4 hidden items-center justify-between sm:flex">
-		<div class="flex items-center gap-2">
+	<div class="mb-4 flex items-center justify-between">
+		<div class="flex min-w-0 items-center gap-2">
 			{#if collectionImage}
-				<img src={collectionImage} alt="" class="h-7 w-7 rounded-md object-cover" />
+				<img src={collectionImage} alt="" class="h-7 w-7 flex-shrink-0 rounded-md object-cover" />
 			{:else}
-				<div class="h-7 w-7 rounded-md bg-gray-200"></div>
+				<div class="h-7 w-7 flex-shrink-0 rounded-md bg-gray-200"></div>
 			{/if}
-			<h1 class="text-lg font-medium lg:text-2xl">
+			<h1 class="truncate text-base font-medium sm:text-lg lg:text-2xl">
 				{#if collectionName}
 					{collectionName}
 				{:else}

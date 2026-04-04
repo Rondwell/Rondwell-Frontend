@@ -88,7 +88,7 @@
 		}
 	];
 
-	const eventImage = '/eventcard.png';
+	const eventImage = '/events.png';
 
 	const latestProducts = [
 		{

@@ -13,7 +13,7 @@
 			locationIcon: '/location.svg',
 			status: 'Invited',
 			attendees: '0',
-			image: '/eventcard.png',
+			image: '/events.png',
 			tag: 'Tech Cabal'
 		},
 		{
@@ -25,7 +25,7 @@
 			locationIcon: '/hybrid.svg',
 			status: 'Going',
 			attendees: '388',
-			image: '/eventcard2.png',
+			image: '/events.png',
 			tag: ''
 		},
 		{
@@ -37,7 +37,7 @@
 			locationIcon: '/zoom.svg',
 			status: 'Going',
 			attendees: '59',
-			image: '/eventcard1.png',
+			image: '/events.png',
 			tag: ''
 		},
 		{
@@ -49,7 +49,7 @@
 			locationIcon: '/zoom.svg',
 			status: 'Going',
 			attendees: '0',
-			image: '/eventcard1.png',
+			image: '/events.png',
 			tag: ''
 		}
 	];

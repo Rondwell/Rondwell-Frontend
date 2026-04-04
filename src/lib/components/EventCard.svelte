@@ -168,10 +168,10 @@
 		<!-- Event Image -->
 		<div class="h-[218px] w-full flex-shrink-0 overflow-hidden rounded-xl md:h-30 md:w-30">
 			<img
-				src={event.image || '/favicon.png'}
+				src={event.image || '/events.png'}
 				alt={event.title}
 				class="h-full w-full object-cover"
-				on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/event_pic1.png'; }}
+				on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/events.png'; }}
 			/>
 		</div>
 	</svelte:element>

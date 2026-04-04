@@ -207,7 +207,7 @@ input.value = '';
 }
 }
 
-$: eventImageSrc = eventData?.coverPictureUrl || eventData?.displayPictureUrl || '/event_pic1.png';
+$: eventImageSrc = eventData?.coverPictureUrl || eventData?.displayPictureUrl || '/events.png';
 $: eventLink = eventData?.customLinkSlug
 ? `rondwell.com/e/${eventData.customLinkSlug}`
 : `rondwell.com/event-page/${eventId}`;

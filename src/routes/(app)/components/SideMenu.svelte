@@ -54,7 +54,7 @@
 <nav
 	bind:this={navContainer}
 	on:scroll={handleScroll}
-	class="custom-scrollbar flex gap-3 overflow-x-auto overflow-y-hidden whitespace-nowrap py-6 pr-12 md:hidden"
+	class="custom-scrollbar -mx-3 flex gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap px-3 py-6 md:hidden"
 >
 	{#if showScrollBtn}
 		<div class="bg fade-in">

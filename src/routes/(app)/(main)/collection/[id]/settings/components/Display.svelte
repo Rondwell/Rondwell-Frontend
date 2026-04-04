@@ -313,12 +313,12 @@
 				<input id="settings-profile-upload" type="file" accept="image/*" class="hidden" on:change={handleProfileUpload} />
 			</div>
 
-			<div class="ml-4 mt-12 w-full">
+			<div class="mt-12 w-full pr-4 pl-4">
 				<input
 					type="text"
 					placeholder="Collection name"
 					bind:value={eventData.name}
-					class="h-12 w-full px-4 py-2 text-3xl font-semibold focus:outline-none focus:ring-0"
+					class="h-12 w-full px-4 py-2 text-2xl font-semibold focus:outline-none focus:ring-0 sm:text-3xl"
 				/>
 				<div class="relative mt-2 border-t">
 					<button type="button"

@@ -1,8 +1,17 @@
 <script lang="ts">
+	import { generateEventWithAI, type AIGeneratedEvent } from '$lib/services/ai.services';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	export let open = false;
+
+	const dispatch = createEventDispatcher<{
+		generate: AIGeneratedEvent;
+		loading: boolean;
+		error: string;
+	}>();
+
 	let showDropdown = false;
 	let eventTypes = [
 		'Conference / Summit',
@@ -12,8 +21,9 @@
 		'Networking / Mixer'
 	];
 	let selectedType = 'Conference / Summit';
-	let promptText =
-		'A 2-day virtual summit on African innovation, featuring 10 speakers and live panel sessions, 20 attendees';
+	let promptText = '';
+	let generating = false;
+	let errorMsg = '';
 
 	function toggleDropdown() {
 		showDropdown = !showDropdown;
@@ -24,12 +34,28 @@
 		showDropdown = false;
 	}
 
-	function generateEvent() {
-		console.log('Generating event:', selectedType, promptText);
-	}
+	async function generateEvent() {
+		if (!promptText.trim() || promptText.trim().length < 10) {
+			errorMsg = 'Please describe your event in at least 10 characters.';
+			return;
+		}
 
-	function closeModal() {
-		console.log('Modal closed');
+		errorMsg = '';
+		generating = true;
+		dispatch('loading', true);
+		open = false;
+
+		try {
+			const data = await generateEventWithAI(promptText.trim(), selectedType);
+			dispatch('generate', data);
+		} catch (e: any) {
+			errorMsg = e.message ?? 'Failed to generate event. Please try again.';
+			dispatch('error', errorMsg);
+			open = true;
+		} finally {
+			generating = false;
+			dispatch('loading', false);
+		}
 	}
 
 	$: if (open === false) {
@@ -85,41 +111,17 @@
 			<p class="mb-4 text-sm text-gray-500">Generate description for your event with AI.</p>
 
 			<!-- Event Type -->
-			<label for="" class="mb-1 block text-sm font-medium text-gray-700">Event Type</label>
+			<label for="ai-event-type" class="mb-1 block text-sm font-medium text-gray-700">Event Type</label>
 			<div class="relative mb-4" use:clickOutside={() => (showDropdown = false)}>
 				<button
+					id="ai-event-type"
 					on:click={toggleDropdown}
 					class="flex w-full items-center justify-between rounded-md border border-gray-300 bg-[#FCFDFD] px-3 py-2 text-sm text-gray-500"
 				>
 					<span>{selectedType}</span>
-					<svg
-						width="12"
-						height="12"
-						viewBox="0 0 16 16"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M14.418 1.12207C15.3683 2.09574 15.5796 3.50344 14.9404 4.71191L10.4707 13.2041V13.2051C9.93997 14.2195 8.89369 14.8515 7.74707 14.8516C6.60043 14.8516 5.55426 14.2195 5.02344 13.2051L0.552734 4.71191L0.553711 4.71094C0.305154 4.24437 0.187547 3.75335 0.1875 3.26172C0.1875 2.47868 0.493415 1.72134 1.07617 1.12305V1.12207C2.02732 0.147846 3.43464 -0.0863889 4.65039 0.521484L7.02441 1.70898C7.46955 1.93154 8.00912 1.9316 8.46289 1.70801H8.46387L10.8438 0.521484C12.0595 -0.086218 13.4669 0.14769 14.418 1.12207ZM13.832 3.26855C13.832 2.82174 13.6239 2.4274 13.3574 2.1543V2.15332C12.9611 1.74382 12.263 1.45873 11.4951 1.83887L9.12012 3.02637L8.95605 3.10156C8.18224 3.43027 7.30409 3.43024 6.53027 3.10156L6.36621 3.02637L3.99121 1.83887C3.22461 1.45229 2.52643 1.74255 2.12891 2.15332C1.72955 2.56599 1.45292 3.26448 1.85254 4.02441L6.32227 12.5176L6.43945 12.71C6.73858 13.1325 7.2107 13.3769 7.73926 13.377C8.26782 13.377 8.7399 13.1324 9.03906 12.71L9.15625 12.5176L13.6406 4.02441C13.7797 3.75951 13.832 3.50355 13.832 3.26855Z"
-							fill="#333537"
-							stroke="#9D6E6C"
-							stroke-width="0.375"
-						/>
-						<rect
-							x="6.96094"
-							y="7.33594"
-							width="4.89098"
-							height="1.50399"
-							rx="0.751997"
-							transform="rotate(-90 6.96094 7.33594)"
-							fill="#333537"
-							stroke="#9D6E6C"
-							stroke-width="0.375"
-						/>
-					</svg>
+					<Icon icon="mdi:chevron-down" class="text-lg" />
 				</button>
 
-				<!-- Dropdown -->
 				{#if showDropdown}
 					<div
 						class="triangle absolute right-0 left-0 z-10 mt-2 rounded-lg border border-gray-200 bg-white p-3 shadow-lg"
@@ -128,15 +130,12 @@
 						<div class="overflow-y-auto text-sm text-gray-700">
 							{#each eventTypes as type}
 								<button
-									class="flex w-full cursor-pointer items-center justify-between px-3 py-2 hover:bg-gray-100 {selectedType ===
-									type
-										? 'bg-[#F1F1F1]'
-										: ''}"
+									class="flex w-full cursor-pointer items-center justify-between px-3 py-2 hover:bg-gray-100 {selectedType === type ? 'bg-[#F1F1F1]' : ''}"
 									on:click={() => selectType(type)}
 								>
 									<span>{type}</span>
 									{#if selectedType === type}
-										<img src="/selected.svg" alt="selected icons" class="h-5 w-5" />
+										<Icon icon="mdi:check-circle" class="text-green-500" />
 									{/if}
 								</button>
 							{/each}
@@ -147,20 +146,28 @@
 
 			<!-- Prompt -->
 			<div class="mb-3">
-				<label for="" class="mb-1 block text-sm font-medium text-gray-600">Enter Prompt</label>
+				<label for="ai-prompt" class="mb-1 block text-sm font-medium text-gray-600">Enter Prompt</label>
 				<textarea
+					id="ai-prompt"
 					rows="4"
+					bind:value={promptText}
 					placeholder="For example, you could tell the AI to write about a startup pitch event."
 					class="w-full resize-none rounded-md border p-2 text-xs text-gray-500 outline-none focus:ring-0"
 				></textarea>
 			</div>
 
+			<!-- Error message -->
+			{#if errorMsg}
+				<p class="mb-2 text-xs text-red-500">{errorMsg}</p>
+			{/if}
+
 			<!-- Generate Button -->
 			<button
-				class="w-full rounded-md bg-black py-2 text-sm font-medium text-white"
+				class="w-full rounded-md bg-black py-2 text-sm font-medium text-white disabled:opacity-50"
 				on:click={generateEvent}
+				disabled={generating}
 			>
-				Generate Event
+				{generating ? 'Generating...' : 'Generate Event'}
 			</button>
 		</div>
 	</div>

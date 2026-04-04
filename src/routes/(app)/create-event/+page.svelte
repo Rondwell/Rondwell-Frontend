@@ -9,6 +9,7 @@
 	import Icon from '@iconify/svelte';
 	import { onMount, tick } from 'svelte';
 	import Sidebar from '../components/Sidebar.svelte';
+	import AILoadingOverlay from './components/AILoadingOverlay.svelte';
 	import AIModal from './components/AIModal.svelte';
 	import AuthModal from './components/AuthModal.svelte';
 	import CapacityModal from './components/CapacityModal.svelte';
@@ -23,6 +24,7 @@
 	import ThemeModal from './components/ThemeModal.svelte';
 	import TicketModal from './components/TicketModal.svelte';
 	import TimeModal from './components/TimeModal.svelte';
+	import TimezoneModal from './components/TimezoneModal.svelte';
 	import VisibilityModal from './components/VisibilityModal.svelte';
 
 	let showImageSelectorModal = false;
@@ -46,6 +48,7 @@
 	let openTicketModal = false;
 	let openCapacityModal = false;
 	let showAuthModal = false;
+	let openTimezoneModal = false;
 
 	// Form state
 	let visibility = 'public';
@@ -73,6 +76,125 @@
 	// Submission state
 	let submitting = false;
 	let submitError = '';
+
+	// AI generation state
+	let aiLoading = false;
+	let aiError = '';
+
+	import type { AIGeneratedEvent } from '$lib/services/ai.services';
+
+	function parseISODate(iso: string): Date {
+		try { return new Date(iso); } catch { return new Date(); }
+	}
+
+	function formatTimeFromISO(iso: string): string {
+		try {
+			const d = new Date(iso);
+			let hours = d.getHours();
+			const minutes = d.getMinutes();
+			const meridiem = hours >= 12 ? 'PM' : 'AM';
+			hours = hours % 12 || 12;
+			return `${hours}:${String(minutes).padStart(2, '0')} ${meridiem}`;
+		} catch { return '9:00 AM'; }
+	}
+
+	function prefillFromAI(data: AIGeneratedEvent) {
+		// Title
+		eventName = data.title || eventName;
+
+		// Description
+		if (data.description) {
+			description = data.description
+				.split(/\n\n+/)
+				.filter((p) => p.trim())
+				.map((p) => `<p>${p.trim()}</p>`)
+				.join('');
+		}
+
+		// Category
+		if (data.category) {
+			eventCategories = [data.category];
+		}
+
+		// Event type
+		if (data.eventType) {
+			const typeMap: Record<string, 'Virtual' | 'Physical' | 'Hybrid'> = {
+				VIRTUAL: 'Virtual', PHYSICAL: 'Physical', HYBRID: 'Hybrid'
+			};
+			eventType = typeMap[data.eventType] || eventType;
+		}
+
+		// Registration type
+		if (data.registrationType) {
+			registrationType = data.registrationType;
+		}
+
+		// Visibility
+		if (data.visibility) {
+			visibility = data.visibility === 'PUBLIC' ? 'public' : 'private';
+			visibility_icon = data.visibility === 'PUBLIC' ? 'mdi:web' : 'mdi:lock';
+		}
+
+		// Dates & times
+		if (data.startDateTime) {
+			startDate = parseISODate(data.startDateTime);
+			startTime = formatTimeFromISO(data.startDateTime);
+		}
+		if (data.endDateTime) {
+			endDate = parseISODate(data.endDateTime);
+			endTime = formatTimeFromISO(data.endDateTime);
+		}
+
+		// Timezone
+		if (data.timeZone) {
+			timezone = data.timeZone;
+		}
+
+		// Capacity
+		if (data.maxAttendees) {
+			maxAttendees = data.maxAttendees;
+		}
+
+		// Location
+		if (data.locationDetails) {
+			if (data.locationDetails.virtual?.meetingLink) {
+				location = data.locationDetails.virtual.meetingLink;
+			}
+			if (data.locationDetails.physical?.venueAddress) {
+				physicalAddress = data.locationDetails.physical.venueAddress;
+			}
+		}
+
+		// Theme color
+		if (data.themeColor) {
+			const match = colors.find(
+				(c) => c.name.toLowerCase() === data.themeColor!.toLowerCase()
+			);
+			if (match) {
+				selectedColor = match;
+				setEventTheme('pending', selectedColor);
+			}
+		}
+
+		// Boolean settings
+		waitlistEnabled = data.waitlistEnabled ?? waitlistEnabled;
+		donationsEnabled = data.donationsEnabled ?? donationsEnabled;
+		publicGuestListEnabled = data.publicAttendeeListEnabled ?? publicGuestListEnabled;
+		postEventFeedbackEnabled = data.postEventFeedbackEnabled ?? postEventFeedbackEnabled;
+	}
+
+	function handleAIGenerate(e: CustomEvent<AIGeneratedEvent>) {
+		prefillFromAI(e.detail);
+		aiError = '';
+	}
+
+	function handleAILoading(e: CustomEvent<boolean>) {
+		aiLoading = e.detail;
+	}
+
+	function handleAIError(e: CustomEvent<string>) {
+		aiError = e.detail;
+	}
 
 	function scrollToId(id: string, options?: { behavior?: ScrollBehavior }) {
 		const el = document.getElementById(id);
@@ -273,6 +395,8 @@
 		</svg>`;
 </script>
 
+<AILoadingOverlay visible={aiLoading} message={aiLoading ? 'Generating your event with AI...' : ''} />
+
 <div
 	class="relative flex flex-col md:flex-row min-h-screen overflow-auto"
 	style="background-color: {selectedColor.bg}; color: {selectedColor.text}; font-family: {selectedFont}"
@@ -449,7 +573,7 @@
 							<div class="font-semibold">Generate with AI</div>
 						</div>
 					</button>
-					<AIModal open={showAIModal} />
+					<AIModal open={showAIModal} on:generate={handleAIGenerate} on:loading={handleAILoading} on:error={handleAIError} />
 				</div>
 
 				<div
@@ -667,58 +791,29 @@
 						</div>
 					</div>
 
-					<!-- Right Section -->
+					<!-- Right Section: Timezone -->
 					<div
-						class="flex w-[159px] flex-col justify-center gap-2 rounded-[9.75px] p-4 font-medium"
+						class="relative flex w-[159px] flex-col justify-center gap-2 rounded-[9.75px] p-4 font-medium cursor-pointer"
 						style="background-color: {selectedColor.cover};"
+						use:clickOutside={() => (openTimezoneModal = false)}
 					>
-						<div style="color: {selectedColor.lightText}">
-							<svg
-								width="19"
-								height="18"
-								viewBox="0 0 19 18"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M9.25 16.5C13.3921 16.5 16.75 13.1421 16.75 9C16.75 4.85786 13.3921 1.5 9.25 1.5C5.10786 1.5 1.75 4.85786 1.75 9C1.75 13.1421 5.10786 16.5 9.25 16.5Z"
-									stroke="currentColor"
-									stroke-width="1.125"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M6.24922 2.25H6.99922C5.53672 6.63 5.53672 11.37 6.99922 15.75H6.24922"
-									stroke="currentColor"
-									stroke-width="1.125"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M11.5 2.25C12.9625 6.63 12.9625 11.37 11.5 15.75"
-									stroke="currentColor"
-									stroke-width="1.125"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M2.5 12V11.25C6.88 12.7125 11.62 12.7125 16 11.25V12"
-									stroke="currentColor"
-									stroke-width="1.125"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M2.5 6.75313C6.88 5.29063 11.62 5.29063 16 6.75313"
-									stroke="currentColor"
-									stroke-width="1.125"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
-						</div>
-						<span>{timezone}</span>
-						<span style="color: {selectedColor.lightText};">{locationName}</span>
+						<button
+							class="flex flex-col items-start gap-2 w-full text-left"
+							on:click={async () => {
+								openTimezoneModal = !openTimezoneModal;
+								await tick();
+								scrollToId('timezone');
+							}}
+						>
+							<img src="/globe-icon.svg" alt="timezone" class="h-5 w-5 opacity-60" />
+							<span>{timezone}</span>
+							<span style="color: {selectedColor.lightText};">{locationName}</span>
+						</button>
+						<TimezoneModal
+							bind:open={openTimezoneModal}
+							bind:selectedTimezone={timezone}
+							bind:selectedLocationName={locationName}
+						/>
 					</div>
 				</div>
 			</div>
@@ -1301,7 +1396,7 @@
 							<div class="font-semibold">Generate with AI</div>
 						</div>
 					</button>
-					<AIModal open={showAIModalMobile} />
+					<AIModal open={showAIModalMobile} on:generate={handleAIGenerate} on:loading={handleAILoading} on:error={handleAIError} />
 				</div>
 
 				<div

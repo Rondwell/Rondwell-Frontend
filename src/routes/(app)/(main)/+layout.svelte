@@ -85,7 +85,7 @@
 	{/if}
 
 	<!-- Main Content Area -->
-	<main class="relative mb-[106px] flex min-h-screen w-full min-w-0 flex-col p-3 md:mb-0 md:p-5">
+	<main class="relative mb-[106px] flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden p-3 md:mb-0 md:p-5">
 		<div class="{isEventPage ? '' : 'bg'} flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
 			<!-- Mobile SubMenu (Events / People / Collections root only) -->
 			{#if isSubMenuVisible && isMobile && menuItems.length > 0}

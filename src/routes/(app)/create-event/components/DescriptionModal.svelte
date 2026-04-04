@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { generateDescriptionWithAI } from '$lib/services/ai.services';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import PlaceholderExtension from '@tiptap/extension-placeholder';
@@ -13,11 +14,15 @@
 	let showAIModal = false;
 	let showDropdown = false;
 	let moods = ['💐', '💼', '😂'];
-	let selectedMood: string | null = moods[0];
+	let moodToTone: Record<string, string> = { '💐': 'CELEBRATORY', '💼': 'PROFESSIONAL', '😂': 'FUN' };
+	let selectedMood: string = moods[0];
 	let selectedLength = 'S';
+	let lengthMap: Record<string, string> = { S: 'SHORT', M: 'MEDIUM', L: 'LONG' };
+	let aiPromptText = '';
+	let aiGenerating = false;
+	let aiError = '';
 
 	let descEditor: Readable<Editor>;
-	let aiEditor: Readable<Editor>;
 
 	onMount(() => {
 		descEditor = createEditor({
@@ -30,16 +35,8 @@
 				description = editor.getHTML();
 			},
 		});
-
-		aiEditor = createEditor({
-			extensions: [
-				StarterKit,
-				PlaceholderExtension.configure({ placeholder: 'Tell the AI about your event...' }),
-			],
-		});
 	});
 
-	// When modal opens, sync existing description into editor
 	$: if (open && descEditor) {
 		tick().then(() => {
 			const current = $descEditor?.getHTML();
@@ -51,8 +48,40 @@
 
 	onDestroy(() => {
 		$descEditor?.destroy();
-		$aiEditor?.destroy();
 	});
+
+	async function handleAIGenerate() {
+		if (!aiPromptText.trim() || aiPromptText.trim().length < 10) {
+			aiError = 'Please provide at least 10 characters.';
+			return;
+		}
+
+		aiError = '';
+		aiGenerating = true;
+
+		try {
+			const tone = moodToTone[selectedMood] || 'PROFESSIONAL';
+			const length = lengthMap[selectedLength] || 'MEDIUM';
+			const result = await generateDescriptionWithAI(aiPromptText.trim(), tone, length);
+
+			// Set the generated description into the editor
+			const html = result
+				.split(/\n\n+/)
+				.filter((p: string) => p.trim())
+				.map((p: string) => `<p>${p.trim()}</p>`)
+				.join('');
+			if ($descEditor) {
+				$descEditor.commands.setContent(html);
+			}
+			description = html;
+			showAIModal = false;
+			aiPromptText = '';
+		} catch (e: any) {
+			aiError = e.message ?? 'Failed to generate description.';
+		} finally {
+			aiGenerating = false;
+		}
+	}
 </script>
 
 {#if open}
@@ -72,7 +101,6 @@
 
 			<!-- Toolbar -->
 			<div class="flex flex-wrap items-center gap-0.5 border-b border-gray-100 bg-[#F8F9FA] px-3 py-1.5">
-				<!-- + media button -->
 				<div use:clickOutside={() => { showDropdown = false; }} class="relative mr-1">
 					<button
 						class="flex h-6 w-6 items-center justify-center rounded bg-[#939597] text-white hover:bg-gray-600"
@@ -135,7 +163,6 @@
 
 			<!-- Footer -->
 			<div class="relative flex items-center justify-between border-t border-gray-100 bg-[#F8F9FA] px-4 py-2.5">
-				<!-- Suggest with AI -->
 				<button
 					class="flex items-center gap-1.5 text-xs text-[#B2B3B3] hover:text-gray-500 transition-colors"
 					on:click={() => (showAIModal = !showAIModal)}
@@ -163,7 +190,7 @@
 		</div>
 	</div>
 
-	<!-- AI Suggest Modal — rendered outside the overflow-hidden card so it floats freely -->
+	<!-- AI Suggest Modal -->
 	{#if showAIModal}
 		<div
 			class="fixed bottom-16 left-1/2 z-[9999] w-[320px] -translate-x-1/2 rounded-xl border border-gray-100 bg-white p-4 shadow-xl"
@@ -182,7 +209,7 @@
 
 			<div class="mb-3 flex gap-4">
 				<div class="flex-1">
-					<label class="mb-1 block text-xs font-medium text-gray-600">Mood</label>
+					<span class="mb-1 block text-xs font-medium text-gray-600">Mood</span>
 					<div class="flex gap-1 rounded-lg bg-[#EFEFF0] p-1">
 						{#each moods as mood}
 							<button
@@ -193,7 +220,7 @@
 					</div>
 				</div>
 				<div>
-					<label class="mb-1 block text-xs font-medium text-gray-600">Length</label>
+					<span class="mb-1 block text-xs font-medium text-gray-600">Length</span>
 					<div class="flex gap-1 rounded-lg bg-[#EFEFF0] p-1">
 						{#each ['S', 'M', 'L'] as size}
 							<button
@@ -206,14 +233,26 @@
 			</div>
 
 			<div class="mb-3">
-				<label class="mb-1 block text-xs font-medium text-gray-600">Additional Instructions</label>
-				<div class="min-h-[70px] rounded-lg border border-gray-200 bg-white p-2 text-sm">
-					<EditorContent editor={$aiEditor} />
-				</div>
+				<label for="ai-desc-prompt" class="mb-1 block text-xs font-medium text-gray-600">Additional Instructions</label>
+				<textarea
+					id="ai-desc-prompt"
+					rows="3"
+					bind:value={aiPromptText}
+					placeholder="Tell the AI about your event..."
+					class="w-full resize-none rounded-lg border border-gray-200 bg-white p-2 text-sm outline-none"
+				></textarea>
 			</div>
 
-			<button class="w-full rounded-lg bg-gray-900 py-2 text-sm font-medium text-white hover:bg-gray-700 transition-colors">
-				Generate
+			{#if aiError}
+				<p class="mb-2 text-xs text-red-500">{aiError}</p>
+			{/if}
+
+			<button
+				class="w-full rounded-lg bg-gray-900 py-2 text-sm font-medium text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
+				on:click={handleAIGenerate}
+				disabled={aiGenerating}
+			>
+				{aiGenerating ? 'Generating...' : 'Generate'}
 			</button>
 		</div>
 	{/if}

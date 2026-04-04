@@ -175,7 +175,7 @@
 	<!-- Page Views -->
 	<div class="mb-6 grid gap-4 rounded-2xl bg-[#FDFDFD] p-1">
 		<!-- Main charts area -->
-		<div class="flex w-full flex-col overflow-hidden gap-20 p-4 lg:flex-row">
+		<div class="flex w-full flex-col overflow-hidden gap-6 p-4 lg:flex-row lg:gap-10">
 			<!-- Left charts col -->
 
 			<div class="w-full">
@@ -183,7 +183,7 @@
 			</div>
 
 			<!-- Right donut chart col -->
-			<div class=" max-w-100 flex w-full items-center justify-center">
+			<div class="flex w-full items-center justify-center lg:max-w-[400px]">
 				<DonutChart data={pageViewsDistribution} options={donutOptions} />
 			</div>
 		</div>

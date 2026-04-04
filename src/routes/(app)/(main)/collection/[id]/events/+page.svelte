@@ -128,7 +128,7 @@
 								<span class="ml-1 h-full border-2 border-dashed border-gray-200"></span>
 							</div>
 						</div>
-						<div class="flex w-full max-w-171.75 flex-col gap-4">
+						<div class="flex w-full flex-col gap-4 md:max-w-[687px]">
 							<div class="flex gap-4 rounded-md bg-[#FDFDFD] p-6">
 								<div class="flex-1 space-y-3">
 									<div class="h-3 w-16 rounded bg-gray-200"></div>
@@ -168,7 +168,7 @@
 							<span class="ml-1 h-full border-2 border-dashed border-[#D9D9D9]"></span>
 						</div>
 					</div>
-					<div class="flex w-full max-w-171.75 flex-col gap-4 overflow-hidden">
+					<div class="flex w-full flex-col gap-4 overflow-hidden md:max-w-[687px]">
 						{#each dayEvents as event, index (event._id ?? index)}
 							<EventCard {event} {type} />
 						{/each}

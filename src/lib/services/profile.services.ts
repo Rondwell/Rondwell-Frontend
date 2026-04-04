@@ -46,3 +46,21 @@ export async function switchProfile(newProfileId: string) {
   if (!res.ok) throw new Error(data.message ?? 'Failed to switch profile');
   return data.data;
 }
+
+/**
+ * Complete role-specific onboarding (vendor, exhibitor, speaker).
+ * Creates the profile and returns the new profile data.
+ */
+export async function completeOnboarding(
+  roleType: 'vendor' | 'exhibitor' | 'speaker',
+  onboardingData: Record<string, unknown>
+) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/onboard/${roleType}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ onboardingData }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Onboarding failed');
+  return data.data;
+}

@@ -1,1165 +1,512 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
-    import { goto } from '$app/navigation';
-    import { onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
+	import OnboardingNavButtons from '$lib/components/onboarding/OnboardingNavButtons.svelte';
+	import OnboardingProgressBar from '$lib/components/onboarding/OnboardingProgressBar.svelte';
+	import PaymentPricingStep from '$lib/components/onboarding/PaymentPricingStep.svelte';
+	import SummaryRow from '$lib/components/onboarding/SummaryRow.svelte';
+	import TaxRateModal from '$lib/components/onboarding/TaxRateModal.svelte';
+	import { completeOnboarding } from '$lib/services/profile.services';
+	import { setActiveProfile } from '$lib/stores/auth.store';
+	import { toast } from '$lib/stores/toast.store';
+	import { colors, type Color } from '$lib/utils/colors';
+	import countries from '$lib/utils/countries.json';
 	import OnboardingNavbar from '../../components/OnboardingNavbar.svelte';
 
-    // live time
-   /* let now = $state(formatTime());
+	// ============================================
+	// INTERFACES
+	// ============================================
+	interface BusinessType {
+		label: string;
+		icon: string;
+	}
 
-    const updateTime = () => {
-        now = formatTime();
-    };
+	// ============================================
+	// THEME
+	// ============================================
+	let selectedColor: Color = colors[7];
 
-   // function formatTime() {
-        let rawTime = new Date().toLocaleString('en-GB', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-            timeZoneName: 'short'
-        });
+	// ============================================
+	// STEP CONTROL
+	// ============================================
+	const totalSteps = 3;
+	const steps = ['Business Details', 'Payment & Pricing Setup', 'Summary'];
+	let currentStep = $state(1);
+	let isSubmitting = $state(false);
 
-        // Convert am/pm to AM/PM
-        return rawTime.replace(/am|pm/, (match) => match.toUpperCase());
-    }
+	// ============================================
+	// STEP 1: VENDOR DETAILS
+	// ============================================
+	let businessLogo = $state<File | null>(null);
+	let businessLogoPreview = $state('');
+	let coverImage = $state<File | null>(null);
+	let coverImagePreview = $state('');
+	let companyName = $state('');
+	let selectedBusinessType = $state<BusinessType | null>(null);
+	let companyDescription = $state('');
+	let businessLocation = $state('');
+	let phoneNumber = $state('');
+	let emailAddress = $state('');
+	let websiteURL = $state('');
+	let tempLocation = $state('');
+	let error = $state('');
+	let selectedCountry = $state(countries[0]);
+	let showBusinessTypeDropdown = $state(false);
+	let otherBusinessType = $state('');
+	let showModal = $state(false);
+	let open = $state(false);
 
-    const interval = setInterval(updateTime, 60000);
-    onDestroy(() => clearInterval(interval));
-	const now = new Date().toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit'
-  }) + ' GMT+1';*/
+	// ============================================
+	// STEP 2: PAYMENT & PRICING
+	// ============================================
+	let paymentMethods = $state<string[]>(['paystack']);
+	let currencies = $state<string[]>(['NGN']);
+	let taxRate = $state(0);
+	let showTaxModal = $state(false);
 
-    // ==========================================
-    // 1. APP STATE
-    // ==========================================
-    let currentStep = $state(1);
-    let isSubmitting = $state(false);
+	// ============================================
+	// CONSTANTS
+	// ============================================
+	const businessTypes: BusinessType[] = [
+		{ label: 'Catering', icon: '/food.svg' },
+		{ label: 'Photography', icon: '/entertainment.svg' },
+		{ label: 'Event Venue', icon: '/professional-service.svg' },
+		{ label: 'Sound & Lighting', icon: '/technology.svg' },
+		{ label: 'Entertainment', icon: '/entertainment.svg' },
+		{ label: 'Cake & Confectionery', icon: '/food.svg' },
+		{ label: 'Floristry', icon: '/healthcare.svg' },
+		{ label: 'Security', icon: '/professional-service.svg' },
+		{ label: 'Transportation', icon: '/transportation.svg' },
+		{ label: 'Printing & Branding', icon: '/marketing.svg' },
+		{ label: 'Other', icon: '/other.svg' }
+	];
 
-    // Modals & Dropdowns
-    let isTaxModalOpen = $state(false);
-    let isCountryDropdownOpen = $state(false);
-    let isProductModalOpen = $state(false);
-    let isPaymentDropdownOpen = $state(false);
-    let isServiceDropdownOpen = $state(false);
+	// ============================================
+	// DERIVED
+	// ============================================
+	let canProceedStep1 = $derived(
+		!!(companyName && selectedBusinessType && emailAddress && phoneNumber)
+	);
+	let canProceedStep2 = $derived(paymentMethods.length > 0);
+	let canProceed = $derived(
+		currentStep === 1 ? canProceedStep1 : currentStep === 2 ? canProceedStep2 : true
+	);
 
-    // ==========================================
-    // 2. DATA & ASSETS
-    // ==========================================
+	// ============================================
+	// FILE UPLOAD HANDLERS
+	// ============================================
+	function handleLogoUpload(event: Event) {
+		const file = (event.target as HTMLInputElement).files?.[0];
+		if (!file) return;
+		businessLogo = file;
+		const reader = new FileReader();
+		reader.onload = (e) => { businessLogoPreview = e.target?.result as string; };
+		reader.readAsDataURL(file);
+	}
 
-    const countries = [
-        { code: '+234', iso: 'ng', name: 'Nigeria' },
-        { code: '+1', iso: 'us', name: 'USA' },
-        { code: '+44', iso: 'gb', name: 'UK' },
-        { code: '+233', iso: 'gh', name: 'Ghana' },
-        { code: '+254', iso: 'ke', name: 'Kenya' },
-        { code: '+27', iso: 'za', name: 'South Africa' },
-        { code: '+1', iso: 'ca', name: 'Canada' }
-    ];
-
-    const businessCategories = [
-        'Catering',
-        'Photography',
-        'Event Venue',
-        'Sound & Lighting',
-        'Entertainment',
-        'Cake & Confectionery',
-        'Wedding Gowns',
-        'Floristry',
-        'Security',
-        'Transportation',
-        'Printing & Branding'
-    ];
-
-    const serviceTypes = [
-        { name: 'Catering', icon: 'heroicons:table-cells' },
-        { name: 'Photography', icon: 'heroicons:camera' },
-        { name: 'Event Venue', icon: 'heroicons:building-office-2' },
-        { name: 'Sound & Lighting', icon: 'heroicons:speaker-wave' },
-        { name: 'Entertainment', icon: 'heroicons:musical-note' },
-        { name: 'Cake & Confectionery', icon: 'heroicons:cake' },
-        { name: 'Wedding Gowns', icon: 'heroicons:sparkles' },
-        { name: 'Floristry', icon: 'heroicons:heart' },
-        { name: 'Security', icon: 'heroicons:shield-check' },
-        { name: 'Transportation', icon: 'heroicons:truck' },
-        { name: 'Printing & Branding', icon: 'heroicons:printer' },
-        { name: 'Other', icon: 'heroicons:ellipsis-horizontal-circle' }
-    ];
-
-    const paymentMethods = [
-        {
-            name: 'Paystack',
-            icon: '/paystack.svg' 
-        },
-        {
-            name: 'Flutterwave',
-            icon: '/Logo_Flutterwave Logo.svg'
-        },
-        {
-            name: 'Stripe',
-            icon: '/Stripe.svg'
-        }
-    ];
-
-    // ==========================================
-    // 3. FORM LOGIC
-    // ==========================================
-    let formData = $state({
-        companyName: '',
-        category: '',
-        otherCategory: '',
-        description: '',
-        location: '',
-        phone: '',
-        phoneCode: countries[0],
-        email: '',
-        website: '',
-        paymentMethod: null as (typeof paymentMethods)[0] | null,
-        currency: '',
-        taxRate: '',
-        products: [] as { name: string; price: string; description: string }[]
-    });
-
-    let newProduct = $state({
-        category: null as (typeof serviceTypes)[0] | null,
-        customName: '',
-        price: '',
-        description: ''
-    });
-
-    /*let steps = [
-        { number: 1, title: 'Business Details' },
-        { number: 2, title: 'Payment & Pricing Setup' },
-        { number: 3, title: 'Your First Listing' },
-        { number: 4, title: 'Summary' }
-    ];*/
-	const steps = ['Business Details', 'Payment & Pricing Setup','Your First Listing', 'Summary'];
-
-    let currencySymbol = $derived(formData.currency.includes('Naira') ? '₦' : '$');
-    let displayCategory = $derived(
-        formData.category === 'Other' ? formData.otherCategory : formData.category
-    );
-
-    function selectCountry(country: (typeof countries)[0]) {
-        formData.phoneCode = country;
-        isCountryDropdownOpen = false;
-    }
-
-    function selectPaymentMethod(method: (typeof paymentMethods)[0]) {
-        formData.paymentMethod = method;
-        isPaymentDropdownOpen = false;
-    }
-
-    function selectServiceType(type: (typeof serviceTypes)[0]) {
-        newProduct.category = type;
-        if (type.name !== 'Other') isServiceDropdownOpen = false;
-    }
-
-    async function handleContinue() {
-        if (currentStep === 1) {
-            if (!formData.companyName || !formData.email) {
-                alert('Please fill in at least Company Name and Email.');
-                return;
-            }
-            if (formData.category === 'Other' && !formData.otherCategory) {
-                alert('Please specify your category.');
-                return;
-            }
-            currentStep = 2;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else if (currentStep === 2) {
-            if (!formData.paymentMethod || !formData.currency) {
-                alert('Please select a Payment Method and Currency.');
-                return;
-            }
-            currentStep = 3;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else if (currentStep === 3) {
-            currentStep = 4;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else if (currentStep === 4) {
-            isSubmitting = true;
-            await new Promise((r) => setTimeout(r, 1500));
-            isSubmitting = false;
-            goto('/vendor');
-        }
-    }
-
-    function goBack() {
-        if (currentStep > 1) currentStep--;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function openProductModal() {
-        newProduct = { category: null, customName: '', price: '', description: '' };
-        isProductModalOpen = true;
-    }
-
-    function saveProduct() {
-        if (!newProduct.category || !newProduct.price) {
-            alert('Please select a Category and enter a Price.');
-            return;
-        }
-        const finalName =
-            newProduct.category.name === 'Other' && newProduct.customName
-                ? newProduct.customName
-                : newProduct.category.name;
-
-        if (!finalName) {
-            alert('Please enter a name for the product.');
-            return;
-        }
-
-        formData.products = [
-            ...formData.products,
-            {
-                name: finalName,
-                price: newProduct.price,
-                description: newProduct.description
-            }
-        ];
-        isProductModalOpen = false;
-    }
-
-    function removeProduct(index: number) {
-        formData.products = formData.products.filter((_, i) => i !== index);
-    }
-
-    function editStep(stepNumber: number) {
-        currentStep = stepNumber;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-	function editField(step: number) {
-		// Allow navigation to any completed step or current step
-		if (step <= currentStep) {
-			currentStep = step;
+	function handleCoverUpload(event: Event) {
+		const file = (event.target as HTMLInputElement).files?.[0];
+		if (!file) return;
+		const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+		if (!validTypes.includes(file.type)) {
+			alert('Please upload a valid file: JPEG, PNG, or PDF format');
+			return;
+		}
+		if (file.size > 50 * 1024 * 1024) {
+			alert('File size must be less than 50MB');
+			return;
+		}
+		coverImage = file;
+		if (file.type.startsWith('image/')) {
+			const reader = new FileReader();
+			reader.onload = (e) => { coverImagePreview = e.target?.result as string; };
+			reader.readAsDataURL(file);
+		} else {
+			coverImagePreview = '/pdf-placeholder.svg';
 		}
 	}
-	function handleHorizontalScroll(event: WheelEvent) {
-    const container = event.currentTarget as HTMLElement;
-    event.preventDefault();
-    container.scrollLeft += event.deltaY;
-}
-	const totalSteps = 4;
+
+	function removeCoverImage() {
+		coverImage = null;
+		coverImagePreview = '';
+		const input = document.getElementById('coverInput') as HTMLInputElement | null;
+		if (input) input.value = '';
+	}
+
+	// ============================================
+	// MODAL HANDLERS
+	// ============================================
+	function openLocationModal() {
+		tempLocation = businessLocation;
+		error = '';
+		showModal = true;
+	}
+
+	function saveLocation() {
+		if (tempLocation.trim().length < 5) {
+			error = 'Please enter a valid location';
+			return;
+		}
+		businessLocation = tempLocation;
+		showModal = false;
+	}
+
+	// ============================================
+	// SELECTION HANDLERS
+	// ============================================
+	function selectBusinessType(type: BusinessType) {
+		selectedBusinessType = type;
+		showBusinessTypeDropdown = false;
+		if (type.label !== 'Other') otherBusinessType = '';
+	}
+
+	function confirmOther() {
+		if (otherBusinessType.trim()) {
+			selectedBusinessType = { label: otherBusinessType, icon: '/other.svg' };
+			showBusinessTypeDropdown = false;
+		}
+	}
+
+	function selectCountry(country: (typeof countries)[0]) {
+		selectedCountry = country;
+		open = false;
+	}
+
+	function togglePaymentMethod(method: string) {
+		const idx = paymentMethods.indexOf(method);
+		if (idx > -1) {
+			if (paymentMethods.length > 1) paymentMethods = paymentMethods.filter((m) => m !== method);
+		} else {
+			paymentMethods = [...paymentMethods, method];
+		}
+	}
+
+	function toggleCurrency(curr: string) {
+		const idx = currencies.indexOf(curr);
+		if (idx > -1) {
+			if (currencies.length > 1) currencies = currencies.filter((c) => c !== curr);
+		} else {
+			currencies = [...currencies, curr];
+		}
+	}
+
+	function getPaymentMethodDisplay() {
+		return paymentMethods.map((m) => m === 'paystack' ? 'Paystack' : m === 'flutterwave' ? 'Flutterwave' : m === 'stripe' ? 'Stripe' : m).join(', ');
+	}
+
+	function getCurrencyDisplay() {
+		return currencies.join(', ');
+	}
+
+	// ============================================
+	// NAVIGATION
+	// ============================================
+	function editField(step: number) {
+		if (step <= currentStep) currentStep = step;
+	}
+
+	function nextStep() {
+		if (currentStep < totalSteps) currentStep++;
+	}
+
+	function prevStep() {
+		if (currentStep > 1) currentStep--;
+	}
+
+	// ============================================
+	// SUBMIT
+	// ============================================
+	async function submitOnboarding() {
+		isSubmitting = true;
+		try {
+			const data = await completeOnboarding('vendor', {
+				businessName: companyName,
+				businessType: selectedBusinessType?.label || '',
+				businessDescription: companyDescription,
+				businessLocation,
+				contactInfo: {
+					email: emailAddress,
+					phone: `${selectedCountry.dial_code}${phoneNumber}`,
+					website: websiteURL
+				},
+				paymentMethods,
+				currencies,
+				taxRate
+			});
+
+			if (data?.profile) {
+				setActiveProfile({
+					_id: data.profile._id,
+					role: 'VENDOR',
+					name: data.profile.name || companyName,
+					profilePictureUrl: data.profile.profilePictureUrl,
+					onboardingStatus: 'COMPLETED'
+				});
+			}
+
+			toast.success('Vendor profile created successfully!');
+			goto('/vendor');
+		} catch (err: any) {
+			toast.error(err.message || 'Failed to complete onboarding');
+		} finally {
+			isSubmitting = false;
+		}
+	}
 </script>
 
-<div class="bg relative min-h-screen overflow-hidden font-sans pb-28 md:pb-0">
+<div
+	class="relative flex min-h-screen flex-col overflow-auto bg-cover bg-center bg-no-repeat"
+	style="background-image: url('/exhibitor-bg.png'); color: {selectedColor.text};"
+>
 	<OnboardingNavbar />
-	<!-- Background Decorations -->
-	<div class="mx-auto my-10 flex max-w-5xl items-center justify-center">
-		<!-- Progress Indicator - ALL STEPS VISIBLE -->
-<div class="mb-8 w-full border-b border-[#EBEBEB] py-3 pt-3">
-  <div class="flex w-full items-center justify-between px-4 md:px-0">
+	<main class="relative mb-[106px] flex-1 px-5 md:mb-0">
+		<div class="mx-auto mb-8 overflow-x-hidden">
+			<OnboardingProgressBar {steps} {currentStep} onStepClick={editField} />
+		</div>
 
-    {#each steps as step, index}
-      <button
-        type="button"
-        class="flex items-center gap-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-        onclick={() => editField(index + 1)}
-        disabled={index + 1 > currentStep}
-      >
-        <!-- STEP NUMBER -->
-        <div
-          class="flex h-6 w-6 items-center justify-center rounded-full text-sm font-normal transition-all"
-          style="
-            background: {currentStep > index
-              ? 'linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%)'
-              : '#FFFFFF'};
-            color: {currentStep > index ? '#FFFFFF' : '#5C5C5C'};
-          "
-        >
-          {index + 1}
-        </div>
-
-        <!-- STEP LABEL -->
-        <span
-          class="text-sm font-normal whitespace-nowrap transition-all"
-          style="color: {currentStep > index ? '#171717' : '#5C5C5C'}"
-        >
-          {step}
-        </span>
-
-        <!-- ARROW (except last) -->
-        {#if index < steps.length - 1}
-          <img
-            src="/arrow-right-s-line.svg"
-            alt="arrow"
-            class="h-4 w-4 text-gray-400"
-          />
-        {/if}
-      </button>
-    {/each}
-
-  </div>
-</div>
-
-	</div>
-
-	<div
-		class="relative mx-auto max-w-2xl rounded-3xl border border-white/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm sm:p-12"
-	>
-		{#if currentStep > 1}
-			<button
-				onclick={goBack}
-				class="absolute top-8 left-8 flex items-center gap-1 text-xs font-medium text-gray-500 transition hover:text-black"
-			>
-				<Icon icon="heroicons:chevron-left" class="h-3 w-3" /> Back
-			</button>
-		{/if}
-
-		{#if currentStep === 1}
-			<div class="mb-10 text-center">
-				<div class="mb-4 flex justify-center">
-					<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100">
-						<Icon icon="heroicons:building-storefront" class="h-6 w-6 text-gray-600" />
-					</div>
-				</div>
-				<h1 class="text-2xl font-bold text-gray-900">Business Details</h1>
-				<p class="mt-2 text-sm text-gray-500">Provide essential Business Details to proceed.</p>
-			</div>
-
-			<div class="mb-8 grid gap-6 sm:grid-cols-3">
-				<div
-					class="col-span-1 flex flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white p-6 text-center"
-				>
-					<div
-						class="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-gray-400"
-					>
-						<Icon icon="heroicons:user" class="h-8 w-8" />
-					</div>
-					<h3 class="text-xs font-semibold text-gray-900">Business Logo</h3>
-					<p class="mb-3 text-[10px] text-gray-400">Max file size: 1MB</p>
-					<button
-						class="rounded-full border border-gray-300 bg-white px-4 py-1.5 text-[10px] font-medium text-gray-700 hover:bg-gray-50"
-						>Add Image</button
-					>
-				</div>
-				<div
-					class="col-span-2 flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-gray-50/50 p-6 text-center"
-				>
-					<Icon icon="heroicons:cloud-arrow-up" class="mb-2 h-6 w-6 text-gray-400" />
-					<h3 class="mb-1 text-xs font-semibold text-gray-900">Cover/Banner Image</h3>
-					<p class="mb-4 text-center text-[10px] text-gray-400">
-						Choose a file or drag & drop it here.<br />JPEG, PNG, PDF up to 50 MB.
-					</p>
-					<button
-						class="rounded-full border border-gray-300 bg-white px-6 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-						>Browse File</button
-					>
-				</div>
-			</div>
-
-			<div class="space-y-5">
-				<div class="grid gap-5 sm:grid-cols-2">
-					<div>
-						<label class="mb-1.5 block text-xs font-semibold text-gray-700">Company Name *</label>
-						<input
-							type="text"
-							bind:value={formData.companyName}
-							placeholder="Synergy HR"
-							class="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm transition outline-none focus:border-black focus:ring-1 focus:ring-black"
-						/>
-					</div>
-					<div>
-						<label class="mb-1.5 block text-xs font-semibold text-gray-700"
-							>Business Type/Category *</label
-						>
-						<div class="relative">
-							<select
-								bind:value={formData.category}
-								class="w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-600 transition outline-none focus:border-black focus:ring-1 focus:ring-black"
-							>
-								<option value="" disabled selected>Select Category</option>
-								{#each businessCategories as category}
-									<option value={category}>{category}</option>
-								{/each}
-								<option value="Other">Other</option>
-							</select>
-							<Icon
-								icon="heroicons:chevron-down"
-								class="pointer-events-none absolute top-3 right-3 h-4 w-4 text-gray-400"
-							/>
+		<div
+			class="mx-auto mb-20 w-full rounded-[16px] p-3 md:max-w-[716px]"
+			style="background-color: {selectedColor.cover}; box-shadow: 0px 1px 2px 0px #0A0D1408;"
+		>
+			{#if currentStep === 1}
+				<!-- Step 1: Business Details -->
+				<div class="space-y-6 rounded-xl">
+					<div class="mb-6 text-center">
+						<div class="mx-auto h-[96px] w-[96px]">
+							<img src="/detail-icon.svg" alt="detail-icon" class="h-full w-full" />
 						</div>
-						{#if formData.category === 'Other'}
-							<input
-								type="text"
-								bind:value={formData.otherCategory}
-								placeholder="Enter your category"
-								class="mt-2 w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm transition outline-none focus:border-black focus:ring-1 focus:ring-black"
-							/>
-						{/if}
+						<div class="text-[24px] font-semibold text-[#171717]">Business Details</div>
+						<p class="mt-1 text-sm text-[#5C5C5C]">Provide essential Business Details to proceed.</p>
 					</div>
-				</div>
+					<div class="my-8 h-[1px] w-full bg-[#EBEBEB]"></div>
 
-				<div>
-					<label class="mb-1.5 block text-xs font-semibold text-gray-700"
-						>Company Description * (Optional)</label
-					>
-					<div class="relative">
-						<textarea
-							bind:value={formData.description}
-							rows="3"
-							placeholder="Describe your company..."
-							class="w-full resize-none rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm transition outline-none focus:border-black focus:ring-1 focus:ring-black"
-						></textarea>
-						<span class="absolute right-3 bottom-2 text-[10px] text-gray-400"
-							>{formData.description.length}/200</span
-						>
-					</div>
-					<p class="mt-1 flex items-center gap-1 text-[10px] text-gray-400">
-						<Icon icon="heroicons:information-circle" class="h-3 w-3" /> You can describe your company
-						briefly.
-					</p>
-				</div>
-
-				<div>
-					<label class="mb-1.5 block text-xs font-semibold text-gray-700"
-						>Business Location/Service Area *</label
-					>
-					<div class="relative">
-						<Icon icon="heroicons:map-pin" class="absolute top-3 left-3 h-4 w-4 text-gray-400" />
-						<input
-							type="text"
-							bind:value={formData.location}
-							placeholder="Add Business Location"
-							class="w-full rounded-lg border border-gray-200 bg-white py-2.5 pr-4 pl-9 text-sm transition outline-none focus:border-black focus:ring-1 focus:ring-black"
-						/>
-					</div>
-					<p class="mt-1 text-[10px] text-gray-400">Offline location or virtual link</p>
-				</div>
-
-				<div class="grid gap-5 sm:grid-cols-2">
-					<div class="relative z-20">
-						<label class="mb-1.5 block text-xs font-semibold text-gray-700">Phone Number *</label>
-						<div
-							class="relative flex rounded-lg border border-gray-200 bg-white transition focus-within:border-black focus-within:ring-1 focus-within:ring-black"
-						>
-							<button
-								onclick={() => (isCountryDropdownOpen = !isCountryDropdownOpen)}
-								class="flex min-w-[100px] items-center gap-2 rounded-l-lg border-r border-gray-200 bg-gray-50 px-3 transition hover:bg-gray-100"
+					<!-- Images Upload -->
+					<div class="grid grid-cols-1 items-center gap-6 rounded-2xl border p-3 md:grid-cols-3" style="box-shadow: 0px 1px 2px 0px #0A0D1408;">
+						<div class="col-span-1 space-y-2 md:border-r-1">
+							<div
+								class="flex h-40 cursor-pointer flex-col items-center justify-center space-y-2 rounded-[10px] transition-colors"
+								onclick={() => document.getElementById('logoInput')?.click()}
+								onkeydown={(e) => e.key === 'Enter' && document.getElementById('logoInput')?.click()}
+								role="button"
+								tabindex="0"
 							>
-								<img
-									src={`https://flagcdn.com/w40/${formData.phoneCode.iso}.png`}
-									alt={formData.phoneCode.name}
-									class="h-4 w-6 rounded-sm object-cover shadow-sm"
-								/>
-								<span class="text-sm font-medium text-gray-700">{formData.phoneCode.code}</span>
-								<Icon icon="heroicons:chevron-down" class="ml-auto h-3 w-3 text-gray-400" />
-							</button>
+								{#if businessLogoPreview}
+									<img src={businessLogoPreview} alt="Business Logo" class="h-full w-full rounded-[10px] object-cover px-10 py-5" />
+								{:else}
+									<img src="/avatar.svg" alt="avatar" />
+									<div class="text-sm font-medium">Business Logo</div>
+									<span class="mt-1 text-xs" style="color: {selectedColor.lightText}">Max file size: 1MB</span>
+									<button class="h-[32px] rounded-[10px] border px-6 text-sm" style="color: {selectedColor.lightText}">Add Image</button>
+								{/if}
+							</div>
+							<input id="logoInput" type="file" accept="image/*" class="hidden" onchange={handleLogoUpload} />
+						</div>
 
-							{#if isCountryDropdownOpen}
-								<div
-									class="absolute top-[110%] left-0 w-72 overflow-hidden rounded-lg border border-gray-100 bg-white shadow-xl"
-								>
-									<div class="max-h-56 overflow-y-auto">
-										{#each countries as country}
-											<button
-												onclick={() => selectCountry(country)}
-												class="flex w-full items-center gap-3 border-b border-gray-50 px-4 py-2.5 text-left text-sm transition last:border-0 hover:bg-gray-50"
-											>
-												<img
-													src={`https://flagcdn.com/w40/${country.iso}.png`}
-													alt={country.name}
-													class="h-4 w-6 rounded-sm object-cover"
-												/>
-												<span class="flex-1 font-medium text-gray-900">{country.name}</span>
-												<span class="text-gray-500">{country.code}</span>
-												{#if formData.phoneCode.code === country.code}
-													<Icon icon="heroicons:check" class="ml-2 h-4 w-4 text-purple-600" />
-												{/if}
-											</button>
-										{/each}
+						<div class="col-span-2 space-y-2">
+							<div class="text-sm font-medium">Cover/Banner Image</div>
+							<div
+								class="relative flex h-40 cursor-pointer flex-col items-center justify-around rounded-[10px]"
+								style="border: 1px dashed #D1D1D1;"
+								onclick={() => !coverImagePreview && document.getElementById('coverInput')?.click()}
+								onkeydown={(e) => e.key === 'Enter' && !coverImagePreview && document.getElementById('coverInput')?.click()}
+								role="button"
+								tabindex="0"
+							>
+								{#if coverImagePreview}
+									<img src={coverImagePreview} alt="Cover" class="h-full w-full rounded-[10px] object-cover" />
+									<div class="absolute inset-0 flex items-center justify-center gap-3 rounded-[10px] bg-black/40 opacity-0 transition-opacity hover:opacity-100">
+										<button type="button" class="rounded-lg bg-white px-4 py-2 text-sm font-medium text-[#171717] hover:bg-gray-100" onclick={(e) => { e.stopPropagation(); document.getElementById('coverInput')?.click(); }}>Change</button>
+										<button type="button" class="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-red-600" onclick={(e) => { e.stopPropagation(); removeCoverImage(); }}>Remove</button>
 									</div>
-								</div>
+								{:else}
+									<img src="/upload.svg" alt="upload-icon" />
+									<div class="px-4 text-center">
+										<p class="text-sm">Choose a file or drag & drop it here.</p>
+										<p class="mt-1 text-xs" style="color: {selectedColor.lightText}">JPEG, PNG, PDF formats, up to 50 MB</p>
+									</div>
+									<button type="button" class="mx-auto flex h-[32px] items-center rounded-[10px] border px-6 text-sm font-medium text-[#5C5C5C] hover:bg-gray-50" onclick={(e) => { e.stopPropagation(); document.getElementById('coverInput')?.click(); }}>Browse File</button>
+								{/if}
+							</div>
+							<input id="coverInput" type="file" accept="image/jpeg,image/jpg,image/png,application/pdf" class="hidden" onchange={handleCoverUpload} />
+							{#if coverImage}
+								<div class="text-xs text-gray-500">Selected: {coverImage.name} ({(coverImage.size / 1024 / 1024).toFixed(2)} MB)</div>
 							{/if}
-
-							<input
-								type="tel"
-								bind:value={formData.phone}
-								placeholder="800 000 0000"
-								class="w-full rounded-r-lg bg-transparent px-3 py-2.5 text-sm outline-none"
-							/>
 						</div>
 					</div>
 
-					<div>
-						<label class="mb-1.5 block text-xs font-semibold text-gray-700">Email Address *</label>
-						<div class="relative">
-							<Icon icon="heroicons:envelope" class="absolute top-3 left-3 h-4 w-4 text-gray-400" />
-							<input
-								type="email"
-								bind:value={formData.email}
-								placeholder="hello@alignui.com"
-								class="w-full rounded-lg border border-gray-200 bg-white py-2.5 pr-4 pl-9 text-sm transition outline-none focus:border-black focus:ring-1 focus:ring-black"
-							/>
+					<!-- Company Information -->
+					<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+						<div class="space-y-2 md:col-span-1">
+							<label for="companyName" class="text-sm font-medium">Company Name <span class="text-[#335CFF]">*</span></label>
+							<input id="companyName" type="text" bind:value={companyName} placeholder="Synergy HR" class="h-[40px] w-full rounded-[10px] border border-[#EBEBEB] bg-white px-4 py-3 text-sm focus:outline-none" style="box-shadow: 0px 1px 2px 0px #0A0D1408;" />
 						</div>
-					</div>
-				</div>
 
-				<div>
-					<label class="mb-1.5 block text-xs font-semibold text-gray-700">Website URL *</label>
-					<div
-						class="flex overflow-hidden rounded-lg border border-gray-200 bg-white transition focus-within:border-black focus-within:ring-1 focus-within:ring-black"
-					>
-						<span
-							class="flex items-center border-r border-gray-200 bg-gray-50 px-3 text-sm text-gray-500"
-							>alignui.com</span
-						>
-						<input
-							type="text"
-							bind:value={formData.website}
-							placeholder="synergyhr"
-							class="w-full px-3 py-2.5 text-sm outline-none"
-						/>
-					</div>
-				</div>
-			</div>
-		{:else if currentStep === 2}
-			<div class="mb-10 pt-4 text-center">
-				<div class="mb-4 flex justify-center">
-					<div class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-						<Icon icon="heroicons:building-library" class="h-6 w-6 text-gray-600" />
-					</div>
-				</div>
-				<h1 class="text-2xl font-bold text-gray-900">Payment & Pricing Setup</h1>
-				<p class="mt-2 text-sm text-gray-500">
-					Select a payment method and set up product pricing.
-				</p>
-			</div>
-
-			<div class="space-y-6">
-				<div class="grid gap-5 sm:grid-cols-2">
-					<div class="relative z-20">
-						<label class="mb-1.5 block flex items-center gap-1 text-xs font-semibold text-gray-700">
-							Select Payment Method <Icon
-								icon="heroicons:information-circle"
-								class="h-3 w-3 text-gray-400"
-							/>
-						</label>
-						<div class="relative">
-							<button
-								onclick={() => (isPaymentDropdownOpen = !isPaymentDropdownOpen)}
-								class="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm transition outline-none focus:border-black focus:ring-1 focus:ring-black"
-							>
-								{#if formData.paymentMethod}
+						<div class="relative space-y-2">
+							<label for="businessType" class="text-sm font-medium">Business Type/Category <span class="text-[#335CFF]">*</span></label>
+							<button id="businessType" type="button" class="h-[40px] w-full appearance-none rounded-[10px] border border-[#EBEBEB] bg-white px-4 pr-10 text-left text-sm focus:outline-none" style="box-shadow: 0px 1px 2px 0px #0A0D1408; background-image: url('/arrow-dropdown.svg'); background-repeat: no-repeat; background-position: right 12px center; background-size: 14px;" onclick={() => (showBusinessTypeDropdown = !showBusinessTypeDropdown)}>
+								{#if selectedBusinessType}
 									<div class="flex items-center gap-2">
-										<img
-											src={formData.paymentMethod.icon}
-											alt={formData.paymentMethod.name}
-											class="h-4 object-contain"
-										/>
-										<span>{formData.paymentMethod.name}</span>
+										<img src={selectedBusinessType.icon} alt="icon" class="h-5 w-5" />
+										<span>{selectedBusinessType.label}</span>
 									</div>
 								{:else}
-									<span class="text-gray-500">Select Method</span>
+									<span class="text-[#A3A3A3]">Select business type</span>
 								{/if}
-								<Icon icon="heroicons:chevron-down" class="h-4 w-4 text-gray-400" />
 							</button>
-
-							{#if isPaymentDropdownOpen}
-								<div
-									class="absolute top-[110%] left-0 z-30 w-full overflow-hidden rounded-lg border border-gray-100 bg-white shadow-xl"
-								>
-									{#each paymentMethods as method}
-										<button
-											onclick={() => selectPaymentMethod(method)}
-											class="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-gray-50"
-										>
-											<img src={method.icon} alt={method.name} class="h-4 object-contain" />
-											<span class="font-medium text-gray-900">{method.name}</span>
-										</button>
+							{#if showBusinessTypeDropdown}
+								<div class="absolute top-full left-0 z-50 mt-1 max-h-64 w-full overflow-auto rounded-lg border bg-white p-2 shadow-lg">
+									{#each businessTypes as type}
+										{#if type.label !== 'Other'}
+											<button type="button" class="flex w-full items-center gap-2 rounded-md px-4 py-2 text-left text-sm transition-colors hover:bg-gray-100 {selectedBusinessType?.label === type.label ? 'bg-blue-50' : ''}" onclick={() => selectBusinessType(type)}>
+												<img src={type.icon} alt={type.label} class="h-5 w-5" />
+												<span>{type.label}</span>
+											</button>
+										{/if}
 									{/each}
+									<div class="mt-1 flex items-center gap-2 border-t px-4 py-2 pt-3">
+										<img src="/other.svg" alt="other" class="h-5 w-5" />
+										<input type="text" bind:value={otherBusinessType} placeholder="Other business type..." class="w-full rounded border border-[#EBEBEB] px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { e.stopPropagation(); if (e.key === 'Enter') confirmOther(); }} />
+										<button type="button" class="rounded bg-blue-500 px-3 py-1 text-sm font-medium whitespace-nowrap text-white hover:bg-blue-600" onclick={confirmOther}>Add</button>
+									</div>
 								</div>
 							{/if}
 						</div>
-					</div>
 
-					<div>
-						<label class="mb-1.5 block flex items-center gap-1 text-xs font-semibold text-gray-700">
-							Select Preferred Currency <Icon
-								icon="heroicons:information-circle"
-								class="h-3 w-3 text-gray-400"
-							/>
-						</label>
-						<div class="relative">
-							<select
-								bind:value={formData.currency}
-								class="w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
-							>
-								<option value="" disabled selected>Select Currency</option>
-								<option>US Dollar ($)</option>
-								<option>Naira (₦)</option>
-							</select>
-							<Icon
-								icon="heroicons:chevron-down"
-								class="pointer-events-none absolute top-3 right-3 h-4 w-4 text-gray-400"
-							/>
+						<div class="space-y-2 md:col-span-2">
+							<label for="companyDesc" class="text-sm font-medium">Company Description <span class="font-normal text-[#5C5C5C]">(Optional)</span></label>
+							<div class="relative w-full">
+								<textarea id="companyDesc" bind:value={companyDescription} placeholder="Describe your company..." maxlength="200" rows="3" class="h-[56px] w-full resize-none rounded-[10px] border border-[#EBEBEB] bg-white px-4 py-3 pr-14 text-sm placeholder:text-[#A3A3A3] focus:outline-none" style="box-shadow: 0px 1px 2px 0px #0A0D1408;"></textarea>
+								<span class="pointer-events-none absolute right-5 bottom-3 text-xs" style="color: {selectedColor.lightText}">{companyDescription.length}/200</span>
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<div
-					class="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50/50 p-4"
-				>
-					<div class="flex items-center gap-3">
-						<div
-							class="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white"
-						>
-							<Icon icon="heroicons:banknotes" class="h-5 w-5 text-gray-500" />
-						</div>
-						<div>
-							<h4 class="text-sm font-semibold text-gray-900">Tax Information</h4>
-							<p class="text-[10px] text-gray-500">
-								{#if formData.taxRate}
-									Current Tax Rate: <span class="font-bold text-black">{formData.taxRate}%</span>
+					<!-- Business Location -->
+					<div class="space-y-2">
+						<label class="text-sm font-medium" for="location-btn">Business Location/Service Area <span class="text-[#335CFF]">*</span></label>
+						<button id="location-btn" class="flex h-14 w-full items-start gap-2 rounded-[10px] border border-[#EBEBEB] bg-white px-4 py-3 text-left shadow-[0_1px_2px_0_#0A0D1408]" onclick={openLocationModal}>
+							<img src="/location-add.svg" alt="location" class="h-4 w-4" />
+							<div>
+								{#if businessLocation}
+									<p class="text-sm text-[#111]">{businessLocation}</p>
+									<p class="text-xs text-[#A9AAAA]">Click to edit location</p>
 								{:else}
-									Set default tax rate for all products
+									<p class="text-sm text-[#616265]">Add Business Location</p>
+									<p class="text-xs text-[#A9AAAA]">Offline location or virtual link</p>
 								{/if}
-							</p>
-						</div>
-					</div>
-					<button
-						onclick={() => (isTaxModalOpen = true)}
-						class="rounded-lg bg-black px-4 py-2 text-xs font-medium text-white hover:bg-gray-800"
-					>
-						{formData.taxRate ? 'Edit Tax Rate' : 'Enter Tax Rate'}
-					</button>
-				</div>
-			</div>
-		{:else if currentStep === 3}
-			{#if formData.products.length === 0}
-				<div class="flex flex-col items-center justify-center py-6 text-center">
-					<div
-						class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 text-gray-600"
-					>
-						<Icon icon="heroicons:building-storefront" class="h-7 w-7" />
-					</div>
-
-					<h1 class="mb-2 text-2xl font-bold text-gray-900">Showcase Your Offerings!</h1>
-					<p class="mb-8 text-sm text-gray-500">
-						Let's add your first product or service to attract Organizers.
-					</p>
-
-					<div
-						class="mb-8 flex w-full max-w-lg gap-3 rounded-xl border border-[#FFDBB8] bg-[#FFF4E5] p-4 text-left"
-					>
-						<Icon
-							icon="heroicons:information-circle"
-							class="mt-0.5 h-5 w-5 shrink-0 text-[#E65100]"
-						/>
-						<div class="text-xs leading-relaxed text-[#944216]">
-							<span class="mb-1 block font-bold">Adding a product grows your business.</span>
-							It increases your visibility, helps customers find what you offer, and builds trust by
-							showing you're active and ready to serve.
-						</div>
-					</div>
-
-					<div class="mb-6 flex w-full max-w-lg gap-4">
-						<button
-							onclick={() => (currentStep = 4)}
-							class="flex-1 rounded-lg border border-gray-300 bg-white py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-						>
-							Skip For Now
-						</button>
-						<button
-							onclick={openProductModal}
-							class="flex-1 rounded-lg bg-blue-600 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-						>
-							Add My First Product/Service
+							</div>
 						</button>
 					</div>
 
-					<button
-						onclick={handleContinue}
-						class="w-full max-w-lg rounded-lg bg-black py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
-					>
-						Continue
-					</button>
-				</div>
-			{:else}
-				<div class="mb-10 pt-4 text-center">
-					<div class="mb-4 flex justify-center">
-						<div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100">
-							<Icon icon="heroicons:building-storefront" class="h-6 w-6 text-gray-600" />
-						</div>
-					</div>
-					<h1 class="text-2xl font-bold text-gray-900">Showcase Your Offerings!</h1>
-					<p class="mt-2 text-sm text-gray-500">
-						Let's add your first product or service to attract Organizers.
-					</p>
-				</div>
-
-				<div class="space-y-4">
-					{#each formData.products as product, index}
-						<div
-							class="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-						>
-							<div class="flex items-center gap-4">
-								<div
-									class="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-gray-400"
-								>
-									<Icon icon="heroicons:photo" class="h-6 w-6" />
-								</div>
-								<div>
-									<h4 class="text-sm font-bold text-gray-900">{product.name}</h4>
-									<p class="text-xs text-gray-500">
-										{formData.currency.split(' ')[1]?.replace(/[()]/g, '') || '$'}
-										{product.price}
-									</p>
+					{#if showModal}
+						<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+							<div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+								<h3 class="mb-4 text-lg font-semibold">Add Business Location</h3>
+								<input type="text" bind:value={tempLocation} placeholder="e.g. Ikeja, Lagos or Online (Zoom)" class="w-full rounded-lg border border-[#EBEBEB] px-4 py-3 text-sm focus:ring-2 focus:ring-[#335CFF] focus:outline-none" />
+								{#if error}<p class="mt-2 text-xs text-red-500">{error}</p>{/if}
+								<p class="mt-2 text-xs text-[#A9AAAA]">Enter a physical address or an online meeting link</p>
+								<div class="mt-6 flex justify-end gap-3">
+									<button class="rounded-lg px-4 py-2 text-sm text-gray-600" onclick={() => (showModal = false)}>Cancel</button>
+									<button class="rounded-lg bg-[#335CFF] px-4 py-2 text-sm text-white" onclick={saveLocation}>Save Location</button>
 								</div>
 							</div>
-							<button onclick={() => removeProduct(index)} class="text-gray-400 hover:text-red-500">
-								<Icon icon="heroicons:trash" class="h-5 w-5" />
-							</button>
 						</div>
-					{/each}
+					{/if}
 
-					<button
-						onclick={openProductModal}
-						class="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 py-3 text-xs font-semibold text-gray-500 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
-					>
-						<Icon icon="heroicons:plus" class="h-4 w-4" /> Add Another Product
-					</button>
+					<!-- Contact Information -->
+					<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+						<div class="space-y-2">
+							<label for="phone" class="text-sm font-medium">Phone Number <span class="text-[#335CFF]">*</span></label>
+							<div class="relative flex rounded-[10px] border border-[#EBEBEB] bg-white text-sm">
+								<button type="button" class="flex w-[96px] items-center gap-2 border-r border-[#EBEBEB] px-2 py-3" onclick={() => (open = !open)}>
+									<img src={selectedCountry.flag} alt={selectedCountry.name} class="h-5 w-5 rounded-full object-cover" />
+									<span class="text-xs">{selectedCountry.dial_code}</span>
+									<svg class="ml-auto h-4 w-4 text-gray-500 transition-transform duration-200" class:rotate-180={open} viewBox="0 0 20 20" fill="currentColor">
+										<path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd" />
+									</svg>
+								</button>
+								<input id="phone" type="tel" bind:value={phoneNumber} placeholder="(555) 000-0000" class="w-full flex-1 px-4 py-3 text-sm placeholder:text-[#A3A3A3] focus:outline-none" oninput={(e) => { const t = e.target as HTMLInputElement; t.value = t.value.replace(/[^0-9]/g, ''); phoneNumber = t.value; }} />
+								{#if open}
+									<ul class="absolute top-full left-0 z-50 mt-1 max-h-64 w-72 overflow-auto rounded-lg border bg-white shadow-lg">
+										{#each countries as country}
+											<li class="flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-gray-100" onclick={() => selectCountry(country)} onkeydown={(e) => e.key === 'Enter' && selectCountry(country)} role="option" tabindex="0" aria-selected={selectedCountry === country}>
+												<img src={country.flag} alt={country.name} class="h-5 w-7 rounded-sm object-cover" />
+												<span class="text-sm">{country.name}</span>
+												<span class="ml-auto text-xs text-gray-500">{country.dial_code}</span>
+											</li>
+										{/each}
+									</ul>
+								{/if}
+							</div>
+						</div>
 
-					<div class="mt-8">
-						<button
-							onclick={handleContinue}
-							disabled={isSubmitting}
-							class="w-full rounded-lg bg-black py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:opacity-70"
-						>
-							Continue
-						</button>
+						<div class="space-y-2">
+							<label for="email" class="text-sm font-medium">Email Address <span class="text-[#335CFF]">*</span></label>
+							<div class="flex items-center gap-0 rounded-[10px] border border-[#EBEBEB] bg-white px-3 text-sm">
+								<img src="/mail-line.svg" alt="mail" class="h-5 w-5" />
+								<input id="email" type="email" bind:value={emailAddress} placeholder="hello@company.com" class="w-full rounded-[10px] px-4 py-3 focus:outline-none" />
+							</div>
+						</div>
+
+						<div class="space-y-2">
+							<label for="website" class="text-sm font-medium">Website URL</label>
+							<div class="flex w-full items-center rounded-[10px] border border-[#EBEBEB] bg-white px-3 text-sm focus:outline-none" style="box-shadow: 0px 1px 2px 0px #0A0D1408;">
+								<div class="border-r py-3 pr-3 text-[#5C5C5C]">https://</div>
+								<input id="website" type="url" bind:value={websiteURL} placeholder="www.example.com" class="w-full pl-3 placeholder:text-[#171717] focus:outline-none" />
+							</div>
+						</div>
+					</div>
+				</div>
+			{:else if currentStep === 2}
+				<PaymentPricingStep
+					{paymentMethods}
+					{currencies}
+					{taxRate}
+					onTogglePayment={togglePaymentMethod}
+					onToggleCurrency={toggleCurrency}
+					onOpenTaxModal={() => (showTaxModal = true)}
+				/>
+			{:else}
+				<!-- Step 3: Summary -->
+				<div class="space-y-6">
+					<div class="text-center">
+						<div class="mx-auto h-[96px] w-[96px]">
+							<img src="/summary-icon.svg" alt="summary-icon" class="h-full w-full" />
+						</div>
+						<h3 class="mb-2 text-2xl font-medium">Onboarding Summary</h3>
+						<p class="-mt-2 text-[16px] text-[#5C5C5C]">Review and complete your account setup.</p>
+					</div>
+					<div class="my-8 h-[1px] w-full bg-[#EBEBEB]"></div>
+
+					<div class="space-y-3 rounded-2xl border bg-white px-4" style="box-shadow: 0px 1px 2px 0px #0A0D1408;">
+						<SummaryRow icon="/account-pin-box-line.svg" label="Company Name" value={companyName} editStep={1} onEdit={editField} />
+						<SummaryRow icon="/grid-icon.svg" label="Business Type/Category" value={otherBusinessType || selectedBusinessType?.label || 'Not selected'} editStep={1} onEdit={editField} />
+						<SummaryRow icon="/phone-icon.svg" label="Phone Number" value={phoneNumber || 'Not provided'} editStep={1} onEdit={editField} />
+						<SummaryRow icon="/mail-icon.svg" label="Email Address" value={emailAddress} editStep={1} onEdit={editField} />
+						{#if websiteURL}
+							<SummaryRow icon="/globe-icon.svg" label="Website URL" value={websiteURL} editStep={1} onEdit={editField} />
+						{/if}
+						<SummaryRow icon="/bank-icon.svg" label="Payment Method" value={getPaymentMethodDisplay()} editStep={2} onEdit={editField} />
+						<SummaryRow icon="/currency-icon.svg" label="Preferred Currency" value={getCurrencyDisplay()} editStep={2} onEdit={editField} showBorder={false} />
 					</div>
 				</div>
 			{/if}
-		{:else if currentStep === 4}
-			<div class="mb-10 pt-4 text-center">
-				<div class="mb-4 flex justify-center">
-					<div class="flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
-						<Icon icon="heroicons:check-circle" class="h-6 w-6 text-green-500" />
-					</div>
-				</div>
-				<h1 class="text-2xl font-bold text-gray-900">Onboarding Summary</h1>
-				<p class="mt-2 text-sm text-gray-500">Review and complete your account setup.</p>
-			</div>
 
-			<div class="space-y-6">
-				<div class="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
-					<div class="flex items-center justify-between p-4">
-						<div class="flex items-center gap-4">
-							<div
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-500"
-							>
-								<Icon icon="heroicons:building-office" class="h-5 w-5" />
-							</div>
-							<div>
-								<p class="text-xs text-gray-500">Company Name</p>
-								<p class="text-sm font-medium text-gray-900">
-									{formData.companyName || 'Not provided'}
-								</p>
-							</div>
-						</div>
-						<button onclick={() => editStep(1)} class="text-gray-400 hover:text-gray-600"
-							><Icon icon="heroicons:pencil-square" class="h-5 w-5" /></button
-						>
-					</div>
-
-					<div class="flex items-center justify-between p-4">
-						<div class="flex items-center gap-4">
-							<div
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-500"
-							>
-								<Icon icon="heroicons:briefcase" class="h-5 w-5" />
-							</div>
-							<div>
-								<p class="text-xs text-gray-500">Business Type/Category</p>
-								<p class="text-sm font-medium text-gray-900">
-									{displayCategory || 'Not selected'}
-								</p>
-							</div>
-						</div>
-						<button onclick={() => editStep(1)} class="text-gray-400 hover:text-gray-600"
-							><Icon icon="heroicons:pencil-square" class="h-5 w-5" /></button
-						>
-					</div>
-
-					<div class="flex items-center justify-between p-4">
-						<div class="flex items-center gap-4">
-							<div
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-500"
-							>
-								<Icon icon="heroicons:phone" class="h-5 w-5" />
-							</div>
-							<div>
-								<p class="text-xs text-gray-500">Phone Number</p>
-								<div class="flex items-center gap-2 text-sm font-medium text-gray-900">
-									<img
-										src={`https://flagcdn.com/w40/${formData.phoneCode.iso}.png`}
-										alt={formData.phoneCode.name}
-										class="h-4 w-6 rounded-sm object-cover"
-									/>
-									<span>{formData.phoneCode.code} {formData.phone || ''}</span>
-								</div>
-							</div>
-						</div>
-						<button onclick={() => editStep(1)} class="text-gray-400 hover:text-gray-600"
-							><Icon icon="heroicons:pencil-square" class="h-5 w-5" /></button
-						>
-					</div>
-
-					<div class="flex items-center justify-between p-4">
-						<div class="flex items-center gap-4">
-							<div
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-500"
-							>
-								<Icon icon="heroicons:envelope" class="h-5 w-5" />
-							</div>
-							<div>
-								<p class="text-xs text-gray-500">Email Address</p>
-								<p class="text-sm font-medium text-gray-900">
-									{formData.email || 'Not provided'}
-								</p>
-							</div>
-						</div>
-						<button onclick={() => editStep(1)} class="text-gray-400 hover:text-gray-600"
-							><Icon icon="heroicons:pencil-square" class="h-5 w-5" /></button
-						>
-					</div>
-
-					<div class="flex items-center justify-between p-4">
-						<div class="flex items-center gap-4">
-							<div
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-500"
-							>
-								<Icon icon="heroicons:globe-alt" class="h-5 w-5" />
-							</div>
-							<div>
-								<p class="text-xs text-gray-500">Website URL</p>
-								<p class="text-sm font-medium text-gray-900">
-									{formData.website || 'Not provided'}
-								</p>
-							</div>
-						</div>
-						<button onclick={() => editStep(1)} class="text-gray-400 hover:text-gray-600"
-							><Icon icon="heroicons:pencil-square" class="h-5 w-5" /></button
-						>
-					</div>
-
-					<div class="flex items-center justify-between p-4">
-						<div class="flex items-center gap-4">
-							<div
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-500"
-							>
-								<Icon icon="heroicons:credit-card" class="h-5 w-5" />
-							</div>
-							<div>
-								<p class="text-xs text-gray-500">Select Payment Method</p>
-								<div class="flex items-center gap-2">
-									{#if formData.paymentMethod}
-										{#if formData.paymentMethod.type === 'svg'}
-											<div class="h-4 w-auto">
-												{@html formData.paymentMethod.val}
-											</div>
-										{:else if formData.paymentMethod.type === 'image'}
-											<img
-												src={formData.paymentMethod.val}
-												alt={formData.paymentMethod.name}
-												class="h-4 object-contain"
-											/>
-										{:else}
-											<Icon
-												icon={formData.paymentMethod.val}
-												class="h-4 w-4 {formData.paymentMethod.color}"
-											/>
-										{/if}
-										<p class="text-sm font-medium text-gray-900">{formData.paymentMethod.name}</p>
-									{:else}
-										<p class="text-sm font-medium text-gray-900">Not selected</p>
-									{/if}
-								</div>
-							</div>
-						</div>
-						<button onclick={() => editStep(2)} class="text-gray-400 hover:text-gray-600"
-							><Icon icon="heroicons:pencil-square" class="h-5 w-5" /></button
-						>
-					</div>
-
-					<div class="flex items-center justify-between p-4">
-						<div class="flex items-center gap-4">
-							<div
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-500"
-							>
-								<Icon icon="heroicons:currency-dollar" class="h-5 w-5" />
-							</div>
-							<div>
-								<p class="text-xs text-gray-500">Select preferred currency</p>
-								<p class="text-sm font-medium text-gray-900">
-									{formData.currency || 'Not selected'}
-								</p>
-							</div>
-						</div>
-						<button onclick={() => editStep(2)} class="text-gray-400 hover:text-gray-600"
-							><Icon icon="heroicons:pencil-square" class="h-5 w-5" /></button
-						>
-					</div>
-
-					<div class="flex items-center justify-between p-4">
-						<div class="flex items-center gap-4">
-							<div
-								class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-500"
-							>
-								<Icon icon="heroicons:shopping-bag" class="h-5 w-5" />
-							</div>
-							<div>
-								<p class="text-xs text-gray-500">Products/Services listed</p>
-								<p class="text-sm font-medium text-gray-900">{formData.products.length} Items</p>
-							</div>
-						</div>
-						<button onclick={() => editStep(3)} class="text-gray-400 hover:text-gray-600"
-							><Icon icon="heroicons:pencil-square" class="h-5 w-5" /></button
-						>
-					</div>
-				</div>
-
-				<div class="mt-8 pt-4">
-					<button
-						onclick={handleContinue}
-						disabled={isSubmitting}
-						class="flex w-full items-center justify-center gap-2 rounded-lg bg-black py-4 text-sm font-bold text-white shadow-lg transition hover:bg-gray-800 disabled:opacity-70"
-					>
-						{#if isSubmitting}
-							<svg class="h-5 w-5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
-								<circle
-									class="opacity-25"
-									cx="12"
-									cy="12"
-									r="10"
-									stroke="currentColor"
-									stroke-width="4"
-								></circle>
-								<path
-									class="opacity-75"
-									fill="currentColor"
-									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-								></path>
-							</svg>
-							Creating Account...
-						{:else}
-							Complete Registration
-						{/if}
-					</button>
-				</div>
-			</div>
-		{/if}
-
-		{#if currentStep < 3}
-			<div class="mt-8">
-				<button
-					onclick={handleContinue}
-					disabled={isSubmitting}
-					class="flex w-full items-center justify-center gap-2 rounded-lg bg-black py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 disabled:opacity-70"
-				>
-					{#if isSubmitting}
-						<svg class="h-5 w-5 animate-spin text-white" fill="none" viewBox="0 0 24 24"
-							><circle
-								class="opacity-25"
-								cx="12"
-								cy="12"
-								r="10"
-								stroke="currentColor"
-								stroke-width="4"
-							></circle><path
-								class="opacity-75"
-								fill="currentColor"
-								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-							></path></svg
-						>
-						Processing...
-					{:else}
-						{currentStep === 4 ? 'Complete Registration' : 'Continue'}
-					{/if}
-				</button>
-			</div>
-		{/if}
-	</div>
-
-	{#if isTaxModalOpen}
-		<div
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-		>
-			<div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-				<h3 class="mb-2 text-lg font-bold text-gray-900">Enter Tax Rate</h3>
-				<p class="mb-4 text-sm text-gray-500">
-					Enter the percentage tax to apply to your bookings.
-				</p>
-				<div class="relative mb-6">
-					<input
-						type="number"
-						bind:value={formData.taxRate}
-						placeholder="7.5"
-						class="w-full rounded-lg border border-gray-300 px-4 py-2 text-lg font-medium text-gray-900 outline-none focus:border-black focus:ring-1 focus:ring-black"
-					/>
-					<span class="absolute top-2.5 right-4 font-bold text-gray-400">%</span>
-				</div>
-				<div class="flex gap-3">
-					<button
-						onclick={() => (isTaxModalOpen = false)}
-						class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-						>Cancel</button
-					>
-					<button
-						onclick={() => (isTaxModalOpen = false)}
-						class="flex-1 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-						>Save Rate</button
-					>
-				</div>
-			</div>
+			<OnboardingNavButtons
+				{currentStep}
+				{totalSteps}
+				{canProceed}
+				{isSubmitting}
+				onNext={nextStep}
+				onPrev={prevStep}
+				onSubmit={submitOnboarding}
+			/>
 		</div>
-	{/if}
-
-	{#if isProductModalOpen}
-		<div
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-		>
-			<div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-				<div class="mb-4 flex items-center justify-between">
-					<h3 class="text-lg font-bold text-gray-900">Add Product / Service</h3>
-					<button
-						onclick={() => (isProductModalOpen = false)}
-						class="text-gray-400 hover:text-gray-600"
-					>
-						<Icon icon="heroicons:x-mark" class="h-6 w-6" />
-					</button>
-				</div>
-
-				<div class="space-y-4">
-					<div class="relative z-20">
-						<label class="mb-1 block text-xs font-semibold text-gray-700">Category</label>
-						<div class="relative">
-							<button
-								onclick={() => (isServiceDropdownOpen = !isServiceDropdownOpen)}
-								class="flex w-full items-center justify-between rounded-lg border border-gray-300 px-3 py-2 text-sm transition outline-none focus:border-black focus:ring-1 focus:ring-black"
-							>
-								{#if newProduct.category}
-									<div class="flex items-center gap-2">
-										<Icon icon={newProduct.category.icon} class="h-4 w-4 text-gray-500" />
-										<span>{newProduct.category.name}</span>
-									</div>
-								{:else}
-									<span class="text-gray-400">Select Service Category</span>
-								{/if}
-								<Icon icon="heroicons:chevron-down" class="h-4 w-4 text-gray-400" />
-							</button>
-
-							{#if isServiceDropdownOpen}
-								<div
-									class="absolute top-[110%] left-0 z-30 max-h-48 w-full overflow-hidden overflow-y-auto rounded-lg border border-gray-100 bg-white shadow-xl"
-								>
-									{#each serviceTypes as type}
-										<button
-											onclick={() => selectServiceType(type)}
-											class="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-gray-50"
-										>
-											<Icon icon={type.icon} class="h-4 w-4 text-gray-500" />
-											<span class="font-medium text-gray-900">{type.name}</span>
-										</button>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					</div>
-
-					{#if newProduct.category?.name === 'Other'}
-						<div>
-							<label class="mb-1 block text-xs font-semibold text-gray-700">Custom Name</label>
-							<input
-								type="text"
-								bind:value={newProduct.customName}
-								placeholder="e.g. Luxury Car Rental"
-								class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
-							/>
-						</div>
-					{/if}
-
-					<div>
-						<label class="mb-1 block text-xs font-semibold text-gray-700">Price</label>
-						<div class="relative">
-							<span
-								class="pointer-events-none absolute top-2.5 left-3 text-sm font-medium text-gray-500"
-							>
-								{currencySymbol}
-							</span>
-							<input
-								type="text"
-								inputmode="decimal"
-								bind:value={newProduct.price}
-								oninput={(e) => {
-                                    const target = e.currentTarget as HTMLInputElement;
-                                    // Replace any char that is NOT a digit or a dot
-                                    let val = target.value.replace(/[^0-9.]/g, '');
-                                    // Prevent multiple dots
-                                    if ((val.match(/\./g) || []).length > 1) {
-                                        val = val.substring(0, val.lastIndexOf('.'));
-                                    }
-                                    target.value = val;
-                                    newProduct.price = val;
-                                }}
-								placeholder="0.00"
-								class="w-full rounded-lg border border-gray-300 py-2.5 pr-3 pl-8 text-sm transition outline-none focus:border-black focus:ring-1 focus:ring-black"
-							/>
-						</div>
-					</div>
-					<div>
-						<label class="mb-1 block text-xs font-semibold text-gray-700">Description</label>
-						<textarea
-							bind:value={newProduct.description}
-							rows="3"
-							class="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
-						></textarea>
-					</div>
-				</div>
-
-				<div class="mt-6">
-					<button
-						onclick={saveProduct}
-						class="w-full rounded-lg bg-black px-4 py-3 text-sm font-bold text-white hover:bg-gray-800"
-					>
-						Save Product
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
+	</main>
 </div>
 
-<style>
-	.bg {
-		background: conic-gradient(
-			from 10.7deg at 50.03% 44.27%,
-			rgba(242, 243, 246, 0.923391) -135.02deg,
-			rgba(240, 245, 245, 0.985181) 34.46deg,
-			#f0f5f5 75.11deg,
-			#fae9fa 134.76deg,
-			#ffefec 175.96deg,
-			#fbebf6 184.8deg,
-			rgba(250, 233, 250, 0.36) 203.89deg,
-			rgba(242, 243, 246, 0.923391) 224.98deg,
-			rgba(240, 245, 245, 0.985181) 394.46deg
-		);
-	}
-
-	/* Remove arrows/spinners from number inputs */
-	input[type='number']::-webkit-outer-spin-button,
-	input[type='number']::-webkit-inner-spin-button {
-		-webkit-appearance: none;
-		margin: 0;
-	}
-
-	/* For Firefox */
-	input[type='number'] {
-		-moz-appearance: textfield;
-	}
-</style>
+<TaxRateModal
+	show={showTaxModal}
+	{taxRate}
+	onSave={(rate) => { taxRate = rate; showTaxModal = false; }}
+	onCancel={() => (showTaxModal = false)}
+/>

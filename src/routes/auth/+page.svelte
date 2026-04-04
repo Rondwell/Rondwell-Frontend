@@ -61,8 +61,9 @@
 						<!-- Toggle between phone/email -->
 						<button
 							type="button"
-							on:click={toggleInputType}
-							class="flex items-center gap-1 text-xs text-gray-600 hover:underline"
+							disabled
+							class="flex items-center gap-1 text-xs text-gray-400 cursor-not-allowed opacity-50"
+							title="Phone number login coming soon"
 						>
 							<svg
 								width="14"

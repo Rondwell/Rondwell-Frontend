@@ -19,7 +19,7 @@
 </script>
 
 <div
-  class="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 w-full max-w-sm pointer-events-none"
+  class="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-2 w-full max-w-md pointer-events-none px-4"
   aria-live="polite"
   aria-atomic="false"
 >

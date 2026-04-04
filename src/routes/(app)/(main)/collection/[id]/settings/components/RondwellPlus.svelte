@@ -30,7 +30,7 @@
 	const features: Feature[] = [
 		{
 			icon: '/dollar-coin.svg',
-			oldValue: '5%',
+			oldValue: '6%',
 			title: '0% Platform Fee',
 			footnote: '1',
 			alt: 'dollar'

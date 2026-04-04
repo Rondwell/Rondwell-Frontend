@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createTicketType, updateTicketType } from '$lib/services/event.services';
+	import { toast } from '$lib/stores/toast.store';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import PlaceholderExtension from '@tiptap/extension-placeholder';
@@ -15,6 +16,9 @@
 	export let ticket: any = null; // null = create, object = edit
 	export let eventTitle = '';
 	export let onSuccess: () => void = () => {};
+	export let eventCapacity: number = 0;
+	export let waitlistEnabled: boolean = false;
+	export let existingTickets: any[] = [];
 
 	// Form state
 	let name = '';
@@ -152,14 +156,28 @@
 
 	async function handleSubmit() {
 		errorMsg = '';
-		if (!name.trim()) { errorMsg = 'Ticket name is required'; return; }
-		if (!salesStartDate || !salesEndDate) { errorMsg = 'Sales start and end dates are required'; return; }
+		if (!name.trim()) { errorMsg = 'Ticket name is required'; toast.error('Ticket name is required'); return; }
+		if (!salesStartDate || !salesEndDate) { errorMsg = 'Sales start and end dates are required'; toast.error('Sales start and end dates are required'); return; }
 
 		const startDt = buildDateTime(salesStartDate, salesStartTime);
 		const endDt = buildDateTime(salesEndDate, salesEndTime);
-		if (startDt >= endDt) { errorMsg = 'Sales start must be before end date'; return; }
+		if (startDt >= endDt) { errorMsg = 'Sales start must be before end date'; toast.error('Sales start must be before end date'); return; }
 
-		if (!isFree && (!price || Number(price) <= 0)) { errorMsg = 'Price is required for paid tickets'; return; }
+		if (!isFree && (!price || Number(price) <= 0)) { errorMsg = 'Price is required for paid tickets'; toast.error('Price is required for paid tickets'); return; }
+
+		// Frontend capacity validation
+		if (eventCapacity > 0 && totalTickets && !waitlistEnabled) {
+			const otherTicketsTotal = existingTickets
+				.filter((t: any) => !isEditing || t.id !== ticket?.id)
+				.reduce((sum: number, t: any) => sum + (t.quantityAvailable ?? 0), 0);
+			const remaining = eventCapacity - otherTicketsTotal;
+			if (Number(totalTickets) > remaining) {
+				const msg = `Cannot allocate ${totalTickets} tickets. Only ${remaining} of ${eventCapacity} event capacity remaining.`;
+				errorMsg = msg;
+				toast.error(msg);
+				return;
+			}
+		}
 
 		saving = true;
 		try {
@@ -184,6 +202,7 @@
 			onSuccess();
 		} catch (e: any) {
 			errorMsg = e.message ?? 'Failed to save ticket';
+			toast.error(errorMsg);
 		} finally {
 			saving = false;
 		}
@@ -454,7 +473,15 @@
 						placeholder="Leave empty for unlimited"
 						class="w-full rounded-md border border-gray-200 bg-[#F8F8F9] px-3 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:border-gray-400 focus:outline-none"
 					/>
-					<p class="mt-1 text-xs text-gray-400">Total number of this ticket type that can be purchased before sold out</p>
+					{#if eventCapacity > 0}
+						{@const otherTotal = existingTickets.filter((t) => !isEditing || t.id !== ticket?.id).reduce((s, t) => s + (t.quantityAvailable ?? 0), 0)}
+						{@const remaining = eventCapacity - otherTotal}
+						<p class="mt-1 text-xs text-gray-400">
+							Event capacity: {eventCapacity} · Already allocated: {otherTotal} · Remaining: {remaining}
+						</p>
+					{:else}
+						<p class="mt-1 text-xs text-gray-400">Total number of this ticket type that can be purchased before sold out</p>
+					{/if}
 				</div>
 			</div>
 

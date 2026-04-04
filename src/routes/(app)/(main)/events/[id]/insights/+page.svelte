@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { DonutChart, StackedAreaChart } from '@carbon/charts-svelte';
 	import '@carbon/charts-svelte/styles.css';
@@ -155,8 +154,10 @@
 					/>
 				</svg>
 			</div>
-			<button
-				on:click={()=> goto('/event-page/1')}
+			<a
+				href="/event-page/{eventId}"
+				target="_blank"
+				rel="noopener noreferrer"
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
 			>
 				Event Page
@@ -185,7 +186,7 @@
 						stroke-width="0.37461"
 					/>
 				</svg>
-			</button>
+			</a>
 		</div>
 		<h1 class="mb-4 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
 

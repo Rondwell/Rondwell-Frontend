@@ -1,10 +1,29 @@
 <script lang="ts">
+	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
 	import Nav from '../../components/Nav.svelte';
 	import Account from './Components/Account.svelte';
 	import Preferences from './Components/Preferences.svelte';
 	import Wallet from './Components/Wallet.svelte';
 
 	let activeTab = 'account';
+
+	const validTabs = ['account', 'preferences', 'wallet'];
+
+	onMount(() => {
+		const tabParam = $page.url.searchParams.get('tab');
+		if (tabParam && validTabs.includes(tabParam)) {
+			activeTab = tabParam;
+		}
+	});
+
+	// Also react to URL changes while on the page
+	$: {
+		const tabParam = $page.url.searchParams.get('tab');
+		if (tabParam && validTabs.includes(tabParam)) {
+			activeTab = tabParam;
+		}
+	}
 
 	const tabs = [
 		{

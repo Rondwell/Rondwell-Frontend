@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { getEventEarnings, getUserSubscriptionInfo } from '$lib/services/wallet.services';
 	import { getEventCache } from '$lib/stores/eventCache.store';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
+	import { onMount } from 'svelte';
 
 	$: eventId = $page.params.id ?? '';
 
@@ -24,31 +26,87 @@
 	let showStatusDropdown = false;
 	let dateFilter = 'All Time';
 	let showDateDropdown = false;
+	let loadingEarnings = true;
 
-	// Mock earnings data
-	let earnings = [
-		{ id: '1', user: 'Sarah Johnson', email: 'sarah@example.com', date: '2026-03-25T14:30:00Z', ticketType: 'VIP', amount: 50000, status: 'COMPLETED' },
-		{ id: '2', user: 'Mike Chen', email: 'mike@example.com', date: '2026-03-25T12:15:00Z', ticketType: 'General', amount: 15000, status: 'COMPLETED' },
-		{ id: '3', user: 'Ada Obi', email: 'ada@example.com', date: '2026-03-24T09:45:00Z', ticketType: 'VIP', amount: 50000, status: 'PENDING' },
-		{ id: '4', user: 'John Doe', email: 'john@example.com', date: '2026-03-24T08:00:00Z', ticketType: 'Early Bird', amount: 10000, status: 'COMPLETED' },
-		{ id: '5', user: 'Fatima Ali', email: 'fatima@example.com', date: '2026-03-23T16:20:00Z', ticketType: 'General', amount: 15000, status: 'REFUNDED' },
-	];
+	let earnings: any[] = [];
+	let feeRate = 0.06;
+	let feePercent = 6;
+	let earningsPage = 1;
+	const earningsPerPage = 20;
 
 	const statusOptions = ['All', 'Completed', 'Pending', 'Refunded'];
-	const dateOptions = ['All Time', 'Today', 'This Week', 'This Month'];
+	const dateOptions = ['All Time', 'Today', 'This Week', 'This Month', 'Last 3 Months', 'Last 6 Months'];
 
-	$: totalEarnings = earnings.reduce((sum, e) => sum + (e.status !== 'REFUNDED' ? e.amount : 0), 0);
-	$: completedEarnings = earnings.filter(e => e.status === 'COMPLETED').reduce((sum, e) => sum + e.amount, 0);
-	$: pendingEarnings = earnings.filter(e => e.status === 'PENDING').reduce((sum, e) => sum + e.amount, 0);
+	function koboToNaira(amount: number): number {
+		return amount / 100;
+	}
 
-	$: filteredEarnings = earnings.filter(e => {
+	$: totalEarnings = earnings.reduce((sum: number, e: any) => sum + (e.status !== 'REFUNDED' ? koboToNaira(e.totalAmount ?? 0) : 0), 0);
+	$: completedEarnings = earnings.filter((e: any) => e.status === 'COMPLETED').reduce((sum: number, e: any) => sum + koboToNaira(e.totalAmount ?? 0), 0);
+	$: pendingEarnings = earnings.filter((e: any) => e.status === 'PENDING').reduce((sum: number, e: any) => sum + koboToNaira(e.totalAmount ?? 0), 0);
+	$: platformFees = completedEarnings * feeRate;
+	$: netEarnings = completedEarnings - platformFees;
+
+	$: filteredEarnings = earnings.filter((e: any) => {
 		if (searchQuery) {
 			const q = searchQuery.toLowerCase();
-			if (!e.user.toLowerCase().includes(q) && !e.email.toLowerCase().includes(q) && !e.ticketType.toLowerCase().includes(q)) return false;
+			const name = (e.metaData?.purchaserName || e.metaData?.userName || '').toLowerCase();
+			const email = (e.metaData?.purchaserEmail || e.metaData?.userEmail || '').toLowerCase();
+			const ticketName = (e.metaData?.ticketTypeName || '').toLowerCase();
+			if (!name.includes(q) && !email.includes(q) && !ticketName.includes(q)) return false;
 		}
 		if (statusFilter !== 'All' && e.status !== statusFilter.toUpperCase()) return false;
+		if (dateFilter !== 'All Time') {
+			const now = new Date();
+			const created = new Date(e.paidAt || e.createdAt);
+			if (dateFilter === 'Today') {
+				if (created.toDateString() !== now.toDateString()) return false;
+			} else if (dateFilter === 'This Week') {
+				const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+				if (created < weekAgo) return false;
+			} else if (dateFilter === 'This Month') {
+				if (created.getMonth() !== now.getMonth() || created.getFullYear() !== now.getFullYear()) return false;
+			} else if (dateFilter === 'Last 3 Months') {
+				const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+				if (created < threeMonthsAgo) return false;
+			} else if (dateFilter === 'Last 6 Months') {
+				const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+				if (created < sixMonthsAgo) return false;
+			}
+		}
 		return true;
 	});
+
+	$: earningsTotalPages = Math.ceil(filteredEarnings.length / earningsPerPage);
+	$: pagedEarnings = filteredEarnings.slice((earningsPage - 1) * earningsPerPage, earningsPage * earningsPerPage);
+	$: if (statusFilter || dateFilter || searchQuery) earningsPage = 1;
+
+	onMount(() => {
+		if (eventId) {
+			fetchEarnings();
+			loadFeeRate();
+		}
+	});
+
+	async function loadFeeRate() {
+		try {
+			const info = await getUserSubscriptionInfo();
+			feeRate = info.feeRate;
+			feePercent = Math.round(feeRate * 100);
+		} catch { /* use defaults */ }
+	}
+
+	async function fetchEarnings() {
+		loadingEarnings = true;
+		try {
+			const result = await getEventEarnings(eventId, { limit: 100 });
+			earnings = result.data ?? [];
+		} catch (e: any) {
+			console.error('Failed to fetch earnings:', e);
+		} finally {
+			loadingEarnings = false;
+		}
+	}
 
 	function formatDate(dateStr: string): string {
 		const d = new Date(dateStr);
@@ -71,6 +129,52 @@
 			case 'REFUNDED': return 'bg-red-100 text-red-700';
 			default: return 'bg-gray-100 text-gray-700';
 		}
+	}
+
+	function getUserInitials(e: any): string {
+		const name = e.metaData?.purchaserName || e.metaData?.userName || 'U';
+		return name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+	}
+
+	function getUserName(e: any): string {
+		return e.metaData?.purchaserName || e.metaData?.userName || 'Unknown';
+	}
+
+	function getUserEmail(e: any): string {
+		return e.metaData?.purchaserEmail || e.metaData?.userEmail || '';
+	}
+
+	function getTicketType(e: any): string {
+		return e.metaData?.ticketTypeName || 'Ticket';
+	}
+
+	function downloadCSV() {
+		if (filteredEarnings.length === 0) return;
+		const headers = ['Name', 'Email', 'Time', 'Date', 'Ticket Type', 'Amount (₦)', `Fee (${feePercent}%)`, 'Net (₦)', 'Status'];
+		const rows = filteredEarnings.map((e: any) => {
+			const gross = koboToNaira(e.totalAmount ?? 0);
+			const fee = e.status === 'COMPLETED' ? gross * feeRate : 0;
+			const net = gross - fee;
+			return [
+				getUserName(e),
+				getUserEmail(e),
+				formatTime(e.paidAt || e.createdAt),
+				formatDate(e.paidAt || e.createdAt),
+				getTicketType(e),
+				gross.toFixed(2),
+				fee > 0 ? fee.toFixed(2) : '0',
+				net.toFixed(2),
+				e.status
+			].map(v => `"${v}"`).join(',');
+		});
+		const csv = [headers.join(','), ...rows].join('\n');
+		const blob = new Blob([csv], { type: 'text/csv' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `earnings-${eventId}-${new Date().toISOString().split('T')[0]}.csv`;
+		a.click();
+		URL.revokeObjectURL(url);
 	}
 </script>
 
@@ -96,29 +200,49 @@
 	</div>
 
 	<!-- Summary Cards -->
-	<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-		<div class="rounded-xl border bg-white p-5">
+	<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+		<div class="rounded-xl border bg-white p-4">
 			<p class="text-xs text-gray-500">Total Earnings</p>
-			<p class="mt-1 text-2xl font-semibold">{formatCurrency(totalEarnings)}</p>
+			{#if loadingEarnings}
+				<div class="mt-1 h-7 w-24 animate-pulse rounded bg-gray-200"></div>
+			{:else}
+				<p class="mt-1 text-xl font-semibold">{formatCurrency(totalEarnings)}</p>
+			{/if}
 		</div>
-		<div class="rounded-xl border bg-white p-5">
+		<div class="rounded-xl border bg-white p-4">
 			<p class="text-xs text-gray-500">Completed</p>
-			<p class="mt-1 text-2xl font-semibold text-green-600">{formatCurrency(completedEarnings)}</p>
+			{#if loadingEarnings}
+				<div class="mt-1 h-7 w-24 animate-pulse rounded bg-gray-200"></div>
+			{:else}
+				<p class="mt-1 text-xl font-semibold text-green-600">{formatCurrency(completedEarnings)}</p>
+			{/if}
 		</div>
-		<div class="rounded-xl border bg-white p-5">
+		<div class="rounded-xl border bg-white p-4">
+			<p class="text-xs text-gray-500">Platform Fee ({feePercent}%)</p>
+			{#if loadingEarnings}
+				<div class="mt-1 h-7 w-24 animate-pulse rounded bg-gray-200"></div>
+			{:else}
+				<p class="mt-1 text-xl font-semibold text-red-500">-{formatCurrency(platformFees)}</p>
+			{/if}
+		</div>
+		<div class="rounded-xl border bg-white p-4">
 			<p class="text-xs text-gray-500">Pending</p>
-			<p class="mt-1 text-2xl font-semibold text-yellow-600">{formatCurrency(pendingEarnings)}</p>
+			{#if loadingEarnings}
+				<div class="mt-1 h-7 w-24 animate-pulse rounded bg-gray-200"></div>
+			{:else}
+				<p class="mt-1 text-xl font-semibold text-yellow-600">{formatCurrency(pendingEarnings)}</p>
+			{/if}
 		</div>
 	</div>
 
 	<!-- Search + Filters -->
 	<div class="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-		<div class="relative w-full max-w-xl">
+		<div class="relative w-full max-w-sm">
 			<input type="text" bind:value={searchQuery} placeholder="Search by name, email, or ticket type..." class="h-[43px] w-full rounded-lg bg-white py-2 pr-4 pl-10 text-[#C5C6C6] focus:ring-0 focus:outline-none" />
 			<span class="absolute top-2.5 left-3 text-gray-400"><img src="/search-favorite.png" alt="search" class="h-5 w-5" /></span>
 		</div>
 		<div class="flex items-center gap-2">
-			<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]"><img src="/download-icon.svg" alt="download" /></div>
+			<div class="flex h-[33px] w-[33px] cursor-pointer items-center justify-center rounded-lg bg-[#EBECED] hover:bg-gray-200" on:click={downloadCSV} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && downloadCSV()}><img src="/download-icon.svg" alt="download CSV" /></div>
 			<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]"><img src="/export.svg" alt="export" /></div>
 			<div use:clickOutside={() => (showStatusDropdown = false)} class="relative">
 				<button on:click={() => (showStatusDropdown = !showStatusDropdown)} class="flex items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm">
@@ -148,7 +272,7 @@
 	</div>
 
 	<!-- Earnings Table -->
-	{#if loading}
+	{#if loadingEarnings}
 		<div class="overflow-hidden rounded-xl bg-white shadow-sm">
 			{#each [1, 2, 3, 4] as _}
 				<div class="flex animate-pulse items-center gap-4 border-b px-4 py-4 last:border-none">
@@ -164,42 +288,72 @@
 		<div class="overflow-visible rounded-xl bg-white shadow-sm">
 			<!-- Table Header -->
 			<div class="hidden border-b px-4 py-3 text-xs font-medium text-gray-400 lg:flex">
-				<div class="w-1/4">User</div>
-				<div class="w-1/6">Time</div>
-				<div class="w-1/6">Date</div>
-				<div class="w-1/6">Ticket Type</div>
-				<div class="w-1/6 text-right">Amount</div>
-				<div class="w-1/6 text-right">Status</div>
+				<div class="w-[22%]">User</div>
+				<div class="w-[10%]">Time</div>
+				<div class="w-[12%]">Date</div>
+				<div class="w-[12%]">Ticket Type</div>
+				<div class="w-[12%] text-right">Amount</div>
+				<div class="w-[10%] text-right">Fee ({feePercent}%)</div>
+				<div class="w-[12%] text-right">Net</div>
+				<div class="w-[10%] text-right">Status</div>
 			</div>
-			{#each filteredEarnings as e}
+			{#each pagedEarnings as e}
+				{@const gross = koboToNaira(e.totalAmount ?? 0)}
+				{@const fee = e.status === 'COMPLETED' ? gross * feeRate : 0}
+				{@const net = gross - fee}
 				<div class="flex flex-col gap-2 border-b px-4 py-3 last:border-none lg:flex-row lg:items-center lg:gap-0">
 					<!-- User -->
-					<div class="flex items-center gap-3 lg:w-1/4">
+					<div class="flex items-center gap-3 lg:w-[22%]">
 						<div class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-pink-400 text-xs font-medium text-white">
-							{e.user.split(' ').map(n => n[0]).join('')}
+							{getUserInitials(e)}
 						</div>
-						<div>
-							<p class="text-sm font-medium">{e.user}</p>
-							<p class="text-xs text-gray-400">{e.email}</p>
+						<div class="min-w-0">
+							<p class="text-sm font-medium truncate">{getUserName(e)}</p>
+							<p class="text-xs text-gray-400 truncate">{getUserEmail(e)}</p>
 						</div>
 					</div>
 					<!-- Time -->
-					<div class="text-sm text-gray-500 lg:w-1/6">{formatTime(e.date)}</div>
+					<div class="text-sm text-gray-500 lg:w-[10%]">{formatTime(e.paidAt || e.createdAt)}</div>
 					<!-- Date -->
-					<div class="text-sm text-gray-500 lg:w-1/6">{formatDate(e.date)}</div>
+					<div class="text-sm text-gray-500 lg:w-[12%]">{formatDate(e.paidAt || e.createdAt)}</div>
 					<!-- Ticket Type -->
-					<div class="lg:w-1/6">
-						<span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">{e.ticketType}</span>
+					<div class="lg:w-[12%]">
+						<span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">{getTicketType(e)}</span>
 					</div>
 					<!-- Amount -->
-					<div class="text-sm font-medium lg:w-1/6 lg:text-right">{formatCurrency(e.amount)}</div>
+					<div class="text-sm font-medium lg:w-[12%] lg:text-right">{formatCurrency(gross)}</div>
+					<!-- Platform Fee -->
+					<div class="text-sm text-red-400 lg:w-[10%] lg:text-right">{fee > 0 ? `-${formatCurrency(fee)}` : '–'}</div>
+					<!-- Net -->
+					<div class="text-sm font-medium text-green-700 lg:w-[12%] lg:text-right">{formatCurrency(net)}</div>
 					<!-- Status -->
-					<div class="lg:w-1/6 lg:text-right">
+					<div class="lg:w-[10%] lg:text-right">
 						<span class="rounded-full px-2 py-1 text-xs font-medium {getStatusStyle(e.status)}">{e.status.charAt(0) + e.status.slice(1).toLowerCase()}</span>
 					</div>
 				</div>
 			{/each}
 		</div>
+
+		<!-- Pagination -->
+		{#if earningsTotalPages > 1}
+			<div class="mt-4 flex items-center justify-center gap-2">
+				<button
+					on:click={() => { earningsPage = Math.max(1, earningsPage - 1); }}
+					disabled={earningsPage === 1}
+					class="rounded-md px-3 py-1 text-sm text-[#616265] transition-colors hover:bg-[#EBECED] disabled:opacity-40"
+				>
+					Previous
+				</button>
+				<span class="text-sm text-gray-500">Page {earningsPage} of {earningsTotalPages}</span>
+				<button
+					on:click={() => { earningsPage = Math.min(earningsTotalPages, earningsPage + 1); }}
+					disabled={earningsPage === earningsTotalPages}
+					class="rounded-md px-3 py-1 text-sm text-[#616265] transition-colors hover:bg-[#EBECED] disabled:opacity-40"
+				>
+					Next
+				</button>
+			</div>
+		{/if}
 	{:else}
 		<div class="flex h-60 flex-col items-center justify-center rounded-xl bg-white">
 			<Icon icon="mdi:cash-off" class="mb-2 text-4xl text-gray-300" />

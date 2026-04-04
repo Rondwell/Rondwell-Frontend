@@ -1,42 +1,146 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import {
+		addBankAccount,
+		getBankAccounts,
+		getBankList,
+		getEarningsSummary,
+		getWalletBalance,
+		removeBankAccount,
+		requestWithdrawalOtp,
+		resolveBankAccount,
+		verifyWithdrawalOtp,
+	} from '$lib/services/wallet.services';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
+	import { onMount } from 'svelte';
 
 	// Balances
-	let totalBalance = 340000;
-	let withdrawableBalance = 285000;
+	let totalBalance = 0;
+	let withdrawableBalance = 0;
+	let loadingBalance = true;
 
 	// Bank accounts
-	let bankAccounts: { id: string; bankName: string; accountNumber: string; accountName: string }[] = [
-		{ id: '1', bankName: 'Access Bank', accountNumber: '0123456789', accountName: 'John Doe' },
-	];
+	let bankAccounts: { id: string; bankName: string; accountNumber: string; accountName: string }[] = [];
+	let loadingBanks = true;
 
 	// Withdrawal modal
 	let showWithdrawModal = false;
 	let showAddBankModal = false;
-	let selectedBankId = bankAccounts[0]?.id ?? '';
+	let selectedBankId = '';
 	let withdrawAmount = '';
+	let withdrawOtp = '';
+	let otpSent = false;
+	let sendingOtp = false;
 	let withdrawing = false;
 	let withdrawError = '';
 	let withdrawSuccess = '';
 
 	// Add bank form
-	let newBankName = '';
+	let banks: { name: string; code: string }[] = [];
+	let bankSearchQuery = '';
+	let showBankDropdown = false;
+	let selectedBank: { name: string; code: string } | null = null;
 	let newAccountNumber = '';
 	let newAccountName = '';
+	let resolvingAccount = false;
+	let resolveError = '';
 	let addingBank = false;
+	let addBankError = '';
 
 	// Earnings table
 	let showDateFilter = false;
 	let dateFilter = 'All Time';
 	const dateOptions = ['All Time', 'This Week', 'This Month', 'This Year'];
 
-	let eventEarnings = [
-		{ id: '1', name: 'Megaexe Party 3', type: 'Event', date: '2026-03-25T14:30:00Z', status: 'COMPLETED', amount: 200000, eventId: '69c0429efea038864ed347ee' },
-		{ id: '2', name: 'Tech Summit 2026', type: 'Event', date: '2026-03-20T10:00:00Z', status: 'COMPLETED', amount: 85000, eventId: 'abc123' },
-		{ id: '3', name: 'John Collection', type: 'Collection', date: '2026-03-18T09:00:00Z', status: 'PENDING', amount: 55000, eventId: '' },
-	];
+	let eventEarnings: any[] = [];
+	let loadingEarnings = true;
+
+	$: filteredBanks = bankSearchQuery
+		? banks.filter((b) => b.name.toLowerCase().includes(bankSearchQuery.toLowerCase()))
+		: banks;
+
+	onMount(async () => {
+		await Promise.all([loadWalletBalance(), loadBankAccounts(), loadBankList(), loadEarnings()]);
+	});
+
+	async function loadWalletBalance() {
+		loadingBalance = true;
+		try {
+			const wallet = await getWalletBalance();
+			const agg = wallet?.aggregatedBalance;
+			if (agg) {
+				totalBalance = agg.totalEarnings ?? 0;
+				withdrawableBalance = agg.withdrawable ?? 0;
+			} else {
+				const ngnBalance = wallet?.balance?.NGN ?? 0;
+				totalBalance = ngnBalance > 100000 ? ngnBalance / 100 : ngnBalance;
+				withdrawableBalance = totalBalance;
+			}
+		} catch (e: any) {
+			console.error('Failed to load wallet balance:', e);
+		} finally {
+			loadingBalance = false;
+		}
+	}
+
+	async function loadBankAccounts() {
+		loadingBanks = true;
+		try {
+			const result: any = await getBankAccounts();
+			const items = Array.isArray(result) ? result : result?.items ?? result?.data?.items ?? result?.data ?? [];
+			bankAccounts = items.map((b: any) => ({
+				id: b.id ?? b._id,
+				bankName: b.bankName,
+				accountNumber: b.accountNumber,
+				accountName: b.accountName
+			}));
+			if (bankAccounts.length > 0 && !selectedBankId) {
+				selectedBankId = bankAccounts[0].id;
+			}
+		} catch (e: any) {
+			console.error('Failed to load bank accounts:', e);
+		} finally {
+			loadingBanks = false;
+		}
+	}
+
+	async function loadBankList() {
+		try {
+			const result: any = await getBankList();
+			const items = Array.isArray(result) ? result : result?.data ?? [];
+			banks = items.map((b: any) => ({ name: b.name ?? b.bankName, code: b.code ?? b.bankCode }));
+		} catch (e: any) {
+			console.error('Failed to load bank list:', e);
+		}
+	}
+
+	async function loadEarnings() {
+		loadingEarnings = true;
+		try {
+			const result = await getEarningsSummary();
+			const items = Array.isArray(result) ? result : [];
+			// Enrich event names from the event service for items without names
+			const { getEventById } = await import('$lib/services/event.services');
+			for (const item of items) {
+				if (!item.name && item.eventId) {
+					try {
+						const event = await getEventById(item.eventId);
+						item.name = event?.title ?? '';
+					} catch { /* non-critical */ }
+				}
+			}
+			eventEarnings = items;
+		} catch (e: any) {
+			console.error('Failed to load earnings:', e);
+		} finally {
+			loadingEarnings = false;
+		}
+	}
+
+	function koboToNaira(amount: number): number {
+		return amount / 100;
+	}
 
 	function formatCurrency(amount: number): string {
 		return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount);
@@ -51,39 +155,109 @@
 	}
 
 	function getStatusStyle(status: string): string {
-		return status === 'COMPLETED' ? 'bg-green-100 text-green-700' : status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700';
+		if (status === 'COMPLETED') return 'bg-green-100 text-green-700';
+		if (status === 'PENDING') return 'bg-yellow-100 text-yellow-700';
+		if (status === 'PARTIAL') return 'bg-blue-100 text-blue-700';
+		if (status === 'FAILED') return 'bg-red-100 text-red-700';
+		return 'bg-gray-100 text-gray-700';
 	}
 
-	function handleWithdraw() {
+	async function handleRequestOtp() {
 		const amount = parseInt(withdrawAmount);
 		if (!amount || amount <= 0) { withdrawError = 'Enter a valid amount'; return; }
 		if (amount > withdrawableBalance) { withdrawError = 'Amount exceeds withdrawable balance'; return; }
 		if (!selectedBankId) { withdrawError = 'Select a bank account'; return; }
-		withdrawing = true; withdrawError = '';
-		setTimeout(() => {
-			withdrawableBalance -= amount;
+
+		sendingOtp = true;
+		withdrawError = '';
+		try {
+			await requestWithdrawalOtp(amount);
+			otpSent = true;
+		} catch (e: any) {
+			withdrawError = e.message ?? 'Failed to send OTP';
+		} finally {
+			sendingOtp = false;
+		}
+	}
+
+	async function handleWithdraw() {
+		const amount = parseInt(withdrawAmount);
+		if (!withdrawOtp || withdrawOtp.length !== 6) { withdrawError = 'Enter the 6-digit OTP'; return; }
+
+		withdrawing = true;
+		withdrawError = '';
+		try {
+			await verifyWithdrawalOtp(withdrawOtp, amount, 'NGN', selectedBankId);
 			withdrawSuccess = `${formatCurrency(amount)} withdrawal initiated successfully`;
 			withdrawAmount = '';
-			withdrawing = false;
+			withdrawOtp = '';
+			otpSent = false;
+			await loadWalletBalance();
 			setTimeout(() => { showWithdrawModal = false; withdrawSuccess = ''; }, 2000);
-		}, 1500);
+		} catch (e: any) {
+			withdrawError = e.message ?? 'Withdrawal failed';
+		} finally {
+			withdrawing = false;
+		}
 	}
 
-	function handleAddBank() {
-		if (!newBankName.trim() || !newAccountNumber.trim() || !newAccountName.trim()) return;
+	async function handleResolveAccount() {
+		if (newAccountNumber.length !== 10 || !selectedBank) return;
+		resolvingAccount = true;
+		resolveError = '';
+		newAccountName = '';
+		try {
+			const result = await resolveBankAccount(newAccountNumber, selectedBank.code);
+			newAccountName = result?.accountName ?? result?.account_name ?? '';
+			if (!newAccountName) resolveError = 'Could not resolve account name';
+		} catch (e: any) {
+			resolveError = e.message ?? 'Failed to resolve account';
+		} finally {
+			resolvingAccount = false;
+		}
+	}
+
+	function selectBank(bank: { name: string; code: string }) {
+		selectedBank = bank;
+		bankSearchQuery = bank.name;
+		showBankDropdown = false;
+		if (newAccountNumber.length === 10) handleResolveAccount();
+	}
+
+	function onAccountNumberInput() {
+		if (newAccountNumber.length === 10 && selectedBank) {
+			handleResolveAccount();
+		}
+	}
+
+	async function handleAddBank() {
+		if (!selectedBank || !newAccountNumber.trim() || !newAccountName.trim()) return;
 		addingBank = true;
-		setTimeout(() => {
-			const newId = String(Date.now());
-			bankAccounts = [...bankAccounts, { id: newId, bankName: newBankName, accountNumber: newAccountNumber, accountName: newAccountName }];
-			newBankName = ''; newAccountNumber = ''; newAccountName = '';
-			addingBank = false; showAddBankModal = false;
-		}, 800);
+		addBankError = '';
+		try {
+			await addBankAccount(newAccountNumber, selectedBank.code, selectedBank.name);
+			await loadBankAccounts();
+			selectedBank = null;
+			bankSearchQuery = '';
+			newAccountNumber = '';
+			newAccountName = '';
+			showAddBankModal = false;
+		} catch (e: any) {
+			addBankError = e.message ?? 'Failed to add bank account';
+		} finally {
+			addingBank = false;
+		}
 	}
 
-	function deleteBank(id: string) {
+	async function deleteBank(id: string) {
 		if (!confirm('Remove this bank account?')) return;
-		bankAccounts = bankAccounts.filter(b => b.id !== id);
-		if (selectedBankId === id) selectedBankId = bankAccounts[0]?.id ?? '';
+		try {
+			await removeBankAccount(id);
+			bankAccounts = bankAccounts.filter((b) => b.id !== id);
+			if (selectedBankId === id) selectedBankId = bankAccounts[0]?.id ?? '';
+		} catch (e: any) {
+			console.error('Failed to remove bank account:', e);
+		}
 	}
 </script>
 
@@ -92,14 +266,22 @@
 	<div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
 		<div class="rounded-xl border bg-white p-6">
 			<p class="text-xs text-gray-500">Total Balance</p>
-			<p class="mt-1 text-3xl font-semibold">{formatCurrency(totalBalance)}</p>
+			{#if loadingBalance}
+				<div class="mt-1 h-9 w-40 animate-pulse rounded bg-gray-200"></div>
+			{:else}
+				<p class="mt-1 text-3xl font-semibold">{formatCurrency(totalBalance)}</p>
+			{/if}
 			<p class="mt-2 text-xs text-gray-400">Across all events and collections</p>
 		</div>
 		<div class="rounded-xl border bg-white p-6">
 			<div class="flex items-start justify-between">
 				<div>
 					<p class="text-xs text-gray-500">Withdrawable Balance</p>
-					<p class="mt-1 text-3xl font-semibold text-green-600">{formatCurrency(withdrawableBalance)}</p>
+					{#if loadingBalance}
+						<div class="mt-1 h-9 w-40 animate-pulse rounded bg-gray-200"></div>
+					{:else}
+						<p class="mt-1 text-3xl font-semibold text-green-600">{formatCurrency(withdrawableBalance)}</p>
+					{/if}
 					<p class="mt-2 text-xs text-gray-400">Available for withdrawal</p>
 				</div>
 				<button on:click={() => (showWithdrawModal = true)} class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
@@ -121,7 +303,21 @@
 			</button>
 		</div>
 
-		{#if bankAccounts.length > 0}
+		{#if loadingBanks}
+			<div class="space-y-3">
+				{#each [1, 2] as _}
+					<div class="flex animate-pulse items-center justify-between rounded-lg border bg-white p-4">
+						<div class="flex items-center gap-3">
+							<div class="h-10 w-10 rounded-lg bg-gray-200"></div>
+							<div>
+								<div class="h-4 w-24 rounded bg-gray-200"></div>
+								<div class="mt-1 h-3 w-40 rounded bg-gray-200"></div>
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{:else if bankAccounts.length > 0}
 			<div class="space-y-3">
 				{#each bankAccounts as bank}
 					<div class="flex items-center justify-between rounded-lg border bg-white p-4">
@@ -172,7 +368,18 @@
 			</div>
 		</div>
 
-		{#if eventEarnings.length > 0}
+		{#if loadingEarnings}
+			<div class="space-y-3">
+				{#each [1, 2, 3] as _}
+					<div class="flex animate-pulse items-center gap-4 rounded-xl bg-white px-4 py-4">
+						<div class="h-8 w-8 rounded-lg bg-gray-200"></div>
+						<div class="h-4 w-32 rounded bg-gray-200"></div>
+						<div class="h-4 w-20 rounded bg-gray-200"></div>
+						<div class="h-4 w-16 rounded bg-gray-200"></div>
+					</div>
+				{/each}
+			</div>
+		{:else if eventEarnings.length > 0}
 			<div class="overflow-visible rounded-xl bg-white shadow-sm">
 				<div class="hidden border-b px-4 py-3 text-xs font-medium text-gray-400 lg:flex">
 					<div class="w-1/4">Event / Collection</div>
@@ -189,7 +396,7 @@
 								<Icon icon={e.type === 'Event' ? 'mdi:calendar-star' : 'mdi:folder-multiple'} class="text-base {e.type === 'Event' ? 'text-[#AB46DD]' : 'text-[#146AEB]'}" />
 							</div>
 							<div>
-								<p class="text-sm font-medium">{e.name}</p>
+								<p class="text-sm font-medium truncate max-w-[180px]" title={e.name || 'Event'}>{e.name || 'Event'}</p>
 								<p class="text-xs text-gray-400">{e.type}</p>
 							</div>
 						</div>
@@ -198,7 +405,7 @@
 						<div class="lg:w-1/6">
 							<span class="rounded-full px-2 py-1 text-xs font-medium {getStatusStyle(e.status)}">{e.status.charAt(0) + e.status.slice(1).toLowerCase()}</span>
 						</div>
-						<div class="text-sm font-medium lg:w-1/6 lg:text-right">{formatCurrency(e.amount)}</div>
+						<div class="text-sm font-medium lg:w-1/6 lg:text-right">{formatCurrency(e.netAmount ?? e.amount)}</div>
 						<div class="lg:w-1/6 lg:text-right">
 							{#if e.eventId}
 								<button on:click={() => goto(`/events/${e.eventId}/earnings`)} class="rounded-md bg-[#EBECED] px-3 py-1.5 text-xs font-medium text-[#616265] hover:bg-gray-200">
@@ -235,9 +442,9 @@
 
 		<!-- Select Bank -->
 		<div class="mb-4">
-			<label class="mb-1 block text-sm font-medium text-gray-700">Bank Account</label>
+			<label for="withdraw-bank" class="mb-1 block text-sm font-medium text-gray-700">Bank Account</label>
 			{#if bankAccounts.length > 0}
-				<select bind:value={selectedBankId} class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none">
+				<select id="withdraw-bank" bind:value={selectedBankId} class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none">
 					{#each bankAccounts as bank}
 						<option value={bank.id}>{bank.bankName} · {bank.accountNumber}</option>
 					{/each}
@@ -248,14 +455,53 @@
 		</div>
 
 		<!-- Amount -->
-		<div class="mb-5">
-			<label class="mb-1 block text-sm font-medium text-gray-700">Amount</label>
-			<input type="number" bind:value={withdrawAmount} placeholder="Enter amount" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none" />
+		<div class="mb-4">
+			<label for="withdraw-amount" class="mb-1 block text-sm font-medium text-gray-700">Amount</label>
+			<input id="withdraw-amount" type="number" bind:value={withdrawAmount} placeholder="Enter amount" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none" />
 		</div>
 
-		<button on:click={handleWithdraw} disabled={withdrawing || bankAccounts.length === 0} class="w-full rounded-lg bg-gray-900 py-3 text-center font-medium text-white disabled:opacity-50">
-			{withdrawing ? 'Processing...' : 'Withdraw'}
-		</button>
+		<!-- Withdrawal Fee Breakdown -->
+		{#if withdrawAmount && parseInt(withdrawAmount) > 0}
+			{@const amt = parseInt(withdrawAmount)}
+			{@const rawFee = amt * 0.03}
+			{@const fee = Math.min(rawFee, 500)}
+			{@const youReceive = amt - fee}
+			<div class="mb-4 rounded-lg border border-gray-200 bg-white p-3 text-sm">
+				<div class="flex justify-between text-gray-500">
+					<span>Withdrawal Fee (3%, max ₦500)</span>
+					<span class="text-red-500">-{formatCurrency(fee)}</span>
+				</div>
+				<div class="mt-1 flex justify-between border-t pt-1 font-medium">
+					<span>You'll receive</span>
+					<span class="text-green-600">{formatCurrency(youReceive > 0 ? youReceive : 0)}</span>
+				</div>
+			</div>
+		{/if}
+
+		<!-- PIN → OTP -->
+		{#if !otpSent}
+			<button on:click={handleRequestOtp} disabled={sendingOtp || bankAccounts.length === 0 || !withdrawAmount}
+				class="w-full rounded-lg bg-gray-900 py-3 text-center font-medium text-white disabled:opacity-50">
+				{sendingOtp ? 'Sending OTP...' : 'Send OTP to Email'}
+			</button>
+		{:else}
+			<div class="mb-4">
+				<label for="withdraw-otp" class="mb-1 block text-sm font-medium text-gray-700">Enter OTP</label>
+				<p class="mb-2 text-xs text-gray-400">A 6-digit code was sent to your email</p>
+				<input id="withdraw-otp" type="text" bind:value={withdrawOtp} placeholder="Enter 6-digit OTP" maxlength="6"
+					class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-center text-lg font-mono tracking-widest focus:outline-none" />
+			</div>
+			<div class="flex gap-2">
+				<button on:click={handleRequestOtp} disabled={sendingOtp}
+					class="flex-1 rounded-lg border border-gray-200 py-3 text-center text-sm font-medium text-gray-600 disabled:opacity-50">
+					{sendingOtp ? 'Resending...' : 'Resend OTP'}
+				</button>
+				<button on:click={handleWithdraw} disabled={withdrawing || withdrawOtp.length !== 6}
+					class="flex-1 rounded-lg bg-gray-900 py-3 text-center font-medium text-white disabled:opacity-50">
+					{withdrawing ? 'Processing...' : 'Confirm Withdrawal'}
+				</button>
+			</div>
+		{/if}
 	</div>
 </div>
 </div>
@@ -271,20 +517,66 @@
 			<button on:click={() => (showAddBankModal = false)}><Icon icon="mdi:close" class="text-xl text-gray-400" /></button>
 		</div>
 
+		{#if addBankError}<p class="mb-3 rounded-md bg-red-50 p-3 text-sm text-red-600">{addBankError}</p>{/if}
+
+		<!-- Bank Name (searchable dropdown) -->
 		<div class="mb-4">
-			<label class="mb-1 block text-sm font-medium text-gray-700">Bank Name</label>
-			<input type="text" bind:value={newBankName} placeholder="e.g., Access Bank" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none" />
-		</div>
-		<div class="mb-4">
-			<label class="mb-1 block text-sm font-medium text-gray-700">Account Number</label>
-			<input type="text" bind:value={newAccountNumber} placeholder="0123456789" maxlength="10" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none" />
-		</div>
-		<div class="mb-5">
-			<label class="mb-1 block text-sm font-medium text-gray-700">Account Name</label>
-			<input type="text" bind:value={newAccountName} placeholder="John Doe" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none" />
+			<label for="bank-search" class="mb-1 block text-sm font-medium text-gray-700">Bank Name</label>
+			<div use:clickOutside={() => (showBankDropdown = false)} class="relative">
+				<input
+					id="bank-search"
+					type="text"
+					bind:value={bankSearchQuery}
+					on:focus={() => (showBankDropdown = true)}
+					on:input={() => { showBankDropdown = true; selectedBank = null; }}
+					placeholder="Search for a bank..."
+					class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none"
+				/>
+				{#if showBankDropdown && filteredBanks.length > 0}
+					<div class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border bg-white shadow-lg">
+						{#each filteredBanks as bank}
+							<button on:click={() => selectBank(bank)} class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50">{bank.name}</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
 		</div>
 
-		<button on:click={handleAddBank} disabled={addingBank || !newBankName.trim() || !newAccountNumber.trim() || !newAccountName.trim()} class="w-full rounded-lg bg-gray-900 py-3 text-center font-medium text-white disabled:opacity-50">
+		<!-- Account Number -->
+		<div class="mb-4">
+			<label for="account-number" class="mb-1 block text-sm font-medium text-gray-700">Account Number</label>
+			<input
+				id="account-number"
+				type="text"
+				bind:value={newAccountNumber}
+				on:input={onAccountNumberInput}
+				placeholder="0123456789"
+				maxlength="10"
+				class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none"
+			/>
+		</div>
+
+		<!-- Account Name (auto-resolved) -->
+		<div class="mb-5">
+			<label for="account-name" class="mb-1 block text-sm font-medium text-gray-700">Account Name</label>
+			{#if resolvingAccount}
+				<div class="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-400">
+					<Icon icon="mdi:loading" class="animate-spin" /> Resolving...
+				</div>
+			{:else}
+				<input
+					id="account-name"
+					type="text"
+					bind:value={newAccountName}
+					placeholder="Will auto-fill when account is resolved"
+					readonly
+					class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm focus:outline-none"
+				/>
+			{/if}
+			{#if resolveError}<p class="mt-1 text-xs text-red-500">{resolveError}</p>{/if}
+		</div>
+
+		<button on:click={handleAddBank} disabled={addingBank || !selectedBank || !newAccountNumber.trim() || !newAccountName.trim()} class="w-full rounded-lg bg-gray-900 py-3 text-center font-medium text-white disabled:opacity-50">
 			{addingBank ? 'Adding...' : 'Add Bank Account'}
 		</button>
 	</div>

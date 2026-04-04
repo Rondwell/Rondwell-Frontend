@@ -35,6 +35,7 @@ export interface CreateEventPayload {
   collectionId?: string;
   registrationOpen?: boolean;
   groupRegistrationEnabled?: boolean;
+  maxGroupSize?: number;
 }
 
 export interface CreateEventResponse {
@@ -228,6 +229,7 @@ export async function getEventAttendeesPaginated(
     limit?: number;
     search?: string;
     attendeeStatus?: string;
+    ticketTypeId?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   } = {}
@@ -237,6 +239,7 @@ export async function getEventAttendeesPaginated(
   if (options.limit) params.set('limit', String(options.limit));
   if (options.search) params.set('search', options.search);
   if (options.attendeeStatus) params.set('attendeeStatus', options.attendeeStatus);
+  if (options.ticketTypeId) params.set('ticketTypeId', options.ticketTypeId);
   if (options.sortBy) params.set('sortBy', options.sortBy);
   if (options.sortOrder) params.set('sortOrder', options.sortOrder);
 
@@ -251,6 +254,30 @@ export async function getMyEvents(): Promise<any[]> {
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to fetch events');
   return data.events ?? [];
+}
+
+// ==================== ATTENDEE INVITATION APIs ====================
+
+export async function inviteAttendees(
+  eventId: string,
+  attendees: Array<{ email: string; firstName?: string; lastName?: string }>,
+  customMessage?: string
+): Promise<{ success: any[]; failed: any[] }> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ attendees, customMessage }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to invite attendees');
+  return data.data;
+}
+
+export async function getEmailUsage(userId: string): Promise<{ used: number; limit: number; tier: string }> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/email/usage/${userId}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch email usage');
+  return data.data;
 }
 
 
@@ -321,8 +348,10 @@ export async function updateRegistrationOpen(eventId: string, registrationOpen: 
   return updateEvent(eventId, { registrationOpen } as any);
 }
 
-export async function updateGroupRegistration(eventId: string, groupRegistrationEnabled: boolean): Promise<any> {
-  return updateEvent(eventId, { groupRegistrationEnabled } as any);
+export async function updateGroupRegistration(eventId: string, groupRegistrationEnabled: boolean, maxGroupSize?: number): Promise<any> {
+  const payload: any = { groupRegistrationEnabled };
+  if (maxGroupSize !== undefined) payload.maxGroupSize = maxGroupSize;
+  return updateEvent(eventId, payload as any);
 }
 
 export async function updateEventCapacity(eventId: string, maxAttendees: number | null, waitlistEnabled?: boolean): Promise<any> {
@@ -1541,6 +1570,30 @@ export async function scrapeExternalEventUrl(url: string): Promise<{
 
 
 // ==================== CHECK-IN APIs ====================
+
+/** Verify passcode — returns attendee details without checking in */
+export async function verifyCheckinPasscode(eventId: string, passcode: string): Promise<any> {
+  const res = await fetch(`${EVENT_URL}/api/v1/checkin/verify/passcode`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId, passcode }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Verification failed');
+  return data.data ?? data;
+}
+
+/** Verify QR token — returns attendee details without checking in */
+export async function verifyCheckinQr(eventId: string, checkinToken: string): Promise<any> {
+  const res = await fetch(`${EVENT_URL}/api/v1/checkin/verify/qr`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ eventId, checkinToken }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'QR verification failed');
+  return data.data ?? data;
+}
 
 /** Check in attendee via passcode */
 export async function checkinByPasscode(eventId: string, passcode: string): Promise<any> {

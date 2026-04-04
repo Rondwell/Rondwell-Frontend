@@ -28,6 +28,7 @@
 	$: maxAttendees = eventData?.maxAttendees ?? 0;
 	$: waitlistEnabled = eventData?.waitlistEnabled ?? false;
 	$: groupRegistrationEnabled = eventData?.groupRegistrationEnabled ?? false;
+	$: maxGroupSize = eventData?.maxGroupSize ?? 10;
 
 	let showCapacityModal = false;
 	let showGroupRegisterModal = false;
@@ -132,11 +133,13 @@
 		}
 	}
 
-	async function handleGroupRegistrationChange(enabled: boolean) {
+	async function handleGroupRegistrationChange(enabled: boolean, newMaxGroupSize: number) {
 		try {
-			await updateGroupRegistration(eventId, enabled);
+			await updateGroupRegistration(eventId, enabled, newMaxGroupSize);
 			groupRegistrationEnabled = enabled;
+			maxGroupSize = newMaxGroupSize;
 			eventData.groupRegistrationEnabled = enabled;
+			eventData.maxGroupSize = newMaxGroupSize;
 			showGroupRegisterModal = false;
 		} catch (e: any) {
 			console.error('Failed to update group registration:', e.message);
@@ -253,12 +256,13 @@
 				</div>
 				<div>
 					<p>Group Registration</p>
-					<p class="text-left text-xs text-[#B8BABA]">{groupRegistrationEnabled ? 'On' : 'Off'}</p>
+					<p class="text-left text-xs text-[#B8BABA]">{groupRegistrationEnabled ? `On · Max ${maxGroupSize}` : 'Off'}</p>
 				</div>
 			</button>
 			<GroupRegistrationModal
 				bind:open={showGroupRegisterModal}
 				enabled={groupRegistrationEnabled}
+				currentMaxGroupSize={maxGroupSize}
 				onConfirm={handleGroupRegistrationChange}
 			/>
 		</div>
@@ -538,6 +542,9 @@
 	{eventId}
 	ticket={editingTicket}
 	eventTitle={eventData?.title ?? ''}
+	eventCapacity={maxAttendees}
+	waitlistEnabled={waitlistEnabled}
+	existingTickets={tickets}
 	onSuccess={handleTicketCreated}
 />
 

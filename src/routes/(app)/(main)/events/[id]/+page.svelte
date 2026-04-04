@@ -3,6 +3,7 @@
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { getEventAttendees, uploadEventPhoto } from '$lib/services/event.services';
+import { getEventEarnings } from '$lib/services/wallet.services';
 import { getEventCache } from '$lib/stores/eventCache.store';
 import { clickOutside } from '$lib/utils/constant';
 import Icon from '@iconify/svelte';
@@ -15,6 +16,8 @@ let uploadingPhoto = false;
 let photoInput: HTMLInputElement;
 let attendeesLoading = true;
 let fetchedAttendees: any[] = [];
+let earningsTotal = 0;
+let earningsLoading = true;
 
 // Use cached event data — no re-fetch on tab switch
 $: ({ event: eventStore, collections: collectionsStore, loading: loadingStore, error: errorStore } = getEventCache(eventId!));
@@ -26,6 +29,22 @@ $: error = $errorStore;
 // Fetch attendees when eventId is available
 $: if (eventId) {
 	fetchAttendees(eventId);
+	fetchEarnings(eventId);
+}
+
+async function fetchEarnings(eid: string) {
+	earningsLoading = true;
+	try {
+		const result = await getEventEarnings(eid, { limit: 100 });
+		const items = result?.data ?? [];
+		earningsTotal = items
+			.filter((item: any) => item.status === 'COMPLETED')
+			.reduce((sum: number, item: any) => sum + (item.totalAmount ?? 0) / 100, 0);
+	} catch {
+		earningsTotal = 0;
+	} finally {
+		earningsLoading = false;
+	}
 }
 
 async function fetchAttendees(eid: string) {
@@ -190,8 +209,8 @@ input.value = '';
 
 $: eventImageSrc = eventData?.coverPictureUrl || eventData?.displayPictureUrl || '/event_pic1.png';
 $: eventLink = eventData?.customLinkSlug
-? `rondwell.com/${eventData.customLinkSlug}`
-: `rondwell.com/events/${eventId}`;
+? `rondwell.com/e/${eventData.customLinkSlug}`
+: `rondwell.com/event-page/${eventId}`;
 </script>
 
 <input
@@ -238,9 +257,11 @@ $: eventLink = eventData?.customLinkSlug
 					</svg>
 				</a>
 			{/if}
-			<button
+			<a
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
-					on:click={()=> goto(`/event-page/${eventId}`)}
+				href={eventData?.customLinkSlug ? `/e/${eventData.customLinkSlug}` : `/event-page/${eventId}`}
+				target="_blank"
+				rel="noopener noreferrer"
 			>
 				Event Page
 				<svg
@@ -268,7 +289,7 @@ $: eventLink = eventData?.customLinkSlug
 						stroke-width="0.37461"
 					/>
 				</svg>
-			</button>
+			</a>
 		</div>
 		{#if loading}
 			<div class="mb-4 h-9 w-3/4 animate-pulse rounded bg-gray-200"></div>
@@ -429,7 +450,12 @@ $: eventLink = eventData?.customLinkSlug
 						<path opacity="0.4" d="M26.5848 16.9033H19.5078L21.789 14.6221C23.6497 12.7614 24.584 12.7614 26.4447 14.6221L26.9118 15.0892C26.4213 15.5797 26.3046 16.3038 26.5848 16.9033Z" stroke="#AB46DD" stroke-width="1.12383" stroke-linecap="round" stroke-linejoin="round"/>
 						<path d="M20.0706 20.2803V23.3232C20.0706 23.766 20.4339 24.1293 20.8767 24.1293V26.9791C20.4339 26.9791 20.0706 27.3424 20.0706 27.7852V30.8281C20.0706 31.2709 20.4339 31.6342 20.8767 31.6342V34.3705H17.9929C13.5422 34.3705 12.1797 33.008 12.1797 28.5573V28.0691C12.1797 27.6149 12.5317 27.2629 12.9745 27.2629C13.9282 27.2629 14.6889 26.4909 14.6889 25.5485C14.6889 24.6061 13.9282 23.8341 12.9745 23.8341C12.5317 23.8341 12.1797 23.4821 12.1797 23.028V22.5397C12.1797 18.0777 13.5422 16.7266 17.9929 16.7266H20.8654V19.4856C20.4339 19.4856 20.0706 19.8489 20.0706 20.2803Z" fill="#AB46DD"/>
 					</svg>
-					Earnings <span class="text-[#838485]">|</span> <span class="font-semibold">N200,000</span>
+					Earnings <span class="text-[#838485]">|</span>
+					{#if earningsLoading}
+						<span class="inline-block h-4 w-16 animate-pulse rounded bg-gray-200"></span>
+					{:else}
+						<span class="font-semibold">N{earningsTotal.toLocaleString()}</span>
+					{/if}
 				</button>
 			</div>
 		{/if}

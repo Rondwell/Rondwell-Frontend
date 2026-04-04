@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { getActiveProfile, getAllProfiles, switchProfile, type UserProfileData } from '$lib/services/profile.services';
+	import { getWalletBalance } from '$lib/services/wallet.services';
 	import { authState, clearUser, isAuthenticated, setActiveProfile } from '$lib/stores/auth.store';
 	import { onMount } from 'svelte';
 
@@ -20,7 +21,7 @@
 	let showAll = false;
 	let loading = false;
 	let showWalletBalance = true;
-	let walletBalance = 200000;
+	let walletBalance = 0;
 
 	$: user = $authState.user;
 	$: activeProfile = $authState.activeProfile;
@@ -53,6 +54,14 @@
 			console.error('Failed to load profiles', e);
 		} finally {
 			loading = false;
+		}
+		// Fetch wallet balance separately (non-blocking)
+		try {
+			const wallet = await getWalletBalance();
+			const agg = wallet?.aggregatedBalance;
+			walletBalance = agg?.totalEarnings ?? (wallet?.balance?.NGN ?? 0);
+		} catch (e) {
+			console.error('Failed to load wallet balance', e);
 		}
 	});
 
@@ -202,7 +211,7 @@
 				</a>
 
 				<!-- Wallet -->
-				<div class="flex cursor-pointer items-center gap-2">
+				<div class="flex cursor-pointer items-center gap-2" on:click={() => { goto('/settings?tab=wallet'); onClose(); }} on:keydown={(e) => e.key === 'Enter' && (goto('/settings?tab=wallet'), onClose())} role="button" tabindex="0">
 					<div class="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-[#E3F4E1]">
 						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<path d="M9.75 6.9375H5.25" stroke="#2A2D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>

@@ -127,7 +127,9 @@
 				</svg>
 			</a>
 			<a
-				href="/event-page/{eventId}"
+				href={rawEvent?.customLinkSlug ? `/e/${rawEvent.customLinkSlug}` : `/event-page/${eventId}`}
+				target="_blank"
+				rel="noopener noreferrer"
 				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
 			>
 				Event Page

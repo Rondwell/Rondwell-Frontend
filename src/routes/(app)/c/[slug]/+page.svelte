@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import SubscribeModal from '$lib/components/SubscribeModal.svelte';
+	import { publicSubscribeToCollection } from '$lib/services/collection.services';
 	import { getPublicCollectionBySlug } from '$lib/services/event.services';
+	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { resolveCollectionThemeColor } from '$lib/stores/collectionTheme';
+	import { toast } from '$lib/stores/toast.store';
 	import { colors, type Color } from '$lib/utils/colors';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
@@ -13,6 +17,8 @@
 	let collection: any = null;
 	let events: any[] = [];
 	let themeColor: Color = colors[0];
+	let showSubscribeModal = false;
+	let subscribing = false;
 
 	let activeTab: 'overview' | 'community' = 'overview';
 	let dateFilter: 'all' | 'upcoming' | 'past' = 'all';
@@ -74,6 +80,38 @@
 	function stripHtml(html: string): string {
 		return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 	}
+
+	async function handleSubscribeClick() {
+		if ($isAuthenticated && $authState.user) {
+			subscribing = true;
+			try {
+				const u = $authState.user;
+				const profileName = $authState.activeProfile?.name || '';
+				const result = await publicSubscribeToCollection(collection._id, {
+					email: u.email,
+					firstName: profileName.split(' ')[0] || '',
+					lastName: profileName.split(' ').slice(1).join(' ') || '',
+					userId: u.id,
+				});
+				if (result.alreadySubscribed) {
+					toast.info('You are already subscribed to this collection.');
+				} else {
+					toast.success(`Subscribed to ${collection.name} successfully!`);
+					collection.subscriberCount = (collection.subscriberCount ?? 0) + 1;
+				}
+			} catch (e: any) {
+				toast.error(e.message || 'Failed to subscribe');
+			} finally {
+				subscribing = false;
+			}
+		} else {
+			showSubscribeModal = true;
+		}
+	}
+
+	function handleSubscribed() {
+		collection.subscriberCount = (collection.subscriberCount ?? 0) + 1;
+	}
 </script>
 
 <svelte:head>
@@ -134,9 +172,21 @@
 			<div class="mt-14 flex flex-col gap-4 sm:mt-16 sm:flex-row sm:items-start sm:justify-between">
 				<div class="flex-1">
 					<h1 class="text-2xl font-bold sm:text-3xl" style="color: {themeColor.text}">{collection.name}</h1>
-					<p class="mt-1 text-sm" style="color: {themeColor.lightText}">
-						{collection?.subscriberCount ?? 0} subscriber{(collection?.subscriberCount ?? 0) !== 1 ? 's' : ''}
-					</p>
+					<div class="mt-1 flex items-center gap-2">
+						{#if (collection.subscriberSample?.length ?? 0) > 0}
+						<div class="flex -space-x-1.5">
+							{#each collection.subscriberSample as sub}
+							<div class="flex h-5 w-5 items-center justify-center rounded-full border-2 text-[8px] font-bold"
+								style="border-color: {themeColor.bg}; background-color: {themeColor.button}; color: {themeColor.buttonText};">
+								{(sub.firstName?.[0] || sub.email?.[0] || '?').toUpperCase()}
+							</div>
+							{/each}
+						</div>
+						{/if}
+						<p class="text-sm" style="color: {themeColor.lightText}">
+							{collection?.subscriberCount ?? 0} subscriber{(collection?.subscriberCount ?? 0) !== 1 ? 's' : ''}
+						</p>
+					</div>
 					{#if collection.socialLinks}
 						{@const links = Object.entries(collection.socialLinks).filter(([, v]) => v)}
 						{#if links.length > 0}
@@ -153,9 +203,21 @@
 						{/if}
 					{/if}
 				</div>
-				<button class="w-fit rounded-lg px-6 py-2.5 text-sm font-medium transition hover:opacity-90"
-					style="background-color: {themeColor.button}; color: {themeColor.buttonText}">Subscribe</button>
+				<button class="w-fit rounded-lg px-6 py-2.5 text-sm font-medium transition hover:opacity-90 disabled:opacity-60"
+					style="background-color: {themeColor.button}; color: {themeColor.buttonText}"
+					disabled={subscribing}
+					on:click={handleSubscribeClick}>
+					{subscribing ? 'Subscribing...' : 'Subscribe'}
+				</button>
 			</div>
+
+			<SubscribeModal
+				bind:open={showSubscribeModal}
+				collectionId={collection._id}
+				collectionName={collection.name}
+				{themeColor}
+				onSubscribed={handleSubscribed}
+			/>
 
 			<!-- ABOUT section — right below header, before tabs -->
 			{#if collection.description}
@@ -382,7 +444,8 @@
 							</p>
 						</div>
 						<button class="mt-2 rounded-lg px-6 py-2.5 text-sm font-medium transition hover:opacity-90"
-							style="background-color: {themeColor.button}; color: {themeColor.buttonText}">
+							style="background-color: {themeColor.button}; color: {themeColor.buttonText}"
+							on:click={handleSubscribeClick}>
 							Subscribe to Get Notified
 						</button>
 					</div>

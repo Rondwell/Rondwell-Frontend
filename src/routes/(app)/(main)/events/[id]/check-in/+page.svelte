@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getEventAttendeesPaginated } from '$lib/services/event.services';
+	import { getEventAttendeesPaginated, getTicketTypes } from '$lib/services/event.services';
 	import { getEventCache } from '$lib/stores/eventCache.store';
 	import { clickOutside } from '$lib/utils/constant';
 	import { onMount } from 'svelte';
@@ -33,13 +33,16 @@
 	let showTicketDropdown = false;
 	let showSortDropdown = false;
 
+	// Ticket types for filter
+	let ticketTypes: any[] = [];
+
 	const sortOptions = [
 		{ label: 'Check-in Time', value: 'updatedAt' },
 		{ label: 'Name', value: 'firstName' },
 		{ label: 'Email', value: 'email' }
 	];
 
-	onMount(() => { fetchCheckedIn(); });
+	onMount(() => { fetchCheckedIn(); loadTicketTypes(); });
 
 	async function fetchCheckedIn() {
 		loading = true;
@@ -49,6 +52,7 @@
 				limit: 20,
 				search: searchQuery || undefined,
 				attendeeStatus: 'CHECKED_IN',
+				ticketTypeId: ticketFilter || undefined,
 				sortBy,
 				sortOrder
 			});
@@ -57,6 +61,17 @@
 			totalPages = result.totalPages;
 		} catch { checkedInAttendees = []; totalCheckedIn = 0; }
 		finally { loading = false; }
+	}
+
+	async function loadTicketTypes() {
+		try { ticketTypes = await getTicketTypes(eventId); } catch { ticketTypes = []; }
+	}
+
+	function selectTicketFilter(id: string) {
+		ticketFilter = id;
+		showTicketDropdown = false;
+		currentPage = 1;
+		fetchCheckedIn();
 	}
 
 	function handleSearch() {
@@ -109,6 +124,9 @@
 		})()
 		: '';
 	$: selectedSortLabel = sortOptions.find(s => s.value === sortBy)?.label ?? 'Check-in Time';
+	$: selectedTicketLabel = ticketFilter
+		? ticketTypes.find(t => (t._id || t.id) === ticketFilter)?.name ?? 'Ticket'
+		: 'All Attendees';
 </script>
 
 <div class="max-w-6xl">
@@ -168,11 +186,31 @@
 
 		<!-- Filters -->
 		<div class="mb-3 flex items-center justify-between">
-			<button class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm">
-				<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
-				All Guests
-				<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
-			</button>
+			<div class="relative" use:clickOutside={() => { showTicketDropdown = false; }}>
+				<button on:click={() => (showTicketDropdown = !showTicketDropdown)}
+					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm">
+					<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
+					{selectedTicketLabel}
+					<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
+				</button>
+				{#if showTicketDropdown}
+					<div class="absolute left-0 z-50 mt-2 w-52 rounded-xl border border-white/20 bg-white/70 p-1 shadow-xl backdrop-blur-xl">
+						<button on:click={() => selectTicketFilter('')}
+							class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/50 {!ticketFilter ? 'font-medium text-[#7C3AED]' : 'text-[#616265]'}">
+							All Attendees
+							{#if !ticketFilter}<span class="text-xs text-[#7C3AED]">✓</span>{/if}
+						</button>
+						{#each ticketTypes as ticket}
+							{@const tid = ticket._id || ticket.id}
+							<button on:click={() => selectTicketFilter(tid)}
+								class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/50 {ticketFilter === tid ? 'font-medium text-[#7C3AED]' : 'text-[#616265]'}">
+								{ticket.name}
+								{#if ticketFilter === tid}<span class="text-xs text-[#7C3AED]">✓</span>{/if}
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
 			<div class="relative" use:clickOutside={() => { showSortDropdown = false; }}>
 				<button on:click={() => (showSortDropdown = !showSortDropdown)}
 					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm">

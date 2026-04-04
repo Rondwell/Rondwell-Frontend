@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import SubscribeModal from '$lib/components/SubscribeModal.svelte';
+	import { publicSubscribeToCollection } from '$lib/services/collection.services';
 	import { getPublicEventPage } from '$lib/services/event.services';
-	import { isAuthenticated } from '$lib/stores/auth.store';
+	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { setEventSlug } from '$lib/stores/eventSlug';
 	import { getEventTheme, setEventTheme } from '$lib/stores/eventTheme';
+	import { toast } from '$lib/stores/toast.store';
 	import type { Color } from '$lib/utils/colors';
 	import { colors } from '$lib/utils/colors';
 	import { onMount } from 'svelte';
@@ -17,6 +20,7 @@
 	$: eventId = $page.params.id ?? '';
 
 	let selectedTicket = '';
+	let ticketQuantity: Record<string, number> = {};
 	let showAddModal = false;
 	let loading = true;
 	let error = '';
@@ -53,7 +57,7 @@
 			// Auto-select first available ticket
 			if (ticketTypes.length > 0) {
 				const available = ticketTypes.find((t: any) => isTicketAvailable(t));
-				selectedTicket = available?._id ?? ticketTypes[0]._id;
+				selectedTicket = available?._id ?? '';
 			}
 
 			// Apply theme from event's themeColor
@@ -162,6 +166,7 @@
 	}
 
 	function isTicketAvailable(ticket: any): boolean {
+		if (!ticket) return false;
 		const now = new Date();
 		// Block all tickets if event has ended
 		if (event?.eventStatus === 'ENDED' || event?.eventStatus === 'CANCELLED') return false;
@@ -186,12 +191,22 @@
 		return '';
 	}
 
+	$: isGroupEnabled = event?.groupRegistrationEnabled === true;
+	$: maxGroupSize = event?.maxGroupSize ?? 10;
+	$: selectedQuantity = ticketQuantity[selectedTicket] ?? 1;
+	$: anyTicketAvailable = ticketTypes.some((t: any) => isTicketAvailable(t));
+	$: selectedTicketAvailable = selectedTicket ? isTicketAvailable(ticketTypes.find((t: any) => t._id === selectedTicket)) : false;
+
 	function getRegisterButtonLabel(): string {
 		const ticket = ticketTypes.find(t => t._id === selectedTicket);
 		if (!ticket) return 'Register';
-		if (ticket.requiresApproval) return 'Request to Get In';
-		if (ticket.isFree || !ticket.price) return 'Register';
-		return `Register — ${formatTicketPrice(ticket)}`;
+		const qty = ticketQuantity[selectedTicket] ?? 1;
+		if (ticket.requiresApproval) return qty > 1 ? `Request ${qty} Tickets` : 'Request to Get In';
+		if (ticket.isFree || !ticket.price) return qty > 1 ? `Register ${qty} Tickets` : 'Register';
+		const totalPrice = ticket.price * qty;
+		const currency = ticket.currency ?? 'NGN';
+		const formatted = new Intl.NumberFormat('en-NG', { style: 'currency', currency, minimumFractionDigits: 0 }).format(totalPrice);
+		return qty > 1 ? `Register ${qty} Tickets — ${formatted}` : `Register — ${formatted}`;
 	}
 
 	$: attendingNames = attendingSample.map(g => [g.firstName, g.lastName].filter(Boolean).join(' ') || 'Guest').join(', ');
@@ -200,6 +215,37 @@
 	$: organizerEmail = organizerProfile?.email
 		|| (organizers.length > 0 ? organizers[0].email : '')
 		|| '';
+
+	let showSubscribeModal = false;
+	let eventSubscribing = false;
+
+	async function handleEventSubscribeClick() {
+		if (!collectionInfo?._id) return;
+		if ($isAuthenticated && $authState.user) {
+			eventSubscribing = true;
+			try {
+				const u = $authState.user;
+				const profileName = $authState.activeProfile?.name || '';
+				const result = await publicSubscribeToCollection(collectionInfo._id, {
+					email: u.email,
+					firstName: profileName.split(' ')[0] || '',
+					lastName: profileName.split(' ').slice(1).join(' ') || '',
+					userId: u.id,
+				});
+				if (result.alreadySubscribed) {
+					toast.info('You are already subscribed to this collection.');
+				} else {
+					toast.success(`Subscribed to ${collectionInfo.name} successfully!`);
+				}
+			} catch (e: any) {
+				toast.error(e.message || 'Failed to subscribe');
+			} finally {
+				eventSubscribing = false;
+			}
+		} else {
+			showSubscribeModal = true;
+		}
+	}
 </script>
 
 <!-- SEO Meta Tags (server-rendered) -->
@@ -390,17 +436,19 @@
 							<img src="/tech-icon.svg" alt="" class="size-9 rounded-[9px] object-cover" style="background-color: {themeColor.smallCover};" />
 							<div>
 								<p class="text-xs" style="color: {themeColor.lightText};">Presented by</p>
-								<a href="/collection/{collectionInfo._id}/events" class="flex items-center gap-1 text-sm font-medium no-underline hover:underline" style="color: {themeColor.text};">
+								<a href={collectionInfo.slug ? `/c/${collectionInfo.slug}` : `/collection/${collectionInfo._id}/events`} class="flex items-center gap-1 text-sm font-medium no-underline hover:underline" style="color: {themeColor.text};">
 									{collectionInfo.name}
 									<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3 1l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 								</a>
 							</div>
 						</div>
 						<button
-							class="rounded-full px-3.5 py-2 text-sm font-normal transition-colors"
+							class="rounded-full px-3.5 py-2 text-sm font-normal transition-colors disabled:opacity-60"
 							style="background-color: {themeColor.smallCover}; color: {themeColor.text};"
+							disabled={eventSubscribing}
+							on:click={handleEventSubscribeClick}
 						>
-							Subscribe
+							{eventSubscribing ? '...' : 'Subscribe'}
 						</button>
 					</div>
 					{#if event.description}
@@ -483,7 +531,7 @@
 				{#if collectionInfo}
 				<div class="mt-2 flex items-center md:hidden">
 					<div class="mr-2 size-4 rounded-[4px] border flex items-center justify-center text-[8px]" style="border-color: {themeColor.toggle};">🎪</div>
-					<p class="text-xs" style="color: {themeColor.lightText};">{collectionInfo.name}</p>
+					<a href={collectionInfo.slug ? `/c/${collectionInfo.slug}` : `/collection/${collectionInfo._id}/events`} class="text-xs no-underline hover:underline" style="color: {themeColor.lightText};">{collectionInfo.name}</a>
 				</div>
 				{/if}
 
@@ -617,7 +665,7 @@
 					<button
 						class="relative block w-full text-left rounded-lg border-2 p-4 transition-colors {available ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}"
 						style="background-color: {themeColor.bg}; border-color: {selectedTicket === ticket._id ? themeColor.button : themeColor.toggle};"
-						on:click={() => { if (available) selectedTicket = ticket._id; }}
+						on:click={() => { if (available) { selectedTicket = ticket._id; if (!ticketQuantity[ticket._id]) ticketQuantity[ticket._id] = 1; } }}
 						disabled={!available}
 					>
 						<div class="flex items-start justify-between">
@@ -649,6 +697,44 @@
 						{#if salesEnded}
 						<p class="mt-2 text-xs" style="color: {themeColor.lightText};">{salesEnded}</p>
 						{/if}
+
+						<!-- Group Registration Quantity Selector -->
+						{#if isGroupEnabled && available && selectedTicket === ticket._id}
+						<div class="mt-3 flex items-center justify-between rounded-lg px-3 py-2" style="background-color: {themeColor.smallCover};"
+							on:click|stopPropagation={() => {}}>
+							<span class="text-xs font-medium" style="color: {themeColor.lightText};">Quantity</span>
+							<div class="flex items-center gap-2">
+								<button
+									class="flex h-7 w-7 items-center justify-center rounded-full transition-colors"
+									style="background-color: {themeColor.toggle}; color: {themeColor.text};"
+									on:click|stopPropagation={() => {
+										const current = ticketQuantity[ticket._id] ?? 1;
+										if (current > 1) { ticketQuantity[ticket._id] = current - 1; ticketQuantity = ticketQuantity; }
+									}}
+									disabled={(ticketQuantity[ticket._id] ?? 1) <= 1}
+									aria-label="Decrease quantity"
+								>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+								</button>
+								<span class="min-w-[24px] text-center text-sm font-semibold" style="color: {themeColor.text};">
+									{ticketQuantity[ticket._id] ?? 1}
+								</span>
+								<button
+									class="flex h-7 w-7 items-center justify-center rounded-full transition-colors"
+									style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+									on:click|stopPropagation={() => {
+										const current = ticketQuantity[ticket._id] ?? 1;
+										const max = Math.min(maxGroupSize, ticket.quantityAvailable ?? maxGroupSize);
+										if (current < max) { ticketQuantity[ticket._id] = current + 1; ticketQuantity = ticketQuantity; }
+									}}
+									disabled={(ticketQuantity[ticket._id] ?? 1) >= Math.min(maxGroupSize, ticket.quantityAvailable ?? maxGroupSize)}
+									aria-label="Increase quantity"
+								>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+								</button>
+							</div>
+						</div>
+						{/if}
 					</button>
 					{/each}
 
@@ -679,9 +765,13 @@
 						class="w-full cursor-pointer rounded-lg px-4 py-2.5 text-base font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 						style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
 						on:click={() => (showAddModal = true)}
-						disabled={!selectedTicket || ticketTypes.length === 0}
+						disabled={!selectedTicket || ticketTypes.length === 0 || !anyTicketAvailable || !selectedTicketAvailable}
 					>
-						{getRegisterButtonLabel()}
+						{#if !anyTicketAvailable}
+							Tickets Unavailable
+						{:else}
+							{getRegisterButtonLabel()}
+						{/if}
 					</button>
 					<RegistrationModal
 						bind:open={showAddModal}
@@ -689,6 +779,8 @@
 						selectedTicketId={selectedTicket}
 						{ticketTypes}
 						{registrationFields}
+						ticketQuantity={ticketQuantity[selectedTicket] ?? 1}
+						isGroupRegistration={isGroupEnabled && (ticketQuantity[selectedTicket] ?? 1) > 1}
 					/>
 				</div>
 				{/if}
@@ -783,17 +875,19 @@
 							<img src="/tech-icon.svg" alt="" class="size-9 rounded-[9px] object-cover" style="background-color: {themeColor.smallCover};" />
 							<div>
 								<p class="text-xs" style="color: {themeColor.lightText};">Presented by</p>
-								<a href="/collection/{collectionInfo._id}/events" class="flex items-center gap-1 text-sm font-medium no-underline hover:underline" style="color: {themeColor.text};">
+								<a href={collectionInfo.slug ? `/c/${collectionInfo.slug}` : `/collection/${collectionInfo._id}/events`} class="flex items-center gap-1 text-sm font-medium no-underline hover:underline" style="color: {themeColor.text};">
 									{collectionInfo.name}
 									<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M3 1l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 								</a>
 							</div>
 						</div>
 						<button
-							class="rounded-full px-3.5 py-2 text-sm font-normal transition-colors"
+							class="rounded-full px-3.5 py-2 text-sm font-normal transition-colors disabled:opacity-60"
 							style="background-color: {themeColor.smallCover}; color: {themeColor.text};"
+							disabled={eventSubscribing}
+							on:click={handleEventSubscribeClick}
 						>
-							Subscribe
+							{eventSubscribing ? '...' : 'Subscribe'}
 						</button>
 					</div>
 					{#if event.description}
@@ -858,6 +952,16 @@
 		</div>
 	</div>
 </div>
+{/if}
+
+{#if collectionInfo}
+<SubscribeModal
+	bind:open={showSubscribeModal}
+	collectionId={collectionInfo._id}
+	collectionName={collectionInfo.name}
+	{themeColor}
+	onSubscribed={() => {}}
+/>
 {/if}
 
 <style>

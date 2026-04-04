@@ -4,6 +4,7 @@
 	import CollectionCard from '$lib/components/CollectionCard.svelte';
 	import EventCard from '$lib/components/EventCard.svelte';
 	import { getMyEvents } from '$lib/services/event.services';
+	import { getEarningsSummary, getWalletBalance } from '$lib/services/wallet.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { onMount } from 'svelte';
 
@@ -13,23 +14,46 @@
 	let pageReady = false;
 
 	// Stats
-	let totalRevenue = 200000;
+	let totalRevenue = 0;
 	let totalEvents = 0;
 	let totalAttendees = 0;
-	let walletBalance = 200000;
+	let walletBalance = 0;
 
 	onMount(async () => {
 		if (!$isAuthenticated) return;
 		try {
-			createdEvents = await getMyEvents();
+			const [events] = await Promise.all([
+				getMyEvents(),
+				loadWalletAndRevenue(),
+			]);
+			createdEvents = events;
 			totalEvents = createdEvents.length;
 			totalAttendees = createdEvents.reduce((sum: number, e: any) => sum + (e.attendeeCount ?? 0), 0);
 		} catch (e: any) {
-			console.error('Failed to load events', e);
+			console.error('Failed to load overview data', e);
 		} finally {
 			pageReady = true;
 		}
 	});
+
+	async function loadWalletAndRevenue() {
+		try {
+			const wallet = await getWalletBalance();
+			const agg = wallet?.aggregatedBalance;
+			if (agg) {
+				walletBalance = agg.withdrawable ?? agg.totalEarnings ?? 0;
+			} else {
+				const ngnBalance = wallet?.balance?.NGN ?? 0;
+				walletBalance = ngnBalance > 100000 ? ngnBalance / 100 : ngnBalance;
+			}
+		} catch { /* non-critical */ }
+
+		try {
+			const earnings = await getEarningsSummary();
+			const items = Array.isArray(earnings) ? earnings : [];
+			totalRevenue = items.reduce((sum: number, e: any) => sum + (e.completedAmount ?? 0), 0);
+		} catch { /* non-critical */ }
+	}
 
 	function normalizeEvent(e: any) {
 		const locDetails = e.locationDetails;
@@ -244,7 +268,7 @@
 								{/if}
 							</div>
 							<span class="rounded-md px-2 py-0.5 text-[10px] font-medium" style="background-color: {card.bg}; color: {card.color}">
-								{card.icon === 'revenue' || card.icon === 'wallet' ? 'This Month' : 'All Time'}
+								{card.icon === 'revenue' ? 'This Month' : card.icon === 'wallet' ? '' : 'All Time'}
 							</span>
 						</div>
 						<div class="text-2xl font-bold text-gray-900">{getStatValue(card.icon)}</div>
@@ -293,18 +317,18 @@
 
 		<!-- Latest Event Section -->
 		<div class="mb-8 w-full">
-			<div class="mb-4 flex items-center justify-between">
+			<div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<h2 class="text-2xl font-medium">Latest Event</h2>
 
-				<div class="h-[50px] w-fit rounded bg-[#E0E9EC] p-1 text-[#98A1A4]">
+				<div class="flex h-[42px] w-fit shrink-0 rounded bg-[#E0E9EC] p-1 text-[#98A1A4] sm:h-[50px]">
 					<button
-						class={`h-full w-25 cursor-pointer rounded px-3 py-1 text-sm ${activeTab === 'Created' ? 'bg-white text-black shadow-md' : ''}`}
+						class={`h-full cursor-pointer rounded px-4 py-1 text-sm whitespace-nowrap ${activeTab === 'Created' ? 'bg-white text-black shadow-md' : ''}`}
 						on:click={() => (activeTab = 'Created')}
 					>
 						Created
 					</button>
 					<button
-						class={`h-full w-25 cursor-pointer rounded px-3 py-1 text-sm ${activeTab === 'Attending' ? 'bg-white text-black shadow-md' : ''}`}
+						class={`h-full cursor-pointer rounded px-4 py-1 text-sm whitespace-nowrap ${activeTab === 'Attending' ? 'bg-white text-black shadow-md' : ''}`}
 						on:click={() => (activeTab = 'Attending')}
 					>
 						Attending

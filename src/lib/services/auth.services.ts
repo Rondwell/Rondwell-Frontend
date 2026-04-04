@@ -13,7 +13,7 @@ function parseApiError(res: Response, data: any): string {
   return data.message ?? 'Something went wrong.';
 }
 
-// ─── Registrations ────────────────────────────────────────────────────────────
+// ─── Registration ────────────────────────────────────────────────────────────
 
 export async function requestRegistrationOTP(emailOrPhone: string, isPhone = false) {
   const body = isPhone ? { phoneNumber: emailOrPhone } : { email: emailOrPhone };

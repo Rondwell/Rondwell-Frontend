@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Nav from '../../../../components/Nav.svelte';
@@ -146,8 +145,10 @@
 						/>
 					</svg>
 				</a>
-				<button
-					on:click={() => goto(`/event-page/${eventId}`)}
+				<a
+					href={rawEvent?.customLinkSlug ? `/e/${rawEvent.customLinkSlug}` : `/event-page/${eventId}`}
+					target="_blank"
+					rel="noopener noreferrer"
 					class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
 				>
 					Event Page
@@ -176,7 +177,7 @@
 							stroke-width="0.37461"
 						/>
 					</svg>
-				</button>
+				</a>
 			</div>
 			<h1 class="mb-10 text-3xl font-bold md:text-4xl">{eventData?.title ?? 'Untitled Event'}</h1>
 

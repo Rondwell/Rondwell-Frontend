@@ -1,20 +1,31 @@
 <script lang="ts">
 	export let open = false;
 	export let enabled = false;
-	export let onConfirm: (enabled: boolean) => void = () => {};
+	export let currentMaxGroupSize = 10;
+	export let onConfirm: (enabled: boolean, maxGroupSize: number) => void = () => {};
 
 	let allowGroupRegistration = false;
+	let maxGroupSize = 10;
 	let saving = false;
 
-	$: if (open) allowGroupRegistration = enabled;
+	$: if (open) {
+		allowGroupRegistration = enabled;
+		maxGroupSize = currentMaxGroupSize > 0 ? currentMaxGroupSize : 10;
+	}
 
 	function toggleAllow() {
 		allowGroupRegistration = !allowGroupRegistration;
 	}
 
+	function clampGroupSize() {
+		if (maxGroupSize < 2) maxGroupSize = 2;
+		if (maxGroupSize > 10) maxGroupSize = 10;
+	}
+
 	async function confirm() {
+		clampGroupSize();
 		saving = true;
-		await onConfirm(allowGroupRegistration);
+		await onConfirm(allowGroupRegistration, maxGroupSize);
 		saving = false;
 	}
 </script>
@@ -60,6 +71,22 @@
 					></span>
 				</button>
 			</div>
+
+			{#if allowGroupRegistration}
+			<div class="mb-4">
+				<label for="maxGroupSize" class="mb-1 block text-sm font-medium text-gray-700">Max Group Size</label>
+				<p class="mb-2 text-xs text-[#8E8E90]">Maximum number of tickets an attendee can purchase at once (2–10).</p>
+				<input
+					id="maxGroupSize"
+					type="number"
+					min="2"
+					max="10"
+					bind:value={maxGroupSize}
+					on:blur={clampGroupSize}
+					class="h-[40px] w-full rounded-md border border-gray-300 bg-[#FFFFFF] px-3 py-1 text-sm text-black focus:ring-2 focus:ring-gray-400 focus:outline-none"
+				/>
+			</div>
+			{/if}
 
 			<button
 				class="w-full rounded-lg bg-gray-900 py-2.5 font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"

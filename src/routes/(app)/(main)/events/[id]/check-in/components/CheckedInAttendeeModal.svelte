@@ -176,7 +176,19 @@
 							</p>
 						</div>
 						{#if ticketTypeName}
-							<div><p class="text-xs text-[#C1C2C2]">Ticket Type</p><p class="text-sm font-semibold text-black">{ticketTypeName}</p></div>
+							<div class="border-r border-gray-200 pr-6"><p class="text-xs text-[#C1C2C2]">Ticket Type</p><p class="text-sm font-semibold text-black">{ticketTypeName}</p></div>
+						{/if}
+						{#if registration?.checked_in_at}
+							<div class="border-r border-gray-200 pr-6">
+								<p class="text-xs text-[#C1C2C2]">Checked-in Time</p>
+								<p class="text-sm font-semibold text-black">{formatTime(registration.checked_in_at)}</p>
+							</div>
+						{/if}
+						{#if registration?.event_passcode}
+							<div>
+								<p class="text-xs text-[#C1C2C2]">Event Passcode</p>
+								<p class="text-sm font-semibold font-mono text-black">{registration.event_passcode}</p>
+							</div>
 						{/if}
 					</div>
 

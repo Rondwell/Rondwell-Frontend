@@ -15,6 +15,8 @@
 	export let selectedTicketId: string = '';
 	export let ticketTypes: any[] = [];
 	export let registrationFields: any[] = [];
+	export let ticketQuantity: number = 1;
+	export let isGroupRegistration: boolean = false;
 
 	$: eventId = $page.params.id ?? '';
 	$: themeColor = eventId ? getEventTheme(eventId) : colors[0];
@@ -49,12 +51,33 @@
 	$: ethAddressEnabled = eventData?.registrationFormSettings?.ethAddressEnabled ?? 'OFF';
 	$: solAddressEnabled = eventData?.registrationFormSettings?.solAddressEnabled ?? 'OFF';
 
-	// Steps: 'form' | 'seats' | 'payment' | 'confirmation'
-	let step: 'form' | 'seats' | 'payment' | 'confirmation' = 'form';
+	// Steps: 'form' | 'group-members' | 'seats' | 'payment' | 'confirmation'
+	let step: 'form' | 'group-members' | 'seats' | 'payment' | 'confirmation' = 'form';
 	let registrationResult: any = null;
 	let selectedSeatId = '';
 	let selectedSeatNumber = '';
 	let hasSeatLayout = false;
+
+	// Group members state
+	interface GroupMember {
+		firstName: string;
+		lastName: string;
+		email: string;
+	}
+	let groupMembers: GroupMember[] = [];
+	let editingMemberIndex: number = -1;
+	let memberFirstName = '';
+	let memberLastName = '';
+	let memberEmail = '';
+	let memberErrors: Record<string, string> = {};
+
+	$: groupMemberCount = isGroupRegistration ? ticketQuantity - 1 : 0;
+
+	// Initialize group members array when quantity changes
+	$: if (isGroupRegistration && groupMembers.length !== groupMemberCount) {
+		const existing = [...groupMembers];
+		groupMembers = Array.from({ length: groupMemberCount }, (_, i) => existing[i] ?? { firstName: '', lastName: '', email: '' });
+	}
 
 	function resetForm() {
 		firstName = '';
@@ -72,6 +95,12 @@
 		selectedSeatId = '';
 		selectedSeatNumber = '';
 		hasSeatLayout = false;
+		groupMembers = [];
+		editingMemberIndex = -1;
+		memberFirstName = '';
+		memberLastName = '';
+		memberEmail = '';
+		memberErrors = {};
 	}
 
 	$: if (open) {
@@ -127,6 +156,12 @@
 	async function handleSubmit() {
 		if (!validate()) return;
 
+		// If group registration, go to group members step
+		if (isGroupRegistration && step === 'form') {
+			step = 'group-members';
+			return;
+		}
+
 		// If seat layout exists, go to seat selection first
 		if (hasSeatLayout && step === 'form') {
 			step = 'seats';
@@ -134,6 +169,65 @@
 		}
 
 		await proceedToRegistration();
+	}
+
+	function validateGroupMembers(): boolean {
+		// Check all members have required fields
+		for (let i = 0; i < groupMembers.length; i++) {
+			const m = groupMembers[i];
+			if (!m.firstName.trim() || !m.email.trim()) return false;
+			if (!isValidEmail(m.email)) return false;
+		}
+		// Check for duplicate emails (including lead email)
+		const allEmails = [email.toLowerCase(), ...groupMembers.map(m => m.email.toLowerCase())];
+		return new Set(allEmails).size === allEmails.length;
+	}
+
+	function validateMemberForm(): boolean {
+		memberErrors = {};
+		if (!memberFirstName.trim()) memberErrors['firstName'] = 'First name is required.';
+		if (!memberEmail.trim()) memberErrors['email'] = 'Email is required.';
+		else if (!isValidEmail(memberEmail)) memberErrors['email'] = 'Please enter a valid email.';
+		else {
+			// Check for duplicates
+			const allEmails = [email.toLowerCase(), ...groupMembers.map((m, i) => i !== editingMemberIndex ? m.email.toLowerCase() : '')].filter(Boolean);
+			if (allEmails.includes(memberEmail.trim().toLowerCase())) {
+				memberErrors['email'] = 'This email is already used by another attendee.';
+			}
+		}
+		return Object.keys(memberErrors).length === 0;
+	}
+
+	function saveMember() {
+		if (!validateMemberForm()) return;
+		groupMembers[editingMemberIndex] = {
+			firstName: memberFirstName.trim(),
+			lastName: memberLastName.trim(),
+			email: memberEmail.trim().toLowerCase(),
+		};
+		groupMembers = groupMembers;
+		editingMemberIndex = -1;
+		memberFirstName = '';
+		memberLastName = '';
+		memberEmail = '';
+		memberErrors = {};
+	}
+
+	function openMemberEditor(index: number) {
+		const m = groupMembers[index];
+		memberFirstName = m.firstName;
+		memberLastName = m.lastName;
+		memberEmail = m.email;
+		editingMemberIndex = index;
+		memberErrors = {};
+	}
+
+	function closeMemberEditor() {
+		editingMemberIndex = -1;
+		memberFirstName = '';
+		memberLastName = '';
+		memberEmail = '';
+		memberErrors = {};
 	}
 
 	async function proceedToRegistration() {
@@ -151,14 +245,12 @@
 			let answerValue = '';
 
 			if (f.fieldType === 'TERMS_CHECKBOX') {
-				// For terms, store "Accepted" + signature if provided
 				if (!val) return [];
 				const sig = answers[fid + '_signature'];
 				answerValue = sig ? `Accepted (Signed: ${sig})` : 'Accepted';
 			} else if (f.fieldType === 'CHECKBOX') {
 				answerValue = val ? 'Yes' : 'No';
 			} else if (Array.isArray(val)) {
-				// Multi-select: join selected values
 				const items = val.map((v: any) => typeof v === 'object' ? (v.value || v.label || String(v)) : String(v));
 				answerValue = items.join(', ');
 			} else {
@@ -171,7 +263,6 @@
 				{ field_id: fid, answer_value: answerValue },
 			];
 
-			// Also save signature as a separate answer if present
 			if (f.fieldType === 'TERMS_CHECKBOX' && answers[fid + '_signature']) {
 				result.push({
 					field_id: fid + '_signature',
@@ -185,7 +276,7 @@
 		const isPaid = selectedTicket && !selectedTicket.isFree && selectedTicket.price && selectedTicket.price > 0;
 
 		try {
-			// Step 1: Create attendee entry (returns existing if already registered)
+			// Step 1: Create attendee entry
 			const attendeeRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/register`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -201,7 +292,43 @@
 			const existingAttendee = attendeeData.data;
 			const attendeeId = existingAttendee?._id ?? existingAttendee?.id ?? attendeeData.attendeeId;
 
-			// Step 2: Create or update registration (backend handles PENDING re-registration)
+			// GROUP REGISTRATION PATH
+			if (isGroupRegistration && groupMembers.length > 0) {
+				const groupRegRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/register/group`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						eventId,
+						ticketTypeId: selectedTicketId,
+						leadDetails: {
+							attendeeId,
+							email: email.trim().toLowerCase(),
+							firstName: firstName.trim(),
+							lastName: lastName.trim(),
+						},
+						members: groupMembers,
+						form_answers: formAnswers,
+					}),
+				});
+				const groupRegData = await groupRegRes.json();
+				if (!groupRegRes.ok) throw new Error(groupRegData.error ?? groupRegData.message ?? 'Group registration failed');
+
+				// For group registration, we need to get the lead's registration
+				// The backend creates it, so we fetch it
+				const leadRegRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/event/${eventId}/attendee/${attendeeId}`);
+				const leadRegData = await leadRegRes.json();
+				registrationResult = leadRegData || { registration_id: 'group-pending', attendeeId };
+
+				if (isPaid) {
+					step = 'payment';
+				} else {
+					registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
+					step = 'confirmation';
+				}
+				return;
+			}
+
+			// SINGLE REGISTRATION PATH (unchanged)
 			const regRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/register`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -224,23 +351,19 @@
 			registrationResult = regData.registration;
 
 			if (isPaid) {
-				// Go to payment gateway selection — don't finalize yet
 				step = 'payment';
 			} else {
-				// Free ticket — finalize immediately
 				const finalizeRes = await fetch(
 					`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`,
 					{ method: 'POST', headers: { 'Content-Type': 'application/json' } }
 				);
 				if (finalizeRes.ok) {
-					// Backend sets UNAPPROVED if ticket requires approval, ATTENDING otherwise
 					registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
 				}
 				step = 'confirmation';
 			}
 		} catch (e: any) {
 			const msg = e.message ?? '';
-			// Map backend errors to user-friendly messages
 			if (msg.includes('already registered')) {
 				submitError = "You're already registered for this event with this email address. Check your inbox for confirmation details.";
 			} else if (msg.includes('blocked from registering')) {
@@ -251,11 +374,16 @@
 				submitError = 'Registration is currently closed for this event. Please check back later.';
 			} else if (msg.includes('Ticket type not found')) {
 				submitError = 'This ticket type is no longer available. Please select a different ticket.';
+			} else if (msg.includes('Duplicate email')) {
+				submitError = msg;
+			} else if (msg.includes('Not enough capacity')) {
+				submitError = msg;
+			} else if (msg.includes('already registered')) {
+				submitError = msg;
 			} else {
 				submitError = msg || 'Something went wrong. Please try again.';
 			}
-			// Go back to form step so the user sees the error clearly
-			if (step === 'seats') step = 'form';
+			if (step === 'seats' || step === 'group-members') step = 'form';
 		} finally {
 			submitting = false;
 		}
@@ -285,6 +413,7 @@
 		submitError = '';
 
 		const PAYMENT_URL = import.meta.env.VITE_PAYMENT_API_URL || import.meta.env.VITE_API_URL || import.meta.env.VITE_EVENT_API_URL;
+		const qty = isGroupRegistration ? ticketQuantity : 1;
 
 		try {
 			const paymentRes = await fetch(`${PAYMENT_URL}/api/v1/payment/ticketPayment/attendee-ticket-purchase/`, {
@@ -298,7 +427,7 @@
 					organizerId: eventData?.organizerId ?? '',
 					ticketDetails: {
 						ticketTypeId: selectedTicketId,
-						quantity: 1,
+						quantity: qty,
 						unitPrice: selectedTicket?.price ?? 0,
 					},
 					paymentMethodDetails: {
@@ -306,7 +435,8 @@
 						cardToken: '',
 						currency: selectedTicket?.currency ?? 'NGN',
 					},
-					isGroupPurchase: false,
+					isGroupPurchase: isGroupRegistration,
+					groupMembersEmails: isGroupRegistration ? groupMembers.map(m => m.email) : undefined,
 					successCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=success&reg=${registrationResult.registration_id}`,
 					failureCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=failed&reg=${registrationResult.registration_id}`,
 					returnWalletPaymentLink: false,
@@ -420,11 +550,29 @@
 					<p class="text-base" style="color: {themeColor.lightText};">Ticket</p>
 					<p class="text-base font-medium" style="color: {themeColor.text};">{selectedTicket?.name ?? 'Standard'}</p>
 				</div>
+				{#if isGroupRegistration}
+				<div class="flex justify-between items-center">
+					<p class="text-base" style="color: {themeColor.lightText};">Quantity</p>
+					<p class="text-base font-medium" style="color: {themeColor.text};">{ticketQuantity} tickets</p>
+				</div>
+				{/if}
 				<hr style="border-color: {themeColor.toggle};" />
 				<div class="flex justify-between items-center">
 					<p class="text-base" style="color: {themeColor.lightText};">Total</p>
-					<p class="text-xl font-semibold" style="color: {themeColor.text};">{formatPrice(selectedTicket)}</p>
+					<p class="text-xl font-semibold" style="color: {themeColor.text};">
+						{#if selectedTicket && !selectedTicket.isFree && selectedTicket.price}
+							{new Intl.NumberFormat('en-NG', { style: 'currency', currency: selectedTicket.currency ?? 'NGN', minimumFractionDigits: 0 }).format(selectedTicket.price * (isGroupRegistration ? ticketQuantity : 1))}
+						{:else}
+							FREE
+						{/if}
+					</p>
 				</div>
+				{#if isGroupRegistration}
+				<div class="flex items-center gap-2 rounded-lg px-3 py-2" style="background-color: {themeColor.smallCover};">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="{themeColor.button}" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="7" r="4" stroke="{themeColor.button}" stroke-width="1.5"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="{themeColor.button}" stroke-width="1.5" stroke-linecap="round"/></svg>
+					<span class="text-xs" style="color: {themeColor.lightText};">Group Registration · {ticketQuantity} attendees</span>
+				</div>
+				{/if}
 			</div>
 
 			<!-- Form / Confirmation -->
@@ -639,6 +787,134 @@
 					</button>
 				</form>
 
+			{:else if step === 'group-members'}
+				<!-- Group Members Step -->
+				<div class="flex flex-col gap-5">
+					<div>
+						<h3 class="text-2xl font-normal" style="color: {themeColor.text};">Group Members</h3>
+						<p class="mt-1 text-sm" style="color: {themeColor.lightText};">
+							Add details for the {groupMemberCount} additional attendee{groupMemberCount > 1 ? 's' : ''} in your group.
+						</p>
+					</div>
+
+					{#if submitError}
+					<div class="flex items-start gap-3 rounded-xl p-4 text-sm" style="background-color: #fef2f2; border: 1px solid #fecaca;">
+						<svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+						</svg>
+						<span style="color: #991b1b;">{submitError}</span>
+					</div>
+					{/if}
+
+					<!-- Lead info summary -->
+					<div class="flex items-center gap-3 rounded-lg p-3" style="background-color: {themeColor.smallCover};">
+						<div class="flex h-9 w-9 items-center justify-center rounded-full" style="background-color: {themeColor.button}; color: {themeColor.buttonText};">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/></svg>
+						</div>
+						<div>
+							<p class="text-sm font-medium" style="color: {themeColor.text};">{firstName} {lastName} <span class="text-xs font-normal" style="color: {themeColor.lightText};">(You - Group Lead)</span></p>
+							<p class="text-xs" style="color: {themeColor.lightText};">{email}</p>
+						</div>
+						<svg class="ml-auto h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="{themeColor.button}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					</div>
+
+					<!-- Member cards -->
+					<div class="flex flex-col gap-3">
+						{#each groupMembers as member, i}
+						{@const isFilled = member.firstName && member.email}
+						{@const isEditing = editingMemberIndex === i}
+
+						{#if isEditing}
+						<!-- Inline editor -->
+						<div class="rounded-xl border-2 p-4" style="border-color: {themeColor.button}; background-color: {themeColor.cover};">
+							<div class="mb-3 flex items-center justify-between">
+								<p class="text-sm font-medium" style="color: {themeColor.text};">Attendee {i + 2}</p>
+								<button class="text-xs underline" style="color: {themeColor.lightText};" on:click={closeMemberEditor}>Cancel</button>
+							</div>
+							<div class="flex flex-col gap-3">
+								<div>
+									<label class="text-xs" style="color: {themeColor.lightText};">First Name *</label>
+									<input bind:value={memberFirstName} type="text" placeholder="First name"
+										class="mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
+										style="background-color: {themeColor.bg}; border-color: {memberErrors.firstName ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+									{#if memberErrors.firstName}<p class="mt-1 text-xs text-red-500">{memberErrors.firstName}</p>{/if}
+								</div>
+								<div>
+									<label class="text-xs" style="color: {themeColor.lightText};">Last Name</label>
+									<input bind:value={memberLastName} type="text" placeholder="Last name"
+										class="mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
+										style="background-color: {themeColor.bg}; border-color: {themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+								</div>
+								<div>
+									<label class="text-xs" style="color: {themeColor.lightText};">Email *</label>
+									<input bind:value={memberEmail} type="email" placeholder="email@example.com"
+										class="mt-1 w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2"
+										style="background-color: {themeColor.bg}; border-color: {memberErrors.email ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+									{#if memberErrors.email}<p class="mt-1 text-xs text-red-500">{memberErrors.email}</p>{/if}
+								</div>
+								<button
+									class="w-full rounded-lg py-2.5 text-sm font-medium transition-all"
+									style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+									on:click={saveMember}
+								>
+									Save
+								</button>
+							</div>
+						</div>
+						{:else}
+						<!-- Member card (clickable) -->
+						<button
+							class="flex items-center gap-3 rounded-xl border p-3 text-left transition-all hover:opacity-90"
+							style="border-color: {isFilled ? themeColor.button + '40' : themeColor.toggle}; background-color: {themeColor.cover};"
+							on:click={() => openMemberEditor(i)}
+						>
+							<div class="flex h-9 w-9 items-center justify-center rounded-full"
+								style="background-color: {isFilled ? themeColor.button + '20' : themeColor.smallCover};">
+								{#if isFilled}
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="{themeColor.button}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+								{:else}
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="{themeColor.lightText}" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="7" r="4" stroke="{themeColor.lightText}" stroke-width="1.5"/></svg>
+								{/if}
+							</div>
+							<div class="flex-1">
+								{#if isFilled}
+								<p class="text-sm font-medium" style="color: {themeColor.text};">{member.firstName} {member.lastName}</p>
+								<p class="text-xs" style="color: {themeColor.lightText};">{member.email}</p>
+								{:else}
+								<p class="text-sm" style="color: {themeColor.lightText};">Attendee {i + 2} — Click to add details</p>
+								{/if}
+							</div>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="{themeColor.lightText}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+						</button>
+						{/if}
+						{/each}
+					</div>
+
+					<!-- Continue button -->
+					<button
+						class="w-full rounded-lg py-3 text-base font-medium transition-all disabled:opacity-60"
+						style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+						disabled={!validateGroupMembers() || submitting}
+						on:click={() => {
+							if (hasSeatLayout) { step = 'seats'; }
+							else { proceedToRegistration(); }
+						}}
+					>
+						{#if submitting}
+							<span class="inline-flex items-center gap-2">
+								<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+								Processing...
+							</span>
+						{:else}
+							Continue
+						{/if}
+					</button>
+
+					<button class="text-sm underline" style="color: {themeColor.lightText};" on:click={() => { step = 'form'; submitError = ''; }}>
+						Back to form
+					</button>
+				</div>
+
 			{:else if step === 'seats'}
 				<!-- Seat Selection Step -->
 				<div class="flex flex-col gap-4">
@@ -747,9 +1023,21 @@
 							<span class="text-sm" style="color: {themeColor.lightText};">Ticket</span>
 							<span class="text-sm font-medium" style="color: {themeColor.text};">{selectedTicket?.name}</span>
 						</div>
+						{#if isGroupRegistration}
+						<div class="flex justify-between mb-2">
+							<span class="text-sm" style="color: {themeColor.lightText};">Quantity</span>
+							<span class="text-sm font-medium" style="color: {themeColor.text};">{ticketQuantity} tickets</span>
+						</div>
+						{/if}
 						<div class="flex justify-between">
 							<span class="text-sm" style="color: {themeColor.lightText};">Amount</span>
-							<span class="text-lg font-bold" style="color: {themeColor.text};">{formatPrice(selectedTicket)}</span>
+							<span class="text-lg font-bold" style="color: {themeColor.text};">
+								{#if selectedTicket && !selectedTicket.isFree && selectedTicket.price}
+									{new Intl.NumberFormat('en-NG', { style: 'currency', currency: selectedTicket.currency ?? 'NGN', minimumFractionDigits: 0 }).format(selectedTicket.price * (isGroupRegistration ? ticketQuantity : 1))}
+								{:else}
+									FREE
+								{/if}
+							</span>
 						</div>
 					</div>
 
@@ -785,9 +1073,15 @@
 						{selectedTicket?.requiresApproval ? 'Request Submitted' : 'Registration Confirmed'}
 					</h2>
 					<p class="text-sm leading-relaxed" style="color: {themeColor.lightText};">
-						{selectedTicket?.requiresApproval
-							? 'Your request has been submitted. The organizer will review and approve your registration.'
-							: `You're registered for ${eventData?.title ?? 'this event'}. Check your email for confirmation details.`}
+						{#if isGroupRegistration}
+							{selectedTicket?.requiresApproval
+								? `Your group request for ${ticketQuantity} tickets has been submitted. The organizer will review and approve your registration.`
+								: `You've registered ${ticketQuantity} attendees for ${eventData?.title ?? 'this event'}. Group members will receive an email to complete their profile.`}
+						{:else}
+							{selectedTicket?.requiresApproval
+								? 'Your request has been submitted. The organizer will review and approve your registration.'
+								: `You're registered for ${eventData?.title ?? 'this event'}. Check your email for confirmation details.`}
+						{/if}
 					</p>
 
 					{#if registrationResult}
@@ -822,6 +1116,23 @@
 					<div class="flex flex-col items-center gap-2">
 						<p class="text-xs" style="color: {themeColor.lightText};">Your QR Code</p>
 						<img src={registrationResult.qr_code_data} alt="QR Code" class="h-32 w-32 rounded-lg" />
+					</div>
+					{/if}
+
+					{#if isGroupRegistration && groupMembers.length > 0}
+					<div class="w-full rounded-xl p-4 text-left space-y-2" style="background-color: {themeColor.smallCover};">
+						<p class="text-xs font-medium uppercase tracking-wider" style="color: {themeColor.lightText};">Group Members</p>
+						{#each groupMembers as member, i}
+						<div class="flex items-center gap-2">
+							<div class="flex h-6 w-6 items-center justify-center rounded-full text-xs" style="background-color: {themeColor.button}20; color: {themeColor.button};">
+								{i + 1}
+							</div>
+							<div>
+								<p class="text-sm" style="color: {themeColor.text};">{member.firstName} {member.lastName}</p>
+								<p class="text-xs" style="color: {themeColor.lightText};">{member.email} · Invitation sent</p>
+							</div>
+						</div>
+						{/each}
 					</div>
 					{/if}
 					{/if}

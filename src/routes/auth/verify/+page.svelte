@@ -115,6 +115,12 @@
   $: loading = $authState.loading;
 </script>
 
+<svelte:head>
+	<title>Verify OTP | Rondwell</title>
+	<meta name="description" content="Enter your verification code to sign in to Rondwell." />
+	<meta name="robots" content="noindex, nofollow" />
+</svelte:head>
+
 <main class="bg flex h-full min-h-screen flex-col items-stretch">
 	<Header />
 

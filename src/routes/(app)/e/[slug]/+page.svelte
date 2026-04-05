@@ -56,8 +56,11 @@
 		<meta name="twitter:title" content={seo.title} />
 		<meta name="twitter:description" content={seo.description} />
 		<meta name="twitter:image" content={seo.image} />
-		<meta name="twitter:site" content="@rondwell" />
+		<meta name="twitter:site" content="@rondwellhq" />
 		<link rel="canonical" href={seo.url} />
+		{#if seo.jsonLd}
+			{@html `<script type="application/ld+json">${JSON.stringify(seo.jsonLd)}</script>`}
+		{/if}
 	{/if}
 </svelte:head>
 

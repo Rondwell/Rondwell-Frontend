@@ -1,3 +1,18 @@
+<svelte:head>
+	<title>Privacy Policy | Rondwell</title>
+	<meta name="description" content="Read Rondwell's privacy policy. Learn how we collect, use, and protect your personal information." />
+	<meta property="og:title" content="Privacy Policy | Rondwell" />
+	<meta property="og:description" content="Read Rondwell's privacy policy. Learn how we collect, use, and protect your personal information." />
+	<meta property="og:url" content="https://rondwell.com/privacy" />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="Rondwell" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Privacy Policy | Rondwell" />
+	<meta name="twitter:description" content="Read Rondwell's privacy policy. Learn how we collect, use, and protect your personal information." />
+	<meta name="twitter:site" content="@rondwellhq" />
+	<link rel="canonical" href="https://rondwell.com/privacy" />
+</svelte:head>
+
 <div class="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8 lg:py-10">
 	<!-- Hero Section -->
 	<div class="mb-6 md:mb-8 flex flex-col items-center gap-3 md:gap-4 text-center">

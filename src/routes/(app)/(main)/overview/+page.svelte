@@ -152,6 +152,12 @@
 	];
 </script>
 
+<svelte:head>
+	<title>Dashboard | Rondwell</title>
+	<meta name="description" content="Your Rondwell dashboard. Manage events, track revenue, and view analytics." />
+	<meta name="robots" content="noindex, nofollow" />
+</svelte:head>
+
 {#if !pageReady}
 	<!-- Full-page skeleton: renders once, no layout shift -->
 	<div class="w-full animate-pulse">

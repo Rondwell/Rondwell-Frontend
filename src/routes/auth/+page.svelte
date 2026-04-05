@@ -37,6 +37,17 @@
   $: loading = $authState.loading;
 </script>
 
+<svelte:head>
+	<title>Sign In | Rondwell</title>
+	<meta name="description" content="Sign in or create your Rondwell account. Manage events, collections, and more." />
+	<meta property="og:title" content="Sign In | Rondwell" />
+	<meta property="og:description" content="Sign in or create your Rondwell account." />
+	<meta property="og:url" content="https://rondwell.com/auth" />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="Rondwell" />
+	<meta name="robots" content="noindex, nofollow" />
+</svelte:head>
+
 <main class="bg flex h-full min-h-screen flex-col items-stretch">
 	<Header />
 

@@ -10,6 +10,9 @@
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
+	export let data: any;
+	$: seo = data?.seo;
+
 	$: slug = $page.params.slug;
 
 	let loading = true;
@@ -115,12 +118,52 @@
 </script>
 
 <svelte:head>
-	{#if collection}
+	{#if seo}
+		<title>{seo.title}</title>
+		<meta name="description" content={seo.description} />
+		<meta property="og:title" content={seo.title} />
+		<meta property="og:description" content={seo.description} />
+		<meta property="og:image" content={seo.image} />
+		<meta property="og:image:secure_url" content={seo.image} />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:type" content="image/jpeg" />
+		<meta property="og:image:alt" content={seo.title} />
+		<meta property="og:url" content={seo.url} />
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Rondwell" />
+		<meta property="og:locale" content="en_US" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={seo.title} />
+		<meta name="twitter:description" content={seo.description} />
+		<meta name="twitter:image" content={seo.image} />
+		<meta name="twitter:site" content="@rondwellhq" />
+		<link rel="canonical" href={seo.url} />
+		{@html `<script type="application/ld+json">${JSON.stringify({
+			"@context": "https://schema.org",
+			"@type": "CollectionPage",
+			"name": seo.collection?.name ?? seo.title,
+			"description": seo.description,
+			"url": seo.url,
+			"image": seo.image,
+			"publisher": { "@type": "Organization", "name": "Rondwell", "url": "https://rondwell.com" },
+			"mainEntity": {
+				"@type": "ItemList",
+				"numberOfItems": seo.collection?.eventCount ?? 0,
+				"name": seo.collection?.name ?? seo.title
+			}
+		})}</script>`}
+	{:else if collection}
 		<title>{collection.name} | Rondwell</title>
 		<meta name="description" content={collection.description ? stripHtml(collection.description).slice(0, 160) : `${collection.name} on Rondwell`} />
 		<meta property="og:title" content={`${collection.name} | Rondwell`} />
 		<meta property="og:description" content={collection.description ? stripHtml(collection.description).slice(0, 160) : ''} />
-		{#if collection.coverBannerUrl}<meta property="og:image" content={collection.coverBannerUrl} />{/if}
+		{#if collection.coverBannerUrl || collection.profilePictureUrl}
+			<meta property="og:image" content={collection.coverBannerUrl || collection.profilePictureUrl} />
+		{/if}
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Rondwell" />
+		<meta name="twitter:card" content="summary_large_image" />
 	{/if}
 </svelte:head>
 

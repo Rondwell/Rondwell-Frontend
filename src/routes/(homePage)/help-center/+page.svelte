@@ -36,6 +36,21 @@
 	];
 </script>
 
+<svelte:head>
+	<title>Help Center | Rondwell</title>
+	<meta name="description" content="Get help with Rondwell. Browse guides, tutorials, and support articles for event management." />
+	<meta property="og:title" content="Help Center | Rondwell" />
+	<meta property="og:description" content="Get help with Rondwell. Browse guides, tutorials, and support articles for event management." />
+	<meta property="og:url" content="https://rondwell.com/help-center" />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="Rondwell" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Help Center | Rondwell" />
+	<meta name="twitter:description" content="Get help with Rondwell. Browse guides, tutorials, and support articles for event management." />
+	<meta name="twitter:site" content="@rondwellhq" />
+	<link rel="canonical" href="https://rondwell.com/help-center" />
+</svelte:head>
+
 <div class="mx-auto max-w-4xl py-10">
 	<!-- Hero -->
 	<div class="mb-10 flex flex-col items-center gap-6 text-center">

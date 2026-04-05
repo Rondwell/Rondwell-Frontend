@@ -1,3 +1,18 @@
+<svelte:head>
+	<title>Terms of Service | Rondwell</title>
+	<meta name="description" content="Read Rondwell's terms of service. Understand the rules and guidelines for using our platform." />
+	<meta property="og:title" content="Terms of Service | Rondwell" />
+	<meta property="og:description" content="Read Rondwell's terms of service. Understand the rules and guidelines for using our platform." />
+	<meta property="og:url" content="https://rondwell.com/terms" />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="Rondwell" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Terms of Service | Rondwell" />
+	<meta name="twitter:description" content="Read Rondwell's terms of service. Understand the rules and guidelines for using our platform." />
+	<meta name="twitter:site" content="@rondwellhq" />
+	<link rel="canonical" href="https://rondwell.com/terms" />
+</svelte:head>
+
 <div class="mx-auto max-w-4xl px-6 py-10">
 	<div class="mb-8 flex flex-col items-center gap-4 text-center">
 		<img src="/logo.svg" alt="" class="h-8" />

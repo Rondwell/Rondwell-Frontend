@@ -99,6 +99,21 @@
 	];
 </script>
 
+<svelte:head>
+	<title>Pricing | Rondwell</title>
+	<meta name="description" content="Explore Rondwell pricing plans. From free to enterprise, find the right plan for your event management needs." />
+	<meta property="og:title" content="Pricing | Rondwell" />
+	<meta property="og:description" content="Explore Rondwell pricing plans. From free to enterprise, find the right plan for your event management needs." />
+	<meta property="og:url" content="https://rondwell.com/pricing" />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="Rondwell" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Pricing | Rondwell" />
+	<meta name="twitter:description" content="Explore Rondwell pricing plans. From free to enterprise, find the right plan for your event management needs." />
+	<meta name="twitter:site" content="@rondwellhq" />
+	<link rel="canonical" href="https://rondwell.com/pricing" />
+</svelte:head>
+
 <section>
 	<Header />
 	<main class="bg-color px-6 py-8">

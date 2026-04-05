@@ -71,6 +71,21 @@
 	};
 </script>
 
+<svelte:head>
+	<title>Contact Us | Rondwell</title>
+	<meta name="description" content="Get in touch with the Rondwell team. We're here to help with your event management needs." />
+	<meta property="og:title" content="Contact Us | Rondwell" />
+	<meta property="og:description" content="Get in touch with the Rondwell team. We're here to help with your event management needs." />
+	<meta property="og:url" content="https://rondwell.com/contact" />
+	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content="Rondwell" />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content="Contact Us | Rondwell" />
+	<meta name="twitter:description" content="Get in touch with the Rondwell team. We're here to help with your event management needs." />
+	<meta name="twitter:site" content="@rondwellhq" />
+	<link rel="canonical" href="https://rondwell.com/contact" />
+</svelte:head>
+
 	<main class="bg-color px-6 py-8">
 	<div class="mx-auto max-w-lg">
 		<!-- Logo and Title -->

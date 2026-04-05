@@ -66,16 +66,29 @@
 
 	$: isEventPage = $page.url.pathname.startsWith('/event-page/');
 	$: eventPageBg = $activeEventPageTheme?.bg ?? '#f4f5f6';
-	$: sidebarBg = isEventPage ? eventPageBg : '#f4f5f6';
 </script>
 
+{#if isEventPage}
+<!-- Event page: no sidebar, no submenu — just the event theme -->
+<div
+	class="relative flex min-h-screen flex-col text-sm font-medium"
+	style="background-color: {eventPageBg};"
+>
+	<main class="flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden p-3 md:p-5">
+		<div class="flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
+			<slot class="h-full w-full flex-1" />
+		</div>
+	</main>
+</div>
+{:else}
+<!-- Normal app layout with sidebar -->
 <div
 	class="relative flex min-h-screen flex-col text-sm font-medium md:flex-row"
-	style="background-image: {isEventPage ? 'none' : selectedTheme}; background-color: {isEventPage ? eventPageBg : 'transparent'};"
+	style="background-image: {selectedTheme}; background-color: transparent;"
 >
 	<!-- Sidebar -->
 	<div class="relative md:min-w-[117px]">
-		<Sidebar background_color={sidebarBg} />
+		<Sidebar background_color="#f4f5f6" />
 	</div>
 
 	{#if isSubMenuVisible}
@@ -86,7 +99,7 @@
 
 	<!-- Main Content Area -->
 	<main class="relative mb-[106px] flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden p-3 md:mb-0 md:p-5">
-		<div class="{isEventPage ? '' : 'bg'} flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
+		<div class="bg flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
 			<!-- Mobile SubMenu (Events / People / Collections root only) -->
 			{#if isSubMenuVisible && isMobile && menuItems.length > 0}
 				<div style={`isSettingsMenuVisible ? 'mb-0':'mb-4'`}>
@@ -99,6 +112,7 @@
 		</div>
 	</main>
 </div>
+{/if}
 
 <style>
 	.bg {

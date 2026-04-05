@@ -47,6 +47,8 @@
 	<svelte:element
 		this={eventHref ? 'a' : 'div'}
 		href={eventHref}
+		target={eventHref ? '_blank' : undefined}
+		rel={eventHref ? 'noopener noreferrer' : undefined}
 		class="flex cursor-pointer flex-col gap-4 rounded-md bg-[#FDFDFD] p-3 no-underline md:flex-row md:p-6"
 	>
 		<div class="flex-1 space-y-1">

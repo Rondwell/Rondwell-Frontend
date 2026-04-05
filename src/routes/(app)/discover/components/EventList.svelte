@@ -106,7 +106,7 @@
 	<main class="h-full py-5">
 		<div class="mb-8 grid gap-4 lg:grid-cols-2">
 			{#each displayEvents as event (event.id)}
-				<a href={event.slug ? `/e/${event.slug}` : `/event-page/${event.id}`} class="no-underline">
+				<a href={event.slug ? `/e/${event.slug}` : `/event-page/${event.id}`} target="_blank" rel="noopener noreferrer" class="no-underline">
 					<EventCard {event} eventId={event.id} slug={event.slug} />
 				</a>
 			{/each}

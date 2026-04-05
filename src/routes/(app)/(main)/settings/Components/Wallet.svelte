@@ -192,7 +192,8 @@
 			withdrawAmount = '';
 			withdrawOtp = '';
 			otpSent = false;
-			await loadWalletBalance();
+			// Refresh balance and earnings after successful withdrawal
+			await Promise.all([loadWalletBalance(), loadEarnings()]);
 			setTimeout(() => { showWithdrawModal = false; withdrawSuccess = ''; }, 2000);
 		} catch (e: any) {
 			withdrawError = e.message ?? 'Withdrawal failed';

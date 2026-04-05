@@ -169,9 +169,26 @@
 
 {#if loading}
 	<div class="flex min-h-screen items-center justify-center" style="background-color: {themeColor.bg}">
-		<div class="flex flex-col items-center gap-3">
-			<div class="h-8 w-8 animate-spin rounded-full border-4 border-gray-200" style="border-top-color: {themeColor.button}"></div>
-			<p class="text-sm" style="color: {themeColor.lightText}">Loading collection...</p>
+		<div class="flex flex-col items-center gap-5">
+			<!-- Animated collection icon -->
+			<div class="relative">
+				<div class="flex h-20 w-20 items-center justify-center rounded-2xl" style="background-color: {themeColor.cover}">
+					<svg width="36" height="36" viewBox="0 0 24 24" fill="none" class="collection-loading-bounce">
+						<path d="M17 10H19C21 10 22 9 22 7V5C22 3 21 2 19 2H17C15 2 14 3 14 5V7C14 9 15 10 17 10Z" stroke="{themeColor.button}" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M5 22H7C9 22 10 21 10 19V17C10 15 9 14 7 14H5C3 14 2 15 2 17V19C2 21 3 22 5 22Z" stroke="{themeColor.button}" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M6 10C8.20914 10 10 8.20914 10 6C10 3.79086 8.20914 2 6 2C3.79086 2 2 3.79086 2 6C2 8.20914 3.79086 10 6 10Z" stroke="{themeColor.text}" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M18 22C20.2091 22 22 20.2091 22 18C22 15.7909 20.2091 14 18 14C15.7909 14 14 15.7909 14 18C14 20.2091 15.7909 22 18 22Z" stroke="{themeColor.text}" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
+				</div>
+				<div class="absolute -bottom-1 -right-1 h-4 w-4 rounded-full opacity-60 animate-ping" style="background-color: {themeColor.button}"></div>
+			</div>
+			<!-- Loading dots -->
+			<div class="flex items-center gap-2">
+				<span class="collection-dot collection-dot-1" style="background-color: {themeColor.button}"></span>
+				<span class="collection-dot collection-dot-2" style="background-color: {themeColor.toggle}"></span>
+				<span class="collection-dot collection-dot-3" style="background-color: {themeColor.text}"></span>
+			</div>
+			<p class="text-sm" style="color: {themeColor.lightText}">Loading collection</p>
 		</div>
 	</div>
 {:else if notFound}
@@ -509,6 +526,33 @@
 }} />
 
 <style>
+	/* Collection loading animations */
+	.collection-loading-bounce {
+		animation: gentle-bounce 2s ease-in-out infinite;
+	}
+
+	@keyframes gentle-bounce {
+		0%, 100% { transform: translateY(0); }
+		50% { transform: translateY(-6px); }
+	}
+
+	.collection-dot {
+		display: block;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		animation: collection-pulse 1.6s ease-in-out infinite;
+	}
+
+	.collection-dot-1 { animation-delay: 0s; }
+	.collection-dot-2 { animation-delay: 0.2s; }
+	.collection-dot-3 { animation-delay: 0.4s; }
+
+	@keyframes collection-pulse {
+		0%, 100% { opacity: 0.3; transform: scale(1); }
+		50% { opacity: 1; transform: scale(1.4); }
+	}
+
 	input::placeholder { opacity: 0.5; }
 	.line-clamp-2 {
 		display: -webkit-box;

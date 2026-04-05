@@ -6,7 +6,7 @@
 	import { getPublicEventPage } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { setEventSlug } from '$lib/stores/eventSlug';
-	import { getEventTheme, setEventTheme } from '$lib/stores/eventTheme';
+	import { activeEventPageTheme, getEventTheme, setEventTheme } from '$lib/stores/eventTheme';
 	import { toast } from '$lib/stores/toast.store';
 	import type { Color } from '$lib/utils/colors';
 	import { colors } from '$lib/utils/colors';
@@ -69,6 +69,7 @@
 				if (matched) {
 					setEventTheme(eventId, matched);
 					themeColor = matched;
+					activeEventPageTheme.set(matched);
 				}
 			}
 
@@ -333,17 +334,28 @@
 
 {#if loading}
 <!-- Skeleton Loader -->
-<div class="w-full max-w-6xl animate-pulse">
+<div class="w-full max-w-6xl">
 	<div class="flex flex-col gap-6 py-4 md:flex-row md:gap-9">
+		<!-- Left column skeleton -->
 		<div class="w-full md:max-w-[378px]">
-			<div class="aspect-square w-full rounded-[27px] bg-gray-200 md:size-[378px]"></div>
-			<div class="mt-3 h-16 rounded-lg bg-gray-200"></div>
+			<div class="skeleton-shimmer aspect-square w-full rounded-[27px] md:size-[378px]"></div>
+			<div class="skeleton-shimmer mt-3 h-16 rounded-lg" style="animation-delay: 0.1s;"></div>
 		</div>
+		<!-- Right column skeleton -->
 		<div class="flex-1 space-y-5">
-			<div class="h-40 rounded-2xl bg-gray-200"></div>
-			<div class="h-64 rounded-2xl bg-gray-200"></div>
-			<div class="h-32 rounded-2xl bg-gray-200"></div>
+			<div class="skeleton-shimmer h-40 rounded-2xl" style="animation-delay: 0.15s;"></div>
+			<div class="skeleton-shimmer h-64 rounded-2xl" style="animation-delay: 0.25s;"></div>
+			<div class="skeleton-shimmer h-32 rounded-2xl" style="animation-delay: 0.35s;"></div>
 		</div>
+	</div>
+	<!-- Centered loading indicator -->
+	<div class="mt-8 flex flex-col items-center gap-4">
+		<div class="loading-dots flex items-center gap-2">
+			<span class="dot dot-1"></span>
+			<span class="dot dot-2"></span>
+			<span class="dot dot-3"></span>
+		</div>
+		<p class="text-sm text-gray-400">Loading event details</p>
 	</div>
 </div>
 
@@ -400,10 +412,10 @@
 		<div class="w-full md:max-w-[378px]">
 			<!-- Event Image -->
 			<img
-				src={event.displayPictureUrl || event.coverPictureUrl || '/eventpage_sample.svg'}
+				src={event.displayPictureUrl || event.coverPictureUrl || '/events.png'}
 				alt={event.title}
 				class="aspect-square w-full rounded-[27px] object-cover md:size-[378px]"
-				on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/eventpage_sample.svg'; }}
+				on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/events.png'; }}
 			/>
 
 			<!-- Organizer Access Card (only if logged in) -->
@@ -967,6 +979,48 @@
 {/if}
 
 <style>
+	/* Skeleton shimmer animation */
+	.skeleton-shimmer {
+		background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+		background-size: 200% 100%;
+		animation: shimmer 1.8s ease-in-out infinite;
+		border-radius: inherit;
+	}
+
+	@keyframes shimmer {
+		0% { background-position: 200% 0; }
+		100% { background-position: -200% 0; }
+	}
+
+	/* Loading dots */
+	.loading-dots .dot {
+		display: block;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		animation: pulse-dot 1.6s ease-in-out infinite;
+	}
+
+	.loading-dots .dot-1 {
+		background: #DB3EC6;
+		animation-delay: 0s;
+	}
+
+	.loading-dots .dot-2 {
+		background: #8B3AD4;
+		animation-delay: 0.2s;
+	}
+
+	.loading-dots .dot-3 {
+		background: #513BE2;
+		animation-delay: 0.4s;
+	}
+
+	@keyframes pulse-dot {
+		0%, 100% { opacity: 0.3; transform: scale(1); }
+		50% { opacity: 1; transform: scale(1.4); }
+	}
+
 	:global(.ticket-desc ol) {
 		list-style-type: decimal;
 		padding-left: 1.25rem;

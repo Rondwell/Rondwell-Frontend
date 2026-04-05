@@ -1,17 +1,48 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { afterNavigate } from '$app/navigation';
-	import { activeEventPageTheme, getEventTheme } from '$lib/stores/eventTheme';
+	import { activeEventPageTheme, getEventTheme, setEventTheme } from '$lib/stores/eventTheme';
 	import { eventSlugMap } from '$lib/stores/eventSlug';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 	import type { Color } from '$lib/utils/colors';
 	import { colors } from '$lib/utils/colors';
 
+	export let data: any;
+
 	// Hide the organizer submenu on the public event page
 	showSubMenu.set(false);
 	subMenuItems.set([]);
 	activeSubItem.set('');
+
+	/** Resolve the initial theme from server data or localStorage — never fall back to colors[0] blindly */
+	function resolveInitialTheme(eventId: string, serverThemeColor: string | null): Color {
+		// 1. Check localStorage first (fastest, already resolved)
+		const stored = getEventTheme(eventId);
+		if (stored && stored.name !== colors[0].name) {
+			return stored;
+		}
+
+		// 2. Use server-provided theme color to match against our palette
+		if (serverThemeColor) {
+			const matched = colors.find(
+				(c: Color) => c.name.toLowerCase() === serverThemeColor.toLowerCase()
+					|| c.bg.toLowerCase() === serverThemeColor.toLowerCase()
+			);
+			if (matched) {
+				setEventTheme(eventId, matched);
+				return matched;
+			}
+		}
+
+		// 3. If localStorage had a stored theme (even if it was colors[0]), use it
+		if (stored) {
+			return stored;
+		}
+
+		// 4. True fallback
+		return colors[0];
+	}
 
 	let themeColor: Color = colors[0];
 	let themeReady = false;
@@ -19,24 +50,19 @@
 	$: {
 		const match = $page.url.pathname.match(/^\/event-page\/([^/]+)/);
 		if (match) {
-			const stored = getEventTheme(match[1]);
-			// If we have a stored theme (not the default), use it immediately
-			if (stored && stored.name !== colors[0].name) {
-				themeColor = stored;
-				activeEventPageTheme.set(themeColor);
-				themeReady = true;
-			}
-			// Also react to the activeEventPageTheme store (set by overview page after API fetch)
-			if ($activeEventPageTheme) {
-				themeColor = $activeEventPageTheme;
-				themeReady = true;
-			}
+			const eventId = match[1];
+			const serverThemeColor = data?.serverThemeColor ?? null;
+
 			if (!themeReady) {
-				// No stored theme yet — will be set by the overview page after fetch
-				// Show a neutral state briefly
-				themeColor = colors[0];
+				// First render — resolve from server data or localStorage immediately
+				themeColor = resolveInitialTheme(eventId, serverThemeColor);
 				activeEventPageTheme.set(themeColor);
-				themeReady = true; // don't block rendering
+				themeReady = true;
+			}
+
+			// React to theme updates from the page component (after API fetch)
+			if ($activeEventPageTheme && $activeEventPageTheme.name !== themeColor.name) {
+				themeColor = $activeEventPageTheme;
 			}
 		} else {
 			activeEventPageTheme.set(null);

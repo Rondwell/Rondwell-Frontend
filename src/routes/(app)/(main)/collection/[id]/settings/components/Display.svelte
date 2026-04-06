@@ -252,7 +252,7 @@
 	}
 </script>
 
-<div class="w-full space-y-5">
+<div class="w-full space-y-5 overflow-x-hidden">
 	{#if pageLoading}
 		<!-- Skeleton loader -->
 		<div class="animate-pulse rounded-lg">
@@ -576,7 +576,7 @@
 
 		<div class="mt-6 flex flex-col bg-[#FDFDFD] p-4">
 			<h3 class="mb-3 text-sm font-medium text-[#000]">Links</h3>
-			<div class=" flex w-fit flex-col gap-6">
+			<div class="flex w-full flex-col gap-6">
 				{#each socialLinksMeta as { key, icon, label, prefix }}
 					<div class="flex items-center gap-2">
 						<!-- Icon -->

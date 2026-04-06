@@ -4,8 +4,9 @@
 	import { page } from '$app/stores';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { activeEventPageTheme } from '$lib/stores/eventTheme';
+	import { resetThemeColor, themeColor } from '$lib/stores/themeColor';
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import Sidebar from '../components/Sidebar.svelte';
 	import SideMenu from '../components/SideMenu.svelte';
 
@@ -66,6 +67,40 @@
 
 	$: isEventPage = $page.url.pathname.startsWith('/event-page/');
 	$: eventPageBg = $activeEventPageTheme?.bg ?? '#f4f5f6';
+
+	// Map route gradients to a representative top color for the browser chrome
+	const gradientTopColors: Record<string, string> = {
+		default: '#d1e8f5',
+		eventMain: '#DBD4F1',
+		eventRegistration: '#DDD1E1',
+		eventMore: '#FFD8D2',
+		collection: '#F4E1D2'
+	};
+
+	function getThemeKeyForRoute(path: string | null): string {
+		if (!path) return 'default';
+		if (path.startsWith('/events/') && path.includes('/registration')) return 'eventRegistration';
+		if (path.startsWith('/events/')) return 'eventMain';
+		if (path.startsWith('/collections/')) return 'collection';
+		return 'default';
+	}
+
+	// Update browser chrome color based on current page
+	$: {
+		if (browser) {
+			if (isEventPage && $activeEventPageTheme) {
+				themeColor.set($activeEventPageTheme.bg);
+			} else {
+				const key = getThemeKeyForRoute($page.url.pathname);
+				themeColor.set(gradientTopColors[key] ?? gradientTopColors.default);
+			}
+		}
+	}
+
+	// Reset theme color when leaving this layout
+	onDestroy(() => {
+		resetThemeColor();
+	});
 </script>
 
 <div

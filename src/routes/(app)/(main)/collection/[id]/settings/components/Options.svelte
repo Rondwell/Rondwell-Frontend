@@ -5,7 +5,7 @@
 	let toggler = false;
 </script>
 
-<div class="mb-6">
+<div class="mb-6 overflow-x-hidden">
 	<div class="lg-block hidden sm:justify-between md:mb-10 md:flex">
 		<div class="flex items-center justify-between">
 			<img src="/tech-icon.svg" alt="icon" class="h-7 w-7" />
@@ -47,8 +47,8 @@
 	</div>
 	<p class="text-[#8C8F93]">Default settings for new events created on this calendar.</p>
 
-	<div class="mt-6 rounded-md bg-[#FFFFFF] p-4">
-		<div class="flex justify-between border-b border-gray-300 pt-6">
+	<div class="mt-6 rounded-md bg-[#FFFFFF] p-3 sm:p-4">
+		<div class="flex items-start justify-between gap-4 border-b border-gray-300 pb-4 pt-4 sm:pt-6">
 			<div class="flex flex-col">
 				<span class="text-[#131517]">Event Visibility</span>
 				<span class="text-[#C0C2C2]">Whether events are shown on the calendar page.</span>
@@ -116,7 +116,7 @@
 				</button>
 			</div>
 		</div>
-		<div class="item-center flex justify-between border-b border-gray-300 pb-3 pt-6">
+		<div class="flex items-start justify-between gap-4 border-b border-gray-300 pb-3 pt-4 sm:pt-6">
 			<div class="flex flex-col">
 				<span class="text-[#131517]">Public Guest List</span>
 				<span class="text-[#C0C2C2]">Whether to show guest list on the event pages.</span>
@@ -135,7 +135,7 @@
 			</div>
 		</div>
 
-		<div class="item-center item-center flex justify-between border-b border-gray-300 pb-3 pt-6">
+		<div class="flex items-start justify-between gap-4 border-b border-gray-300 pb-3 pt-4 sm:pt-6">
 			<div class="flex flex-col">
 				<span class="text-[#131517]">Collect Feedback</span>
 				<span class="text-[#C0C2C2]">Email guests after the event to collect feedback.</span>

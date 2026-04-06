@@ -447,7 +447,7 @@
 				<div class="rounded-2xl p-4" style="background-color: {themeColor.cover};">
 					<div class="flex items-center justify-between gap-3">
 						<div class="flex gap-3">
-							<img src="/tech-icon.svg" alt="" class="size-9 rounded-[9px] object-cover" style="background-color: {themeColor.smallCover};" />
+							<img src={collectionInfo.profilePictureUrl || '/tech-icon.svg'} alt="" class="size-9 rounded-[9px] object-cover" style="background-color: {themeColor.smallCover};" on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/tech-icon.svg'; }} />
 							<div>
 								<p class="text-xs" style="color: {themeColor.lightText};">Presented by</p>
 								<a href={collectionInfo.slug ? `/c/${collectionInfo.slug}` : `/collection/${collectionInfo._id}/events`} class="flex items-center gap-1 text-sm font-medium no-underline hover:underline" style="color: {themeColor.text};">
@@ -485,6 +485,8 @@
 							organizerAvatar={organizerProfile?.profilePictureUrl || '/john-avatar.svg'}
 							organizerSocial={!!organizerProfile?.socialLinks && Object.values(organizerProfile.socialLinks).some(Boolean)}
 							socialLinks={organizerProfile?.socialLinks ?? {}}
+							iconColor={themeColor.text}
+							iconBgColor={themeColor.cover}
 						/>
 						<!-- Co-organizers from admins (only those with a name or email) -->
 						{#each organizers.filter((a) => a.displayName || a.email) as admin}
@@ -492,6 +494,8 @@
 								organizerName={admin.displayName ?? admin.email ?? 'Co-organizer'}
 								organizerAvatar="/user1-icon.svg"
 								organizerSocial={false}
+								iconColor={themeColor.text}
+								iconBgColor={themeColor.cover}
 							/>
 						{/each}
 					</div>
@@ -886,7 +890,7 @@
 				<div class="mb-4 rounded-2xl p-4" style="background-color: {themeColor.cover};">
 					<div class="flex items-center justify-between gap-3">
 						<div class="flex gap-3">
-							<img src="/tech-icon.svg" alt="" class="size-9 rounded-[9px] object-cover" style="background-color: {themeColor.smallCover};" />
+							<img src={collectionInfo.profilePictureUrl || '/tech-icon.svg'} alt="" class="size-9 rounded-[9px] object-cover" style="background-color: {themeColor.smallCover};" on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/tech-icon.svg'; }} />
 							<div>
 								<p class="text-xs" style="color: {themeColor.lightText};">Presented by</p>
 								<a href={collectionInfo.slug ? `/c/${collectionInfo.slug}` : `/collection/${collectionInfo._id}/events`} class="flex items-center gap-1 text-sm font-medium no-underline hover:underline" style="color: {themeColor.text};">
@@ -922,12 +926,16 @@
 							organizerAvatar={organizerProfile?.profilePictureUrl || '/john-avatar.svg'}
 							organizerSocial={!!organizerProfile?.socialLinks && Object.values(organizerProfile.socialLinks).some(Boolean)}
 							socialLinks={organizerProfile?.socialLinks ?? {}}
+							iconColor={themeColor.text}
+							iconBgColor={themeColor.cover}
 						/>
 						{#each organizers.filter((a) => a.displayName || a.email) as admin}
 							<OrganiserList
 								organizerName={admin.displayName ?? admin.email ?? 'Co-organizer'}
 								organizerAvatar="/user1-icon.svg"
 								organizerSocial={false}
+								iconColor={themeColor.text}
+								iconBgColor={themeColor.cover}
 							/>
 						{/each}
 					</div>

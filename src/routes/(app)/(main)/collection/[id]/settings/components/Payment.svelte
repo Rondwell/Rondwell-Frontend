@@ -147,7 +147,7 @@
 
 <!-- Action Buttons -->
 
-<div class="mb-6">
+<div class="mb-6 overflow-x-hidden">
 	<div class="mb-4 flex items-center justify-between">
 		<h2 class="text-lg font-semibold">Ticket Sales</h2>
 	</div>

@@ -4,6 +4,11 @@
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="theme-color" id="theme-color-meta" content="#ffffff" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="msapplication-navbutton-color" content="#ffffff" />
 		<title>Rondwell – AI-powered Event Management SaaS</title>
 
 		<!-- Open Graph -->
@@ -85,8 +90,13 @@
 					return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 				}
 
-				const theme = getTheme();
+				var theme = getTheme();
 				document.documentElement.classList.add(theme);
+
+				// Set initial theme-color for browser chrome (status bar, URL bar)
+				var defaultColor = '#ffffff';
+				var meta = document.getElementById('theme-color-meta');
+				if (meta) meta.setAttribute('content', defaultColor);
 			})();
 		</script>
 

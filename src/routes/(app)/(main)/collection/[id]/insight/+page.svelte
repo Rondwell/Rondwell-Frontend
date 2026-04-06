@@ -135,7 +135,7 @@
 	const topSources: any[] = [];
 </script>
 
-<div class="p-4">
+<div class="px-2 sm:px-4">
 
 	<!-- Stats Row -->
 	<section class="flex flex-col gap-0">
@@ -175,10 +175,10 @@
 	<!-- Page Views -->
 	<div class="mb-6 grid gap-4 rounded-2xl bg-[#FDFDFD] p-1">
 		<!-- Main charts area -->
-		<div class="flex w-full flex-col overflow-hidden gap-6 p-4 lg:flex-row lg:gap-10">
+		<div class="flex w-full flex-col gap-6 overflow-x-auto p-2 sm:p-4 lg:flex-row lg:gap-10">
 			<!-- Left charts col -->
 
-			<div class="w-full">
+			<div class="min-w-0 w-full">
 				<StackedAreaChart data={chartData} options={pageViewsOptions} />
 			</div>
 

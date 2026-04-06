@@ -70,11 +70,11 @@
 	}
 </script>
 
-<div class="px-4">
-	<div class="mb-6 flex items-center justify-between">
+<div class="px-2 sm:px-4">
+	<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 		<h1 class="flex items-center gap-2 text-xl font-semibold">
 			Events
-			<div class="ml-4">
+			<div class="ml-2 sm:ml-4">
 				<button on:click={openCollectionModal}
 					class="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBECED] p-1 transition-colors duration-500 hover:bg-[#E8E8E8]">
 					<Icon icon="mdi:plus" class="h-6 w-6 text-[#616265]" />
@@ -105,10 +105,10 @@
 			/>
 		</h1>
 
-		<div class="h-10 w-fit rounded bg-[#EBECED] p-1 text-[#A1A2A2]">
-			<button class={`h-full cursor-pointer rounded px-3 py-1 text-sm ${activeTab === 'Upcoming' ? 'bg-white text-black' : ''}`}
+		<div class="h-10 w-fit shrink-0 rounded bg-[#EBECED] p-1 text-[#A1A2A2]">
+			<button class={`h-full cursor-pointer rounded px-3 py-1 text-sm ${activeTab === 'Upcoming' ? 'bg-white text-black shadow-sm' : ''}`}
 				on:click={() => (activeTab = 'Upcoming')}>Upcoming</button>
-			<button class={`h-full cursor-pointer rounded px-3 py-1 text-sm ${activeTab === 'Past' ? 'bg-white text-black' : ''}`}
+			<button class={`h-full cursor-pointer rounded px-3 py-1 text-sm ${activeTab === 'Past' ? 'bg-white text-black shadow-sm' : ''}`}
 				on:click={() => (activeTab = 'Past')}>Past</button>
 		</div>
 	</div>
@@ -158,7 +158,7 @@
 		{:else}
 			{#each Array.from(groupedEvents) as [date, dayEvents]}
 				<div class="flex flex-col items-stretch gap-4 md:flex-row">
-					<div class="flex w-full max-w-30 justify-between">
+					<div class="flex w-full max-w-[120px] justify-between">
 						<div>
 							<div class="text-lg">{formatDate(date).formatted}</div>
 							<div class="text-lg text-[#B9BABA]">{formatDate(date).weekday}</div>
@@ -170,7 +170,9 @@
 					</div>
 					<div class="flex w-full flex-col gap-4 overflow-hidden md:max-w-[687px]">
 						{#each dayEvents as event, index (event._id ?? index)}
-							<EventCard {event} {type} />
+							<a href={`/events/${event.id}`} class="no-underline">
+								<EventCard {event} {type} />
+							</a>
 						{/each}
 					</div>
 				</div>

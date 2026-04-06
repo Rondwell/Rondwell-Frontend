@@ -135,7 +135,7 @@
 </script>
 
 <!-- Collection Header — shared across all modules -->
-<div class="px-4 py-4">
+<div class="px-2 py-4 sm:px-4">
 	<div class="mb-4 flex items-center justify-between">
 		<div class="flex min-w-0 items-center gap-2">
 			{#if collectionImage}

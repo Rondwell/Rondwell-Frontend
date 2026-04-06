@@ -3,12 +3,13 @@
 	import { onMount } from 'svelte';
 	import Nav from '../../components/Nav.svelte';
 	import Account from './Components/Account.svelte';
+	import PaymentMethods from './Components/PaymentMethods.svelte';
 	import Preferences from './Components/Preferences.svelte';
 	import Wallet from './Components/Wallet.svelte';
 
 	let activeTab = 'account';
 
-	const validTabs = ['account', 'preferences', 'wallet'];
+	const validTabs = ['account', 'preferences', 'wallet', 'payments'];
 
 	onMount(() => {
 		const tabParam = $page.url.searchParams.get('tab');
@@ -103,6 +104,11 @@
 			id: 'wallet',
 			label: 'Wallet',
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.8327 9.29167H5.83268" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.66602 9.29232V5.45065C1.66602 3.72482 3.06602 2.32482 4.79185 2.32482H9.37435C11.1002 2.32482 12.5002 3.39982 12.5002 5.12565" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.5672 10.1172C14.1505 10.5089 13.9255 11.0922 13.9922 11.7089C14.0922 12.6839 14.9838 13.3922 15.9672 13.3922H17.5005V14.5422C17.5005 16.3339 16.0422 17.7922 14.2505 17.7922H4.58382C2.79215 17.7922 1.33382 16.3339 1.33382 14.5422V8.62552C1.33382 6.83385 2.79215 5.37552 4.58382 5.37552H14.2505C16.0338 5.37552 17.5005 6.84219 17.5005 8.62552V10.1089H15.8588C15.3505 10.1089 14.8838 10.3089 14.5672 10.1172Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.3338 10.8161V12.6828C18.3338 13.0745 18.0172 13.3911 17.6172 13.3911H15.9338C15.1672 13.3911 14.4672 12.8161 14.4005 12.0495C14.3588 11.5995 14.5255 11.1745 14.8172 10.8745C15.0755 10.6078 15.4338 10.4578 15.8255 10.4578H17.6172C18.0172 10.4578 18.3338 10.7745 18.3338 11.1661V10.8161Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+		},
+		{
+			id: 'payments',
+			label: 'Payment Methods',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.66699 7.08333H18.3337" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13.75H6.66667" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.75 13.75H12.0833" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.36699 2.91667H14.6253C17.592 2.91667 18.3337 3.65 18.3337 6.58333V13.4167C18.3337 16.35 17.592 17.0833 14.6337 17.0833H5.36699C2.40866 17.0833 1.66699 16.35 1.66699 13.4167V6.58333C1.66699 3.65 2.40866 2.91667 5.36699 2.91667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 		}
 	];
 </script>
@@ -121,5 +127,7 @@
 		<Preferences />
 	{:else if activeTab === 'wallet'}
 		<Wallet />
+	{:else if activeTab === 'payments'}
+		<PaymentMethods />
 	{/if}
 </div>

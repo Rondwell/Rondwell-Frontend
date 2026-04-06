@@ -5,7 +5,6 @@
 		begin2FASetup,
 		changePrimaryEmail,
 		confirm2FASetup,
-		deleteAccount as deleteAccountApi,
 		disable2FA,
 		getActiveSessions,
 		getMe,
@@ -20,6 +19,7 @@
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
+	import DeleteAccountModal from './DeleteAccountModal.svelte';
 
 	// ── State ──────────────────────────────────────────────────────────────────
 	let token = '';
@@ -55,6 +55,7 @@
 
 	let toast = '';
 	let toastType: 'success' | 'error' = 'success';
+	let showDeleteModal = false;
 
 	const socialLinksMeta = [
 		{ key: 'instagram', icon: 'mdi:instagram', label: 'instagram.com/' },
@@ -431,16 +432,11 @@
 	<div>
 		<h2 class="mb-1 text-lg font-semibold">Delete Account</h2>
 		<p class="mb-4 text-sm text-[#8C8F93]">If you no longer wish to use Rondwell, you can permanently delete your account.</p>
-		<button on:click={async () => {
-			if (!confirm('Are you sure you want to permanently delete your account? This action cannot be undone.')) return;
-			try {
-				await deleteAccountApi();
-				clearUser();
-				goto('/auth');
-			} catch (e: any) { showToast(e.message, 'error'); }
-		}} class="flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700">
+		<button on:click={() => (showDeleteModal = true)} class="flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700">
 			<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6.75V10.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.99958 16.0584H4.45458C1.85208 16.0584 0.764583 14.1984 2.02458 11.9259L4.36458 7.71094L6.56958 3.75094C7.90458 1.34344 10.0946 1.34344 11.4296 3.75094L13.6346 7.71844L15.9746 11.9334C17.2346 14.2059 16.1396 16.0659 13.5446 16.0659H8.99958V16.0584Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.99609 12.75H9.00283" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 			Delete Account
 		</button>
 	</div>
 </div>
+
+<DeleteAccountModal bind:open={showDeleteModal} />

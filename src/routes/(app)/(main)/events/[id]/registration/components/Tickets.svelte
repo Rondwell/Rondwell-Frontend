@@ -2,6 +2,7 @@
 	import {
 		deleteTicketType as deleteTicketTypeApi,
 		getTicketTypes,
+		updateEvent,
 		updateEventCapacity,
 		updateGroupRegistration,
 		updateRegistrationOpen,
@@ -37,6 +38,8 @@
 	let editingTicket: any = null;
 	let showDeleteTicket: string | null = null;
 	let showEmailTemplate: number | null = null;
+	let notifyOrganizerOnRegistration = eventData?.notifyOrganizerOnRegistration ?? true;
+	let togglingNotification = false;
 
 	let layout: 'grid' | 'list' = 'grid';
 	let menuOpen: string | null = null;
@@ -44,32 +47,26 @@
 	const registrationEmails = [
 		{
 			id: 1,
-			type: 'Pending Approval / Waitlist',
-			status: 'Pending',
-			icon: 'gray',
-			title: 'Pending Approval / Waitlist Email',
-			description: 'This email is sent when a guest registers for the event, notifying them that their registration is pending approval or that they are on the waitlist.',
-			subject: `Registration pending approval for ${eventData?.title ?? 'Event'}`
-		},
-		{
-			id: 2,
-			type: 'Confirmation Email',
-			status: 'Active',
-			icon: 'check',
-			title: 'Confirmation Email',
-			description: 'This email is sent when a guest registers or when you approve a guest who is pending approval.',
-			subject: `Registration confirmed for ${eventData?.title ?? 'Event'}`
-		},
-		{
-			id: 3,
-			type: 'Decline Email',
-			status: 'Inactive',
-			icon: 'cancel',
-			title: 'Declined Email',
-			description: 'This email is sent when you decline a guest who is pending approval or on the waitlist.',
-			subject: `Registration not accepted for ${eventData?.title ?? 'Event'}`
+			type: 'Attendee Registration Notification',
+			status: notifyOrganizerOnRegistration ? 'Active' : 'Inactive',
+			icon: 'toggle',
+			title: 'Attendee Registration Notification',
+			description: 'This email is sent to you (the organizer) when an attendee registers for your event. It includes the attendee\'s name, email, registration time, ticket type, amount paid, and status.',
+			subject: `New attendee registered for ${eventData?.title ?? 'Event'}`
 		}
 	];
+
+	async function handleToggleOrganizerNotification() {
+		togglingNotification = true;
+		try {
+			notifyOrganizerOnRegistration = !notifyOrganizerOnRegistration;
+			await updateEvent(eventId, { notifyOrganizerOnRegistration } as any);
+		} catch {
+			notifyOrganizerOnRegistration = !notifyOrganizerOnRegistration;
+		} finally {
+			togglingNotification = false;
+		}
+	}
 
 	onMount(async () => {
 		await fetchTickets();
@@ -502,19 +499,24 @@
 						class="w-full rounded-lg bg-[#FDFDFD] shadow-sm md:max-w-[300px]"
 					>
 						<div class="mb-3 flex flex-col items-start gap-2 rounded-lg p-4" style="background: linear-gradient(90deg, #FDFDFD 0%, #F5F5F5 100%);">
-							{#if email.icon === 'gray'}
-								<div class="flex h-8 w-8 items-center justify-center rounded-full border-3 border-[#737475]">
-									<Icon icon="mdi:tick" class="h-7 w-7 font-bold text-[#737475]" />
+							<div class="flex w-full items-center justify-between">
+								<!-- svelte-ignore a11y-click-events-have-key-events -->
+								<!-- svelte-ignore a11y-no-static-element-interactions -->
+								<div
+									on:click|stopPropagation={() => handleToggleOrganizerNotification()}
+									class="relative h-6 w-10 rounded-full transition-colors duration-300 cursor-pointer"
+									class:bg-gray-300={!notifyOrganizerOnRegistration}
+									class:bg-[#131517]={notifyOrganizerOnRegistration}
+								>
+									<span
+										class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300"
+										class:translate-x-4={notifyOrganizerOnRegistration}
+									></span>
 								</div>
-							{:else if email.icon === 'check'}
-								<div class="flex h-8 w-8 items-center justify-center rounded-full bg-[#3CBD2C]">
-									<Icon icon="mdi:tick" class="h-7 w-7 font-bold text-white" />
-								</div>
-							{:else if email.icon === 'cancel'}
-								<div class="flex h-8 w-8 items-center justify-center rounded-full bg-[#ED2B32]">
-									<Icon icon="mdi:close" class="h-7 w-7 font-bold text-white" />
-								</div>
-							{/if}
+								<span class="text-xs font-medium {notifyOrganizerOnRegistration ? 'text-green-600' : 'text-gray-400'}">
+									{notifyOrganizerOnRegistration ? 'On' : 'Off'}
+								</span>
+							</div>
 							<div class="mt-3 flex w-full flex-col gap-2">
 								<div class="h-3 w-full rounded-md bg-[#E6E7E7]"></div>
 								<div class="h-3 w-1/2 rounded-md bg-[#E6E7E7]"></div>

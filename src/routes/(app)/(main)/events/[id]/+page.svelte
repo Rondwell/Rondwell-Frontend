@@ -1035,7 +1035,7 @@ $: eventLink = eventData?.customLinkSlug
 						</p>
 					</span>
 					<p class="hidden text-sm text-[#737577] lg:block">
-						Add hosts, special guests, and even managers.
+						Add hosts, special guests, and event managers.
 					</p>
 				</span>
 				<div class="flex gap-2">

@@ -80,10 +80,10 @@
 	}
 </script>
 
-<section class="p-4">
+<section class="px-1 py-4 sm:p-4">
 	<!-- Header -->
 
-	<div class="mb-4 flex items-center justify-between">
+	<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
 		<h2 class="align-center flex justify-center gap-2 text-lg font-semibold">
 			<span> Admins </span>
 			<div class="relative inline-flex items-center justify-center">

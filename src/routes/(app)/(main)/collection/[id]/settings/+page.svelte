@@ -107,7 +107,7 @@
 </script>
 
 <div class="min-h-screen">
-	<div class="px-4 py-4">
+	<div class="px-1 py-4 sm:px-4">
 		<!-- Navigation Tabs -->
 		<Nav {tabs} bind:activeTab />
 		<!-- Content Area -->

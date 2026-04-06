@@ -5,7 +5,6 @@
 	export let event: any;
 	export let type: string = 'attending';
 	export let variant: 'default' | 'subscriber' = 'default';
-	// Optional: pass an eventId to make the card link to the event page
 	export let eventId: string = '';
 	export let slug: string = '';
 
@@ -16,29 +15,17 @@
 	<!-- SUBSCRIBER COMPACT CARD -->
 	<div class="flex items-start justify-between rounded-xl bg-white p-4 shadow-sm">
 		<div class="flex flex-col gap-2">
-			<h3 class="text-base font-semibold text-gray-900">
-				{event.title}
-			</h3>
-
-			<p class="text-sm text-[#A4A4A5]">
-				{event.date}, {event.time}
-			</p>
-
+			<h3 class="text-base font-semibold text-gray-900">{event.title}</h3>
+			<p class="text-sm text-[#A4A4A5]">{event.date}, {event.time}</p>
 			<div class="mt-2">
 				<p class="text-xs text-[#828486]">Tickets</p>
 				<div class="flex items-center">
-					<span class="text-sm font-medium text-[#828486]">
-						{event.ticketCount}×
-					</span>
+					<span class="text-sm font-medium text-[#828486]">{event.ticketCount}×</span>
 					<span> {event.ticketType}</span>
 				</div>
 			</div>
 		</div>
-
-		<span
-			class="h-fit rounded-full px-3 py-1 text-xs font-medium
-			{event.status === 'Going' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}"
-		>
+		<span class="h-fit rounded-full px-3 py-1 text-xs font-medium {event.status === 'Going' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}">
 			{event.status}
 		</span>
 	</div>
@@ -49,118 +36,93 @@
 		href={eventHref}
 		target={eventHref ? '_blank' : undefined}
 		rel={eventHref ? 'noopener noreferrer' : undefined}
-		class="flex cursor-pointer flex-col gap-4 rounded-md bg-[#FDFDFD] p-3 no-underline md:flex-row md:p-6"
+		class="flex cursor-pointer gap-3 rounded-xl bg-[#FDFDFD] p-3 no-underline transition-shadow hover:shadow-md sm:gap-4 sm:p-4 md:p-5"
 	>
-		<div class="flex-1 space-y-1">
-			<!-- Event Time -->
-			<div class="flex items-center gap-2">
-				<span class="text-sm text-[#B9BABA]">{event.time}</span>
-			</div>
+		<!-- Left content -->
+		<div class="flex min-w-0 flex-1 flex-col justify-between">
+			<!-- Top section -->
+			<div class="space-y-1 sm:space-y-1.5">
+				<!-- Time -->
+				<span class="text-[11px] text-[#B9BABA] sm:text-xs">{event.time}</span>
 
-			<!-- Title + Organizers -->
-			<div class="space-y-2">
-				<div class="flex items-center gap-2 text-lg">
+				<!-- Title (clamped to 2 lines) -->
+				<div class="flex items-start gap-1.5">
 					{#if type !== 'mine'}
-						<img src="/star.svg" alt="Featured" class="h-5 w-5" />
+						<img src="/star.svg" alt="Featured" class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 sm:h-4 sm:w-4" />
 					{/if}
-					<h3
-						class="{type !== 'mine'
-							? 'text-gray-900'
-							: 'text-lg text-black'} font-semibold text-gray-900"
-					>
+					<h3 class="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 sm:text-[15px]">
 						{event.title}
 					</h3>
 				</div>
 
+				<!-- Organizer -->
 				{#if type !== 'mine'}
-					<div
-						class="flex items-center gap-2 font-['Merriweather_Sans'] text-[16px] leading-[17px] font-normal text-[#B9BABA]"
-					>
+					<div class="flex items-center gap-1.5 text-xs text-[#B9BABA] sm:text-[13px]">
 						<img
 							src={event.organizerAvatar || '/you-rondwell.png'}
 							alt="Organizer"
-							class="h-6 w-6 rounded-full object-cover"
+							class="h-4 w-4 rounded-full object-cover sm:h-5 sm:w-5"
 							on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/you-rondwell.png'; }}
 						/>
-						<span>{event.organizers}</span>
+						<span class="truncate">{event.organizers}</span>
 					</div>
 				{/if}
 
-				<div class="flex items-center gap-5">
-					<div class="flex items-center gap-2 text-sm text-[#B9BABA]">
-						<img src={event.locationIcon} alt="Location" class="h-4 w-4" />
-						<span>{event.location}</span>
-					</div>
-					{#if type !== 'mine'}
-						<span class="rounded-2xl bg-[#FFECEC] px-3 py-1 text-sm text-[#FF0004]"
-							>{event.availability}</span
-						>
-					{/if}
+				<!-- Location -->
+				<div class="flex items-center gap-1.5 text-[11px] text-[#B9BABA] sm:text-xs">
+					<img src={event.locationIcon} alt="Location" class="h-3 w-3 flex-shrink-0 sm:h-3.5 sm:w-3.5" />
+					<span class="truncate">{event.location}</span>
 				</div>
 
 				{#if type === 'mine'}
-					<div class="flex items-center gap-2 text-sm text-[#B9BABA]">
-						<img src="/group-icon.svg" alt="Location" class="h-4 w-4" />
+					<div class="flex items-center gap-1.5 text-[11px] text-[#B9BABA] sm:text-xs">
+						<img src="/group-icon.svg" alt="Attendees" class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
 						<span>{event.attendees ?? 0} Attendees</span>
 					</div>
 				{/if}
+			</div>
 
-				<!-- Status + Attendees + Collection -->
-				<div class="relatve flex flex-wrap items-center {type !== 'mine' ? 'gap-2.5' : 'gap-3'}">
-					{#if type !== 'mine'}
-						<span class="rounded-sm bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-							{event.status}
+			<!-- Bottom tags -->
+			<div class="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
+				{#if type !== 'mine'}
+					<span class="rounded-full bg-[#F0FFF0] px-2 py-0.5 text-[10px] font-medium text-[#3CBD2C] sm:text-[11px]">
+						{event.status}
+					</span>
+					{#if event.availability}
+						<span class="rounded-full bg-[#F3F0FF] px-2 py-0.5 text-[10px] font-medium text-[#7C3AED] sm:text-[11px]">
+							{event.availability}
 						</span>
-						<div class="flex items-center gap-1 rounded-full bg-[#F4F4F4] pl-1.5 pr-2.5 py-0.5">
-							<img src="/attendee-icon.svg" alt="Attendees" class="h-5 w-5" />
-							<span class="text-xs font-medium text-[#7F7F81]">{event.attendees}</span>
+					{/if}
+					{#if event.attendees && event.attendees !== '0'}
+						<div class="flex items-center gap-1 rounded-full bg-[#F4F4F4] px-2 py-0.5">
+							<img src="/attendee-icon.svg" alt="Attendees" class="h-3.5 w-3.5" />
+							<span class="text-[10px] font-medium text-[#7F7F81] sm:text-[11px]">{event.attendees}</span>
 						</div>
-					{:else}
-						{#if event.category}
-						<div class="flex items-center gap-1.5 rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-[#7F7F81]">
-							<span class="text-[10px]">#</span>
+					{/if}
+				{:else}
+					{#if event.category}
+						<div class="flex items-center gap-1 rounded-full bg-[#F4F4F4] px-2 py-0.5 text-[10px] text-[#7F7F81] sm:text-[11px]">
+							<span class="text-[9px]">#</span>
 							<span>{event.category}</span>
 						</div>
-						{/if}
 					{/if}
-					{#if event.tag}
-						<div class="flex items-center gap-1.5 text-sm">
-							<img src="/tech-icon.svg" alt="icon" class="h-4 w-4" />
-							<span class="text-[#7F7F81]">{event.tag}</span>
-						</div>
-					{/if}
-				</div>
+				{/if}
+				{#if event.tag}
+					<div class="flex items-center gap-1 rounded-full bg-[#F4F4F4] px-2 py-0.5 text-[10px] sm:text-[11px]">
+						<img src="/tech-icon.svg" alt="icon" class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+						<span class="truncate text-[#7F7F81]">{event.tag}</span>
+					</div>
+				{/if}
 
 				{#if type === 'mine'}
 					<button
-						on:click|stopPropagation={() => goto(`/events/${event.id}`)}
-						class="flex w-35 items-center gap-1 rounded-sm bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-[#616265]"
+						on:click|stopPropagation|preventDefault={() => goto(`/events/${event.id}`)}
+						class="flex items-center gap-1 rounded-md bg-[#F4F4F4] px-2.5 py-1.5 text-[11px] font-medium text-[#616265] sm:px-3 sm:text-xs"
 					>
-						<p>Manage Event</p>
-						<svg
-							width="11"
-							height="11"
-							viewBox="0 0 11 11"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z"
-								fill="#616265"
-								stroke="#616265"
-								stroke-width="0.37461"
-							/>
-							<rect
-								x="5.06035"
-								y="5.85137"
-								width="3.37149"
-								height="1.12383"
-								rx="0.561915"
-								transform="rotate(-180 5.06035 5.85137)"
-								fill="#616265"
-								stroke="#616265"
-								stroke-width="0.37461"
-							/>
+						Manage Event
+						<svg width="10" height="10" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898Z" fill="#616265" stroke="#616265" stroke-width="0.37461"/>
+							<rect x="5.06035" y="5.85137" width="3.37149" height="1.12383" rx="0.561915" transform="rotate(-180 5.06035 5.85137)" fill="#616265" stroke="#616265" stroke-width="0.37461"/>
 						</svg>
 					</button>
 				{/if}
@@ -168,7 +130,7 @@
 		</div>
 
 		<!-- Event Image -->
-		<div class="h-[218px] w-full flex-shrink-0 overflow-hidden rounded-xl md:h-30 md:w-30">
+		<div class="h-[140px] w-[100px] flex-shrink-0 overflow-hidden rounded-xl sm:h-[160px] sm:w-[120px] md:h-[170px] md:w-[130px]">
 			<img
 				src={event.image || '/events.png'}
 				alt={event.title}

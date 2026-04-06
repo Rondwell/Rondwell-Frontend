@@ -245,35 +245,4 @@
 	</div>
 </div>
 
-<!-- Individual Notifications Section -->
-<div class="border-t pt-12">
-	<h2 class="mb-1 text-lg font-semibold">Notifications & Reminders</h2>
-	<p class="mb-4 text-sm text-[#8C8F93]">
-		These options apply to all events, Collection, secrets you are part of.
-	</p>
 
-	<div class="rounded-lg bg-[#FDFDFD] p-4">
-		{#each individualNotifications as notification, index}
-			<div class="flex items-center justify-between border-b border-gray-100 py-3 last:border-b-0">
-				<div class="flex items-center gap-3">
-					{#if notification.type === 'event'}
-						<img src="/face.svg" alt="icon" class="h-6 w-6" />
-					{:else}
-						<img src="/rondwell-attendee.png" alt="icon" class="h-6 w-6 rounded-full" />
-					{/if}
-					<span class="font-medium">{notification.name}</span>
-				</div>
-
-				<button
-					aria-label="save"
-					on:click={() => toggleIndividualNotification(index)}
-					class={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:ring-0 focus:ring-offset-0 focus:outline-none ${notification.enabled ? 'bg-black' : 'bg-gray-200'}`}
-				>
-					<span
-						class={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${notification.enabled ? 'translate-x-5' : 'translate-x-0'}`}
-					></span>
-				</button>
-			</div>
-		{/each}
-	</div>
-</div>

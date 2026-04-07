@@ -30,6 +30,11 @@
 	const AUTOSUGGEST_URL = 'https://autosuggest.search.hereapi.com/v1/autosuggest';
 	const LOOKUP_URL = 'https://lookup.search.hereapi.com/v1/lookup';
 
+	// Warn if API key is missing (common when .env.production is gitignored and not set in hosting dashboard)
+	if (browser && !API_KEY) {
+		console.warn('[AddressAutocomplete] VITE_HERE_API_KEY is not set. Address autocomplete will not work. Set it in your hosting environment variables.');
+	}
+
 	let suggestions: any[] = [];
 	let showSuggestions = false;
 	let loading = false;

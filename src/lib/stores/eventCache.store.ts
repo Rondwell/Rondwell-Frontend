@@ -13,8 +13,8 @@
  *   invalidateEventCache(eventId);  // forces next access to re-fetch
  */
 
-import { writable, get, type Writable } from 'svelte/store';
 import { getEventById, getMyCollections } from '$lib/services/event.services';
+import { get, writable, type Writable } from 'svelte/store';
 
 const STALE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -44,8 +44,10 @@ function isStale(entry: CacheEntry): boolean {
   return Date.now() - entry.fetchedAt > STALE_MS;
 }
 
-async function fetchAndPopulate(eventId: string, entry: CacheEntry): Promise<void> {
-  entry.loading.set(true);
+async function fetchAndPopulate(eventId: string, entry: CacheEntry, showLoading = true): Promise<void> {
+  if (showLoading) {
+    entry.loading.set(true);
+  }
   entry.error.set('');
   try {
     const [event, collections] = await Promise.all([
@@ -81,11 +83,14 @@ export function getEventCache(eventId: string) {
   if (!hasData || isStale(entry)) {
     // If already fetching, don't duplicate
     if (!entry.promise) {
-      // If we have stale data, don't show loading — just refresh in background
       if (hasData) {
+        // Stale data: refresh in background without showing loading skeleton
         entry.loading.set(false);
+        entry.promise = fetchAndPopulate(eventId, entry, false);
+      } else {
+        // No data: show loading skeleton
+        entry.promise = fetchAndPopulate(eventId, entry, true);
       }
-      entry.promise = fetchAndPopulate(eventId, entry);
     }
   }
 

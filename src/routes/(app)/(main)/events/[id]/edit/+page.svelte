@@ -2,7 +2,8 @@
 	import { page } from '$app/stores';
 	import AddressAutocomplete from '$lib/components/AddressAutocomplete.svelte';
 	import { updateEvent, uploadEventPhoto } from '$lib/services/event.services';
-	import { getEventCache } from '$lib/stores/eventCache.store';
+	import { getEventCache, invalidateEventCache } from '$lib/stores/eventCache.store';
+	import { toast } from '$lib/stores/toast.store';
 	import { colors, type Color } from '$lib/utils/colors';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
@@ -24,9 +25,10 @@
 	let loading = true;
 	let saving = false;
 	let saveError = '';
-	let saveSuccess = false;
 	let uploadingCover = false;
+	let uploadingAvatar = false;
 	let coverInput: HTMLInputElement;
+	let avatarInput: HTMLInputElement;
 	let showDescEditor = false;
 
 	let name = '';
@@ -34,6 +36,7 @@
 	let selectedColor: Color = colors[0];
 	let publicUrl = '';
 	let socialPreviewImage: string | null = null;
+	let displayPictureUrl: string | null = null;
 	let rawEvent: any = null;
 	let links: Record<SocialLinkKey, string> = {
 		instagram: '', x: '', youtube: '', tiktok: '', linkedin: '', website: ''
@@ -97,6 +100,7 @@
 				website: sl.website ?? ''
 			};
 			socialPreviewImage = event.coverPictureUrl ?? event.displayPictureUrl ?? null;
+			displayPictureUrl = event.displayPictureUrl ?? null;
 
 			if (event.startDateTime) {
 				const sd = new Date(event.startDateTime);
@@ -137,6 +141,11 @@
 				PlaceholderExtension.configure({ placeholder: "Who should come? What's the event about?" }),
 			],
 			content: descriptionHtml || '',
+			editorProps: {
+				attributes: {
+					style: 'font-weight: 300;',
+				},
+			},
 			onUpdate: ({ editor }) => {
 				descriptionHtml = editor.getHTML();
 			},
@@ -174,10 +183,12 @@
 		return timeStr;
 	}
 
+	import { toast } from '$lib/stores/toast.store';
+	import { cleanErrorMessage } from '$lib/utils/errorMessage';
+
 	async function saveChanges() {
 		saving = true;
 		saveError = '';
-		saveSuccess = false;
 		try {
 			const etMap: Record<string, string> = { 'Virtual': 'VIRTUAL', 'Physical': 'PHYSICAL', 'Hybrid': 'HYBRID' };
 			const locationDetails: any = {};
@@ -206,10 +217,12 @@
 				locationDetails,
 				visibility: visibility === 'Private' ? 'PRIVATE' : 'PUBLIC',
 			} as any);
-			saveSuccess = true;
-			setTimeout(() => (saveSuccess = false), 3000);
+			toast.success('Changes saved successfully.');
+			invalidateEventCache(eventId);
 		} catch (e: any) {
-			saveError = e.message ?? 'Failed to save';
+			const msg = cleanErrorMessage(e.message ?? '');
+			saveError = msg;
+			toast.error(msg);
 		} finally {
 			saving = false;
 		}
@@ -224,9 +237,25 @@
 			const url = await uploadEventPhoto(eventId, file, 'COVER');
 			socialPreviewImage = url;
 		} catch (err: any) {
-			saveError = err.message ?? 'Failed to upload cover';
+			toast.error(cleanErrorMessage(err.message ?? 'Failed to upload cover'));
 		} finally {
 			uploadingCover = false;
+			input.value = '';
+		}
+	}
+
+	async function onAvatarSelected(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		uploadingAvatar = true;
+		try {
+			const url = await uploadEventPhoto(eventId, file, 'DISPLAY');
+			displayPictureUrl = url;
+		} catch (err: any) {
+			toast.error(cleanErrorMessage(err.message ?? 'Failed to upload display picture'));
+		} finally {
+			uploadingAvatar = false;
 			input.value = '';
 		}
 	}
@@ -240,7 +269,7 @@
 		uploadingCover = true;
 		uploadEventPhoto(eventId, file, 'COVER')
 			.then(url => { socialPreviewImage = url; })
-			.catch(err => { saveError = err.message ?? 'Failed to upload'; })
+			.catch(err => { toast.error(cleanErrorMessage(err.message ?? 'Failed to upload')); })
 			.finally(() => { uploadingCover = false; });
 	}
 
@@ -257,6 +286,7 @@
 </script>
 
 <input type="file" accept="image/*" class="hidden" bind:this={coverInput} on:change={onCoverSelected} />
+<input type="file" accept="image/*" class="hidden" bind:this={avatarInput} on:change={onAvatarSelected} />
 
 <div class="w-full max-w-5xl">
 	<!-- Header -->
@@ -282,7 +312,7 @@
 		</div>
 	{:else}
 		<!-- Event Title / Description -->
-		<div class="relative mb-6 rounded-t-lg bg-[#FDFDFD]">
+		<div class="relative mb-6 overflow-visible rounded-t-lg bg-[#FDFDFD]">
 			<div class="relative h-[191px] rounded-t-lg bg-[#D8D8DD] overflow-hidden">
 				{#if socialPreviewImage}
 					<img src={socialPreviewImage} alt="Cover" class="h-full w-full object-cover" />
@@ -295,14 +325,38 @@
 					{uploadingCover ? 'Uploading...' : 'Change Cover'}
 				</button>
 			</div>
-			<!-- Event avatar: shows actual event image or fallback icon -->
-			<div class="absolute bottom-24 left-5 h-14 w-14 overflow-hidden rounded-xl border-2 border-white bg-[#D8D8DD] shadow-md">
-				{#if socialPreviewImage}
-					<img src={socialPreviewImage} alt="Event" class="h-full w-full object-cover" />
+			<!-- Event avatar: click to upload display picture -->
+			<button
+				class="absolute bottom-24 left-5 h-14 w-14 overflow-hidden rounded-xl border-2 border-white bg-[#D8D8DD] shadow-md transition-transform hover:scale-105 cursor-pointer group"
+				on:click={() => avatarInput?.click()}
+				disabled={uploadingAvatar}
+				aria-label="Change display picture"
+			>
+				{#if uploadingAvatar}
+					<div class="flex h-full w-full items-center justify-center bg-black/40">
+						<svg class="h-6 w-6 animate-spin text-white" viewBox="0 0 24 24">
+							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+						</svg>
+					</div>
+				{:else if displayPictureUrl}
+					<img src={displayPictureUrl} alt="Event" class="h-full w-full object-cover" />
+					<div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+						<svg class="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="none">
+							<path d="M12 16a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" stroke-width="1.5"/>
+							<path d="M3 16V8a2 2 0 012-2h1.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0111.07 3h1.86a2 2 0 011.664.89l.812 1.22A2 2 0 0017.07 6H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.5"/>
+						</svg>
+					</div>
 				{:else}
 					<img src="/edit-cover-photo.svg" alt="" class="h-full w-full" />
+					<div class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+						<svg class="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="none">
+							<path d="M12 16a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" stroke-width="1.5"/>
+							<path d="M3 16V8a2 2 0 012-2h1.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0111.07 3h1.86a2 2 0 011.664.89l.812 1.22A2 2 0 0017.07 6H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.5"/>
+						</svg>
+					</div>
 				{/if}
-			</div>
+			</button>
 			<div class="mt-8 ml-4 mr-6 w-full pr-6">
 				<input
 					type="text"
@@ -321,8 +375,8 @@
 						<Icon icon={showDescEditor ? 'mdi:chevron-up' : 'mdi:chevron-down'} class="absolute right-4 text-gray-400" />
 					</button>
 
-					{#if showDescEditor && descEditor}
-						<div class="absolute left-0 top-full z-40 w-full rounded-b-xl border border-t-0 border-gray-100 bg-white shadow-xl">
+					{#if showDescEditor}
+						<div class="absolute left-0 top-full z-50 w-full rounded-b-xl border border-t-0 border-gray-100 bg-white shadow-xl">
 							<!-- Toolbar -->
 							<div class="flex flex-wrap items-center gap-0.5 border-b border-gray-100 bg-[#F8F9FA] px-3 py-1.5">
 								{#if $descEditor}
@@ -350,8 +404,10 @@
 								{/if}
 							</div>
 							<!-- Editor area -->
-							<div class="min-h-[160px] max-h-[280px] overflow-y-auto p-4 text-sm text-gray-800">
-								<EditorContent editor={$descEditor} />
+							<div class="desc-editor min-h-[160px] max-h-[280px] overflow-y-auto p-4 text-sm text-gray-800">
+								{#if $descEditor}
+									<EditorContent editor={$descEditor} />
+								{/if}
 							</div>
 							<div class="flex justify-end border-t border-gray-100 bg-[#F8F9FA] px-4 py-2">
 								<button
@@ -559,8 +615,8 @@
 			<!-- Public URL -->
 			<div class="mb-4">
 				<label for="public-url" class="mb-2 block text-sm font-medium text-gray-700">Public URL</label>
-				<div class="flex max-w-xl items-center">
-					<span class="flex h-[42px] items-center rounded-l-md bg-[#F4F4F4] px-3 text-sm text-gray-500">rondwell.com/e/</span>
+				<div class="flex max-w-xl items-center overflow-hidden rounded-md">
+					<span class="flex h-[42px] shrink-0 items-center bg-[#F4F4F4] px-3 text-xs text-gray-500 sm:text-sm">rondwell.com/e/</span>
 					<input
 						id="public-url"
 						type="text"
@@ -568,7 +624,7 @@
 						bind:value={publicUrl}
 						disabled
 						title="Upgrade to Rondwell Plus to customize your event URL"
-						class="h-[42px] flex-1 cursor-not-allowed rounded-r-md border border-gray-300 bg-[#F4F4F4] px-3 text-sm text-gray-400 focus:ring-0 focus:outline-none"
+						class="h-[42px] min-w-0 flex-1 border border-gray-300 bg-[#F4F4F4] px-3 text-xs text-gray-400 focus:ring-0 focus:outline-none sm:text-sm"
 					/>
 				</div>
 			</div>
@@ -664,13 +720,6 @@
 			<p class="mt-3 text-xs text-[#B3B4B4]">For best results, use an image with a 1.9:1 ratio for Facebook and 1:1 for Instagram.</p>
 		</div>
 
-		{#if saveError}
-			<p class="mt-3 text-sm text-red-500">{saveError}</p>
-		{/if}
-		{#if saveSuccess}
-			<p class="mt-3 text-sm text-green-600">Changes saved successfully.</p>
-		{/if}
-
 		<!-- Save -->
 		<div class="mt-6 mb-10">
 			<button
@@ -690,15 +739,26 @@
 </div>
 
 <style>
-	:global(.ProseMirror) { outline: none; min-height: 80px; line-height: 1.6; }
-	:global(.ProseMirror p.is-editor-empty:first-child::before) {
-		content: attr(data-placeholder); color: #9ca3af; pointer-events: none; float: left; height: 0;
+	:global(.desc-editor .ProseMirror) {
+		outline: none;
+		min-height: 80px;
+		line-height: 1.6;
+		font-weight: 300 !important;
 	}
-	:global(.ProseMirror h1) { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; }
-	:global(.ProseMirror h2) { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.4rem; }
-	:global(.ProseMirror p) { margin-bottom: 0.5rem; }
-	:global(.ProseMirror ul) { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.5rem; }
-	:global(.ProseMirror ol) { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.5rem; }
-	:global(.ProseMirror strong) { font-weight: 700; }
-	:global(.ProseMirror em) { font-style: italic; }
+	:global(.desc-editor .ProseMirror p.is-editor-empty:first-child::before) {
+		content: attr(data-placeholder);
+		color: #9ca3af;
+		pointer-events: none;
+		float: left;
+		height: 0;
+	}
+	:global(.desc-editor .ProseMirror h1) { font-size: 1.4rem; font-weight: 700 !important; margin-bottom: 0.5rem; }
+	:global(.desc-editor .ProseMirror h2) { font-size: 1.15rem; font-weight: 600 !important; margin-bottom: 0.4rem; }
+	:global(.desc-editor .ProseMirror p) { margin-bottom: 0.5rem; font-weight: 300 !important; }
+	:global(.desc-editor .ProseMirror ul) { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.5rem; font-weight: 300 !important; }
+	:global(.desc-editor .ProseMirror ol) { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.5rem; font-weight: 300 !important; }
+	:global(.desc-editor .ProseMirror li) { font-weight: 300 !important; }
+	:global(.desc-editor .ProseMirror strong) { font-weight: 700 !important; }
+	:global(.desc-editor .ProseMirror em) { font-style: italic; }
+	:global(.desc-editor .ProseMirror a) { color: #7c3aed; text-decoration: underline; }
 </style>

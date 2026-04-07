@@ -392,14 +392,14 @@
 			<!-- Public URL -->
 			<div class="mb-4">
 				<label for="" class="mb-2 block text-sm font-medium text-gray-700">Public URL (Slug)</label>
-				<div class="flex max-w-xl items-center">
-					<span class="flex h-[42px] items-center rounded-l-md bg-[#F4F4F4] px-3 text-sm text-gray-500">rondwell.com/c/</span>
+				<div class="flex max-w-xl items-center overflow-hidden rounded-md">
+					<span class="flex h-[42px] shrink-0 items-center bg-[#F4F4F4] px-3 text-xs text-gray-500 sm:text-sm">rondwell.com/c/</span>
 					<input
 						type="text"
 						placeholder="my-collection"
 						bind:value={eventData.publicUrl}
 						on:input={handlePublicUrlInput}
-						class="h-[42px] flex-1 rounded-r-md border border-gray-300 bg-[#FFFFFF] px-3 text-sm focus:outline-none focus:ring-0"
+						class="h-[42px] min-w-0 flex-1 border border-gray-300 bg-[#FFFFFF] px-3 text-xs focus:outline-none focus:ring-0 sm:text-sm"
 					/>
 				</div>
 				<p class="mt-1 text-xs text-gray-400">This is the shareable link for your collection page.</p>

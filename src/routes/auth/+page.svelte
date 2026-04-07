@@ -69,7 +69,7 @@
 						<label for="contact" class="mb-1 block text-sm font-medium">
 							{usePhone ? 'Phone Number' : 'Email'}
 						</label>
-						<!-- Toggle between phone/email -->
+						<!-- Toggle between phone/emails -->
 						<button
 							type="button"
 							disabled

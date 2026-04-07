@@ -814,7 +814,7 @@
 					</svg>
 					<h2 class="text-lg font-medium" style="color: {themeColor.text};">About Event</h2>
 				</div>
-				<div class="px-5 pb-5 prose prose-sm max-w-none" style="color: {themeColor.lightText};">
+				<div class="event-description px-5 pb-5 prose prose-sm max-w-none" style="color: {themeColor.lightText};">
 					{@html event.description}
 				</div>
 			</div>
@@ -1044,6 +1044,7 @@
 	}
 	:global(.ticket-desc p) {
 		margin: 0.15rem 0;
+		font-weight: 400;
 	}
 	:global(.ticket-desc strong) {
 		font-weight: 600;
@@ -1052,6 +1053,54 @@
 		font-style: italic;
 	}
 	:global(.ticket-desc a) {
+		text-decoration: underline;
+	}
+
+	/* Event description rich text styling */
+	:global(.event-description p) {
+		margin-bottom: 0.5rem;
+		font-weight: 400;
+		line-height: 1.6;
+	}
+	:global(.event-description h1) {
+		font-size: 1.4rem;
+		font-weight: 700;
+		margin-bottom: 0.5rem;
+	}
+	:global(.event-description h2) {
+		font-size: 1.15rem;
+		font-weight: 600;
+		margin-bottom: 0.4rem;
+	}
+	:global(.event-description h3) {
+		font-size: 1rem;
+		font-weight: 600;
+		margin-bottom: 0.375rem;
+	}
+	:global(.event-description ul) {
+		list-style-type: disc;
+		padding-left: 1.25rem;
+		margin-bottom: 0.5rem;
+		font-weight: 400;
+	}
+	:global(.event-description ol) {
+		list-style-type: decimal;
+		padding-left: 1.25rem;
+		margin-bottom: 0.5rem;
+		font-weight: 400;
+	}
+	:global(.event-description li) {
+		margin-bottom: 0.25rem;
+		font-weight: 400;
+	}
+	:global(.event-description strong) {
+		font-weight: 700;
+	}
+	:global(.event-description em) {
+		font-style: italic;
+	}
+	:global(.event-description a) {
+		color: #7c3aed;
 		text-decoration: underline;
 	}
 </style>

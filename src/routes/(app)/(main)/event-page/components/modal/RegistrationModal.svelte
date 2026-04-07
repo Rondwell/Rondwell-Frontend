@@ -1178,10 +1178,11 @@
 	.terms-content :global(h1) { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
 	.terms-content :global(h2) { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem; }
 	.terms-content :global(h3) { font-size: 1rem; font-weight: 600; margin-bottom: 0.375rem; }
-	.terms-content :global(p) { margin-bottom: 0.5rem; line-height: 1.6; }
-	.terms-content :global(ul) { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; }
-	.terms-content :global(ol) { list-style: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; }
-	.terms-content :global(li) { margin-bottom: 0.25rem; }
-	.terms-content :global(strong) { font-weight: 600; }
+	.terms-content :global(p) { margin-bottom: 0.5rem; line-height: 1.6; font-weight: 400; }
+	.terms-content :global(ul) { list-style: disc; padding-left: 1.25rem; margin-bottom: 0.5rem; font-weight: 400; }
+	.terms-content :global(ol) { list-style: decimal; padding-left: 1.25rem; margin-bottom: 0.5rem; font-weight: 400; }
+	.terms-content :global(li) { margin-bottom: 0.25rem; font-weight: 400; }
+	.terms-content :global(strong) { font-weight: 700; }
 	.terms-content :global(em) { font-style: italic; }
+	.terms-content :global(a) { color: #7c3aed; text-decoration: underline; }
 </style>

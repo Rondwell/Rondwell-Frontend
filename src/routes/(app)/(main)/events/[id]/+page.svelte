@@ -5,7 +5,9 @@ import { page } from '$app/stores';
 import { getEventAttendees, uploadEventPhoto } from '$lib/services/event.services';
 import { getEventEarnings } from '$lib/services/wallet.services';
 import { getEventCache } from '$lib/stores/eventCache.store';
+import { toast } from '$lib/stores/toast.store';
 import { clickOutside } from '$lib/utils/constant';
+import { cleanErrorMessage } from '$lib/utils/errorMessage';
 import Icon from '@iconify/svelte';
 import InviteGuestsModal from './components/InviteGuestsModal.svelte';
 import SendPostModal from './components/SendPostModal.svelte';
@@ -200,7 +202,7 @@ try {
 const url = await uploadEventPhoto(eventId!, file, 'DISPLAY');
 eventData = { ...eventData, displayPictureUrl: url };
 } catch (err: any) {
-alert(err.message ?? 'Failed to upload photo');
+toast.error(cleanErrorMessage(err.message ?? 'Failed to upload photo'));
 } finally {
 uploadingPhoto = false;
 input.value = '';

@@ -529,9 +529,10 @@
 		float: left;
 		height: 0;
 	}
-	:global(.ticket-editor .ProseMirror p) { margin-bottom: 0.3rem; }
-	:global(.ticket-editor .ProseMirror ul) { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.3rem; }
-	:global(.ticket-editor .ProseMirror ol) { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.3rem; }
+	:global(.ticket-editor .ProseMirror p) { margin-bottom: 0.3rem; font-weight: 400; }
+	:global(.ticket-editor .ProseMirror ul) { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.3rem; font-weight: 400; }
+	:global(.ticket-editor .ProseMirror ol) { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.3rem; font-weight: 400; }
+	:global(.ticket-editor .ProseMirror li) { font-weight: 400; }
 	:global(.ticket-editor .ProseMirror strong) { font-weight: 700; }
 	:global(.ticket-editor .ProseMirror em) { font-style: italic; }
 </style>

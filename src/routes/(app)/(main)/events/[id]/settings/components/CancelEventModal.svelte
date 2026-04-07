@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { cancelEvent } from '$lib/services/event.services';
+	import { toast } from '$lib/stores/toast.store';
+	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import Icon from '@iconify/svelte';
 
 	export let open = false;
@@ -8,17 +10,16 @@
 	export let eventTitle = '';
 
 	let saving = false;
-	let error = '';
 
 	async function handleCancel() {
 		saving = true;
-		error = '';
 		try {
 			await cancelEvent(eventId);
+			toast.success('Event cancelled successfully.');
 			open = false;
 			goto(`/events`);
 		} catch (e: any) {
-			error = e.message || 'Failed to cancel event';
+			toast.error(cleanErrorMessage(e.message || 'Failed to cancel event'));
 		} finally {
 			saving = false;
 		}
@@ -36,7 +37,6 @@
 			<p class="mt-2 text-sm text-gray-500">
 				Are you sure you want to cancel <span class="font-medium text-gray-700">{eventTitle}</span>? All registered guests will be notified. This cannot be undone.
 			</p>
-			{#if error}<p class="mt-3 text-sm text-red-500">{error}</p>{/if}
 			<div class="mt-5 flex gap-3">
 				<button on:click={() => (open = false)} class="flex-1 rounded-lg bg-[#F0F1F1] py-2.5 text-sm font-medium text-[#727375] transition hover:bg-gray-200">
 					Keep Event

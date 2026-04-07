@@ -2,6 +2,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { getEventCache } from '$lib/stores/eventCache.store';
+	import { toast } from '$lib/stores/toast.store';
+	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import Icon from '@iconify/svelte';
 	import Nav from '../../../../components/Nav.svelte';
 	import CancelEventModal from './components/CancelEventModal.svelte';
@@ -97,20 +99,17 @@
 	};
 
 	let urlUpdating = false;
-	let urlSuccess = '';
 
 	const updatePublicUrl = async () => {
 		if (!eventData) return;
 		urlUpdating = true;
-		urlSuccess = '';
 		try {
 			const { updateEvent } = await import('$lib/services/event.services');
 			const slug = eventData.publicUrl.replace('rondwell.com/', '');
 			await updateEvent(eventId!, { customLinkSlug: slug } as any);
-			urlSuccess = 'URL updated successfully';
-			setTimeout(() => { urlSuccess = ''; }, 3000);
+			toast.success('URL updated successfully.');
 		} catch (e: any) {
-			urlSuccess = e.message || 'Failed to update URL';
+			toast.error(cleanErrorMessage(e.message || 'Failed to update URL'));
 		} finally {
 			urlUpdating = false;
 		}
@@ -241,8 +240,8 @@
 		</div>
 		<div class="w-full sm:max-w-96">
 			<label for="url" class="mb-2 block text-xs font-medium text-gray-700 sm:text-sm">Public URL</label>
-			<div class="flex items-center">
-				<span class="rounded-l-md bg-[#EBECED] px-3 py-2.5 text-xs sm:rounded-l-md sm:text-sm">rondwell.com/</span>
+			<div class="flex items-center overflow-hidden rounded-md">
+				<span class="shrink-0 bg-[#EBECED] px-3 py-2.5 text-xs sm:text-sm">rondwell.com/</span>
 				<input
 					type="text"
 					value={eventData.publicUrl}
@@ -250,7 +249,7 @@
 						const target = e.target as HTMLInputElement | null;
 						if (target) eventData.publicUrl = target.value;
 					}}
-					class="flex-1 rounded-r-md border border-gray-300 bg-[#F4F5F6] px-3 py-2 text-xs focus:ring-0 focus:outline-none sm:rounded-r-md sm:text-sm"
+					class="min-w-0 flex-1 border border-gray-300 bg-[#F4F5F6] px-3 py-2 text-xs focus:ring-0 focus:outline-none sm:text-sm"
 				/>
 				<button
 					on:click={updatePublicUrl}

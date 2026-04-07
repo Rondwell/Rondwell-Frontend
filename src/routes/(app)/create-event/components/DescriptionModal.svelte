@@ -31,6 +31,11 @@
 				PlaceholderExtension.configure({ placeholder: "Who should come? What's the event about?" }),
 			],
 			content: description || '',
+			editorProps: {
+				attributes: {
+					style: 'font-weight: 300;',
+				},
+			},
 			onUpdate: ({ editor }) => {
 				description = editor.getHTML();
 			},
@@ -157,7 +162,7 @@
 			</div>
 
 			<!-- Editor area -->
-			<div class="min-h-[180px] max-h-[300px] overflow-y-auto p-4 text-sm text-gray-800">
+			<div class="desc-editor min-h-[180px] max-h-[300px] overflow-y-auto p-4 text-sm text-gray-800">
 				<EditorContent editor={$descEditor} />
 			</div>
 
@@ -259,23 +264,26 @@
 {/if}
 
 <style>
-	:global(.ProseMirror) {
+	:global(.desc-editor .ProseMirror) {
 		outline: none;
 		min-height: 80px;
 		line-height: 1.6;
+		font-weight: 300 !important;
 	}
-	:global(.ProseMirror p.is-editor-empty:first-child::before) {
+	:global(.desc-editor .ProseMirror p.is-editor-empty:first-child::before) {
 		content: attr(data-placeholder);
 		color: #9ca3af;
 		pointer-events: none;
 		float: left;
 		height: 0;
 	}
-	:global(.ProseMirror h1) { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; }
-	:global(.ProseMirror h2) { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.4rem; }
-	:global(.ProseMirror p) { margin-bottom: 0.5rem; }
-	:global(.ProseMirror ul) { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.5rem; }
-	:global(.ProseMirror ol) { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.5rem; }
-	:global(.ProseMirror strong) { font-weight: 700; }
-	:global(.ProseMirror em) { font-style: italic; }
+	:global(.desc-editor .ProseMirror h1) { font-size: 1.4rem; font-weight: 700 !important; margin-bottom: 0.5rem; }
+	:global(.desc-editor .ProseMirror h2) { font-size: 1.15rem; font-weight: 600 !important; margin-bottom: 0.4rem; }
+	:global(.desc-editor .ProseMirror p) { margin-bottom: 0.5rem; font-weight: 300 !important; }
+	:global(.desc-editor .ProseMirror ul) { list-style: disc; padding-left: 1.5rem; margin-bottom: 0.5rem; font-weight: 300 !important; }
+	:global(.desc-editor .ProseMirror ol) { list-style: decimal; padding-left: 1.5rem; margin-bottom: 0.5rem; font-weight: 300 !important; }
+	:global(.desc-editor .ProseMirror li) { font-weight: 300 !important; }
+	:global(.desc-editor .ProseMirror strong) { font-weight: 700 !important; }
+	:global(.desc-editor .ProseMirror em) { font-style: italic; }
+	:global(.desc-editor .ProseMirror a) { color: #7c3aed; text-decoration: underline; }
 </style>

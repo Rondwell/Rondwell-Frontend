@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { getMyCollections, transferEventCollection } from '$lib/services/event.services';
+	import { toast } from '$lib/stores/toast.store';
 	import { clickOutside } from '$lib/utils/constant';
+	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import Icon from '@iconify/svelte';
-	import { onMount } from 'svelte';
 
 	export let open = false;
 	export let eventId = '';
@@ -12,7 +13,6 @@
 	let selectedCollectionId = '';
 	let showDropdown = false;
 	let saving = false;
-	let error = '';
 
 	$: if (open) { loadCollections(); }
 	$: selectedCollection = collections.find((c) => (c._id || c.id) === selectedCollectionId);
@@ -23,11 +23,12 @@
 
 	async function handleTransfer() {
 		if (!selectedCollectionId) return;
-		saving = true; error = '';
+		saving = true;
 		try {
 			await transferEventCollection(eventId, selectedCollectionId);
+			toast.success('Event transferred successfully.');
 			open = false;
-		} catch (e: any) { error = e.message || 'Failed to transfer'; }
+		} catch (e: any) { toast.error(cleanErrorMessage(e.message || 'Failed to transfer')); }
 		finally { saving = false; }
 	}
 </script>
@@ -75,8 +76,6 @@
 					</div>
 				{/if}
 			</div>
-
-			{#if error}<p class="mt-3 text-sm text-red-500">{error}</p>{/if}
 
 			<button on:click={handleTransfer} disabled={!selectedCollectionId || saving}
 				class="mt-4 w-full rounded-lg bg-gray-900 py-3 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">

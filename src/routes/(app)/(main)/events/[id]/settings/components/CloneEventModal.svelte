@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { cloneEvent, getMyCollections } from '$lib/services/event.services';
+	import { toast } from '$lib/stores/toast.store';
 	import { clickOutside } from '$lib/utils/constant';
+	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import Icon from '@iconify/svelte';
 	import DatePickerModal from '../../../../../create-event/components/DatePickerModal.svelte';
 	import TimeModal from '../../../../../create-event/components/TimeModal.svelte';
@@ -19,7 +21,6 @@
 	let startTime = '02:00 PM';
 	let timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 	let saving = false;
-	let error = '';
 
 	let openDatePicker = false;
 	let openTimePicker = false;
@@ -54,8 +55,8 @@
 	}
 
 	async function handleClone() {
-		if (!selectedCollectionId) { error = 'Please select a collection'; return; }
-		saving = true; error = '';
+		if (!selectedCollectionId) { toast.warning('Please select a collection'); return; }
+		saving = true;
 		try {
 			const startDT = buildDateTime(startDate, startTime);
 			const endDT = new Date(new Date(startDT).getTime() + 3 * 60 * 60 * 1000).toISOString();
@@ -66,10 +67,11 @@
 				timeZone,
 				visibility,
 			});
+			toast.success('Event cloned successfully.');
 			open = false;
 			const newId = result.eventId || result.event?.id || result.event?._id;
 			if (newId) goto(`/events/${newId}`);
-		} catch (e: any) { error = e.message || 'Failed to clone event'; }
+		} catch (e: any) { toast.error(cleanErrorMessage(e.message || 'Failed to clone event')); }
 		finally { saving = false; }
 	}
 </script>
@@ -172,8 +174,6 @@
 				<span class="text-xs text-gray-400">{tzOffset}</span>
 				<span>{timeZone.split('/').pop()?.replace(/_/g, ' ')}</span>
 			</div>
-
-			{#if error}<p class="mt-3 text-sm text-red-500">{error}</p>{/if}
 
 			<button on:click={handleClone} disabled={saving}
 				class="mt-4 w-full rounded-lg bg-gray-900 py-3 text-sm font-medium text-white transition hover:bg-gray-800 disabled:opacity-50">

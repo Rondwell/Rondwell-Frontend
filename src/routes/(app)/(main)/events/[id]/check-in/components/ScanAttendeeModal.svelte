@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { checkinByPasscode, checkinByQrCode, verifyCheckinPasscode, verifyCheckinQr } from '$lib/services/event.services';
 	import Icon from '@iconify/svelte';
-	import jsQR from 'jsqr';
 	import { createEventDispatcher, onDestroy, tick } from 'svelte';
 
 	export let open = false;
@@ -11,110 +10,90 @@
 
 	let phase: 'scan' | 'preview' | 'success' | 'error' = 'scan';
 	let passcode = '';
-	let videoElement: HTMLVideoElement;
-	let canvasElement: HTMLCanvasElement;
-	let stream: MediaStream | null = null;
 	let verifying = false;
 	let checkingIn = false;
 	let errorMessage = '';
-	let scanInterval: ReturnType<typeof setInterval> | null = null;
-	let barcodeDetector: any = null;
 
-	// Verified attendee data (from verify endpoint)
 	let verifiedData: any = null;
-	// The passcode/token used for verification (needed to do actual check-in)
 	let verifiedPasscode = '';
 	let verifiedQrToken = '';
+
+	let scannerContainerId = 'qr-reader-' + Math.random().toString(36).slice(2);
+	let html5QrScanner: any = null;
+	let scannerReady = false;
 
 	$: if (open && phase === 'scan') { initScan(); }
 	$: if (!open) { cleanup(); resetState(); }
 
 	async function initScan() {
 		await tick();
-		// Pre-create BarcodeDetector once if available
-		if ('BarcodeDetector' in window && !barcodeDetector) {
-			try {
-				barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-			} catch { barcodeDetector = null; }
-		}
-		startCamera();
+		// Wait for the DOM element to exist
+		await tick();
+		startHtml5QrScanner();
 	}
 
-	async function startCamera() {
+	async function startHtml5QrScanner() {
+		// Cleanup any existing scanner first
+		await stopScanner();
+		scannerReady = false;
+
 		try {
-			stream = await navigator.mediaDevices.getUserMedia({
-				video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-			});
-			if (videoElement) {
-				videoElement.srcObject = stream;
-				videoElement.setAttribute('playsinline', 'true');
-				await videoElement.play().catch(() => {});
-				videoElement.onloadedmetadata = () => { startQrScanning(); };
-				// Also start scanning if metadata already loaded
-				if (videoElement.readyState >= 2) { startQrScanning(); }
+			// Dynamic import to avoid SSR issues
+			const { Html5Qrcode } = await import('html5-qrcode');
+
+			const container = document.getElementById(scannerContainerId);
+			if (!container) {
+				console.error('Scanner container not found');
+				return;
 			}
-		} catch (err) { console.error('Camera error:', err); }
-	}
 
-	function startQrScanning() {
-		if (scanInterval) clearInterval(scanInterval);
-		scanInterval = setInterval(() => { scanFrame(); }, 250);
-	}
+			html5QrScanner = new Html5Qrcode(scannerContainerId);
 
-	async function scanFrame() {
-		if (!videoElement || !canvasElement || videoElement.readyState < 2 || phase !== 'scan' || verifying) return;
-		const ctx = canvasElement.getContext('2d', { willReadFrequently: true });
-		if (!ctx) return;
-
-		const vw = videoElement.videoWidth;
-		const vh = videoElement.videoHeight;
-		if (!vw || !vh) return;
-
-		canvasElement.width = vw;
-		canvasElement.height = vh;
-		ctx.drawImage(videoElement, 0, 0, vw, vh);
-
-		// 1) Try BarcodeDetector API first (native, fast on supported browsers)
-		if (barcodeDetector) {
-			try {
-				const barcodes = await barcodeDetector.detect(canvasElement);
-				if (barcodes.length > 0) {
-					const raw = barcodes[0].rawValue;
-					if (raw) { await handleQrDetected(raw); return; }
+			await html5QrScanner.start(
+				{ facingMode: 'environment' },
+				{
+					fps: 10,
+					qrbox: { width: 250, height: 250 },
+					aspectRatio: 1.0,
+					disableFlip: false,
+				},
+				async (decodedText: string) => {
+					// QR code successfully scanned
+					await handleQrDetected(decodedText);
+				},
+				() => {
+					// QR code not found in this frame — this is normal, ignore
 				}
-			} catch { /* fall through to jsQR */ }
+			);
+			scannerReady = true;
+		} catch (err) {
+			console.error('Failed to start QR scanner:', err);
 		}
-
-		// 2) Fallback: jsQR (works on all browsers)
-		try {
-			const imageData = ctx.getImageData(0, 0, vw, vh);
-			const code = jsQR(imageData.data, vw, vh, { inversionAttempts: 'dontInvert' });
-			if (code?.data) {
-				await handleQrDetected(code.data);
-			}
-		} catch { /* ignore frame errors */ }
 	}
 
 	async function handleQrDetected(rawValue: string) {
 		if (verifying || phase !== 'scan') return;
-		stopScanning();
 		verifying = true;
 		errorMessage = '';
+
+		// Stop scanner immediately to prevent duplicate scans
+		await stopScanner();
+
 		try {
-			// The QR code contains JSON: {"registration_id":"...","eventId":"...","attendeeId":"...","ticketTypeId":"..."}
 			let token = rawValue;
 			try {
 				const parsed = JSON.parse(rawValue);
 				// Encode as base64 for the backend decodeCheckinToken
 				token = btoa(JSON.stringify({ attendeeId: parsed.attendeeId, eventId: parsed.eventId }));
-			} catch { /* use raw value as token */ }
+			} catch {
+				// If it's not JSON, try using raw value as token directly
+			}
 
 			const result = await verifyCheckinQr(eventId, token);
 			verifiedData = result;
 			verifiedQrToken = token;
 			verifiedPasscode = '';
 			phase = 'preview';
-			stopCamera();
 		} catch (e: any) {
 			errorMessage = e.message || 'QR verification failed';
 			phase = 'error';
@@ -123,16 +102,30 @@
 		}
 	}
 
-	function stopScanning() {
-		if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+	async function stopScanner() {
+		if (html5QrScanner) {
+			try {
+				const state = html5QrScanner.getState();
+				// State 2 = SCANNING, State 3 = PAUSED
+				if (state === 2 || state === 3) {
+					await html5QrScanner.stop();
+				}
+			} catch {
+				// Ignore stop errors
+			}
+			try {
+				html5QrScanner.clear();
+			} catch {
+				// Ignore clear errors
+			}
+			html5QrScanner = null;
+		}
+		scannerReady = false;
 	}
 
-	function stopCamera() {
-		stopScanning();
-		if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+	async function cleanup() {
+		await stopScanner();
 	}
-
-	function cleanup() { stopCamera(); barcodeDetector = null; }
 
 	function resetState() {
 		phase = 'scan';
@@ -155,7 +148,7 @@
 			verifiedPasscode = passcode.trim();
 			verifiedQrToken = '';
 			phase = 'preview';
-			stopCamera();
+			await stopScanner();
 		} catch (e: any) {
 			errorMessage = e.message || 'Verification failed';
 			phase = 'error';
@@ -184,14 +177,16 @@
 		}
 	}
 
-	function handleClose() {
+	async function handleClose() {
 		open = false;
-		cleanup();
+		await cleanup();
 		resetState();
 	}
 
-	function handleRetry() {
+	async function handleRetry() {
+		await cleanup();
 		resetState();
+		await tick();
 		initScan();
 	}
 
@@ -247,26 +242,14 @@
 			<div class="mt-6 overflow-hidden border-t pt-6">
 				{#if phase === 'scan'}
 					<div class="custom-scrollbar max-h-80 overflow-y-auto rounded-lg border p-4 md:max-h-96">
-						<!-- Camera View with QR Scanner Overlay -->
-						<div class="relative mb-4 flex items-center justify-center overflow-hidden rounded-lg bg-gray-900">
-							<video bind:this={videoElement} autoplay playsinline muted class="h-60 w-full rounded-lg object-cover">
-								<track kind="captions" />
-							</video>
-							<canvas bind:this={canvasElement} class="hidden"></canvas>
-							<!-- QR Scanner Overlay -->
-							<div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-								<div class="relative h-44 w-44">
-									<!-- Corner brackets -->
-									<div class="absolute top-0 left-0 h-8 w-8 border-t-3 border-l-3 border-white rounded-tl-md"></div>
-									<div class="absolute top-0 right-0 h-8 w-8 border-t-3 border-r-3 border-white rounded-tr-md"></div>
-									<div class="absolute bottom-0 left-0 h-8 w-8 border-b-3 border-l-3 border-white rounded-bl-md"></div>
-									<div class="absolute bottom-0 right-0 h-8 w-8 border-b-3 border-r-3 border-white rounded-br-md"></div>
-									<!-- Scanning line animation -->
-									<div class="scan-line absolute left-2 right-2 h-0.5 bg-[#DB3EC6] opacity-80"></div>
+						<!-- QR Scanner powered by html5-qrcode -->
+						<div class="relative mb-4 overflow-hidden rounded-lg bg-gray-900">
+							<div id={scannerContainerId} class="qr-scanner-container"></div>
+							{#if verifying}
+								<div class="absolute inset-0 flex items-center justify-center bg-black/60">
+									<p class="text-sm text-white">Verifying QR code...</p>
 								</div>
-							</div>
-							<!-- Dim overlay outside scanner area -->
-							<div class="pointer-events-none absolute inset-0 bg-black/40" style="mask-image: radial-gradient(circle 88px at center, transparent 85px, black 86px); -webkit-mask-image: radial-gradient(circle 88px at center, transparent 85px, black 86px);"></div>
+							{/if}
 						</div>
 						<p class="mb-3 text-center text-xs text-gray-400">Point camera at attendee's QR code</p>
 						<!-- Passcode Input -->
@@ -290,7 +273,6 @@
 				{:else if phase === 'preview'}
 					<!-- Attendee Details Preview -->
 					<div class="custom-scrollbar max-h-80 overflow-y-auto rounded-lg bg-[#F6FBF5] p-4 md:max-h-96">
-						<!-- Attendee Info -->
 						<div class="flex items-center justify-between gap-3">
 							<div class="flex items-center gap-3">
 								<div class="flex h-12 w-12 items-center justify-center rounded-full bg-pink-100">
@@ -307,7 +289,6 @@
 							</span>
 						</div>
 
-						<!-- Details Grid -->
 						<div class="mt-5 grid grid-cols-3 gap-4 border-t border-gray-200 pt-4">
 							<div>
 								<p class="text-xs text-gray-400">Registration Time</p>
@@ -331,7 +312,6 @@
 						{/if}
 					</div>
 
-					<!-- Action Buttons -->
 					<div class="mt-6 flex items-center gap-3">
 						<button on:click={handleClose} class="flex-1 rounded-md bg-[#EBECED] px-4 py-2.5 text-sm font-medium text-gray-600">Cancel</button>
 						{#if isAlreadyCheckedIn}
@@ -395,11 +375,19 @@
 <style>
 	.animate-fadeIn { animation: fade 0.15s ease-out; }
 	@keyframes fade { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
-	.scan-line {
-		animation: scanMove 2s ease-in-out infinite;
+
+	/* Style the html5-qrcode scanner container */
+	.qr-scanner-container {
+		width: 100%;
+		min-height: 280px;
 	}
-	@keyframes scanMove {
-		0%, 100% { top: 8px; }
-		50% { top: calc(100% - 10px); }
+	:global(#qr-shaded-region) {
+		border-color: rgba(219, 62, 198, 0.5) !important;
+	}
+	/* Hide the default html5-qrcode branding/header */
+	.qr-scanner-container :global(img[alt="Info icon"]),
+	.qr-scanner-container :global(span:has(> a[href*="scanapp"])),
+	.qr-scanner-container :global(a[href*="scanapp"]) {
+		display: none !important;
 	}
 </style>

@@ -16,6 +16,7 @@
 
 	$: if (open) { loadCollections(); }
 	$: selectedCollection = collections.find((c) => (c._id || c.id) === selectedCollectionId);
+	$: currentCollection = collections.find((c) => c.name === currentCollectionName);
 
 	async function loadCollections() {
 		try { collections = await getMyCollections(); } catch { collections = []; }
@@ -37,7 +38,11 @@
 	<div on:click={() => (open = false)} on:keydown={(e) => e.key === 'Escape' && (open = false)}
 		class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-3" role="dialog" aria-modal="true" tabindex="-1">
 		<div class="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl" role="document" on:click|stopPropagation on:keydown|stopPropagation>
-			<img src="/tech-icon.svg" alt="" class="mb-3 h-12 w-12" />
+			{#if currentCollection?.profilePictureUrl}
+				<img src={currentCollection.profilePictureUrl} alt="" class="mb-3 h-12 w-12 rounded-lg object-cover" />
+			{:else}
+				<div class="mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-xl">🎪</div>
+			{/if}
 			<p class="text-sm text-gray-500">This event is managed by</p>
 			<p class="text-lg font-semibold text-gray-900">{currentCollectionName}</p>
 
@@ -57,7 +62,11 @@
 				<button on:click={() => (showDropdown = !showDropdown)}
 					class="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
 					<span class="flex items-center gap-2">
-						<img src="/tech-icon.svg" alt="" class="h-4 w-4" />
+						{#if selectedCollection?.profilePictureUrl}
+							<img src={selectedCollection.profilePictureUrl} alt="" class="h-5 w-5 rounded object-cover" />
+						{:else}
+							<span class="flex h-5 w-5 items-center justify-center rounded bg-gray-100 text-xs">🎪</span>
+						{/if}
 						{selectedCollection?.name || 'Choose Collection'}
 					</span>
 					<Icon icon="mdi:chevron-down" class="text-lg" />
@@ -68,7 +77,11 @@
 							{#each collections as col}
 								<button on:click={() => { selectedCollectionId = col._id || col.id; showDropdown = false; }}
 									class="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-gray-50 {selectedCollectionId === (col._id || col.id) ? 'bg-gray-100 font-medium' : ''}">
-									<img src="/tech-icon.svg" alt="" class="h-4 w-4" />
+									{#if col.profilePictureUrl}
+										<img src={col.profilePictureUrl} alt="" class="h-5 w-5 rounded object-cover" />
+									{:else}
+										<span class="flex h-5 w-5 items-center justify-center rounded bg-gray-100 text-xs">🎪</span>
+									{/if}
 									{col.name}
 								</button>
 							{/each}

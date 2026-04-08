@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import EventCard from '$lib/components/EventCard.svelte';
-	import { getMyEvents } from '$lib/services/event.services';
+	import { getMyAttendingEvents, getMyEvents } from '$lib/services/event.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { onMount } from 'svelte';
 
@@ -20,7 +20,12 @@
 	onMount(async () => {
 		if (!$isAuthenticated) return;
 		try {
-			createdEvents = await getMyEvents();
+			const [created, attending] = await Promise.all([
+				getMyEvents(),
+				getMyAttendingEvents()
+			]);
+			createdEvents = created;
+			attendingEvents = attending;
 		} catch (e: any) {
 			error = e.message ?? 'Failed to load events';
 		} finally {
@@ -52,7 +57,7 @@
 				? new Date(e.startDateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 				: '',
 			title: e.title ?? 'Untitled Event',
-			organizers: '',
+			organizers: e.eventOrganizerName ?? '',
 			location,
 			locationIcon,
 			status: e.eventStatus ?? 'DRAFT',
@@ -61,6 +66,8 @@
 			image: e.displayPictureUrl ?? e.coverPictureUrl ?? '/events.png',
 			tag: e.tags?.[0] ?? '',
 			category: e.category ?? '',
+			collectionName: e.collectionName ?? '',
+			customLinkSlug: e.customLinkSlug ?? '',
 			organizerAvatar: e.organizerAvatarUrl ?? '',
 		};
 	}
@@ -203,7 +210,7 @@
 									<EventCard {event} type="mine" />
 								</a>
 							{:else}
-								<a href={`/event-page/${event.id}`} class="no-underline">
+								<a href={`/e/${event.customLinkSlug || event.id}`} target="_blank" rel="noopener noreferrer" class="no-underline">
 									<EventCard {event} type="attending" />
 								</a>
 							{/if}

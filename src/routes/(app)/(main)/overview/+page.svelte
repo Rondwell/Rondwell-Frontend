@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import CollectionCard from '$lib/components/CollectionCard.svelte';
 	import EventCard from '$lib/components/EventCard.svelte';
-	import { getMyEvents } from '$lib/services/event.services';
+	import { getMyEvents, getMySubscribedCollections } from '$lib/services/event.services';
 	import { getEarningsSummary, getWalletBalance } from '$lib/services/wallet.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { onMount } from 'svelte';
@@ -11,6 +11,7 @@
 	let activeTab: 'Created' | 'Attending' = 'Created';
 	let createdEvents: any[] = [];
 	let attendingEvents: any[] = [];
+	let subscribedCollections: any[] = [];
 	let pageReady = false;
 
 	// Stats
@@ -22,11 +23,13 @@
 	onMount(async () => {
 		if (!$isAuthenticated) return;
 		try {
-			const [events] = await Promise.all([
+			const [events, subCollections] = await Promise.all([
 				getMyEvents(),
+				getMySubscribedCollections(),
 				loadWalletAndRevenue(),
 			]);
 			createdEvents = events;
+			subscribedCollections = subCollections;
 			totalEvents = createdEvents.length;
 			totalAttendees = createdEvents.reduce((sum: number, e: any) => sum + (e.attendeeCount ?? 0), 0);
 		} catch (e: any) {
@@ -140,16 +143,30 @@
 		}
 	}
 
-	const collections = [
-		{
-			name: 'The GenAI Collective',
-			image: '/events.png',
-			events: [
-				{ title: '💕  GenAI Collective NTC 💕 Research Roundtable', date: 'Thu, Sep 19, 6:30 PM' },
-				{ title: '💕  GenAI Collective NTC 💕 Research Roundtable', date: 'Thu, Sep 19, 6:30 PM' }
-			]
-		}
-	];
+	function normalizeSubscribedCollection(c: any) {
+		return {
+			_id: c._id ?? c.id,
+			name: c.name ?? 'Unnamed Collection',
+			description: c.description ?? '',
+			image: c.profilePictureUrl ?? c.coverBannerUrl ?? '/events.png',
+			profilePictureUrl: c.profilePictureUrl,
+			slug: c.slug,
+			subscriberCount: c.subscriberCount ?? 0,
+			eventCount: c.eventCount ?? 0,
+			upcomingEvents: (c.upcomingEvents ?? []).map((e: any) => ({
+				title: e.title ?? '',
+				date: e.startDateTime
+					? new Date(e.startDateTime).toLocaleDateString('en-US', {
+							weekday: 'short',
+							month: 'short',
+							day: 'numeric',
+							hour: 'numeric',
+							minute: '2-digit'
+						})
+					: '',
+			})),
+		};
+	}
 </script>
 
 <svelte:head>
@@ -396,11 +413,17 @@
 		<div>
 			<h2 class="mb-4 text-2xl font-medium">Subscribed Collections</h2>
 
-			<div class="mb-12 flex w-full max-w-[1020px] flex-col gap-4">
-				{#each collections as collection, index (index)}
-					<CollectionCard {collection} />
-				{/each}
-			</div>
+			{#if subscribedCollections.length === 0}
+				<div class="flex h-32 items-center justify-center rounded-xl bg-[#FDFDFD] text-sm text-gray-400">
+					No subscribed collections yet.
+				</div>
+			{:else}
+				<div class="mb-12 flex w-full max-w-[1020px] flex-col gap-4">
+					{#each subscribedCollections as collection (collection._id ?? collection.id)}
+						<CollectionCard collection={normalizeSubscribedCollection(collection)} type="subscription" />
+					{/each}
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}

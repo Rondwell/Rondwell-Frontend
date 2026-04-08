@@ -2,15 +2,16 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
-import { getEventAttendees, uploadEventPhoto } from '$lib/services/event.services';
+import { getEventAttendees, updateEvent, uploadEventPhoto } from '$lib/services/event.services';
 import { getEventEarnings } from '$lib/services/wallet.services';
-import { getEventCache } from '$lib/stores/eventCache.store';
+import { getEventCache, invalidateEventCache } from '$lib/stores/eventCache.store';
 import { toast } from '$lib/stores/toast.store';
 import { clickOutside } from '$lib/utils/constant';
 import { cleanErrorMessage } from '$lib/utils/errorMessage';
 import Icon from '@iconify/svelte';
 import InviteGuestsModal from './components/InviteGuestsModal.svelte';
 import SendPostModal from './components/SendPostModal.svelte';
+import TransferEventModal from './settings/components/TransferEventModal.svelte';
 
 $: eventId = $page.params.id;
 
@@ -82,6 +83,11 @@ function timeAgo(dateStr: string): string {
 }
 
 $: collectionName = collections.find((c: any) => c._id === rawEvent?.collectionId || c.id === rawEvent?.collectionId)?.name ?? 'My Collection';
+$: collectionImage = collections.find((c: any) => c._id === rawEvent?.collectionId || c.id === rawEvent?.collectionId)?.profilePictureUrl ?? '';
+
+let showVisibilityDropdown = false;
+let showTransferModal = false;
+let visibilityUpdating = false;
 
 $: eventData = rawEvent ? {
 id: rawEvent._id ?? rawEvent.id,
@@ -213,6 +219,24 @@ $: eventImageSrc = eventData?.coverPictureUrl || eventData?.displayPictureUrl ||
 $: eventLink = eventData?.customLinkSlug
 ? `rondwell.com/e/${eventData.customLinkSlug}`
 : `rondwell.com/event-page/${eventId}`;
+
+async function handleVisibilityChange(newVisibility: string) {
+	visibilityUpdating = true;
+	showVisibilityDropdown = false;
+	try {
+		await updateEvent(eventId!, { visibility: newVisibility === 'Private' ? 'PRIVATE' : 'PUBLIC' } as any);
+		invalidateEventCache(eventId!);
+		toast.success(`Event visibility changed to ${newVisibility}.`);
+		// Update local state immediately
+		if (eventData) {
+			eventData = { ...eventData, visibility: { ...eventData.visibility, status: newVisibility } };
+		}
+	} catch (e: any) {
+		toast.error(cleanErrorMessage(e.message || 'Failed to update visibility'));
+	} finally {
+		visibilityUpdating = false;
+	}
+}
 </script>
 
 <input
@@ -240,7 +264,7 @@ $: eventLink = eventData?.customLinkSlug
 						xmlns="http://www.w3.org/2000/svg"
 					>
 						<path
-							d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z"
+							d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898Z"
 							fill="#83808D"
 							stroke="#83808D"
 							stroke-width="0.37461"
@@ -260,37 +284,13 @@ $: eventLink = eventData?.customLinkSlug
 				</a>
 			{/if}
 			<a
-				class="flex items-start gap-1 rounded-md bg-[#DCE4EE] px-3 py-1 text-sm font-medium text-[#5D646F]"
+				class="flex items-center gap-1.5 rounded-md bg-[#F0EFF1] px-3 py-1.5 text-sm font-medium text-[#5D646F] transition-colors hover:bg-[#E4E3E6]"
 				href={eventData?.customLinkSlug ? `/e/${eventData.customLinkSlug}` : `/event-page/${eventId}`}
 				target="_blank"
 				rel="noopener noreferrer"
 			>
 				Event Page
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M1.24306 6.4387C1.40611 5.40243 2.12888 4.62786 3.0931 4.47826L9.69034 3.43935L9.8408 3.42097C10.5948 3.35739 11.3249 3.72187 11.7721 4.3912C12.2195 5.06073 12.3131 5.92902 12.0244 6.68931L11.9618 6.83923L9.01457 13.3413L9.01326 13.3411C8.84871 13.7088 8.61528 14.0066 8.33157 14.2308C7.8792 14.5883 7.31432 14.7405 6.72781 14.6481C5.77143 14.4963 5.05093 13.7247 4.89305 12.6922L4.591 10.7138C4.53659 10.3578 4.3245 10.0403 4.02548 9.86912L4.02494 9.8683L2.3872 8.94152C1.53287 8.45922 1.08026 7.47484 1.24306 6.4387ZM2.76439 5.88928C2.52769 6.07636 2.39626 6.36366 2.35324 6.63719L2.35378 6.638C2.28828 7.04462 2.40721 7.57568 2.91465 7.86476L4.55152 8.78851L4.66279 8.85692C5.17357 9.19045 5.53909 9.73754 5.67294 10.3689L5.69839 10.5051L6.00044 12.4835L6.00098 12.4843C6.09306 13.0997 6.52266 13.3845 6.9 13.4426C7.27991 13.5012 7.75745 13.3662 8.00792 12.8142L10.9559 6.31145C11.1348 5.91836 11.1012 5.47237 10.8636 5.11651C10.6258 4.7606 10.2457 4.58735 9.84651 4.65089L9.84575 4.6515L3.24253 5.68148C3.04601 5.71271 2.88934 5.79056 2.76439 5.88928Z"
-						fill="#5D646F"
-						stroke="#5D646F"
-						stroke-width="0.37461"
-					/>
-					<rect
-						x="7.25931"
-						y="8.68484"
-						width="3.5114"
-						height="1.15881"
-						rx="0.579404"
-						transform="rotate(144 7.25931 8.68484)"
-						fill="#5D646F"
-						stroke="#5D646F"
-						stroke-width="0.37461"
-					/>
-				</svg>
+				<Icon icon="mdi:open-in-new" class="h-3.5 w-3.5 text-[#8A8D90]" />
 			</a>
 		</div>
 		{#if loading}
@@ -1143,7 +1143,11 @@ $: eventLink = eventData?.customLinkSlug
 			<div class="mb-4 rounded-md bg-[#FDFDFD] p-3">
 				<div class="flex flex-col items-start gap-3 lg:flex-row">
 					<div class="flex gap-3">
-						<img src="/tech-icon.svg" alt="icon" class="h-10 w-10" />
+						{#if collectionImage}
+							<img src={collectionImage} alt="collection" class="h-10 w-10 rounded-lg object-cover" />
+						{:else}
+							<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-lg">🎪</div>
+						{/if}
 						<span class="lg:hidden">
 							<div class="text-xs font-medium text-[#ABADAD]">Managing Collection</div>
 							<div class="text-sm text-gray-500">{eventData.visibility.collection}</div>
@@ -1155,104 +1159,59 @@ $: eventLink = eventData?.customLinkSlug
 							<div class="text-sm text-gray-500">{eventData.visibility.collection}</div>
 						</span>
 						<div class="mt-1 mb-3 flex flex-col items-start gap-1 lg:flex-row lg:items-center">
-							<span class="flex items-center text-[#46C036]">
-								<Icon icon="mdi:web" class="rounded-full text-xl " />
+							<span class="flex items-center {eventData.visibility.status === 'Public' ? 'text-[#46C036]' : 'text-[#D69712]'}">
+								<Icon icon={eventData.visibility.status === 'Public' ? 'mdi:web' : 'mdi:lock-outline'} class="rounded-full text-xl" />
 								<p>{eventData.visibility.status}</p>
 							</span>
 							<p class="hidden lg:flex">—</p>
 							<p class="text-sm text-gray-500">
-								This event is listed on the collection page. Collection admins have manage access to
-								the event.
+								{eventData.visibility.status === 'Public'
+									? 'This event is listed on the collection page. Collection admins have manage access to the event.'
+									: 'This event is unlisted. Only people with the link can register.'}
 							</p>
 						</div>
-						<div class="flex flex-col gap-2 sm:flex-row">
+						<div class="relative flex flex-col gap-2 sm:flex-row">
 							<button
-								class="flex items-center justify-center gap-1 rounded-sm bg-[#EBECED] px-3 py-2 text-sm font-medium text-[#616265]"
+								on:click={() => (showVisibilityDropdown = !showVisibilityDropdown)}
+								disabled={visibilityUpdating}
+								class="flex items-center justify-center gap-1 rounded-sm bg-[#EBECED] px-3 py-2 text-sm font-medium text-[#616265] transition-colors hover:bg-gray-200 disabled:opacity-50"
 							>
-								<svg
-									width="18"
-									height="18"
-									viewBox="0 0 18 18"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
-								>
-									<path
-										d="M11.675 8.99471C11.675 10.4782 10.4762 11.6769 8.99275 11.6769C7.5093 11.6769 6.31055 10.4782 6.31055 8.99471C6.31055 7.51125 7.5093 6.3125 8.99275 6.3125C10.4762 6.3125 11.675 7.51125 11.675 8.99471Z"
-										stroke="#646567"
-										stroke-width="1.12383"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-									<path
-										d="M8.99127 15.1886C11.636 15.1886 14.1009 13.6303 15.8167 10.9331C16.491 9.87668 16.491 8.10103 15.8167 7.04463C14.1009 4.34744 11.636 2.78906 8.99127 2.78906C6.34652 2.78906 3.88159 4.34744 2.16588 7.04463C1.49158 8.10103 1.49158 9.87668 2.16588 10.9331C3.88159 13.6303 6.34652 15.1886 8.99127 15.1886Z"
-										stroke="#646567"
-										stroke-width="1.12383"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-								</svg>
-
-								<p>Change Visibility</p>
+								<Icon icon="mdi:eye-outline" class="text-lg" />
+								{visibilityUpdating ? 'Updating...' : 'Change Visibility'}
 							</button>
+
+							{#if showVisibilityDropdown}
+							<div class="absolute top-full left-0 z-50 mt-1 w-64 rounded-lg border bg-white p-2 shadow-lg">
+								<button
+									on:click={() => handleVisibilityChange('Public')}
+									class="flex w-full items-start gap-2 rounded-md p-2 text-left hover:bg-gray-50 {eventData.visibility.status === 'Public' ? 'bg-gray-50' : ''}"
+								>
+									<Icon icon="mdi:web" class="mt-0.5 text-base text-gray-500" />
+									<div>
+										<p class="text-sm font-medium">Public</p>
+										<p class="text-xs text-gray-400">Shown on your collection and eligible to be featured.</p>
+									</div>
+									{#if eventData.visibility.status === 'Public'}<Icon icon="mdi:check" class="ml-auto text-base" />{/if}
+								</button>
+								<button
+									on:click={() => handleVisibilityChange('Private')}
+									class="flex w-full items-start gap-2 rounded-md p-2 text-left hover:bg-gray-50 {eventData.visibility.status === 'Private' ? 'bg-gray-50' : ''}"
+								>
+									<Icon icon="mdi:lock-outline" class="mt-0.5 text-base text-gray-500" />
+									<div>
+										<p class="text-sm font-medium">Private</p>
+										<p class="text-xs text-gray-400">Unlisted. Only people with the link can register.</p>
+									</div>
+									{#if eventData.visibility.status === 'Private'}<Icon icon="mdi:check" class="ml-auto text-base" />{/if}
+								</button>
+							</div>
+							{/if}
+
 							<button
+								on:click={() => (showTransferModal = true)}
 								class="flex items-center justify-center gap-1 rounded-md bg-[#EBECED] px-3 py-2 text-sm font-medium text-[#616265] transition-colors hover:bg-gray-200"
 							>
-								<svg
-									width="18"
-									height="18"
-									viewBox="0 0 18 18"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
-								>
-									<path
-										d="M12.7328 3H5.24056C2.37105 3 1.56938 3.68928 1.50195 6.37149C2.94795 6.37149 4.11673 7.54776 4.11673 8.99376C4.11673 10.4397 2.94795 11.6085 1.50195 11.616C1.56938 14.2982 2.37105 14.9875 5.24056 14.9875H12.7328C15.7296 14.9875 16.4789 14.2383 16.4789 11.2414V6.7461C16.4789 3.74922 15.7296 3 12.7328 3Z"
-										stroke="#616265"
-										stroke-width="1.49844"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-									<path
-										opacity="0.4"
-										d="M6.73633 3V5.62227"
-										stroke="#616265"
-										stroke-width="1.49844"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-									<path
-										opacity="0.4"
-										d="M6.73633 12.3594V14.9816"
-										stroke="#616265"
-										stroke-width="1.49844"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-									<path
-										d="M8.23828 7.2848L11.0479 5.51523V9.05437L8.23828 7.2848Z"
-										fill="#D9D9D9"
-									/>
-									<rect
-										x="10.4863"
-										y="7.96875"
-										width="1.36222"
-										height="3.7461"
-										transform="rotate(-90 10.4863 7.96875)"
-										fill="#D9D9D9"
-									/>
-									<path
-										d="M14.2305 10.6918L11.4209 12.4613V8.92219L14.2305 10.6918Z"
-										fill="#D9D9D9"
-									/>
-									<rect
-										x="11.9824"
-										y="10.0156"
-										width="1.36222"
-										height="3.7461"
-										transform="rotate(90 11.9824 10.0156)"
-										fill="#D9D9D9"
-									/>
-								</svg>
-
+								<Icon icon="mdi:swap-horizontal" class="text-lg" />
 								Transfer Collection
 							</button>
 						</div>
@@ -1261,43 +1220,8 @@ $: eventLink = eventData?.customLinkSlug
 			</div>
 
 			<!-- Additional Information -->
-			<div class="flex items-center gap-1 text-xs text-gray-500">
-				<svg
-					width="20"
-					height="20"
-					viewBox="0 0 20 20"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M12.4934 4.22825L13.6378 6.51711C13.7921 6.83365 14.206 7.13396 14.555 7.19889L16.6248 7.53979C17.9478 7.75893 18.2562 8.71669 17.3065 9.67444L15.6913 11.2896C15.4235 11.5575 15.2693 12.0851 15.3586 12.4665L15.8212 14.4632C16.1864 16.0378 15.3423 16.6547 13.9544 15.8268L12.0145 14.6742C11.6655 14.4632 11.0811 14.4632 10.7321 14.6742L8.79227 15.8268C7.40434 16.6466 6.56023 16.0378 6.92547 14.4632L7.38812 12.4665C7.4774 12.0932 7.32319 11.5656 7.05534 11.2896L5.44015 9.67444C4.49052 8.72481 4.79894 7.76705 6.12194 7.53979L8.19165 7.19889C8.54066 7.14208 8.95461 6.83365 9.10882 6.51711L10.2533 4.22825C10.862 2.98642 11.8685 2.98642 12.4934 4.22825Z"
-						stroke="#C2C4C4"
-						stroke-width="1.87305"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					/>
-					<path
-						d="M6.49493 4.05469H1.625"
-						stroke="#C2C4C4"
-						stroke-width="1.87305"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					/>
-					<path
-						d="M4.05996 15.4219H1.625"
-						stroke="#C2C4C4"
-						stroke-width="1.87305"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					/>
-					<path
-						d="M2.43665 9.73438H1.625"
-						stroke="#C2C4C4"
-						stroke-width="1.87305"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					/>
-				</svg>
+			<div class="flex items-start gap-1 text-xs text-gray-500">
+				<Icon icon="mdi:star-outline" class="mt-0.5 shrink-0 text-base text-gray-300" />
 				<p>
 					You can submit the event to a relevant Rondwell discovery page or other community
 					Collection for a chance to be featured, such as the discover more page.
@@ -1305,5 +1229,11 @@ $: eventLink = eventData?.customLinkSlug
 			</div>
 		</div>
 	</div>
+
+	<TransferEventModal
+		bind:open={showTransferModal}
+		eventId={eventId ?? ''}
+		currentCollectionName={eventData.visibility.collection}
+	/>
 {/if}
 </div>

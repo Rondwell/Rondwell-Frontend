@@ -6,6 +6,7 @@
 	import { toast } from '$lib/stores/toast.store';
 	import { colors, type Color } from '$lib/utils/colors';
 	import { clickOutside } from '$lib/utils/constant';
+	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import Icon from '@iconify/svelte';
 	import PlaceholderExtension from '@tiptap/extension-placeholder';
 	import StarterKit from '@tiptap/starter-kit';
@@ -67,7 +68,35 @@
 	let venueName = '';
 
 	// Rich text editor
+	let editorReady = false;
 	let descEditor: Readable<Editor>;
+
+	function initEditor(content: string) {
+		if (editorReady && $descEditor) {
+			// Editor already exists — just update content
+			const current = $descEditor.getHTML();
+			if (content && current !== content) {
+				$descEditor.commands.setContent(content);
+			}
+			return;
+		}
+		descEditor = createEditor({
+			extensions: [
+				StarterKit,
+				PlaceholderExtension.configure({ placeholder: "Who should come? What's the event about?" }),
+			],
+			content: content || '',
+			editorProps: {
+				attributes: {
+					style: 'font-weight: 300;',
+				},
+			},
+			onUpdate: ({ editor }) => {
+				descriptionHtml = editor.getHTML();
+			},
+		});
+		editorReady = true;
+	}
 
 	function stripHtml(html: string): string {
 		return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
@@ -77,7 +106,6 @@
 		// Use cached event data
 		const { event: eventStore, loading: loadingStore } = getEventCache(eventId);
 		
-		// Wait for cache to load if needed
 		const unsubLoading = loadingStore.subscribe(() => {});
 		const unsubEvent = eventStore.subscribe((event) => {
 			if (!event) return;
@@ -114,7 +142,6 @@
 			}
 			timezone = event.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-			// Event type & location
 			const et = (event.eventType ?? 'VIRTUAL').toUpperCase();
 			eventType = et === 'VIRTUAL' ? 'Virtual' : et === 'PHYSICAL' ? 'Physical' : et === 'HYBRID' ? 'Hybrid' : 'Virtual';
 			virtualLink = event.locationDetails?.virtual?.meetingLink ?? '';
@@ -128,28 +155,20 @@
 			visibility = (event.visibility ?? 'PUBLIC').toUpperCase() === 'PRIVATE' ? 'Private' : 'Public';
 			visibilityIcon = visibility === 'Private' ? 'mdi:sparkles' : 'mdi:web';
 
+			// Initialize or update the editor with the loaded description
+			initEditor(descriptionHtml);
+
 			loading = false;
 			
-			// Unsubscribe after first data load to avoid overwriting user edits
 			unsubEvent();
 			unsubLoading();
 		});
 
-		descEditor = createEditor({
-			extensions: [
-				StarterKit,
-				PlaceholderExtension.configure({ placeholder: "Who should come? What's the event about?" }),
-			],
-			content: descriptionHtml || '',
-			editorProps: {
-				attributes: {
-					style: 'font-weight: 300;',
-				},
-			},
-			onUpdate: ({ editor }) => {
-				descriptionHtml = editor.getHTML();
-			},
-		});
+		// If event data was already cached (synchronous), editor is already initialized above.
+		// If not, create an empty editor now so the UI is ready.
+		if (!editorReady) {
+			initEditor(descriptionHtml);
+		}
 	});
 
 	onDestroy(() => {
@@ -182,9 +201,6 @@
 	function formatTime(timeStr: string) {
 		return timeStr;
 	}
-
-	import { toast } from '$lib/stores/toast.store';
-	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 
 	async function saveChanges() {
 		saving = true;
@@ -375,7 +391,7 @@
 						<Icon icon={showDescEditor ? 'mdi:chevron-up' : 'mdi:chevron-down'} class="absolute right-4 text-gray-400" />
 					</button>
 
-					{#if showDescEditor}
+					{#if showDescEditor && editorReady}
 						<div class="absolute left-0 top-full z-50 w-full rounded-b-xl border border-t-0 border-gray-100 bg-white shadow-xl">
 							<!-- Toolbar -->
 							<div class="flex flex-wrap items-center gap-0.5 border-b border-gray-100 bg-[#F8F9FA] px-3 py-1.5">
@@ -614,9 +630,23 @@
 
 			<!-- Public URL -->
 			<div class="mb-4">
-				<label for="public-url" class="mb-2 block text-sm font-medium text-gray-700">Public URL</label>
-				<div class="flex max-w-xl items-center overflow-hidden rounded-md">
-					<span class="flex h-[42px] shrink-0 items-center bg-[#F4F4F4] px-3 text-xs text-gray-500 sm:text-sm">rondwell.com/e/</span>
+				<div class="mb-2 flex items-center justify-between">
+					<label for="public-url" class="text-sm font-medium text-gray-700">Public URL</label>
+					<button
+						type="button"
+						class="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-gray-100"
+						on:click={() => {
+							const url = `rondwell.com/e/${publicUrl}`;
+							navigator.clipboard.writeText(`https://${url}`);
+							toast.success('Event URL copied!');
+						}}
+					>
+						<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+						Copy URL
+					</button>
+				</div>
+				<div class="max-w-xl">
+					<p class="mb-1 text-xs text-gray-400">rondwell.com/e/</p>
 					<input
 						id="public-url"
 						type="text"
@@ -624,7 +654,7 @@
 						bind:value={publicUrl}
 						disabled
 						title="Upgrade to Rondwell Plus to customize your event URL"
-						class="h-[42px] min-w-0 flex-1 border border-gray-300 bg-[#F4F4F4] px-3 text-xs text-gray-400 focus:ring-0 focus:outline-none sm:text-sm"
+						class="h-[42px] w-full rounded-md border border-gray-300 bg-[#F4F4F4] px-3 text-xs text-gray-500 focus:ring-0 focus:outline-none sm:text-sm"
 					/>
 				</div>
 			</div>
@@ -666,58 +696,69 @@
 				on:dragover={handleDragOver}
 				on:drop={handleDrop}
 				on:click={() => coverInput?.click()}
-				class="mb-4 flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-gray-400 hover:bg-gray-50"
+				class="mb-5 flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-gray-400 hover:bg-gray-50"
 			>
 				<Icon icon="mdi:upload" class="text-lg" />
 				{uploadingCover ? 'Uploading...' : 'Upload cover image'}
 			</button>
 
-			<!-- Side-by-side preview cards -->
-			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-				<!-- Facebook-style preview card -->
-				<div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-					<div class="relative h-[140px] w-full bg-gray-100">
-						{#if socialPreviewImage}
-							<img src={socialPreviewImage} alt="Social Preview" class="h-full w-full object-cover" />
-						{:else}
-							<div class="flex h-full items-center justify-center text-gray-300">
-								<Icon icon="mdi:image-outline" class="text-4xl" />
-							</div>
-						{/if}
-						<div class="absolute top-2 left-2">
-							<span class="rounded-full bg-[#1877F2] px-2 py-0.5 text-xs font-medium text-white">Facebook</span>
-						</div>
+			<!-- Preview cards -->
+			<div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+				<!-- Facebook / Open Graph preview -->
+				<div>
+					<div class="mb-2 flex items-center gap-1.5">
+						<svg class="h-4 w-4" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+						<span class="text-xs font-medium text-gray-500">Facebook / Link Preview</span>
 					</div>
-					<div class="border-t border-gray-100 bg-[#F0F2F5] px-3 py-2">
-						<p class="text-[9px] uppercase tracking-wide text-gray-400">rondwell.com{publicUrl ? `/${publicUrl}` : ''}</p>
-						<p class="mt-0.5 text-xs font-semibold text-gray-900 line-clamp-1">{name || 'Event Name'}</p>
-						<p class="mt-0.5 text-[10px] text-gray-500 line-clamp-2">{stripHtml(descriptionHtml) || 'Your event description will appear here.'}</p>
+					<div class="overflow-hidden rounded-lg border border-gray-200 shadow-sm">
+						<div class="relative aspect-[1.91/1] w-full bg-[#F0F2F5]">
+							{#if socialPreviewImage}
+								<img src={socialPreviewImage} alt="OG Preview" class="h-full w-full object-cover" />
+							{:else}
+								<div class="flex h-full flex-col items-center justify-center gap-2 text-gray-300">
+									<Icon icon="mdi:image-outline" class="text-5xl" />
+									<span class="text-xs">No cover image</span>
+								</div>
+							{/if}
+						</div>
+						<div class="border-t bg-[#F0F2F5] px-3 py-2.5">
+							<p class="text-[10px] uppercase tracking-wider text-gray-400">rondwell.com</p>
+							<p class="mt-0.5 text-[13px] font-semibold leading-tight text-[#1D2129] line-clamp-2">{name || 'Your Event Name'}</p>
+							<p class="mt-0.5 text-xs leading-relaxed text-[#606770] line-clamp-2">{stripHtml(descriptionHtml) || 'Your event description will appear here when shared.'}</p>
+						</div>
 					</div>
 				</div>
 
-				<!-- Instagram-style preview -->
-				<div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-					<div class="flex items-center gap-2 px-3 py-1.5 border-b border-gray-100">
-						<div class="h-6 w-6 rounded-full bg-gradient-to-tr from-[#F77737] to-[#833AB4]"></div>
-						<span class="text-xs font-semibold text-gray-800">rondwell</span>
-						<span class="ml-auto rounded-full bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] px-2 py-0.5 text-xs font-medium text-white">Instagram</span>
+				<!-- Twitter / X preview -->
+				<div>
+					<div class="mb-2 flex items-center gap-1.5">
+						<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="#000"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+						<span class="text-xs font-medium text-gray-500">X (Twitter) Card</span>
 					</div>
-					<div class="relative h-[140px] w-full bg-gray-100">
-						{#if socialPreviewImage}
-							<img src={socialPreviewImage} alt="Instagram Preview" class="h-full w-full object-cover" />
-						{:else}
-							<div class="flex h-full items-center justify-center text-gray-300">
-								<Icon icon="mdi:image-outline" class="text-4xl" />
-							</div>
-						{/if}
-					</div>
-					<div class="px-3 py-2">
-						<p class="text-[10px] text-gray-800 line-clamp-2"><span class="font-semibold">rondwell</span> {stripHtml(descriptionHtml) || 'Your event description...'}</p>
+					<div class="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+						<div class="relative aspect-[1.91/1] w-full bg-gray-100">
+							{#if socialPreviewImage}
+								<img src={socialPreviewImage} alt="Twitter Preview" class="h-full w-full object-cover" />
+							{:else}
+								<div class="flex h-full flex-col items-center justify-center gap-2 text-gray-300">
+									<Icon icon="mdi:image-outline" class="text-5xl" />
+									<span class="text-xs">No cover image</span>
+								</div>
+							{/if}
+						</div>
+						<div class="border-t bg-white px-3 py-2.5">
+							<p class="text-[13px] font-semibold leading-tight text-[#0F1419] line-clamp-1">{name || 'Your Event Name'}</p>
+							<p class="mt-0.5 text-xs leading-relaxed text-[#536471] line-clamp-2">{stripHtml(descriptionHtml) || 'Your event description will appear here when shared.'}</p>
+							<p class="mt-1 flex items-center gap-1 text-[10px] text-[#536471]">
+								<svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+								rondwell.com
+							</p>
+						</div>
 					</div>
 				</div>
 			</div>
 
-			<p class="mt-3 text-xs text-[#B3B4B4]">For best results, use an image with a 1.9:1 ratio for Facebook and 1:1 for Instagram.</p>
+			<p class="mt-4 text-xs text-[#B3B4B4]">For best results, use an image with a 1.91:1 aspect ratio (e.g. 1200×630px). The preview updates as you edit.</p>
 		</div>
 
 		<!-- Save -->

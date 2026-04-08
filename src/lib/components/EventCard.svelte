@@ -99,6 +99,18 @@
 							<span class="text-[10px] font-medium text-[#7F7F81] sm:text-[11px]">{event.attendees}</span>
 						</div>
 					{/if}
+					{#if event.category}
+						<div class="flex items-center gap-1 rounded-full bg-[#F4F4F4] px-2 py-0.5 text-[10px] text-[#7F7F81] sm:text-[11px]">
+							<span class="text-[9px]">#</span>
+							<span>{event.category}</span>
+						</div>
+					{/if}
+					{#if event.collectionName}
+						<div class="flex items-center gap-1 rounded-full bg-[#EDE9FE] px-2 py-0.5 text-[10px] text-[#6D28D9] sm:text-[11px]">
+							<Icon icon="mdi:folder-outline" class="h-3 w-3" />
+							<span class="truncate">{event.collectionName}</span>
+						</div>
+					{/if}
 				{:else}
 					{#if event.category}
 						<div class="flex items-center gap-1 rounded-full bg-[#F4F4F4] px-2 py-0.5 text-[10px] text-[#7F7F81] sm:text-[11px]">
@@ -120,10 +132,7 @@
 						class="flex items-center gap-1 rounded-md bg-[#F4F4F4] px-2.5 py-1.5 text-[11px] font-medium text-[#616265] sm:px-3 sm:text-xs"
 					>
 						Manage Event
-						<svg width="10" height="10" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<path d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898Z" fill="#616265" stroke="#616265" stroke-width="0.37461"/>
-							<rect x="5.06035" y="5.85137" width="3.37149" height="1.12383" rx="0.561915" transform="rotate(-180 5.06035 5.85137)" fill="#616265" stroke="#616265" stroke-width="0.37461"/>
-						</svg>
+						<Icon icon="mdi:chevron-right" class="h-3.5 w-3.5" />
 					</button>
 				{/if}
 			</div>

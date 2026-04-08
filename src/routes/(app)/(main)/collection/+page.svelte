@@ -3,11 +3,12 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import CollectionCard from '$lib/components/CollectionCard.svelte';
-	import { getMyCollections } from '$lib/services/event.services';
+	import { getMyCollections, getMySubscribedCollections } from '$lib/services/event.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { onMount } from 'svelte';
 
 	let myCollections: any[] = [];
+	let subscribedCollections: any[] = [];
 	let loading = true;
 
 	$: if (browser && !$isAuthenticated) goto('/discover?show=true');
@@ -15,10 +16,15 @@
 	onMount(async () => {
 		if (!$isAuthenticated) return;
 		try {
-			const all = await getMyCollections();
+			const [all, subs] = await Promise.all([
+				getMyCollections(),
+				getMySubscribedCollections(),
+			]);
 			myCollections = all;
+			subscribedCollections = subs;
 		} catch (e) {
 			myCollections = [];
+			subscribedCollections = [];
 		} finally {
 			loading = false;
 		}
@@ -44,6 +50,31 @@
 						})
 					: e.date ?? ''
 			}))
+		};
+	}
+
+	function normalizeSubscribedCollection(c: any) {
+		return {
+			_id: c._id ?? c.id,
+			name: c.name ?? 'Unnamed Collection',
+			description: c.description ?? '',
+			image: c.profilePictureUrl ?? c.coverBannerUrl ?? '/events.png',
+			profilePictureUrl: c.profilePictureUrl,
+			slug: c.slug,
+			subscriberCount: c.subscriberCount ?? 0,
+			eventCount: c.eventCount ?? 0,
+			upcomingEvents: (c.upcomingEvents ?? []).map((e: any) => ({
+				title: e.title ?? '',
+				date: e.startDateTime
+					? new Date(e.startDateTime).toLocaleDateString('en-US', {
+							weekday: 'short',
+							month: 'short',
+							day: 'numeric',
+							hour: 'numeric',
+							minute: '2-digit'
+						})
+					: '',
+			})),
 		};
 	}
 </script>
@@ -146,6 +177,37 @@
 					<a href="/collection/{c._id}/events" class="w-full">
 						<CollectionCard collection={c} type="mine" />
 					</a>
+				{/each}
+			</div>
+		{/if}
+	</div>
+
+	<!-- Subscribed Collections -->
+	<div class="mb-8 w-full">
+		<h2 class="mb-4 text-2xl font-medium">Subscribed Collections</h2>
+
+		{#if loading}
+			<div class="flex w-full max-w-[1020px] flex-col gap-4">
+				{#each [1, 2] as _}
+					<div class="animate-pulse rounded-xl bg-[#FDFDFD] p-5">
+						<div class="flex gap-4">
+							<div class="h-20 w-20 rounded-lg bg-gray-200"></div>
+							<div class="flex-1 space-y-2">
+								<div class="h-4 w-1/3 rounded bg-gray-200"></div>
+								<div class="h-3 w-1/4 rounded bg-gray-200"></div>
+							</div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{:else if subscribedCollections.length === 0}
+			<div class="flex w-full max-w-[1020px] items-center justify-center rounded-xl bg-[#FDFDFD] py-12">
+				<p class="text-sm text-gray-400">No subscribed collections yet.</p>
+			</div>
+		{:else}
+			<div class="flex w-full max-w-[1020px] flex-col gap-4">
+				{#each subscribedCollections as collection (collection._id ?? collection.id)}
+					<CollectionCard collection={normalizeSubscribedCollection(collection)} type="subscription" />
 				{/each}
 			</div>
 		{/if}

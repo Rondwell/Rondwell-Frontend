@@ -68,6 +68,17 @@ export async function getMyCollections(): Promise<any[]> {
   }
 }
 
+export async function getMySubscribedCollections(): Promise<any[]> {
+  try {
+    const res = await authFetch(`${EVENT_URL}/api/v1/collections/my-subscriptions`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.collections ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export async function getEventById(eventId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}`);
   const data = await res.json();
@@ -253,6 +264,13 @@ export async function getMyEvents(): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/organizer/all`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to fetch events');
+  return data.events ?? [];
+}
+
+export async function getMyAttendingEvents(): Promise<any[]> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/attending`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch attending events');
   return data.events ?? [];
 }
 

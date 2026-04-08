@@ -160,7 +160,7 @@
 				<img src="/search-download.svg" alt="" class="h-4 w-4" />
 			</span>
 		</div>
-		<div class="mb-3 flex items-center gap-2 overflow-x-auto">
+		<div class="mb-3 flex flex-wrap items-center gap-2">
 			<!-- Filter Dropdown -->
 			<div class="relative flex-shrink-0" use:clickOutside={() => { showFilterDropdown = false; }}>
 				<button

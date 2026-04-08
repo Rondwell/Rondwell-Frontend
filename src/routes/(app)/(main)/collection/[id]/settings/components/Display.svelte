@@ -6,6 +6,7 @@
 		uploadCollectionCoverBanner,
 		uploadCollectionProfilePicture
 	} from '$lib/services/event.services';
+	import { toast } from '$lib/stores/toast.store';
 	import { colors } from '$lib/utils/colors';
 	import Icon from '@iconify/svelte';
 	import PlaceholderExtension from '@tiptap/extension-placeholder';
@@ -391,15 +392,29 @@
 
 			<!-- Public URL -->
 			<div class="mb-4">
-				<label for="" class="mb-2 block text-sm font-medium text-gray-700">Public URL (Slug)</label>
-				<div class="flex max-w-xl items-center overflow-hidden rounded-md">
-					<span class="flex h-[42px] shrink-0 items-center bg-[#F4F4F4] px-3 text-xs text-gray-500 sm:text-sm">rondwell.com/c/</span>
+				<div class="mb-2 flex items-center justify-between">
+					<label class="text-sm font-medium text-gray-700">Public URL (Slug)</label>
+					<button
+						type="button"
+						class="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-gray-100"
+						on:click={() => {
+							const url = `rondwell.com/c/${eventData.publicUrl}`;
+							navigator.clipboard.writeText(`https://${url}`);
+							toast.success('Collection URL copied!');
+						}}
+					>
+						<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+						Copy URL
+					</button>
+				</div>
+				<div class="max-w-xl">
+					<p class="mb-1 text-xs text-gray-400">rondwell.com/c/</p>
 					<input
 						type="text"
 						placeholder="my-collection"
 						bind:value={eventData.publicUrl}
 						on:input={handlePublicUrlInput}
-						class="h-[42px] min-w-0 flex-1 border border-gray-300 bg-[#FFFFFF] px-3 text-xs focus:outline-none focus:ring-0 sm:text-sm"
+						class="h-[42px] w-full rounded-md border border-gray-300 bg-[#FFFFFF] px-3 text-xs focus:outline-none focus:ring-0 sm:text-sm"
 					/>
 				</div>
 				<p class="mt-1 text-xs text-gray-400">This is the shareable link for your collection page.</p>

@@ -254,33 +254,10 @@ async function handleVisibilityChange(newVisibility: string) {
 			{#if loading}
 				<div class="h-4 w-32 animate-pulse rounded bg-gray-200"></div>
 			{:else}
-				<a href="/collection/{eventData.collectionId}/events" class="flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-[#F0EFF1]">
-					<span class="text-sm text-[#83808D]">{eventData.collection}</span>
-					<svg
-						width="11"
-						height="11"
-						viewBox="0 0 11 11"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898Z"
-							fill="#83808D"
-							stroke="#83808D"
-							stroke-width="0.37461"
-						/>
-						<rect
-							x="5.0584"
-							y="5.85137"
-							width="3.37149"
-							height="1.12383"
-							rx="0.561915"
-							transform="rotate(-180 5.0584 5.85137)"
-							fill="#83808D"
-							stroke="#83808D"
-							stroke-width="0.37461"
-						/>
-					</svg>
+				<a href="/collection/{eventData.collectionId}/events" class="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-[#83808D] transition-colors hover:bg-[#F0EFF1]">
+					<span class="flex-shrink-0">In</span>
+					<span class="hidden sm:inline">{eventData.collection}</span>
+					<span class="inline sm:hidden">{eventData.collection.length > 20 ? eventData.collection.slice(0, 20) + '...' : eventData.collection}</span>
 				</a>
 			{/if}
 			<a
@@ -464,120 +441,106 @@ async function handleVisibilityChange(newVisibility: string) {
 
 	<!-- Event Details Section -->
 	{#if eventIsFuture}
-		<div class="mb-12 rounded-lg bg-[#FDFDFD] p-4 shadow-md">
+		<div class="mb-12 overflow-hidden rounded-xl bg-[#FDFDFD] shadow-md">
 			<!-- Two-column layout -->
-			<div class="flex flex-col gap-6 lg:flex-row lg:items-stretch">
+			<div class="flex flex-col lg:flex-row lg:items-stretch">
 				<!-- Left Column: Event Image + Share -->
-				<div class="w-full lg:w-1/2">
-					<div class="relative w-full">
+				<div class="w-full p-4 lg:w-1/2">
+					<!-- Image container -->
+					<div class="relative w-full overflow-hidden rounded-xl">
 						<img
 							src={eventImageSrc}
 							alt="Event"
-							class="mb-4 h-70 w-full rounded-lg object-cover"
+							class="h-72 w-full object-cover"
 						/>
 
-						<!-- Copy link overlay -->
+						<!-- Copy link pill overlay -->
 						<div
-							class="absolute bottom-2 left-1.5 flex w-full max-w-[96%] items-center justify-between gap-2 rounded-md bg-[#B3ACA0] p-2 text-[#EFEEEC] md:left-2.5"
+							class="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 rounded-full bg-black/60 px-4 py-2 backdrop-blur-sm"
 						>
-						<span class="text-xs">{eventLink}</span>
-							<p class="cursor-pointer hover:underline">Copy</p>
+							<span class="truncate text-xs text-white/80">{eventLink}</span>
+							<button class="flex-shrink-0 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-white/30">
+								Copy
+							</button>
 						</div>
 					</div>
 
 					<!-- Share section -->
-					<div class="flex w-full items-center justify-between">
-						<p class="text-sm text-[#838485]">Share event</p>
-						<div class="flex items-center gap-2 text-xl text-[#A3A5A5]">
+					<div class="mt-4 flex w-full items-center justify-between rounded-lg bg-[#F4F4F4]/60 px-4 py-3">
+						<p class="text-sm font-medium text-[#616265]">Share event</p>
+						<div class="flex items-center gap-3 text-lg text-[#83808D]">
 							{#if eventData?.socialLinks?.instagram}
-								<a href="https://instagram.com/{eventData.socialLinks.instagram}" target="_blank" rel="noopener noreferrer" class="hover:text-[#E1306C] transition-colors">
+								<a href="https://instagram.com/{eventData.socialLinks.instagram}" target="_blank" rel="noopener noreferrer" class="rounded-full p-1 transition-colors hover:bg-[#EBECED] hover:text-[#E1306C]">
 									<Icon icon="mdi:instagram" />
 								</a>
 							{:else}
-								<Icon icon="mdi:instagram" class="opacity-30" />
+								<span class="rounded-full p-1 opacity-30"><Icon icon="mdi:instagram" /></span>
 							{/if}
 							{#if eventData?.socialLinks?.x}
-								<a href="https://x.com/{eventData.socialLinks.x}" target="_blank" rel="noopener noreferrer" class="hover:text-black transition-colors">
+								<a href="https://x.com/{eventData.socialLinks.x}" target="_blank" rel="noopener noreferrer" class="rounded-full p-1 transition-colors hover:bg-[#EBECED] hover:text-black">
 									<Icon icon="mdi:twitter" />
 								</a>
 							{:else}
-								<Icon icon="mdi:twitter" class="opacity-30" />
+								<span class="rounded-full p-1 opacity-30"><Icon icon="mdi:twitter" /></span>
 							{/if}
 							{#if eventData?.socialLinks?.linkedin}
-								<a href="https://linkedin.com/in/{eventData.socialLinks.linkedin}" target="_blank" rel="noopener noreferrer" class="hover:text-[#0A66C2] transition-colors">
+								<a href="https://linkedin.com/in/{eventData.socialLinks.linkedin}" target="_blank" rel="noopener noreferrer" class="rounded-full p-1 transition-colors hover:bg-[#EBECED] hover:text-[#0A66C2]">
 									<Icon icon="mdi:linkedin" />
 								</a>
 							{:else}
-								<Icon icon="mdi:linkedin" class="opacity-30" />
+								<span class="rounded-full p-1 opacity-30"><Icon icon="mdi:linkedin" /></span>
 							{/if}
 							{#if eventData?.socialLinks?.tiktok}
-								<a href="https://tiktok.com/@{eventData.socialLinks.tiktok}" target="_blank" rel="noopener noreferrer" class="hover:text-black transition-colors">
+								<a href="https://tiktok.com/@{eventData.socialLinks.tiktok}" target="_blank" rel="noopener noreferrer" class="rounded-full p-1 transition-colors hover:bg-[#EBECED] hover:text-black">
 									<Icon icon="simple-icons:tiktok" />
 								</a>
 							{:else}
-								<Icon icon="simple-icons:tiktok" class="opacity-30" />
+								<span class="rounded-full p-1 opacity-30"><Icon icon="simple-icons:tiktok" /></span>
 							{/if}
 						</div>
 					</div>
 				</div>
 
 				<!-- Right Column: When & Where -->
-				<div class="flex w-full flex-col justify-between rounded-md md:p-4 lg:w-1/2">
+				<div class="flex w-full flex-col justify-between border-t p-5 lg:w-1/2 lg:border-l lg:border-t-0">
 					<div class="w-full">
-						<h3 class="mb-3 text-lg font-semibold text-gray-800">When & Where</h3>
+						<h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-800">
+							<Icon icon="mdi:calendar-clock-outline" class="text-[#83808D]" />
+							When & Where
+						</h3>
 
 						<!-- Date and Location Blocks -->
-						<div class="mb-3 space-y-3">
-							<!-- Date -->
-							<div class="flex items-center gap-2">
-								<div class="flex h-[49.45px] w-[49.45px] flex-col rounded-md border">
-									<p class="bg-[#EBECED] py-[2px] text-center text-xs text-[#C7C9CB]">{getEventMonth(eventData.startDateTime)}</p>
-									<div class="flex flex-1 items-center justify-center border-t">
-										<p class="text-sm font-medium text-gray-700">{getEventDay(eventData.startDateTime)}</p>
+						<div class="mb-4 space-y-3">
+							<!-- Date Block -->
+							<div class="flex items-center gap-3 rounded-lg bg-[#F4F4F4]/70 p-3">
+								<div class="flex h-12 w-12 flex-col overflow-hidden rounded-lg border border-[#EBECED] bg-white">
+									<p class="bg-[#EBECED] py-0.5 text-center text-[10px] font-medium uppercase text-[#83808D]">{getEventMonth(eventData.startDateTime)}</p>
+									<div class="flex flex-1 items-center justify-center">
+										<p class="text-sm font-semibold text-gray-700">{getEventDay(eventData.startDateTime)}</p>
 									</div>
 								</div>
 
 								<div>
-									<div class="text-lg font-medium text-gray-800">{eventData.date}</div>
-									<div class="text-sm text-gray-500">{eventData.time}</div>
+									<div class="text-base font-medium text-gray-800">{eventData.date}</div>
+									<div class="text-sm text-[#83808D]">{eventData.time}</div>
 								</div>
 							</div>
 
-							<!-- Location -->
-							<div class="flex items-center gap-2">
+							<!-- Location Block -->
+							<div class="flex items-center gap-3 rounded-lg bg-[#F4F4F4]/70 p-3">
 								<div
-									class="flex h-[49.45px] w-[49.45px] items-center justify-center rounded-md border"
+									class="flex h-12 w-12 items-center justify-center rounded-lg border border-[#EBECED] bg-white"
 								>
-									<svg
-										width="27"
-										height="27"
-										viewBox="0 0 27 27"
-										fill="none"
-										xmlns="http://www.w3.org/2000/svg"
-									>
-										<path
-											opacity="0.4"
-											d="M23.7738 17.3967L16.7811 4.80977C15.8414 3.11622 14.5412 2.1875 13.1099 2.1875C11.6786 2.1875 10.3784 3.11622 9.43873 4.80977L2.44601 17.3967C1.561 19.0028 1.46266 20.5434 2.17286 21.7562C2.88306 22.969 4.2816 23.6355 6.11719 23.6355H20.1026C21.9382 23.6355 23.3368 22.969 24.047 21.7562C24.7571 20.5434 24.6588 18.9919 23.7738 17.3967Z"
-											fill="#B3B5B7"
-										/>
-										<path
-											d="M13.1105 16.1176C12.6625 16.1176 12.291 15.7461 12.291 15.2981V9.83508C12.291 9.38711 12.6625 9.01562 13.1105 9.01562C13.5584 9.01562 13.9299 9.38711 13.9299 9.83508V15.2981C13.9299 15.7461 13.5584 16.1176 13.1105 16.1176Z"
-											fill="#B3B5B7"
-										/>
-										<path
-											d="M13.1121 19.6723C13.0466 19.6723 12.9701 19.6614 12.8936 19.6505C12.8281 19.6396 12.7625 19.6177 12.697 19.5849C12.6314 19.5631 12.5658 19.5303 12.5003 19.4866C12.4456 19.4429 12.391 19.3992 12.3364 19.3555C12.1397 19.1479 12.0195 18.8638 12.0195 18.5797C12.0195 18.2956 12.1397 18.0116 12.3364 17.804C12.391 17.7603 12.4456 17.7166 12.5003 17.6729C12.5658 17.6291 12.6314 17.5964 12.697 17.5745C12.7625 17.5417 12.8281 17.5199 12.8936 17.509C13.0357 17.4762 13.1886 17.4762 13.3197 17.509C13.3962 17.5199 13.4618 17.5417 13.5273 17.5745C13.5929 17.5964 13.6584 17.6291 13.724 17.6729C13.7786 17.7166 13.8333 17.7603 13.8879 17.804C14.0846 18.0116 14.2048 18.2956 14.2048 18.5797C14.2048 18.8638 14.0846 19.1479 13.8879 19.3555C13.8333 19.3992 13.7786 19.4429 13.724 19.4866C13.6584 19.5303 13.5929 19.5631 13.5273 19.5849C13.4618 19.6177 13.3962 19.6396 13.3197 19.6505C13.2542 19.6614 13.1777 19.6723 13.1121 19.6723Z"
-											fill="#B3B5B7"
-										/>
-									</svg>
+									<Icon icon="mdi:map-marker-outline" class="text-xl text-[#B9BABA]" />
 								</div>
 
-								<div>
-									<div class="text-lg font-medium text-[#D79917]">
+								<div class="min-w-0 flex-1">
+									<div class="text-base font-medium text-[#D79917]">
 										{eventData.location}
 									</div>
-									<div class="max-w-50 text-sm text-gray-500 sm:max-w-full">
+									<div class="max-w-50 text-sm text-[#83808D] sm:max-w-full">
 										{#if eventData.meetingLink}
-											<a href={eventData.meetingLink} target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline truncate block">{eventData.meetingLink}</a>
+											<a href={eventData.meetingLink} target="_blank" rel="noopener noreferrer" class="block truncate text-blue-500 hover:underline">{eventData.meetingLink}</a>
 										{:else if eventData.venueAddress}
 											{eventData.venueAddress}
 										{:else}
@@ -590,18 +553,20 @@ async function handleVisibilityChange(newVisibility: string) {
 					</div>
 
 					<!-- Buttons -->
-					<div class="mt-4 flex w-full items-center gap-2">
+					<div class="mt-4 flex w-full items-center gap-3">
 						<button
 							on:click={() => goto(`/events/${eventId}/edit`)}
-							class="w-35 rounded-md bg-[#F4F4F4] px-3 py-2 text-center text-sm font-medium text-[#939495] hover:bg-gray-100"
+							class="flex items-center gap-2 rounded-lg border border-[#EBECED] bg-white px-4 py-2.5 text-sm font-medium text-[#616265] shadow-sm transition-colors hover:bg-[#F4F4F4]"
 						>
+							<Icon icon="mdi:pencil-outline" class="text-base" />
 							Edit Event
 						</button>
 						<button
-							class="w-35 rounded-md bg-[#F4F4F4] px-3 py-2 text-center text-sm font-medium text-[#939495] hover:bg-gray-100 disabled:opacity-50"
+							class="flex items-center gap-2 rounded-lg border border-[#EBECED] bg-white px-4 py-2.5 text-sm font-medium text-[#616265] shadow-sm transition-colors hover:bg-[#F4F4F4] disabled:opacity-50"
 							on:click={handleChangePhoto}
 							disabled={uploadingPhoto}
 						>
+							<Icon icon="mdi:camera-outline" class="text-base" />
 							{uploadingPhoto ? 'Uploading...' : 'Change Photo'}
 						</button>
 					</div>
@@ -610,279 +575,99 @@ async function handleVisibilityChange(newVisibility: string) {
 		</div>
 	{:else}
 		<div class="mb-6 w-full">
-			<div class="mb-3 flex w-full flex-col">
-				<div class="flex w-full items-center justify-between gap-1">
-					<h4 class="text-lg font-medium">This Event Has Ended</h4>
-					<button
-						class="flex w-fit items-center gap-1 rounded-sm bg-[#EBECED] px-3 py-2 text-sm font-medium text-[#616265]"
-					>
-						<p>Insights</p>
-						<svg
-							width="11"
-							height="11"
-							viewBox="0 0 11 11"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z"
-								fill="#616265"
-								stroke="#616265"
-								stroke-width="0.37461"
-							/>
-							<rect
-								x="5.06035"
-								y="5.85137"
-								width="3.37149"
-								height="1.12383"
-								rx="0.561915"
-								transform="rotate(-180 5.06035 5.85137)"
-								fill="#616265"
-								stroke="#616265"
-								stroke-width="0.37461"
-							/>
-						</svg>
-					</button>
+			<!-- Event Ended Banner -->
+			<div class="mb-4 flex w-full items-center justify-between rounded-xl bg-[#F4F4F4] px-5 py-4">
+				<div class="flex items-center gap-3">
+					<div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBECED]">
+						<Icon icon="mdi:calendar-check" class="text-lg text-[#83808D]" />
+					</div>
+					<div>
+						<h4 class="text-base font-semibold text-[#616265]">This Event Has Ended</h4>
+						<p class="text-xs text-[#83808D] lg:text-sm">
+							Thank you for organizing. We trust it was a huge success!
+						</p>
+					</div>
 				</div>
-				<p class="hidden text-sm text-[#737577] lg:block">
-					Thank you for Organizing. We trust it was a huge success!
-				</p>
+				<button
+					class="flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-[#616265] shadow-sm transition-colors hover:bg-[#EBECED]"
+				>
+					<Icon icon="mdi:chart-line" class="text-base" />
+					<p>Insights</p>
+				</button>
 			</div>
 
 			<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
 				<!-- Event Recap -->
-				<div class="rounded-lg bg-[#FDFDFD] p-4 shadow-md">
-					<div class="flex items-center justify-between">
-						<p class="text-xs text-[#A9AAAA]">EVENT RECAP</p>
-
-						<button
-							on:click={() => goto(`/events/${eventId}/edit`)}
-							class="cursor-pointer"
-							aria-label="Edit event"
-						>
-							<svg
-								width="13"
-								height="13"
-								viewBox="0 0 13 13"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M7.09062 1.65712L1.53353 7.28009C1.32196 7.49416 1.1104 7.91517 1.06809 8.22201L0.764845 10.3699C0.652011 11.1477 1.19503 11.69 1.96371 11.5829L4.0864 11.2761C4.38259 11.2333 4.79867 11.0192 5.01729 10.8052L10.5744 5.18218C11.5335 4.21172 11.9848 3.08427 10.5744 1.65712C9.16394 0.229967 8.04971 0.686655 7.09062 1.65712Z"
-									stroke="#A9AAAA"
-									stroke-width="1.49844"
-									stroke-miterlimit="10"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M6.29297 2.46094C6.76546 4.16638 8.08421 5.50077 9.77673 5.986"
-									stroke="#A9AAAA"
-									stroke-width="1.49844"
-									stroke-miterlimit="10"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<rect
-									x="8.15757"
-									y="11.099"
-									width="4.22292"
-									height="0.713575"
-									fill="#A9AAAA"
-									stroke="#A9AAAA"
-									stroke-width="0.713575"
-								/>
-							</svg>
-						</button>
+				<div class="overflow-hidden rounded-xl bg-[#FDFDFD] shadow-md">
+					<!-- Event image thumbnail -->
+					<div class="relative h-32 w-full">
+						<img
+							src={eventImageSrc}
+							alt="Event recap"
+							class="h-full w-full object-cover"
+						/>
+						<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+						<div class="absolute bottom-3 left-4 flex items-center gap-2">
+							<span class="rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">Recap</span>
+						</div>
 					</div>
-					<div class="my-3 flex flex-col items-start gap-2">
-						<div class="flex items-center gap-2">
-							<svg
-								width="18"
-								height="18"
-								viewBox="0 0 18 18"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M5.24414 1.5V3.74766"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-									stroke-miterlimit="10"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M13.4863 1.5V3.74766"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-									stroke-miterlimit="10"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M2.62305 6.8125H15.3598"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-									stroke-miterlimit="10"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M16.482 14.2313C16.482 14.7932 16.3247 15.3251 16.0475 15.7746C15.5305 16.6437 14.579 17.2281 13.4852 17.2281C12.7284 17.2281 12.0392 16.9509 11.5147 16.4789C11.2825 16.2841 11.0802 16.0444 10.9228 15.7746C10.6456 15.3251 10.4883 14.7932 10.4883 14.2313C10.4883 12.5755 11.8294 11.2344 13.4852 11.2344C14.3842 11.2344 15.1859 11.6315 15.7328 12.2533C16.1973 12.7852 16.482 13.4745 16.482 14.2313Z"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-									stroke-miterlimit="10"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M12.3184 14.2342L13.0601 14.976L14.6559 13.5"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M15.734 6.3711V12.26C15.1871 11.6381 14.3854 11.241 13.4863 11.241C11.8306 11.241 10.4895 12.5821 10.4895 14.2379C10.4895 14.7998 10.6468 15.3318 10.924 15.7813C11.0813 16.051 11.2836 16.2908 11.5159 16.4856H5.99414C3.37188 16.4856 2.24805 14.9871 2.24805 12.7395V6.3711C2.24805 4.12344 3.37188 2.625 5.99414 2.625H11.9879C14.6102 2.625 15.734 4.12344 15.734 6.3711Z"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-									stroke-miterlimit="10"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M8.98573 10.2652H8.99246"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M6.21424 10.2652H6.22097"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M6.21424 12.5152H6.22097"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
 
-							<div class="text-xs">{eventData.date}</div>
+					<div class="p-4">
+						<div class="mb-3 flex items-center justify-between">
+							<p class="text-xs font-medium uppercase tracking-wide text-[#83808D]">Event Recap</p>
+							<button
+								on:click={() => goto(`/events/${eventId}/edit`)}
+								class="rounded-md p-1.5 text-[#B9BABA] transition-colors hover:bg-[#F4F4F4] hover:text-[#616265]"
+								aria-label="Edit event"
+							>
+								<Icon icon="mdi:pencil-outline" class="text-sm" />
+							</button>
 						</div>
 
-						<div class="flex items-center gap-2">
-							<svg
-								width="18"
-								height="18"
-								viewBox="0 0 18 18"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M8.98829 1.50781C4.86009 1.50781 1.49609 4.87181 1.49609 9.00001C1.49609 13.1282 4.86009 16.4922 8.98829 16.4922C13.1165 16.4922 16.4805 13.1282 16.4805 9.00001C16.4805 4.87181 13.1165 1.50781 8.98829 1.50781ZM12.2474 11.6747C12.1425 11.8545 11.9552 11.9519 11.7604 11.9519C11.663 11.9519 11.5656 11.9295 11.4757 11.8695L9.15312 10.4835C8.57622 10.1388 8.14916 9.38211 8.14916 8.7153V5.6435C8.14916 5.33632 8.4039 5.08159 8.71108 5.08159C9.01826 5.08159 9.27299 5.33632 9.27299 5.6435V8.7153C9.27299 8.98502 9.49776 9.38211 9.73002 9.51697L12.0526 10.903C12.3223 11.0604 12.4122 11.405 12.2474 11.6747Z"
-									fill="#B3B5B7"
-								/>
-							</svg>
-							<p class="text-xs">EVENT RECAP</p>
-						</div>
-						<div class="flex items-center gap-2">
-							<svg
-								width="18"
-								height="18"
-								viewBox="0 0 18 18"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M2.70922 6.37025C4.18518 -0.117992 13.7977 -0.1105 15.2661 6.37774C16.1277 10.1838 13.7602 13.4054 11.6849 15.3983C10.1789 16.8518 7.79642 16.8518 6.283 15.3983C4.21515 13.4054 1.84762 10.1763 2.70922 6.37025Z"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-								/>
-								<path
-									d="M6.92969 8.62305L8.05352 9.74688L11.0504 6.75"
-									stroke="#B3B5B7"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
+						<div class="space-y-2.5">
+							<div class="flex items-center gap-3 rounded-lg bg-[#F4F4F4]/60 px-3 py-2">
+								<Icon icon="mdi:calendar-outline" class="flex-shrink-0 text-lg text-[#B9BABA]" />
+								<div class="text-sm text-[#616265]">{eventData.date}</div>
+							</div>
 
-							<div class="text-xs">{eventData.location}</div>
-						</div>
-						<div class="flex items-center gap-2">
-							<svg
-								width="18"
-								height="15"
-								viewBox="0 0 18 15"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M9.2095 6.45292C9.1452 6.44649 9.06805 6.44649 8.99733 6.45292C7.46712 6.40148 6.25195 5.14774 6.25195 3.60467C6.25195 2.02946 7.52498 0.75 9.10663 0.75C10.6818 0.75 11.9613 2.02946 11.9613 3.60467C11.9549 5.14774 10.7397 6.40148 9.2095 6.45292Z"
-									stroke="#A2A5A6"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M5.99702 8.82775C4.4411 9.86932 4.4411 11.5667 5.99702 12.6018C7.76512 13.7849 10.6648 13.7849 12.4329 12.6018C13.9888 11.5603 13.9888 9.86289 12.4329 8.82775C10.6712 7.65117 7.77155 7.65117 5.99702 8.82775Z"
-									stroke="#A2A5A6"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M13.8726 2.03906C15.12 2.03906 16.123 3.04849 16.123 4.28937C16.123 5.50453 15.1585 6.49467 13.9562 6.53968C13.9048 6.53325 13.8469 6.53325 13.7891 6.53968"
-									stroke="#A2A5A6"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M15.1113 12.3264C15.5742 12.23 16.0115 12.0435 16.3715 11.7671C17.3745 11.0148 17.3745 9.77393 16.3715 9.02168C16.0179 8.75165 15.5871 8.57162 15.1306 8.46875"
-									stroke="#A2A5A6"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M3.96134 2.03906C2.71403 2.03906 1.71103 3.04849 1.71103 4.28937C1.71103 5.50453 2.67545 6.49467 3.87776 6.53968C3.92919 6.53325 3.98706 6.53325 4.04492 6.53968"
-									stroke="#A2A5A6"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-								<path
-									d="M2.76172 12.3264C2.2988 12.23 1.8616 12.0435 1.50155 11.7671C0.498553 11.0148 0.498553 9.77393 1.50155 9.02168C1.85517 8.75165 2.28594 8.57162 2.74243 8.46875"
-									stroke="#A2A5A6"
-									stroke-width="1.49844"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
-							<div class="text-xs">{eventData?.attendees?.length} Attendee</div>
+							<div class="flex items-center gap-3 rounded-lg bg-[#F4F4F4]/60 px-3 py-2">
+								<Icon icon="mdi:clock-outline" class="flex-shrink-0 text-lg text-[#B9BABA]" />
+								<p class="text-sm text-[#616265]">{eventData.time}</p>
+							</div>
+
+							<div class="flex items-center gap-3 rounded-lg bg-[#F4F4F4]/60 px-3 py-2">
+								<Icon icon="mdi:map-marker-outline" class="flex-shrink-0 text-lg text-[#B9BABA]" />
+								<div class="text-sm text-[#616265]">{eventData.location}</div>
+							</div>
+
+							<div class="flex items-center gap-3 rounded-lg bg-[#F4F4F4]/60 px-3 py-2">
+								<Icon icon="mdi:account-group-outline" class="flex-shrink-0 text-lg text-[#B9BABA]" />
+								<div class="text-sm text-[#616265]">{eventData?.attendees?.length} Attendee{eventData?.attendees?.length !== 1 ? 's' : ''}</div>
+							</div>
 						</div>
 					</div>
 				</div>
 
 				<!-- Feedback Section -->
-				<div class="rounded-lg bg-[#FDFDFD] p-4 shadow-md">
-					<h3 class="mb-2 text-[#A9AAAA]">FEEDBACK</h3>
+				<div class="flex flex-col rounded-xl bg-[#FDFDFD] p-5 shadow-md">
+					<div class="mb-4 flex items-center gap-2">
+						<Icon icon="mdi:message-text-outline" class="text-lg text-[#83808D]" />
+						<h3 class="text-xs font-medium uppercase tracking-wide text-[#83808D]">Feedback</h3>
+					</div>
 
-					<div class="flex flex-col items-center justify-center gap-1">
-						<img src="/message_icon.svg" alt="" />
-						<div class="text-sm text-[#A9AAAA]">No Feedback Collected</div>
-						<div class="text-xs text-[#B6B7B7]">
-							You are not collecting feedback for this event.
+					<div class="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg bg-[#F4F4F4]/40 p-6">
+						<div class="flex h-14 w-14 items-center justify-center rounded-full bg-[#EBECED]">
+							<Icon icon="mdi:message-reply-text-outline" class="text-2xl text-[#B9BABA]" />
 						</div>
-						<button class="text-sm font-medium text-[#F31A7C]"> Schedule Feedback Email </button>
+						<div class="text-center">
+							<div class="text-sm font-medium text-[#616265]">No Feedback Collected</div>
+							<div class="mt-1 text-xs text-[#B9BABA]">
+								You are not collecting feedback for this event.
+							</div>
+						</div>
+						<button class="mt-2 rounded-lg bg-[#F31A7C]/10 px-4 py-2 text-sm font-medium text-[#F31A7C] transition-colors hover:bg-[#F31A7C]/20">
+							Schedule Feedback Email
+						</button>
 					</div>
 				</div>
 			</div>

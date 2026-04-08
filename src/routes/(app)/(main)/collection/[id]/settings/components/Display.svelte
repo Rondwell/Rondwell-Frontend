@@ -233,7 +233,6 @@
 				name: eventData.name,
 				description: eventData.description,
 				themeColor: eventData.tintColor,
-				slug: eventData.publicUrl || undefined,
 				socialLinks: {
 					instagram: profile.socialLinks.instagram || undefined,
 					twitter: profile.socialLinks.x || undefined,
@@ -412,12 +411,12 @@
 					<input
 						type="text"
 						placeholder="my-collection"
-						bind:value={eventData.publicUrl}
-						on:input={handlePublicUrlInput}
-						class="h-[42px] w-full rounded-md border border-gray-300 bg-[#FFFFFF] px-3 text-xs focus:outline-none focus:ring-0 sm:text-sm"
+						value={eventData.publicUrl}
+						disabled
+						class="h-[42px] w-full cursor-not-allowed rounded-md border border-gray-200 bg-gray-50 px-3 text-xs text-gray-500 focus:outline-none sm:text-sm"
 					/>
 				</div>
-				<p class="mt-1 text-xs text-gray-400">This is the shareable link for your collection page.</p>
+				<p class="mt-1 text-xs text-gray-400">The collection slug cannot be changed after creation.</p>
 			</div>
 
 			<!-- Location -->

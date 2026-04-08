@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { checkinByPasscode, checkinByQrCode, verifyCheckinPasscode, verifyCheckinQr } from '$lib/services/event.services';
 	import Icon from '@iconify/svelte';
+	import jsQR from 'jsqr';
 	import { createEventDispatcher, onDestroy, tick } from 'svelte';
 
 	export let open = false;
@@ -17,6 +18,7 @@
 	let checkingIn = false;
 	let errorMessage = '';
 	let scanInterval: ReturnType<typeof setInterval> | null = null;
+	let barcodeDetector: any = null;
 
 	// Verified attendee data (from verify endpoint)
 	let verifiedData: any = null;
@@ -29,46 +31,68 @@
 
 	async function initScan() {
 		await tick();
+		// Pre-create BarcodeDetector once if available
+		if ('BarcodeDetector' in window && !barcodeDetector) {
+			try {
+				barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+			} catch { barcodeDetector = null; }
+		}
 		startCamera();
 	}
 
 	async function startCamera() {
 		try {
-			const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 			stream = await navigator.mediaDevices.getUserMedia({
-				video: { facingMode: isMobile ? 'environment' : 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+				video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
 			});
 			if (videoElement) {
 				videoElement.srcObject = stream;
+				videoElement.setAttribute('playsinline', 'true');
+				await videoElement.play().catch(() => {});
 				videoElement.onloadedmetadata = () => { startQrScanning(); };
+				// Also start scanning if metadata already loaded
+				if (videoElement.readyState >= 2) { startQrScanning(); }
 			}
 		} catch (err) { console.error('Camera error:', err); }
 	}
 
 	function startQrScanning() {
 		if (scanInterval) clearInterval(scanInterval);
-		scanInterval = setInterval(() => { scanFrame(); }, 300);
+		scanInterval = setInterval(() => { scanFrame(); }, 250);
 	}
 
 	async function scanFrame() {
-		if (!videoElement || !canvasElement || videoElement.readyState < 2 || phase !== 'scan') return;
-		const ctx = canvasElement.getContext('2d');
+		if (!videoElement || !canvasElement || videoElement.readyState < 2 || phase !== 'scan' || verifying) return;
+		const ctx = canvasElement.getContext('2d', { willReadFrequently: true });
 		if (!ctx) return;
-		canvasElement.width = videoElement.videoWidth;
-		canvasElement.height = videoElement.videoHeight;
-		ctx.drawImage(videoElement, 0, 0);
 
-		// Try BarcodeDetector API (Chrome, Edge, Android)
-		if ('BarcodeDetector' in window) {
+		const vw = videoElement.videoWidth;
+		const vh = videoElement.videoHeight;
+		if (!vw || !vh) return;
+
+		canvasElement.width = vw;
+		canvasElement.height = vh;
+		ctx.drawImage(videoElement, 0, 0, vw, vh);
+
+		// 1) Try BarcodeDetector API first (native, fast on supported browsers)
+		if (barcodeDetector) {
 			try {
-				const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-				const barcodes = await detector.detect(canvasElement);
+				const barcodes = await barcodeDetector.detect(canvasElement);
 				if (barcodes.length > 0) {
 					const raw = barcodes[0].rawValue;
 					if (raw) { await handleQrDetected(raw); return; }
 				}
-			} catch { /* fallthrough */ }
+			} catch { /* fall through to jsQR */ }
 		}
+
+		// 2) Fallback: jsQR (works on all browsers)
+		try {
+			const imageData = ctx.getImageData(0, 0, vw, vh);
+			const code = jsQR(imageData.data, vw, vh, { inversionAttempts: 'dontInvert' });
+			if (code?.data) {
+				await handleQrDetected(code.data);
+			}
+		} catch { /* ignore frame errors */ }
 	}
 
 	async function handleQrDetected(rawValue: string) {
@@ -108,7 +132,7 @@
 		if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
 	}
 
-	function cleanup() { stopCamera(); }
+	function cleanup() { stopCamera(); barcodeDetector = null; }
 
 	function resetState() {
 		phase = 'scan';

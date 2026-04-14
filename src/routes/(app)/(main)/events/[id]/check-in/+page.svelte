@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getEventAttendeesPaginated, getTicketTypes } from '$lib/services/event.services';
+	import { getEventAttendeesPaginated, getEventDays, getTicketTypes } from '$lib/services/event.services';
 	import { getEventCache } from '$lib/stores/eventCache.store';
 	import { clickOutside } from '$lib/utils/constant';
+	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import CheckedInAttendeeModal from './components/CheckedInAttendeeModal.svelte';
 	import ScanAttendeeModal from './components/ScanAttendeeModal.svelte';
@@ -12,6 +13,7 @@
 
 	$: ({ event: eventStore, loading: eventLoading } = getEventCache(eventId));
 	$: rawEvent = $eventStore;
+	$: isMultiDay = rawEvent?.isMultiDay || false;
 
 	let searchQuery = '';
 	let searchTimeout: ReturnType<typeof setTimeout>;
@@ -36,13 +38,24 @@
 	// Ticket types for filter
 	let ticketTypes: any[] = [];
 
+	// Multi-day support
+	let eventDays: any[] = [];
+	let selectedDayId = '';
+	let showDayDropdown = false;
+
 	const sortOptions = [
 		{ label: 'Check-in Time', value: 'updatedAt' },
 		{ label: 'Name', value: 'firstName' },
 		{ label: 'Email', value: 'email' }
 	];
 
-	onMount(() => { fetchCheckedIn(); loadTicketTypes(); });
+	onMount(() => {
+		fetchCheckedIn();
+		loadTicketTypes();
+		if (isMultiDay) {
+			getEventDays(eventId).then((days) => { eventDays = days; }).catch(() => {});
+		}
+	});
 
 	async function fetchCheckedIn() {
 		loading = true;
@@ -185,7 +198,36 @@
 		</div>
 
 		<!-- Filters -->
-		<div class="mb-3 flex items-center justify-between">
+		<div class="mb-3 flex flex-wrap items-center gap-2 justify-between">
+			<!-- Day Filter (Multi-Day Events) -->
+			{#if isMultiDay && eventDays.length > 0}
+			<div class="relative" use:clickOutside={() => { showDayDropdown = false; }}>
+				<button on:click={() => (showDayDropdown = !showDayDropdown)}
+					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm">
+					<Icon icon="mdi:calendar-multiple" class="text-base" />
+					{selectedDayId ? (eventDays.find((d) => (d._id || d.id) === selectedDayId)?.label || 'Day') : 'All Days'}
+					<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
+				</button>
+				{#if showDayDropdown}
+					<div class="absolute left-0 z-50 mt-2 w-52 rounded-xl border border-white/20 bg-white/70 p-1 shadow-xl backdrop-blur-xl">
+						<button on:click={() => { selectedDayId = ''; showDayDropdown = false; }}
+							class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/50 {!selectedDayId ? 'font-medium text-[#7C3AED]' : 'text-[#616265]'}">
+							All Days
+							{#if !selectedDayId}<span class="text-xs text-[#7C3AED]">✓</span>{/if}
+						</button>
+						{#each eventDays as day}
+							{@const dayId = day._id || day.id}
+							<button on:click={() => { selectedDayId = dayId; showDayDropdown = false; }}
+								class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/50 {selectedDayId === dayId ? 'font-medium text-[#7C3AED]' : 'text-[#616265]'}">
+								{day.label || `Day ${day.dayNumber}`} — {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+								{#if selectedDayId === dayId}<span class="text-xs text-[#7C3AED]">✓</span>{/if}
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+			{/if}
+
 			<div class="relative" use:clickOutside={() => { showTicketDropdown = false; }}>
 				<button on:click={() => (showTicketDropdown = !showTicketDropdown)}
 					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm">

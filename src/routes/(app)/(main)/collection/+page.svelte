@@ -35,6 +35,7 @@
 			_id: c._id ?? c.id,
 			name: c.name ?? 'Unnamed Collection',
 			image: c.profilePictureUrl ?? c.coverBannerUrl ?? '/events.png',
+			subscriberCount: c.subscriberCount ?? c.subscribers?.length ?? 0,
 			subscribers: c.subscribers ?? [],
 			admins: c.admins ?? [],
 			eventCount: c.eventCount ?? 0,

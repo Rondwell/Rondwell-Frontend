@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventSession, deleteEventMediaByUrl, getEventRooms, getEventSpeakers, updateEventSession, uploadSessionThumbnail } from '$lib/services/event.services';
+	import { createEventSession, deleteEventMediaByUrl, getEventDays, getEventRooms, getEventSpeakers, updateEventSession, uploadSessionThumbnail } from '$lib/services/event.services';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher, tick } from 'svelte';
@@ -11,13 +11,50 @@
 	export let open = false;
 	export let eventId = '';
 	export let session: any = null;
+	export let eventData: any = null;
 
 	$: isEdit = !!session;
 	$: modalTitle = isEdit ? 'Edit Event Session' : 'Create Event Session';
+	$: isMultiDay = eventData?.isMultiDay || false;
+
+	// Compute date/time boundaries based on selected day or event
+	$: selectedDay = isMultiDay && selectedEventDayId
+		? eventDays.find((d: any) => (d._id || d.id) === selectedEventDayId)
+		: null;
+	$: boundaryMinDate = selectedDay ? new Date(selectedDay.date) : (eventData?.startDateTime ? new Date(eventData.startDateTime) : null);
+	$: boundaryMaxDate = selectedDay ? new Date(selectedDay.date) : (eventData?.endDateTime ? new Date(eventData.endDateTime) : null);
+	$: boundaryMinTime = selectedDay ? formatTimeFrom24(selectedDay.startTime) : (eventData?.startDateTime ? formatTimeFromISO(eventData.startDateTime) : null);
+	$: boundaryMaxTime = selectedDay ? formatTimeFrom24(selectedDay.endTime) : (eventData?.endDateTime ? formatTimeFromISO(eventData.endDateTime) : null);
+
+	function formatTimeFromISO(iso: string): string | null {
+		try {
+			const d = new Date(iso);
+			let hours = d.getHours();
+			const minutes = d.getMinutes();
+			const meridiem = hours >= 12 ? 'PM' : 'AM';
+			hours = hours % 12 || 12;
+			return `${hours}:${String(minutes).padStart(2, '0')} ${meridiem}`;
+		} catch { return null; }
+	}
+
+	function formatTimeFrom24(timeVal: any): string | null {
+		if (!timeVal) return null;
+		if (typeof timeVal === 'string' && timeVal.includes('AM') || typeof timeVal === 'string' && timeVal.includes('PM')) return timeVal;
+		try {
+			const d = new Date(timeVal);
+			if (isNaN(d.getTime())) return null;
+			let hours = d.getHours();
+			const minutes = d.getMinutes();
+			const meridiem = hours >= 12 ? 'PM' : 'AM';
+			hours = hours % 12 || 12;
+			return `${hours}:${String(minutes).padStart(2, '0')} ${meridiem}`;
+		} catch { return null; }
+	}
 
 	let title = '';
 	let description = '';
 	let selectedRoomId = '';
+	let selectedEventDayId = '';
 	let startDate: Date = new Date();
 	let endDate: Date = new Date();
 	let startTime = '07:30 PM';
@@ -32,6 +69,7 @@
 	let showRoomDropdown = false;
 	let showTypeDropdown = false;
 	let showSpeakerDropdown = false;
+	let showDayDropdown = false;
 	let speakerSearch = '';
 
 	let openStartDatePicker = false;
@@ -45,6 +83,7 @@
 
 	let rooms: any[] = [];
 	let speakers: any[] = [];
+	let eventDays: any[] = [];
 
 	const sessionTypes = [
 		{ label: 'Keynote', value: 'TALK' },
@@ -59,7 +98,7 @@
 	$: if (open) { loadData(); initForm(); }
 
 	async function loadData() {
-		try { [rooms, speakers] = await Promise.all([getEventRooms(eventId), getEventSpeakers(eventId)]); }
+		try { [rooms, speakers, eventDays] = await Promise.all([getEventRooms(eventId), getEventSpeakers(eventId), getEventDays(eventId)]); }
 		catch (e) { console.error('Failed to load data:', e); }
 	}
 
@@ -67,6 +106,7 @@
 		if (session) {
 			title = session.title || ''; description = session.description || '';
 			selectedRoomId = session.roomId || ''; sessionType = session.type || '';
+			selectedEventDayId = session.eventDayId || '';
 			selectedSpeakers = (session.speakers || []).map((s: any) => ({ ...s }));
 			liveStreamEnabled = session.communityChatEnabled ?? false;
 			isPublic = session.isPublic ?? true;
@@ -84,6 +124,7 @@
 			}
 		} else {
 			title = ''; description = ''; selectedRoomId = ''; sessionType = '';
+			selectedEventDayId = '';
 			selectedSpeakers = []; liveStreamEnabled = false; isPublic = true;
 			startDate = new Date(); endDate = new Date();
 			startTime = '07:30 PM'; endTime = '08:30 PM';
@@ -142,7 +183,7 @@
 		saving = true; error = '';
 		try {
 			const mediaUrls = thumbnailUrl ? [{ type: 'thumbnail', url: thumbnailUrl }] : [];
-			const payload: any = { title: title.trim(), description: description.trim() || undefined, startTime: buildDateTime(startDate, startTime), endTime: buildDateTime(endDate, endTime), type: sessionType, speakers: selectedSpeakers, tags: [getTypeName(sessionType)], isPublic, communityChatEnabled: liveStreamEnabled, mediaUrls };
+			const payload: any = { title: title.trim(), description: description.trim() || undefined, startTime: buildDateTime(startDate, startTime), endTime: buildDateTime(endDate, endTime), type: sessionType, speakers: selectedSpeakers, tags: [getTypeName(sessionType)], isPublic, communityChatEnabled: liveStreamEnabled, mediaUrls, eventDayId: selectedEventDayId || undefined };
 			if (isEdit) { await updateEventSession(eventId, session.roomId, session.id, payload); }
 			else { await createEventSession(eventId, selectedRoomId, payload); }
 			dispatch('saved'); open = false;
@@ -213,16 +254,49 @@
 
 	<!-- Date/Time Pickers -->
 	<div class="rounded-lg border border-gray-200 bg-white p-4">
+
+		<!-- Assign to Day (multi-day events only) -->
+		{#if isMultiDay && eventDays.length > 0}
+		<div class="mb-4">
+			<label class="mb-1 flex items-center gap-1 text-sm font-medium text-gray-900">Assign to Day <Icon icon="mdi:information-outline" width="14" class="text-gray-400" /></label>
+			<div class="relative" use:clickOutside={() => (showDayDropdown = false)}>
+				<button on:click={() => (showDayDropdown = !showDayDropdown)} class="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
+					<span class={selectedEventDayId ? 'text-gray-800' : 'text-gray-400'}>
+						{#if selectedEventDayId}
+							{@const day = eventDays.find((d) => (d._id || d.id) === selectedEventDayId)}
+							{day ? `${day.label || 'Day ' + day.dayNumber} — ${new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Select Day'}
+						{:else}
+							Select Day
+						{/if}
+					</span>
+					<Icon icon="mdi:chevron-down" class="text-lg text-gray-400" />
+				</button>
+				{#if showDayDropdown}
+				<div class="absolute left-0 z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+					<button on:click={() => { selectedEventDayId = ''; showDayDropdown = false; }} class="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50"><Icon icon="mdi:minus-circle-outline" class="text-lg" /> All Days</button>
+					{#each eventDays as day}
+					{@const dayId = day._id || day.id}
+					<button on:click={() => { selectedEventDayId = dayId; showDayDropdown = false; }} class="flex w-full items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 {selectedEventDayId === dayId ? 'bg-gray-50 font-medium' : ''}">
+						<Icon icon="mdi:calendar" class="text-lg text-gray-400" />
+						{day.label || 'Day ' + day.dayNumber} — {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+					</button>
+					{/each}
+				</div>
+				{/if}
+			</div>
+		</div>
+		{/if}
+
 		<div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
 			<div class="flex items-center gap-2"><div class="h-2.5 w-2.5 rounded-full bg-gray-500"></div><span class="text-sm text-gray-400">Session Start Date</span></div>
 			<div class="flex items-center gap-2">
 				<div class="relative" use:clickOutside={() => (openStartDatePicker = false)}>
 					<button on:click={async () => { openStartDatePicker = !openStartDatePicker; await tick(); scrollToId('date'); }} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">{formatDate(startDate)}</button>
-					<DatePickerModal open={openStartDatePicker} bind:selectedDate={startDate} />
+					<DatePickerModal open={openStartDatePicker} bind:selectedDate={startDate} minDate={boundaryMinDate} maxDate={boundaryMaxDate} />
 				</div>
 				<div class="relative" use:clickOutside={() => (openStartTimePicker = false)}>
 					<button on:click={() => (openStartTimePicker = !openStartTimePicker)} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">{startTime}</button>
-					<TimeModal open={openStartTimePicker} bind:selectedTime={startTime} />
+					<TimeModal open={openStartTimePicker} bind:selectedTime={startTime} minTime={boundaryMinTime} maxTime={boundaryMaxTime} />
 				</div>
 			</div>
 		</div>
@@ -232,11 +306,11 @@
 			<div class="flex items-center gap-2">
 				<div class="relative" use:clickOutside={() => (openEndDatePicker = false)}>
 					<button on:click={async () => { openEndDatePicker = !openEndDatePicker; await tick(); scrollToId('date'); }} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">{formatDate(endDate)}</button>
-					<DatePickerModal open={openEndDatePicker} bind:selectedDate={endDate} {startDate} />
+					<DatePickerModal open={openEndDatePicker} bind:selectedDate={endDate} {startDate} minDate={boundaryMinDate} maxDate={boundaryMaxDate} />
 				</div>
 				<div class="relative" use:clickOutside={() => (openEndTimePicker = false)}>
 					<button on:click={() => (openEndTimePicker = !openEndTimePicker)} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">{endTime}</button>
-					<TimeModal open={openEndTimePicker} bind:selectedTime={endTime} referenceTime={startTime} />
+					<TimeModal open={openEndTimePicker} bind:selectedTime={endTime} referenceTime={startTime} minTime={boundaryMinTime} maxTime={boundaryMaxTime} />
 				</div>
 			</div>
 		</div>

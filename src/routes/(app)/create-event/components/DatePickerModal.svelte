@@ -5,6 +5,8 @@
 	export let open = false;
 	export let startDate: Date | null = null;
 	export let selectedDate: Date | null = null;
+	export let minDate: Date | null = null;
+	export let maxDate: Date | null = null;
 
 	type Day = { day: number; current: boolean };
 
@@ -77,7 +79,26 @@
 
 	function selectDate(day: Day): void {
 		if (!day.current) return;
-		selectedDate = new Date(currentYear, currentMonth, day.day);
+		const d = new Date(currentYear, currentMonth, day.day);
+		if (isDisabled(day)) return;
+		selectedDate = d;
+	}
+
+	function isDisabled(day: Day): boolean {
+		if (!day.current) return true;
+		const d = new Date(currentYear, currentMonth, day.day);
+		d.setHours(0, 0, 0, 0);
+		if (minDate) {
+			const min = new Date(minDate);
+			min.setHours(0, 0, 0, 0);
+			if (d < min) return true;
+		}
+		if (maxDate) {
+			const max = new Date(maxDate);
+			max.setHours(0, 0, 0, 0);
+			if (d > max) return true;
+		}
+		return false;
 	}
 
 	function isToday(day: Day): boolean {
@@ -175,14 +196,16 @@
 				<!-- Calendar Grid -->
 				<div class="grid grid-cols-7 gap-1 text-center">
 					{#each days as day}
+						{@const disabled = isDisabled(day)}
 						<button
-							class={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-sm text-sm transition-colors
-                            ${day.current ? 'text-gray-900' : 'text-gray-400'}
-                            ${isStartDate(day) ? 'bg-[#F31A7C] font-semibold text-white' : ''}
-                            ${isToday(day) && !isStartDate(day) ? 'bg-black font-semibold text-white' : ''}
-                            ${isSelected(day) && !isToday(day) && !isStartDate(day) ? 'bg-[#F31A7C] font-semibold text-white' : ''}
-                            hover:bg-gray-300 hover:text-black`}
+							class={`flex h-8 w-8 items-center justify-center rounded-sm text-sm transition-colors
+                            ${disabled ? 'text-gray-300 cursor-not-allowed' : day.current ? 'text-gray-900 cursor-pointer' : 'text-gray-400'}
+                            ${isStartDate(day) && !disabled ? 'bg-[#F31A7C] font-semibold text-white' : ''}
+                            ${isToday(day) && !isStartDate(day) && !disabled ? 'bg-black font-semibold text-white' : ''}
+                            ${isSelected(day) && !isToday(day) && !isStartDate(day) && !disabled ? 'bg-[#F31A7C] font-semibold text-white' : ''}
+                            ${!disabled ? 'hover:bg-gray-300 hover:text-black' : ''}`}
 							on:click={() => selectDate(day)}
+							{disabled}
 						>
 							{day.day}
 						</button>

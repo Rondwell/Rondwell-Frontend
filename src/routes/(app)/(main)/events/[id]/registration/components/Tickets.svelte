@@ -547,6 +547,9 @@
 	eventCapacity={maxAttendees}
 	waitlistEnabled={waitlistEnabled}
 	existingTickets={tickets}
+	isMultiDay={eventData?.isMultiDay ?? false}
+	eventStartDate={eventData?.startDateTime ? new Date(eventData.startDateTime) : null}
+	eventEndDate={eventData?.endDateTime ? new Date(eventData.endDateTime) : null}
 	onSuccess={handleTicketCreated}
 />
 

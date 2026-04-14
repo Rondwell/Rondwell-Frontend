@@ -3,7 +3,7 @@
 	import { page } from '$app/stores';
 	import SubscribeModal from '$lib/components/SubscribeModal.svelte';
 	import { publicSubscribeToCollection } from '$lib/services/collection.services';
-	import { getPublicEventPage } from '$lib/services/event.services';
+	import { getEventDays, getPublicEventPage } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { setEventSlug } from '$lib/stores/eventSlug';
 	import { activeEventPageTheme, getEventTheme, setEventTheme } from '$lib/stores/eventTheme';
@@ -37,6 +37,7 @@
 	let paymentSuccess = false;
 	let paymentFailed = false;
 	let paymentRegId = '';
+	let eventDaysData: any[] = [];
 
 	let themeColor: Color = colors[0];
 	$: if (eventId) themeColor = getEventTheme(eventId);
@@ -76,6 +77,14 @@
 			// Store slug for sub-page URL rewriting
 			if (event.customLinkSlug) {
 				setEventSlug(eventId, event.customLinkSlug);
+			}
+
+			// Fetch event days for multi-day events
+			if (event.isMultiDay && event.eventDays?.length > 0) {
+				try {
+					// Use eventDays from the public page response if available, otherwise fetch
+					eventDaysData = data.eventDays ?? await getEventDays(eventId);
+				} catch { eventDaysData = []; }
 			}
 		} catch (e: any) {
 			const msg = e.message ?? '';
@@ -566,6 +575,34 @@
 						<div class="text-sm" style="color: {themeColor.lightText};">{formatEventTime(event.startDateTime, event.endDateTime, event.timeZone)}</div>
 					</div>
 				</div>
+
+				<!-- Multi-Day Tabs -->
+				{#if event.isMultiDay && event.eventDays?.length > 0}
+				<div class="mt-4 flex flex-wrap gap-2">
+					{#each event.eventDays as dayId, i}
+						{@const dayData = eventDaysData.find((d) => (d._id || d.id) === dayId)}
+						{#if dayData}
+						<div
+							class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
+							style="background-color: {themeColor.smallCover}; color: {themeColor.text};"
+						>
+							<div class="flex h-[36px] w-[32px] flex-col rounded border" style="border-color: {themeColor.toggle};">
+								<p class="py-[1px] text-center text-[9px]" style="background-color: {themeColor.cover}; color: {themeColor.lightText};">{new Date(dayData.date).toLocaleDateString('en-US', { month: 'short' })}</p>
+								<div class="flex flex-1 items-center justify-center">
+									<p class="text-xs font-medium">{new Date(dayData.date).getDate()}</p>
+								</div>
+							</div>
+							<div>
+								<div class="text-xs font-medium">{dayData.label || `Day ${dayData.dayNumber}`}</div>
+								<div class="text-[10px]" style="color: {themeColor.lightText};">
+									{new Date(dayData.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} – {new Date(dayData.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+								</div>
+							</div>
+						</div>
+						{/if}
+					{/each}
+				</div>
+				{/if}
 
 				<!-- Location -->
 				{#if event.eventType === 'VIRTUAL'}

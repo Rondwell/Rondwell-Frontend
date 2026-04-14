@@ -119,9 +119,9 @@
 		<Nav {tabs} bind:activeTab />
 	</div>
 	{#if activeTab === 'rooms'}
-		<Rooms eventTitle={eventData?.title ?? ''} />
+		<Rooms eventTitle={eventData?.title ?? ''} eventData={rawEvent} />
 	{:else if activeTab === 'sessions'}
-		<Sessions eventTitle={eventData?.title ?? ''} />
+		<Sessions eventTitle={eventData?.title ?? ''} eventData={rawEvent} />
 	{:else if activeTab === 'agenda'}
 		<Agenda eventTitle={eventData?.title ?? ''} />
 	{:else if activeTab === 'community'}

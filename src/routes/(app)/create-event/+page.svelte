@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { createEvent, getMyCollections } from '$lib/services/event.services';
+	import { bulkReplaceEventDays, createEvent, getMyCollections, type EventDayPayload } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { setEventTheme } from '$lib/stores/eventTheme';
 	import { colors, type Color } from '$lib/utils/colors';
@@ -49,6 +49,19 @@
 	let openCapacityModal = false;
 	let showAuthModal = false;
 	let openTimezoneModal = false;
+
+	// Multi-day state
+	let isMultiDay = false;
+	let eventDays: Array<{
+		dayNumber: number;
+		label: string;
+		date: Date;
+		startTime: string;
+		endTime: string;
+	}> = [];
+	let activeDayDatePicker = -1;
+	let activeDayStartTime = -1;
+	let activeDayEndTime = -1;
 
 	// Form state
 	let visibility = 'public';
@@ -331,13 +344,23 @@
 		submitting = true;
 		submitError = '';
 		try {
+			// For multi-day events, compute overall start/end from the days
+			let finalStartDateTime = buildDateTime(startDate, startTime);
+			let finalEndDateTime = buildDateTime(endDate, endTime);
+
+			if (isMultiDay && eventDays.length > 0) {
+				const sortedDays = [...eventDays].sort((a, b) => a.date.getTime() - b.date.getTime());
+				finalStartDateTime = buildDateTime(sortedDays[0].date, sortedDays[0].startTime);
+				finalEndDateTime = buildDateTime(sortedDays[sortedDays.length - 1].date, sortedDays[sortedDays.length - 1].endTime);
+			}
+
 			const payload = {
 				title: eventName || 'Untitled Event',
 				description: description ? description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() || undefined : undefined,
 				category: eventCategories[0] ?? 'General',
 				eventOrganizerName: $authState.activeProfile?.name ?? $authState.user?.email ?? 'Organizer',
-				startDateTime: buildDateTime(startDate, startTime),
-				endDateTime: buildDateTime(endDate, endTime),
+				startDateTime: finalStartDateTime,
+				endDateTime: finalEndDateTime,
 				timeZone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
 				eventType: mapEventType(eventType),
 				registrationType,
@@ -358,10 +381,30 @@
 				postEventFeedbackEnabled,
 				customLinkSlug: customLinkSlug || undefined,
 				collectionId: selectedCollectionId || undefined,
+				isMultiDay,
 			};
 
 			const result = await createEvent(payload);
 			const eventId = result.eventId;
+
+			// If multi-day, create the event days
+			if (isMultiDay && eventDays.length > 0) {
+				try {
+					const dayPayloads: EventDayPayload[] = eventDays.map((d) => ({
+						dayNumber: d.dayNumber,
+						label: d.label,
+						date: d.date.toISOString(),
+						startTime: buildDateTime(d.date, d.startTime),
+						endTime: buildDateTime(d.date, d.endTime),
+						checkinEnabled: true,
+					}));
+					await bulkReplaceEventDays(eventId, dayPayloads);
+				} catch (e) {
+					console.warn('Failed to create event days:', e);
+					// Non-critical — event was still created
+				}
+			}
+
 			setEventTheme(eventId, selectedColor);
 
 			const params = new URLSearchParams({
@@ -689,132 +732,193 @@
 			</div>
 
 			<!-- Date & Time -->
-			<div class="flex w-full gap-4">
-				<div class="flex w-full flex-col items-start justify-between gap-4 md:flex-row">
-					<!-- Left Section -->
-					<div
-						class="flex w-full justify-between rounded-[9.75px] px-4 py-3"
-						style="background-color: {selectedColor.cover};"
-					>
-						<!-- Start -->
+			<div class="flex w-full flex-col gap-4">
+				<div
+					class="w-full rounded-[9.75px] px-4 py-3"
+					style="background-color: {selectedColor.cover}; overflow: visible;"
+				>
+					<!-- Multi-Day Toggle Row -->
+					<div class="mb-3 flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<Icon icon="mdi:calendar-multiple" class="text-lg" style="color: {selectedColor.lightText}" />
+							<span class="text-sm font-medium">Multi-Day Event</span>
+						</div>
+						<label class="inline-flex cursor-pointer items-center">
+							<input type="checkbox" class="peer sr-only" bind:checked={isMultiDay}
+								on:change={() => {
+									if (isMultiDay && eventDays.length === 0) {
+										eventDays = [
+											{ dayNumber: 1, label: 'Day 1', date: new Date(startDate), startTime, endTime },
+											{ dayNumber: 2, label: 'Day 2', date: new Date(startDate.getTime() + 86400000), startTime: '9:00 AM', endTime: '5:00 PM' },
+										];
+									} else if (!isMultiDay) {
+										// When turning off, use Day 1's values as the single-day values
+										if (eventDays.length > 0) {
+											startDate = eventDays[0].date;
+											startTime = eventDays[0].startTime;
+											endDate = eventDays[0].date;
+											endTime = eventDays[0].endTime;
+										}
+										eventDays = [];
+									}
+								}}
+							/>
+							<div
+								class="peer relative h-5 w-9 rounded-full peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-4"
+								style="background-color: {isMultiDay ? selectedColor.text : selectedColor.toggle}"
+							></div>
+						</label>
+					</div>
+
+					{#if !isMultiDay}
+					<!-- Single-Day: Start/End Pickers -->
+					<div class="flex justify-between">
 						<div class="flex w-full max-w-[70px] flex-col items-start">
 							<div class="flex items-center space-x-2">
-								<span
-									class="h-[11.25px] w-[11.25px] rounded-full"
-									style="background-color: {selectedColor.smallCover};"
-								></span>
+								<span class="h-[11.25px] w-[11.25px] rounded-full" style="background-color: {selectedColor.smallCover};"></span>
 								<span class="font-medium">Start</span>
 							</div>
-							<div
-								class="ml-1 h-8 border-2 border-dashed"
-								style="border-color: {selectedColor.smallCover};"
-							></div>
+							<div class="ml-1 h-8 border-2 border-dashed" style="border-color: {selectedColor.smallCover};"></div>
 							<div class="flex items-center space-x-2">
-								<span
-									class="h-[11.25px] w-[11.25px] rounded-full border"
-									style="border-color: {selectedColor.smallCover};"
-								></span>
+								<span class="h-[11.25px] w-[11.25px] rounded-full border" style="border-color: {selectedColor.smallCover};"></span>
 								<span class="font-medium">End</span>
 							</div>
 						</div>
-
-						<!-- End -->
 						<div class="flex w-full max-w-[243px] flex-col items-center space-x-4">
 							<div class="grid w-full grid-cols-2 items-center gap-2">
-								<div
-									class="relative w-full"
-									use:clickOutside={() => (openStartDatePickerModal = false)}
-								>
-									<button
-										on:click={async () => {
-											openStartDatePickerModal = !openStartDatePickerModal;
-											await tick();
-											scrollToId('date');
-										}}
+								<div class="relative w-full" use:clickOutside={() => (openStartDatePickerModal = false)}>
+									<button on:click={async () => { openStartDatePickerModal = !openStartDatePickerModal; await tick(); scrollToId('date'); }}
 										class="rounded-t-r w-full p-2 text-sm font-semibold"
 										style="background-color: {selectedColor.smallCover}; border-top-left-radius: 9.75px;"
-										><p class="mr-auto w-fit">{formatDate(startDate)}</p></button
-									>
+									><p class="mr-auto w-fit">{formatDate(startDate)}</p></button>
 									<DatePickerModal open={openStartDatePickerModal} bind:selectedDate={startDate} />
 								</div>
 								<div class="relative w-full" use:clickOutside={() => (openStartTimeModal = false)}>
-									<button
-										on:click={async () => {
-											openStartTimeModal = !openStartTimeModal;
-											await tick();
-											scrollToId('time');
-										}}
+									<button on:click={async () => { openStartTimeModal = !openStartTimeModal; await tick(); scrollToId('time'); }}
 										class="w-full p-2 text-sm font-semibold"
 										style="background-color: {selectedColor.smallCover}; border-top-right-radius: 9.75px;"
-										><p class="ml-auto w-fit">{startTime}</p></button
-									>
+									><p class="ml-auto w-fit">{startTime}</p></button>
 									<TimeModal open={openStartTimeModal} bind:selectedTime={startTime} />
 								</div>
-								<div
-									class="relative w-full"
-									use:clickOutside={() => (openEndDatePickerModal = false)}
-								>
-									<button
-										on:click={async () => {
-											openEndDatePickerModal = !openEndDatePickerModal;
-											await tick();
-											scrollToId('date');
-										}}
+								<div class="relative w-full" use:clickOutside={() => (openEndDatePickerModal = false)}>
+									<button on:click={async () => { openEndDatePickerModal = !openEndDatePickerModal; await tick(); scrollToId('date'); }}
 										class="w-full p-2 text-sm font-semibold"
 										style="background-color: {selectedColor.smallCover}; border-bottom-left-radius: 9.75px;"
-										><p class="mr-auto w-fit">{formatDate(endDate)}</p></button
-									>
-									<DatePickerModal
-										open={openEndDatePickerModal}
-										bind:selectedDate={endDate}
-										{startDate}
-									/>
+									><p class="mr-auto w-fit">{formatDate(endDate)}</p></button>
+									<DatePickerModal open={openEndDatePickerModal} bind:selectedDate={endDate} {startDate} />
 								</div>
 								<div class="relative w-full" use:clickOutside={() => (openEndTimeModal = false)}>
-									<button
-										on:click={async () => {
-											openEndTimeModal = !openEndTimeModal;
-											await tick();
-											scrollToId('time');
-										}}
+									<button on:click={async () => { openEndTimeModal = !openEndTimeModal; await tick(); scrollToId('time'); }}
 										class="w-full p-2 text-sm font-semibold"
 										style="background-color: {selectedColor.smallCover}; border-bottom-right-radius: 9.75px;"
-										><p class="ml-auto w-fit">{endTime}</p></button
-									>
-									<TimeModal
-										open={openEndTimeModal}
-										bind:selectedTime={endTime}
-										referenceTime={startTime}
-									/>
+									><p class="ml-auto w-fit">{endTime}</p></button>
+									<TimeModal open={openEndTimeModal} bind:selectedTime={endTime} referenceTime={startTime} />
 								</div>
 							</div>
 						</div>
 					</div>
 
-					<!-- Right Section: Timezone -->
-					<div
-						class="relative flex w-[159px] flex-col justify-center gap-2 rounded-[9.75px] p-4 font-medium cursor-pointer"
-						style="background-color: {selectedColor.cover};"
-						use:clickOutside={() => (openTimezoneModal = false)}
-					>
+					{:else}
+					<!-- Multi-Day: Inline Day Builder -->
+					<div class="space-y-2" style="overflow: visible;">
+						{#each eventDays as day, i}
+						<div class="rounded-lg p-3" style="background-color: {selectedColor.smallCover}; overflow: visible; position: relative; z-index: {eventDays.length - i};">
+							<div class="mb-2 flex items-center justify-between">
+								<input
+									type="text"
+									bind:value={day.label}
+									class="w-[140px] rounded border px-2 py-1 text-sm font-medium focus:outline-none"
+									style="background-color: {selectedColor.bg}; border-color: {selectedColor.toggle}; color: {selectedColor.text};"
+									placeholder="Day {day.dayNumber}"
+								/>
+								{#if eventDays.length > 2}
+								<button class="rounded p-1 hover:opacity-70" style="color: {selectedColor.lightText};" on:click={() => {
+									eventDays = eventDays.filter((_, idx) => idx !== i).map((d, idx) => ({ ...d, dayNumber: idx + 1 }));
+								}}>
+									<Icon icon="mdi:close" class="text-base" />
+								</button>
+								{/if}
+							</div>
+							<div class="grid grid-cols-3 gap-1.5" style="overflow: visible;">
+								<!-- Date picker -->
+								<div class="relative" use:clickOutside={() => { if (activeDayDatePicker === i) activeDayDatePicker = -1; }}>
+									<button
+										class="w-full rounded px-2 py-1.5 text-xs font-semibold"
+										style="background-color: {selectedColor.bg}; color: {selectedColor.text};"
+										on:click={() => (activeDayDatePicker = activeDayDatePicker === i ? -1 : i)}
+									>{formatDate(day.date)}</button>
+									{#if activeDayDatePicker === i}
+										<DatePickerModal open={true} bind:selectedDate={eventDays[i].date} />
+									{/if}
+								</div>
+								<!-- Start time picker -->
+								<div class="relative" use:clickOutside={() => { if (activeDayStartTime === i) activeDayStartTime = -1; }}>
+									<button
+										class="w-full rounded px-2 py-1.5 text-xs font-semibold"
+										style="background-color: {selectedColor.bg}; color: {selectedColor.text};"
+										on:click={() => (activeDayStartTime = activeDayStartTime === i ? -1 : i)}
+									>{day.startTime}</button>
+									{#if activeDayStartTime === i}
+										<TimeModal open={true} bind:selectedTime={eventDays[i].startTime} />
+									{/if}
+								</div>
+								<!-- End time picker -->
+								<div class="relative" use:clickOutside={() => { if (activeDayEndTime === i) activeDayEndTime = -1; }}>
+									<button
+										class="w-full rounded px-2 py-1.5 text-xs font-semibold"
+										style="background-color: {selectedColor.bg}; color: {selectedColor.text};"
+										on:click={() => (activeDayEndTime = activeDayEndTime === i ? -1 : i)}
+									>{day.endTime}</button>
+									{#if activeDayEndTime === i}
+										<TimeModal open={true} bind:selectedTime={eventDays[i].endTime} referenceTime={eventDays[i].startTime} />
+									{/if}
+								</div>
+							</div>
+						</div>
+						{/each}
+
+						{#if eventDays.length < 14}
 						<button
-							class="flex flex-col items-start gap-2 w-full text-left"
-							on:click={async () => {
-								openTimezoneModal = !openTimezoneModal;
-								await tick();
-								scrollToId('timezone');
+							class="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed py-2 text-sm"
+							style="border-color: {selectedColor.toggle}; color: {selectedColor.lightText};"
+							on:click={() => {
+								const last = eventDays[eventDays.length - 1];
+								const nextDate = last ? new Date(last.date.getTime() + 86400000) : new Date();
+								eventDays = [...eventDays, { dayNumber: eventDays.length + 1, label: `Day ${eventDays.length + 1}`, date: nextDate, startTime: '9:00 AM', endTime: '5:00 PM' }];
 							}}
 						>
-							<img src="/globe-icon.svg" alt="timezone" class="h-5 w-5 opacity-60" />
-							<span>{timezone}</span>
-							<span style="color: {selectedColor.lightText};">{locationName}</span>
+							<Icon icon="mdi:plus" class="text-base" /> Add Day
 						</button>
-						<TimezoneModal
-							bind:open={openTimezoneModal}
-							bind:selectedTimezone={timezone}
-							bind:selectedLocationName={locationName}
-						/>
+						{/if}
 					</div>
+					{/if}
+				</div>
+
+				<!-- Timezone (below date/time) -->
+				<div
+					class="relative flex items-center gap-3 rounded-[9.75px] p-3 font-medium cursor-pointer"
+					style="background-color: {selectedColor.cover};"
+					use:clickOutside={() => (openTimezoneModal = false)}
+				>
+					<button
+						class="flex items-center gap-3 w-full text-left"
+						on:click={async () => {
+							openTimezoneModal = !openTimezoneModal;
+							await tick();
+							scrollToId('timezone');
+						}}
+					>
+						<img src="/globe-icon.svg" alt="timezone" class="h-5 w-5 opacity-60" />
+						<div>
+							<span class="text-sm">{timezone}</span>
+							<span class="ml-2 text-sm" style="color: {selectedColor.lightText};">{locationName}</span>
+						</div>
+					</button>
+					<TimezoneModal
+						bind:open={openTimezoneModal}
+						bind:selectedTimezone={timezone}
+						bind:selectedLocationName={locationName}
+					/>
 				</div>
 			</div>
 

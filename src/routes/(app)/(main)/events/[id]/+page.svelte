@@ -617,10 +617,11 @@ async function handleVisibilityChange(newVisibility: string) {
 							<p class="text-xs font-medium uppercase tracking-wide text-[#83808D]">Event Recap</p>
 							<button
 								on:click={() => goto(`/events/${eventId}/edit`)}
-								class="rounded-md p-1.5 text-[#B9BABA] transition-colors hover:bg-[#F4F4F4] hover:text-[#616265]"
+								class="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[#83808D] transition-colors hover:bg-[#F0F0F2] hover:text-[#414245]"
 								aria-label="Edit event"
 							>
-								<Icon icon="mdi:pencil-outline" class="text-sm" />
+								<Icon icon="mdi:pencil-outline" class="text-lg" />
+								<span class="text-xs font-medium">Edit</span>
 							</button>
 						</div>
 

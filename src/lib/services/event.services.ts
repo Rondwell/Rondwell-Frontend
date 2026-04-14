@@ -36,6 +36,7 @@ export interface CreateEventPayload {
   registrationOpen?: boolean;
   groupRegistrationEnabled?: boolean;
   maxGroupSize?: number;
+  isMultiDay?: boolean;
 }
 
 export interface CreateEventResponse {
@@ -112,6 +113,7 @@ export async function discoverEvents(options?: {
 export async function getPublicEventPage(eventId: string): Promise<{
   event: any;
   ticketTypes: any[];
+  eventDays: any[];
   organizers: any[];
   attendeeCount: number;
   attendingSample: any[];
@@ -126,10 +128,10 @@ export async function getPublicEventPage(eventId: string): Promise<{
 }
 
 /** Public agenda — no auth required */
-export async function getPublicAgenda(eventId: string): Promise<{ dates: any[]; rooms: any[] }> {
+export async function getPublicAgenda(eventId: string): Promise<{ dates: any[]; rooms: any[]; eventDays: any[] }> {
   const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/public/agenda`);
   const data = await res.json();
-  if (!res.ok) return { dates: [], rooms: [] };
+  if (!res.ok) return { dates: [], rooms: [], eventDays: [] };
   return data;
 }
 
@@ -1586,6 +1588,30 @@ export async function scrapeExternalEventUrl(url: string): Promise<{
   return data;
 }
 
+// ── Collection Verification ───────────────────────────────────────────────
+
+export async function requestCollectionVerification(collectionId: string, payload: {
+  estimatedAudience: number;
+  eventsInfo: string;
+  guestsInfo: string;
+}): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/request-verification`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to submit verification request');
+  return data;
+}
+
+export async function getCollectionVerificationStatus(collectionId: string): Promise<{ approvalStatus: string; verificationRequest?: any }> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/verification-status`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to get verification status');
+  return data;
+}
+
 
 // ==================== CHECK-IN APIs ====================
 
@@ -1635,4 +1661,69 @@ export async function checkinByQrCode(eventId: string, checkinToken: string): Pr
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'QR check-in failed');
   return data.data ?? data;
+}
+
+// ==================== EVENT DAY APIs (Multi-Day Event Support) ====================
+
+export interface EventDayPayload {
+  dayNumber: number;
+  label?: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  checkinEnabled?: boolean;
+  locationOverride?: {
+    virtual?: { platform: string; meetingLink: string };
+    physical?: { venueName: string; venueAddress: string; resolvedAddress?: { lat: number; lng: number; formatted_address: string } };
+  };
+}
+
+export async function getEventDays(eventId: string): Promise<any[]> {
+  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/days`);
+  const data = await res.json();
+  if (!res.ok) return [];
+  return data.days ?? [];
+}
+
+export async function createEventDay(eventId: string, payload: EventDayPayload): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/days`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to create event day');
+  return data.day;
+}
+
+export async function updateEventDay(dayId: string, payload: Partial<EventDayPayload>): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/days/${dayId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to update event day');
+  return data.day;
+}
+
+export async function deleteEventDay(dayId: string): Promise<void> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/days/${dayId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message ?? 'Failed to delete event day');
+  }
+}
+
+export async function bulkReplaceEventDays(eventId: string, days: EventDayPayload[]): Promise<any[]> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/days/bulk`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ days }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to replace event days');
+  return data.days ?? [];
 }

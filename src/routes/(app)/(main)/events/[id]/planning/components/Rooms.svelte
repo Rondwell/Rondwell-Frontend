@@ -10,6 +10,7 @@
 	import RoomFilter from './modal/RoomFilter.svelte';
 
 	export let eventTitle = '';
+	export let eventData: any = null;
 	$: eventId = $page.params.id;
 
 	let searchQuery = '';
@@ -223,5 +224,5 @@
 	</div>
 </div>
 
-<CreateEditRoom bind:open={showCreateModal} {eventId} room={editRoom} on:saved={handleSaved} />
+<CreateEditRoom bind:open={showCreateModal} {eventId} room={editRoom} eventStartDate={eventData?.startDateTime ? new Date(eventData.startDateTime) : null} eventEndDate={eventData?.endDateTime ? new Date(eventData.endDateTime) : null} on:saved={handleSaved} />
 <ManageAccess bind:open={showAccessModal} {eventId} room={accessRoom} on:saved={handleSaved} />

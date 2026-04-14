@@ -10,6 +10,7 @@
 	import SessionFilter from './modal/SessionFilter.svelte';
 
 	export let eventTitle = '';
+	export let eventData: any = null;
 	$: eventId = $page.params.id ?? '';
 
 	let searchQuery = '';
@@ -261,5 +262,5 @@
 	</div>
 </div>
 
-<CreateEditSession bind:open={showCreateModal} {eventId} session={editSession} on:saved={handleSaved} />
+<CreateEditSession bind:open={showCreateModal} {eventId} {eventData} session={editSession} on:saved={handleSaved} />
 <AssignSpeakers bind:open={showAssignModal} {eventId} session={assignSession} on:saved={handleSaved} />

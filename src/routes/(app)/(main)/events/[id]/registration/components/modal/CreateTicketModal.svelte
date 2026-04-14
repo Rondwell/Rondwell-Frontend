@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createTicketType, updateTicketType } from '$lib/services/event.services';
+	import { createTicketType, getEventDays, updateTicketType } from '$lib/services/event.services';
 	import { toast } from '$lib/stores/toast.store';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
@@ -19,6 +19,9 @@
 	export let eventCapacity: number = 0;
 	export let waitlistEnabled: boolean = false;
 	export let existingTickets: any[] = [];
+	export let isMultiDay: boolean = false;
+	export let eventStartDate: Date | null = null;
+	export let eventEndDate: Date | null = null;
 
 	// Form state
 	let name = '';
@@ -37,6 +40,9 @@
 	let newTag = '';
 	let saving = false;
 	let errorMsg = '';
+	let allowedEventDayIds: string[] = [];
+	let eventDays: any[] = [];
+	let showDayAccessDropdown = false;
 
 	// Date/time picker toggles
 	let openSalesStartDatePicker = false;
@@ -65,6 +71,9 @@
 
 	onMount(() => {
 		initEditor('');
+		if (isMultiDay) {
+			getEventDays(eventId).then((days) => { eventDays = days; }).catch(() => {});
+		}
 	});
 
 	onDestroy(() => {
@@ -101,6 +110,7 @@
 			}
 			// Re-init editor with existing description
 			if (typeof window !== 'undefined') initEditor(ticket.description ?? '');
+			allowedEventDayIds = ticket.allowedEventDayIds ?? [];
 		} else {
 			name = '';
 			description = '';
@@ -116,6 +126,7 @@
 			salesStartTime = '9:00 AM';
 			salesEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 			salesEndTime = '11:59 PM';
+			allowedEventDayIds = [];
 			// Re-init editor empty
 			if (typeof window !== 'undefined') initEditor('');
 		}
@@ -192,6 +203,7 @@
 				price: isFree ? 0 : Number(price),
 				tags,
 				quantityAvailable: totalTickets ? Number(totalTickets) : undefined,
+				allowedEventDayIds: allowedEventDayIds.length > 0 ? allowedEventDayIds : undefined,
 			};
 
 			if (isEditing) {
@@ -413,6 +425,57 @@
 					</button>
 				</div>
 
+				<!-- Day Access (Multi-Day Events Only) -->
+				{#if isMultiDay && eventDays.length > 0}
+				<div class="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+					<div class="flex items-center justify-between">
+						<div>
+							<p class="text-sm font-medium text-gray-900">Day Access</p>
+							<p class="text-xs text-gray-400">
+								{allowedEventDayIds.length === 0 ? 'Full pass — all days' : `${allowedEventDayIds.length} day${allowedEventDayIds.length > 1 ? 's' : ''} selected`}
+							</p>
+						</div>
+						<button
+							type="button"
+							class="rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+							on:click={() => (showDayAccessDropdown = !showDayAccessDropdown)}
+						>
+							{allowedEventDayIds.length === 0 ? 'Restrict Days' : 'Edit'}
+						</button>
+					</div>
+					{#if showDayAccessDropdown}
+					<div class="mt-3 space-y-2">
+						<button
+							type="button"
+							class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-50 {allowedEventDayIds.length === 0 ? 'bg-gray-100 font-medium' : ''}"
+							on:click={() => { allowedEventDayIds = []; }}
+						>
+							<Icon icon={allowedEventDayIds.length === 0 ? 'mdi:checkbox-marked' : 'mdi:checkbox-blank-outline'} class="text-lg" />
+							All Days (Full Pass)
+						</button>
+						{#each eventDays as day}
+						{@const dayId = day._id || day.id}
+						{@const isSelected = allowedEventDayIds.includes(dayId)}
+						<button
+							type="button"
+							class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-gray-50 {isSelected ? 'bg-gray-100' : ''}"
+							on:click={() => {
+								if (isSelected) {
+									allowedEventDayIds = allowedEventDayIds.filter(id => id !== dayId);
+								} else {
+									allowedEventDayIds = [...allowedEventDayIds, dayId];
+								}
+							}}
+						>
+							<Icon icon={isSelected ? 'mdi:checkbox-marked' : 'mdi:checkbox-blank-outline'} class="text-lg" />
+							{day.label || `Day ${day.dayNumber}`} — {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+						</button>
+						{/each}
+					</div>
+					{/if}
+				</div>
+				{/if}
+
 				<!-- Sales Start Date -->
 				<div class="mb-4">
 					<label class="mb-1.5 block text-xs font-medium text-[#666769]">Sales Start</label>
@@ -424,7 +487,7 @@
 							>
 								{formatDate(salesStartDate)}
 							</button>
-							<DatePickerModal open={openSalesStartDatePicker} bind:selectedDate={salesStartDate} />
+							<DatePickerModal open={openSalesStartDatePicker} bind:selectedDate={salesStartDate} maxDate={eventEndDate} />
 						</div>
 						<div class="relative w-[130px]" use:clickOutside={() => (openSalesStartTimePicker = false)}>
 							<button type="button"
@@ -449,7 +512,7 @@
 							>
 								{formatDate(salesEndDate)}
 							</button>
-							<DatePickerModal open={openSalesEndDatePicker} bind:selectedDate={salesEndDate} startDate={salesStartDate} />
+							<DatePickerModal open={openSalesEndDatePicker} bind:selectedDate={salesEndDate} startDate={salesStartDate} maxDate={eventEndDate} />
 						</div>
 						<div class="relative w-[130px]" use:clickOutside={() => (openSalesEndTimePicker = false)}>
 							<button type="button"

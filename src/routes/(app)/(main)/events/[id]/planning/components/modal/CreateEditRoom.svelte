@@ -11,6 +11,8 @@
 	export let open = false;
 	export let eventId = '';
 	export let room: any = null;
+	export let eventStartDate: Date | null = null;
+	export let eventEndDate: Date | null = null;
 
 	$: isEdit = !!room;
 	$: modalTitle = isEdit ? 'Edit Room' : 'Create New Room';
@@ -319,7 +321,7 @@
 								<button on:click={async () => { openStartDatePicker = !openStartDatePicker; await tick(); scrollToId('date'); }} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">
 									{formatDate(startDate)}
 								</button>
-								<DatePickerModal open={openStartDatePicker} bind:selectedDate={startDate} />
+								<DatePickerModal open={openStartDatePicker} bind:selectedDate={startDate} minDate={eventStartDate} maxDate={eventEndDate} />
 							</div>
 							<div class="relative" use:clickOutside={() => (openStartTimePicker = false)}>
 								<button on:click={() => (openStartTimePicker = !openStartTimePicker)} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">
@@ -343,7 +345,7 @@
 								<button on:click={async () => { openEndDatePicker = !openEndDatePicker; await tick(); scrollToId('date'); }} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">
 									{formatDate(endDate)}
 								</button>
-							<DatePickerModal open={openEndDatePicker} bind:selectedDate={endDate} {startDate} />
+							<DatePickerModal open={openEndDatePicker} bind:selectedDate={endDate} {startDate} minDate={eventStartDate} maxDate={eventEndDate} />
 							</div>
 							<div class="relative" use:clickOutside={() => (openEndTimePicker = false)}>
 								<button on:click={() => (openEndTimePicker = !openEndTimePicker)} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">

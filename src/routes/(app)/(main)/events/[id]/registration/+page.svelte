@@ -3,6 +3,7 @@
 	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Icon from '@iconify/svelte';
 	import Nav from '../../../../components/Nav.svelte';
+	import EmailBlasts from './components/EmailBlasts.svelte';
 	import EventForm from './components/EventForm.svelte';
 	import SeatCapacity from './components/SeatCapacity.svelte';
 	import Tickets from './components/Tickets.svelte';
@@ -23,6 +24,14 @@
 	$: eventData = rawEvent;
 
 	let activeTab = 'ticket';
+
+	// Support deep-linking to a specific tab via ?tab= query param
+	$: {
+		const tabParam = $page.url.searchParams.get('tab');
+		if (tabParam && ['ticket', 'event_forms', 'seat_capacity', 'email_blasts'].includes(tabParam)) {
+			activeTab = tabParam;
+		}
+	}
 
 	const tabs = [
 		{
@@ -59,6 +68,15 @@
 <path d="M6.6582 11.1094V20.3679" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
 <path d="M9.99121 11.1094V20.3679" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
 <path d="M13.3252 11.1094V20.3679" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linejoin="round"/>
+</svg>
+`
+		},
+		{
+			id: 'email_blasts',
+			label: 'Email / Blasts',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M14.1667 17.0833H5.83333C3.33333 17.0833 1.66667 15.8333 1.66667 12.9167V7.08333C1.66667 4.16667 3.33333 2.91667 5.83333 2.91667H14.1667C16.6667 2.91667 18.3333 4.16667 18.3333 7.08333V12.9167C18.3333 15.8333 16.6667 17.0833 14.1667 17.0833Z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.1667 7.5L11.5583 9.58333C10.7 10.2667 9.29167 10.2667 8.43333 9.58333L5.83333 7.5" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `
 		}
@@ -144,6 +162,8 @@
 			<EventForm {eventId} {eventData} />
 		{:else if activeTab === 'seat_capacity'}
 			<SeatCapacity {eventData} />
+		{:else if activeTab === 'email_blasts'}
+			<EmailBlasts {eventId} {eventData} />
 		{/if}
 	{/if}
 </div>

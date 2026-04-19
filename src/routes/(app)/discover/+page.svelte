@@ -5,12 +5,15 @@
 	import Header from './components/Header.svelte';
 	import Hero from './components/Hero.svelte';
 	import DiscoverSidebar from './components/Sidebar.svelte';
+	import VendorList from './components/VendorList.svelte';
 
 	let show = false;
+	let activeTab: 'events' | 'vendors' = 'events';
 
 	if (typeof window !== 'undefined') {
 		const params = new URLSearchParams(window.location.search);
 		show = params.get('show') === 'true';
+		if (params.get('tab') === 'vendors') activeTab = 'vendors';
 	}
 </script>
 
@@ -47,7 +50,28 @@
 			>
 				<!-- Hero -->
 				<Hero />
-				<EventList />
+
+				<!-- Tabs -->
+				<div class="flex gap-1 border-b border-gray-200">
+					<button
+						class="px-4 pb-2 text-sm font-medium transition-colors {activeTab === 'events' ? 'border-b-2 border-[#513BE2] text-[#513BE2]' : 'text-gray-500 hover:text-gray-700'}"
+						on:click={() => (activeTab = 'events')}
+					>
+						Events
+					</button>
+					<button
+						class="px-4 pb-2 text-sm font-medium transition-colors {activeTab === 'vendors' ? 'border-b-2 border-[#513BE2] text-[#513BE2]' : 'text-gray-500 hover:text-gray-700'}"
+						on:click={() => (activeTab = 'vendors')}
+					>
+						Vendors
+					</button>
+				</div>
+
+				{#if activeTab === 'events'}
+					<EventList />
+				{:else}
+					<VendorList />
+				{/if}
 			</div>
 		</div>
 		<div class={show ? 'hidden' : ''}>

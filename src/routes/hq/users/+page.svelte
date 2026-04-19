@@ -207,23 +207,23 @@
 	{:else if users.length > 0}
 		<div class="rounded-xl bg-white">
 			{#each users as user}
-				<button class="flex w-full items-center justify-between border-b border-gray-50 px-4 py-3 text-left transition last:border-b-0 hover:bg-gray-50"
+				<button class="flex w-full items-center gap-2 border-b border-gray-50 px-4 py-3 text-left transition last:border-b-0 hover:bg-gray-50"
 					on:click={() => openUserModal(user)}>
-					<div class="flex items-center gap-3">
+					<div class="flex min-w-0 flex-1 items-center gap-3">
 						{#if user.profilePictureUrl}
-							<img src={user.profilePictureUrl} alt="" class="h-9 w-9 rounded-full object-cover" />
+							<img src={user.profilePictureUrl} alt="" class="h-9 w-9 flex-shrink-0 rounded-full object-cover" />
 						{:else}
-							<div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#F2E4F8] text-xs font-semibold text-[#AB46DD]">
+							<div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#F2E4F8] text-xs font-semibold text-[#AB46DD]">
 								{(user.name || user.email || '?').charAt(0).toUpperCase()}
 							</div>
 						{/if}
-						<div>
-							<p class="text-sm font-medium text-gray-800">{user.name || 'Unknown'}</p>
-							<p class="text-xs text-gray-400">{user.email}</p>
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-sm font-medium text-gray-800">{user.name || 'Unknown'}</p>
+							<p class="truncate text-xs text-gray-400">{user.email}</p>
 						</div>
 					</div>
-					<div class="flex items-center gap-3">
-						<span class="rounded-full px-2.5 py-0.5 text-[10px] font-medium {getStatusClass(user.status)}">{user.status}</span>
+					<div class="flex flex-shrink-0 items-center gap-2">
+						<span class="rounded-full px-2 py-0.5 text-[10px] font-medium {getStatusClass(user.status)}">{user.status}</span>
 						<span class="hidden text-xs text-gray-400 sm:block">{timeAgo(user.createdAt)}</span>
 					</div>
 				</button>
@@ -232,18 +232,21 @@
 
 		<!-- Pagination -->
 		{#if totalPages > 1}
-			<div class="mt-4 flex items-center justify-center gap-2">
-				<button on:click={() => goToPage(currentPage - 1)} disabled={currentPage === 1}
-					class="rounded-lg px-3 py-1.5 text-sm text-[#616265] transition hover:bg-white disabled:opacity-40">Previous</button>
-				{#each Array(Math.min(totalPages, 5)) as _, i}
-					{@const pageNum = totalPages <= 5 ? i + 1 : Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + i}
-					<button on:click={() => goToPage(pageNum)}
-						class="h-8 w-8 rounded-lg text-sm transition {currentPage === pageNum ? 'bg-[#513BE2] text-white' : 'text-[#616265] hover:bg-white'}">
-						{pageNum}
-					</button>
-				{/each}
-				<button on:click={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}
-					class="rounded-lg px-3 py-1.5 text-sm text-[#616265] transition hover:bg-white disabled:opacity-40">Next</button>
+			<div class="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+				<p class="text-xs text-gray-400">Showing {(currentPage - 1) * limit + 1}–{Math.min(currentPage * limit, total)} of {total}</p>
+				<div class="flex items-center gap-1">
+					<button on:click={() => goToPage(currentPage - 1)} disabled={currentPage === 1}
+						class="rounded-lg px-3 py-1.5 text-sm text-[#616265] transition hover:bg-white disabled:opacity-40">Prev</button>
+					{#each Array(Math.min(totalPages, 5)) as _, i}
+						{@const pageNum = totalPages <= 5 ? i + 1 : Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + i}
+						<button on:click={() => goToPage(pageNum)}
+							class="h-8 w-8 rounded-lg text-sm transition {currentPage === pageNum ? 'bg-[#513BE2] text-white' : 'text-[#616265] hover:bg-white'}">
+							{pageNum}
+						</button>
+					{/each}
+					<button on:click={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}
+						class="rounded-lg px-3 py-1.5 text-sm text-[#616265] transition hover:bg-white disabled:opacity-40">Next</button>
+				</div>
 			</div>
 		{/if}
 	{:else}

@@ -3,10 +3,6 @@
   import * as d3 from "d3";
   import { onMount } from "svelte";
 
-  const user = {
-    name: "Innocent James"
-  };
-
   const stats = {
     revenue: "$24,895",
     growth: "+4.5%"
@@ -112,7 +108,7 @@ type StackKey = "pending" | "accepted" | "completed";
 </script>
 
 
-<div class="min-h-screen px-6 py-6 space-y-6">
+<div class="min-h-screen w-full space-y-6 text-[#101828]">
 
   <!-- ================= PRODUCTS / SERVICES ================= -->
   <div class="bg-white rounded-xl p-6 shadow-sm space-y-6">
@@ -121,7 +117,7 @@ type StackKey = "pending" | "accepted" | "completed";
 <div class="flex items-center justify-between gap-6 whitespace-nowrap">
   <!-- LEFT -->
   <div class="flex items-center gap-6 text-sm flex-nowrap">
-    <span class="text-base text-black-900">Products/Services</span>
+    <span class="text-sm font-medium text-gray-900">Products/Services</span>
 
     <span class="flex items-center gap-2 text-gray-500">
       <span class="w-2 h-2 bg-orange-500 rounded-full"></span>
@@ -150,12 +146,17 @@ type StackKey = "pending" | "accepted" | "completed";
 </div>
 
     <!-- Revenue -->
-    <div class="flex items-center gap-4">
-      <div class="text-sm text-gray-500">TOTAL REVENUE</div>
-      <div class="text-xl font-semibold">{stats.revenue}</div>
-      <span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
-        {stats.growth}
-      </span>
+    <div class="flex items-start gap-4">
+      <img src="/see.svg" alt="revenue" class="w-10 h-10" />
+      <div>
+        <p class="text-xs text-gray-500 uppercase">TOTAL REVENUE</p>
+        <div class="flex items-center gap-2">
+          <p class="text-xl font-bold">{stats.revenue}</p>
+          <span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
+            {stats.growth}
+          </span>
+        </div>
+      </div>
     </div>
 
 <!-- Chart Wrapper -->
@@ -316,7 +317,7 @@ type StackKey = "pending" | "accepted" | "completed";
   <div class="bg-white rounded-xl p-6 shadow-sm space-y-4">
   <!-- Top Product -->
   <div class="flex justify-between items-center">
-    <p class="text-sm font-large">Top Product</p>
+    <p class="text-sm font-medium">Top Product</p>
   </div>
   <div class="flex justify-between items-center">
   <p class="text-sm text-gray-500">rondwell.com</p>
@@ -324,7 +325,7 @@ type StackKey = "pending" | "accepted" | "completed";
   </div>
   <!-- Top Cities Orders -->
   <div>
-    <p class="text-sm font-large mt-4">Top Cities Orders</p>
+    <p class="text-sm font-medium mt-4">Top Cities Orders</p>
     <div class="flex justify-between text-sm text-gray-500 mt-6">
       <span>Lagos</span>
       <span>67%</span>

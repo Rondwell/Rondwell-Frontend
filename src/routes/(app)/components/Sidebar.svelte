@@ -8,13 +8,16 @@
 	import { onMount } from 'svelte';
 	import ProfileMenu from './ProfileMenu.svelte';
 
-	import { authState, isAuthenticated } from '$lib/stores/auth.store';
+	import ProfileSwitchOverlay from '$lib/components/ProfileSwitchOverlay.svelte';
+	import { getAllProfiles, switchProfile } from '$lib/services/profile.services';
+	import { authState, isAuthenticated, setActiveProfile } from '$lib/stores/auth.store';
 
 	export let background_color = '';
 	export let show = true;
 	let showMenu = false;
 	let activeItem = '';
 	let showSignInModal = false;
+	let switchingToOrganizer = false;
 
 	$: activeProfile = $authState.activeProfile;
 	$: avatarUrl = activeProfile?.profilePictureUrl || '/you-rondwell.png';
@@ -22,11 +25,37 @@
 	// Nav items that require authentication
 	const authRequiredIds = new Set(['event', 'collections', 'experience']);
 
-	function handleNavClick(item) {
+	// Organizer-only pages — if user is on a non-organizer profile, switch back first
+	const organizerPageIds = new Set(['event', 'collections', 'experience', 'create']);
+
+	async function handleNavClick(item) {
 		if (authRequiredIds.has(item.id) && !$isAuthenticated) {
 			showSignInModal = true;
 			return;
 		}
+
+		// If navigating to an organizer page while on a non-organizer profile, switch back
+		const currentRole = $authState.activeProfile?.role;
+		if (organizerPageIds.has(item.id) && currentRole && currentRole !== 'ORGANIZER') {
+			switchingToOrganizer = true;
+			try {
+				const allProfiles = await getAllProfiles();
+				const organizerProfile = allProfiles.find((p) => p.role === 'ORGANIZER');
+				if (organizerProfile) {
+					const result = await switchProfile(organizerProfile._id);
+					if (result?.newToken) {
+						authState.update((s) => ({ ...s, token: result.newToken }));
+						if (browser) localStorage.setItem('auth_token', result.newToken);
+					}
+					setActiveProfile(organizerProfile);
+				}
+			} catch (e) {
+				console.error('Failed to switch to organizer profile', e);
+			}
+			await new Promise((r) => setTimeout(r, 1000));
+			switchingToOrganizer = false;
+		}
+
 		goto(item.nav);
 	}
 
@@ -143,6 +172,8 @@
 		}
 	}
 </script>
+
+<ProfileSwitchOverlay visible={switchingToOrganizer} roleName="Organizer" roleColor="#7C3AED" />
 
 {#if isMobile}
 	<div class="z-50">

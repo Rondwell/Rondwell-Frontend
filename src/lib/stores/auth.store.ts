@@ -99,6 +99,7 @@ export function clearUser() {
     localStorage.removeItem('auth_refresh_token');
     localStorage.removeItem('auth_user');
     localStorage.removeItem('auth_active_profile');
+    localStorage.removeItem('post_auth_redirect');
   }
   authState.update((s) => ({
     ...s,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getAdminCollections, getCollectionApprovals, updateApprovalStatus, verifyCollection } from '$lib/services/admin.services';
+	import { getAdminCollections, verifyCollection } from '$lib/services/admin.services';
 	import { onMount } from 'svelte';
 
 	let activeTab: 'list' | 'approvals' = 'list';
@@ -13,7 +13,7 @@
 	let colSearch = '';
 	let colSearchTimeout: ReturnType<typeof setTimeout>;
 
-	// Approvals
+	// Approvals (verification requests)
 	let approvals: any[] = [];
 	let appTotal = 0;
 	let appPage = 1;
@@ -22,20 +22,20 @@
 	let appStatusFilter = 'ALL';
 	let showAppStatusDropdown = false;
 
-	// Approval modal
-	let showApprovalModal = false;
-	let selectedApproval: any = null;
-	let adminNote = '';
-	let approvalUpdating = false;
+	// Review modal
+	let showReviewModal = false;
+	let selectedRequest: any = null;
+	let reviewUpdating = false;
 
 	const appStatusOptions = [
 		{ label: 'All Requests', value: 'ALL' },
 		{ label: 'Pending', value: 'PENDING' },
 		{ label: 'Approved', value: 'APPROVED' },
-		{ label: 'Declined', value: 'DECLINED' },
+		{ label: 'Rejected', value: 'REJECTED' },
 	];
 
 	$: appStatusLabel = appStatusOptions.find((s) => s.value === appStatusFilter)?.label ?? 'All Requests';
+	$: pendingCount = approvals.filter((a) => a.approvalStatus === 'PENDING').length;
 
 	onMount(() => { fetchCollections(); fetchApprovals(); });
 
@@ -55,12 +55,20 @@
 	async function fetchApprovals() {
 		appLoading = true;
 		try {
-			const params: Record<string, string> = { page: appPage.toString(), limit: '20' };
-			if (appStatusFilter !== 'ALL') params.status = appStatusFilter;
-			const data = await getCollectionApprovals(params);
-			approvals = data.approvals;
-			appTotal = data.total;
-			appTotalPages = data.totalPages;
+			const API_URL = import.meta.env.VITE_API_URL;
+			const token = localStorage.getItem('admin_token');
+			const params = new URLSearchParams({ page: appPage.toString(), limit: '20' });
+			if (appStatusFilter !== 'ALL') params.set('status', appStatusFilter);
+
+			const res = await fetch(`${API_URL}/api/v1/admin/collections/approvals?${params}`, {
+				headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+			});
+			const data = await res.json();
+			if (data.success) {
+				approvals = data.data.approvals;
+				appTotal = data.data.total;
+				appTotalPages = data.data.totalPages;
+			}
 		} catch { approvals = []; }
 		finally { appLoading = false; }
 	}
@@ -72,21 +80,20 @@
 
 	function selectAppStatus(value: string) { appStatusFilter = value; showAppStatusDropdown = false; appPage = 1; fetchApprovals(); }
 
-	async function handleApprovalAction(id: string, status: 'APPROVED' | 'DECLINED') {
-		approvalUpdating = true;
+	async function handleVerify(id: string, status: 'APPROVED' | 'REJECTED') {
+		reviewUpdating = true;
 		try {
-			await updateApprovalStatus(id, status, adminNote);
-			showApprovalModal = false;
-			adminNote = '';
+			await verifyCollection(id, status);
+			showReviewModal = false;
 			fetchApprovals();
 		} catch (e) { console.error(e); }
-		finally { approvalUpdating = false; }
+		finally { reviewUpdating = false; }
 	}
 
-	function getApprovalStatusClass(status: string): string {
+	function getStatusClass(status: string): string {
 		switch (status) {
 			case 'APPROVED': return 'bg-[#E3F4E1] text-[#3CBD2C]';
-			case 'DECLINED': return 'bg-[#FDEAEA] text-[#E53935]';
+			case 'REJECTED': return 'bg-[#FDEAEA] text-[#E53935]';
 			default: return 'bg-[#FFF8E1] text-[#EAAB26]';
 		}
 	}
@@ -102,7 +109,7 @@
 <div>
 	<div class="mb-6">
 		<h1 class="text-3xl font-semibold text-gray-900">Collections</h1>
-		<p class="mt-1 text-sm text-gray-500">Manage collections and newsletter approvals</p>
+		<p class="mt-1 text-sm text-gray-500">Manage collections and newsletter verification requests</p>
 	</div>
 
 	<!-- Inner Tabs -->
@@ -114,17 +121,17 @@
 			</button>
 			<button on:click={() => (activeTab = 'approvals')}
 				class="flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition {activeTab === 'approvals' ? 'bg-[#513BE2] text-white shadow' : 'text-gray-500 hover:text-gray-700'}">
-				Approvals
-				{#if approvals.filter((a) => a.status === 'PENDING').length > 0}
-					<span class="ml-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-						{approvals.filter((a) => a.status === 'PENDING').length}
+				Verification Requests
+				{#if pendingCount > 0}
+					<span class="ml-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
+						{pendingCount}
 					</span>
 				{/if}
 			</button>
 		</nav>
 	</div>
 
-	<!-- Collection List Tab -->
+	<!-- ─── Collection List Tab ─── -->
 	{#if activeTab === 'list'}
 		<div class="relative mb-4 w-full">
 			<input type="text" bind:value={colSearch} on:input={handleColSearch} placeholder="Search collections..."
@@ -144,44 +151,37 @@
 		{:else if collections.length > 0}
 			<div class="rounded-xl bg-white">
 				{#each collections as col}
-					<div class="flex items-center justify-between border-b border-gray-50 px-4 py-3 last:border-b-0">
-						<div class="flex items-center gap-3">
+					<div class="flex items-center gap-2 border-b border-gray-50 px-4 py-3 last:border-b-0">
+						<div class="flex min-w-0 flex-1 items-center gap-3">
 							{#if col.profilePictureUrl}
-								<img src={col.profilePictureUrl} alt="" class="h-10 w-10 rounded-lg object-cover" />
+								<img src={col.profilePictureUrl} alt="" class="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
 							{:else}
-								<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FFF7D8] text-xs font-semibold text-[#D79917]">
+								<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#FFF7D8] text-xs font-semibold text-[#D79917]">
 									{(col.name || '?').charAt(0).toUpperCase()}
 								</div>
 							{/if}
-							<div>
-								<p class="text-sm font-medium text-gray-800">{col.name}</p>
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-sm font-medium text-gray-800">{col.name}</p>
 								<p class="text-xs text-gray-400">{col.eventCount || 0} events · {col.subscriberCount || 0} subscribers</p>
 							</div>
 						</div>
-						<div class="flex items-center gap-2">
-							<span class="rounded-full px-2 py-0.5 text-[10px] font-medium {col.approvalStatus === 'APPROVED' ? 'bg-[#E3F4E1] text-[#3CBD2C]' : col.approvalStatus === 'REJECTED' ? 'bg-[#FDEAEA] text-[#E53935]' : 'bg-[#FFF8E1] text-[#EAAB26]'}">
-								{col.approvalStatus || 'PENDING'}
-							</span>
-							{#if col.approvalStatus === 'PENDING' && col.verificationRequest}
-								<button on:click={async () => { await verifyCollection(col._id, 'APPROVED'); fetchCollections(); }}
-									class="rounded bg-green-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-green-700">Verify</button>
-								<button on:click={async () => { await verifyCollection(col._id, 'REJECTED'); fetchCollections(); }}
-									class="rounded border border-gray-200 bg-white px-2 py-1 text-[10px] font-medium text-gray-600 hover:bg-gray-50">Reject</button>
-							{:else if col.approvalStatus !== 'APPROVED' && !col.verificationRequest}
-								<button on:click={async () => { await verifyCollection(col._id, 'APPROVED'); fetchCollections(); }}
-									class="rounded bg-green-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-green-700">Verify</button>
-							{/if}
-							<span class="hidden text-xs text-gray-400 sm:block">{formatDate(col.createdAt)}</span>
-						</div>
+						<span class="flex-shrink-0 text-xs text-gray-400">{formatDate(col.createdAt)}</span>
 					</div>
 				{/each}
 			</div>
 
 			{#if colTotalPages > 1}
-				<div class="mt-4 flex items-center justify-center gap-2">
-					<button on:click={() => { colPage = Math.max(1, colPage - 1); fetchCollections(); }} disabled={colPage === 1} class="rounded-lg px-3 py-1.5 text-sm text-[#616265] hover:bg-white disabled:opacity-40">Previous</button>
-					<span class="text-sm text-gray-500">{colPage} / {colTotalPages}</span>
-					<button on:click={() => { colPage = Math.min(colTotalPages, colPage + 1); fetchCollections(); }} disabled={colPage === colTotalPages} class="rounded-lg px-3 py-1.5 text-sm text-[#616265] hover:bg-white disabled:opacity-40">Next</button>
+				<div class="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+					<p class="text-xs text-gray-400">Showing {(colPage - 1) * 20 + 1}–{Math.min(colPage * 20, colTotal)} of {colTotal}</p>
+					<div class="flex items-center gap-1">
+						<button on:click={() => { colPage = Math.max(1, colPage - 1); fetchCollections(); }} disabled={colPage === 1} class="rounded-lg px-3 py-1.5 text-sm text-[#616265] hover:bg-white disabled:opacity-40">Prev</button>
+						{#each Array(Math.min(colTotalPages, 5)) as _, i}
+							{@const pageNum = colTotalPages <= 5 ? i + 1 : Math.max(1, Math.min(colPage - 2, colTotalPages - 4)) + i}
+							<button on:click={() => { colPage = pageNum; fetchCollections(); }}
+								class="h-8 w-8 rounded-lg text-sm transition {colPage === pageNum ? 'bg-[#513BE2] text-white' : 'text-[#616265] hover:bg-white'}">{pageNum}</button>
+						{/each}
+						<button on:click={() => { colPage = Math.min(colTotalPages, colPage + 1); fetchCollections(); }} disabled={colPage === colTotalPages} class="rounded-lg px-3 py-1.5 text-sm text-[#616265] hover:bg-white disabled:opacity-40">Next</button>
+					</div>
 				</div>
 			{/if}
 		{:else}
@@ -190,7 +190,7 @@
 			</div>
 		{/if}
 
-	<!-- Approvals Tab -->
+	<!-- ─── Verification Requests Tab ─── -->
 	{:else}
 		<div class="mb-4">
 			<div class="relative inline-block">
@@ -223,74 +223,101 @@
 			</div>
 		{:else if approvals.length > 0}
 			<div class="rounded-xl bg-white">
-				{#each approvals as approval}
-					<button class="flex w-full items-center justify-between border-b border-gray-50 px-4 py-4 text-left transition last:border-b-0 hover:bg-gray-50"
-						on:click={() => { selectedApproval = approval; showApprovalModal = true; adminNote = ''; }}>
-						<div>
-							<p class="text-sm font-medium text-gray-800">{approval.subject}</p>
-							<p class="text-xs text-gray-400">{approval.collectionName} · {approval.organizerName || approval.organizerEmail}</p>
-							<p class="mt-1 text-xs text-gray-300">{approval.subscriberCount} subscribers · {formatDate(approval.createdAt)}</p>
+				{#each approvals as req}
+					<button class="flex w-full items-center gap-2 border-b border-gray-50 px-4 py-4 text-left transition last:border-b-0 hover:bg-gray-50"
+						on:click={() => { selectedRequest = req; showReviewModal = true; }}>
+						<div class="flex min-w-0 flex-1 items-center gap-3">
+							{#if req.profilePictureUrl}
+								<img src={req.profilePictureUrl} alt="" class="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
+							{:else}
+								<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#FFF7D8] text-xs font-semibold text-[#D79917]">
+									{(req.name || '?').charAt(0).toUpperCase()}
+								</div>
+							{/if}
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-sm font-medium text-gray-800">{req.name}</p>
+								<p class="text-xs text-gray-400">
+									Est. audience: {req.verificationRequest?.estimatedAudience || 0} · {req.subscriberCount || 0} subscribers
+								</p>
+								<p class="mt-0.5 text-xs text-gray-300">Submitted {formatDate(req.verificationRequest?.submittedAt || req.updatedAt)}</p>
+							</div>
 						</div>
-						<span class="flex-shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-medium {getApprovalStatusClass(approval.status)}">{approval.status}</span>
+						<span class="flex-shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-medium {getStatusClass(req.approvalStatus)}">
+							{req.approvalStatus}
+						</span>
 					</button>
 				{/each}
 			</div>
+
+			{#if appTotalPages > 1}
+				<div class="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+					<p class="text-xs text-gray-400">Showing {(appPage - 1) * 20 + 1}–{Math.min(appPage * 20, appTotal)} of {appTotal}</p>
+					<div class="flex items-center gap-1">
+						<button on:click={() => { appPage = Math.max(1, appPage - 1); fetchApprovals(); }} disabled={appPage === 1} class="rounded-lg px-3 py-1.5 text-sm text-[#616265] hover:bg-white disabled:opacity-40">Prev</button>
+						<span class="text-sm text-gray-500">{appPage} / {appTotalPages}</span>
+						<button on:click={() => { appPage = Math.min(appTotalPages, appPage + 1); fetchApprovals(); }} disabled={appPage === appTotalPages} class="rounded-lg px-3 py-1.5 text-sm text-[#616265] hover:bg-white disabled:opacity-40">Next</button>
+					</div>
+				</div>
+			{/if}
 		{:else}
 			<div class="flex h-48 flex-col items-center justify-center gap-2 rounded-xl bg-white">
-				<p class="text-lg font-medium text-[#646568]">No Approval Requests</p>
-				<p class="text-sm text-gray-400">Newsletter approval requests will appear here</p>
+				<p class="text-lg font-medium text-[#646568]">No Verification Requests</p>
+				<p class="text-sm text-gray-400">When organizers submit newsletter verification requests, they'll appear here</p>
 			</div>
 		{/if}
 	{/if}
 </div>
 
-<!-- Approval Detail Modal -->
-{#if showApprovalModal && selectedApproval}
-	<div on:click={() => (showApprovalModal = false)} on:keydown={(e) => e.key === 'Escape' && (showApprovalModal = false)}
+<!-- Review Modal -->
+{#if showReviewModal && selectedRequest}
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+	<div on:click={() => (showReviewModal = false)} on:keydown={(e) => e.key === 'Escape' && (showReviewModal = false)}
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
 		role="dialog" aria-modal="true" tabindex="-1">
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 		<div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" on:click|stopPropagation on:keydown|stopPropagation role="document">
-			<h2 class="mb-1 text-lg font-semibold text-gray-900">Newsletter Approval</h2>
-			<span class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium {getApprovalStatusClass(selectedApproval.status)}">{selectedApproval.status}</span>
+			<div class="mb-1 flex items-center justify-between">
+				<h2 class="text-lg font-semibold text-gray-900">Newsletter Verification Request</h2>
+				<span class="rounded-full px-2.5 py-0.5 text-xs font-medium {getStatusClass(selectedRequest.approvalStatus)}">{selectedRequest.approvalStatus}</span>
+			</div>
+			<p class="mb-5 text-sm text-gray-400">{selectedRequest.name}</p>
 
-			<div class="mt-5 space-y-3">
-				<div><p class="text-xs text-[#C1C2C2]">Collection</p><p class="text-sm font-medium text-gray-800">{selectedApproval.collectionName}</p></div>
-				<div><p class="text-xs text-[#C1C2C2]">Organizer</p><p class="text-sm font-medium text-gray-800">{selectedApproval.organizerName || 'N/A'} ({selectedApproval.organizerEmail})</p></div>
-				<div><p class="text-xs text-[#C1C2C2]">Subject</p><p class="text-sm font-medium text-gray-800">{selectedApproval.subject}</p></div>
-				<div><p class="text-xs text-[#C1C2C2]">Subscribers</p><p class="text-sm font-medium text-gray-800">{selectedApproval.subscriberCount}</p></div>
-				{#if selectedApproval.message}
-					<div>
-						<p class="text-xs text-[#C1C2C2]">Message Preview</p>
-						<div class="mt-1 max-h-40 overflow-y-auto rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{@html selectedApproval.message.substring(0, 1000)}</div>
-					</div>
-				{/if}
-				<div><p class="text-xs text-[#C1C2C2]">Submitted</p><p class="text-sm text-gray-600">{formatDate(selectedApproval.createdAt)}</p></div>
+			<div class="space-y-4">
+				<div>
+					<p class="text-xs font-medium text-[#C1C2C2]">Estimated Audience</p>
+					<p class="text-sm text-gray-800">{selectedRequest.verificationRequest?.estimatedAudience || 'N/A'}</p>
+				</div>
+				<div>
+					<p class="text-xs font-medium text-[#C1C2C2]">About Their Events</p>
+					<p class="text-sm text-gray-700">{selectedRequest.verificationRequest?.eventsInfo || 'No information provided'}</p>
+				</div>
+				<div>
+					<p class="text-xs font-medium text-[#C1C2C2]">About Their Guests</p>
+					<p class="text-sm text-gray-700">{selectedRequest.verificationRequest?.guestsInfo || 'No information provided'}</p>
+				</div>
+				<div>
+					<p class="text-xs font-medium text-[#C1C2C2]">Current Subscribers</p>
+					<p class="text-sm text-gray-800">{selectedRequest.subscriberCount || 0}</p>
+				</div>
+				<div>
+					<p class="text-xs font-medium text-[#C1C2C2]">Submitted</p>
+					<p class="text-sm text-gray-600">{formatDate(selectedRequest.verificationRequest?.submittedAt || selectedRequest.updatedAt)}</p>
+				</div>
 			</div>
 
-			{#if selectedApproval.status === 'PENDING'}
-				<div class="mt-5">
-					<label for="admin-note" class="mb-1 block text-xs font-medium text-gray-600">Admin Note (optional)</label>
-					<textarea id="admin-note" bind:value={adminNote} rows="2" placeholder="Add a note for the organizer..."
-						class="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#513BE2] focus:outline-none"></textarea>
-				</div>
-				<div class="mt-4 flex gap-3">
-					<button on:click={() => handleApprovalAction(selectedApproval._id, 'DECLINED')} disabled={approvalUpdating}
+			{#if selectedRequest.approvalStatus === 'PENDING'}
+				<div class="mt-6 flex gap-3">
+					<button on:click={() => handleVerify(selectedRequest._id, 'REJECTED')} disabled={reviewUpdating}
 						class="flex-1 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">
-						{approvalUpdating ? '...' : 'Decline'}
+						{reviewUpdating ? '...' : 'Reject'}
 					</button>
-					<button on:click={() => handleApprovalAction(selectedApproval._id, 'APPROVED')} disabled={approvalUpdating}
+					<button on:click={() => handleVerify(selectedRequest._id, 'APPROVED')} disabled={reviewUpdating}
 						class="flex-1 rounded-lg bg-green-600 py-2.5 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50">
-						{approvalUpdating ? '...' : 'Approve'}
+						{reviewUpdating ? '...' : 'Approve Newsletter Sending'}
 					</button>
 				</div>
 			{:else}
-				{#if selectedApproval.adminNote}
-					<div class="mt-4 rounded-lg bg-gray-50 p-3">
-						<p class="text-xs text-[#C1C2C2]">Admin Note</p>
-						<p class="text-sm text-gray-700">{selectedApproval.adminNote}</p>
-					</div>
-				{/if}
-				<button on:click={() => (showApprovalModal = false)} class="mt-4 w-full rounded-lg bg-gray-100 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-200">Close</button>
+				<button on:click={() => (showReviewModal = false)} class="mt-6 w-full rounded-lg bg-gray-100 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-200">Close</button>
 			{/if}
 		</div>
 	</div>

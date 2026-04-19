@@ -5,7 +5,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	let activeTab = 'email';
+	let activeTab = 'rondwell';
 	let searchQuery = '';
 
 	export let open = false;
@@ -48,8 +48,8 @@
 	}
 
 	const tabs = [
-		{ id: 'email', label: 'Invite by Email' },
 		{ id: 'rondwell', label: `Add From Rondwell ${participant}` },
+		{ id: 'email', label: 'Invite by Email' },
 		{ id: 'manual', label: 'Manual Add' }
 	];
 

@@ -62,13 +62,13 @@
 	}
 </script>
 
-<div class="w-full max-w-6xl mx-auto p-6">
+<div class="w-full">
 	<!-- Header -->
 	<div class="mb-8">
-		<h1 class="text-2xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+		<h1 class="text-lg font-bold text-gray-900 flex items-center gap-2">
 			My Calendar/Bookings
 		</h1>
-		<p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+		<p class="text-sm text-gray-500 mt-1">
 			View all your confirmed bookings and manage your availability
 		</p>
 	</div>

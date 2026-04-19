@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import ProfileSwitchOverlay from '$lib/components/ProfileSwitchOverlay.svelte';
 	import { getActiveProfile, getAllProfiles, switchProfile, type UserProfileData } from '$lib/services/profile.services';
 	import { getWalletBalance } from '$lib/services/wallet.services';
 	import { authState, clearUser, isAuthenticated, setActiveProfile } from '$lib/stores/auth.store';
@@ -8,33 +9,63 @@
 	export let showMenu = false;
 	export let className = 'fixed bottom-10 left-30 hidden md:block';
 
-	const ROLE_CONFIG: Record<string, { color: string; bg: string }> = {
-		VENDOR:    { color: '#146AEB', bg: '#E2E8FC' },
-		EXHIBITOR: { color: '#3CBD2C', bg: '#E3F4E1' },
-		SPEAKER:   { color: '#AB46DD', bg: 'rgba(171,70,221,0.1)' },
-		ORGANIZER: { color: '#7C3AED', bg: '#EFEBFF' },
+	const ALL_ROLES: Array<'ORGANIZER' | 'VENDOR' | 'EXHIBITOR' | 'SPEAKER'> = ['ORGANIZER', 'VENDOR', 'EXHIBITOR', 'SPEAKER'];
+
+	const ROLE_CONFIG: Record<string, { color: string; bg: string; path: string }> = {
+		ORGANIZER: { color: '#7C3AED', bg: '#EFEBFF', path: '/overview' },
+		VENDOR:    { color: '#146AEB', bg: '#E2E8FC', path: '/vendor' },
+		EXHIBITOR: { color: '#3CBD2C', bg: '#E3F4E1', path: '/exhibitor' },
+		SPEAKER:   { color: '#AB46DD', bg: 'rgba(171,70,221,0.1)', path: '/speaker' },
 	};
 
-	const OTHER_ROLES: Array<'VENDOR' | 'EXHIBITOR' | 'SPEAKER'> = ['VENDOR', 'EXHIBITOR', 'SPEAKER'];
+	const ROLE_ICONS: Record<string, string> = {
+		ORGANIZER: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`,
+		VENDOR: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`,
+		EXHIBITOR: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>`,
+		SPEAKER: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`,
+	};
 
 	let allProfiles: UserProfileData[] = [];
 	let showAll = false;
 	let loading = false;
 	let showWalletBalance = true;
 	let walletBalance = 0;
+	let switching = false;
+	let switchingRole = '';
+	let switchingColor = '#513BE2';
 
 	$: user = $authState.user;
 	$: activeProfile = $authState.activeProfile;
 	$: token = $authState.token;
+	$: activeRole = activeProfile?.role ?? 'ORGANIZER';
 
-	$: otherProfiles = OTHER_ROLES.map((role) => {
-		const found = allProfiles.find((p) => p.role === role);
-		return { role, profile: found ?? null };
-	});
+	// Build the switchable profiles list: all roles EXCEPT the currently active one
+	$: switchableProfiles = ALL_ROLES
+		.filter((role) => role !== activeRole)
+		.map((role) => {
+			const found = allProfiles.find((p) => p.role === role);
+			return { role, profile: found ?? null };
+		});
 
-	$: displayedOtherProfiles = showAll ? otherProfiles : otherProfiles.slice(0, 2);
+	$: displayedProfiles = showAll ? switchableProfiles : switchableProfiles.slice(0, 2);
 
 	$: avatarUrl = activeProfile?.profilePictureUrl || '/you-rondwell.png';
+	$: activeCfg = ROLE_CONFIG[activeRole] || ROLE_CONFIG.ORGANIZER;
+
+	// Get display name for a profile, preferring business/company name for vendor/exhibitor
+	function getProfileDisplayName(role: string, profile: any): string {
+		if (!profile) return role.charAt(0) + role.slice(1).toLowerCase();
+		if (role === 'VENDOR') {
+			return profile.vendorDetails?.businessName || profile.name || 'Vendor';
+		}
+		if (role === 'EXHIBITOR') {
+			return profile.exhibitorDetails?.companyName || profile.exhibitorDetails?.businessName || profile.name || 'Exhibitor';
+		}
+		return profile.name || role.charAt(0) + role.slice(1).toLowerCase();
+	}
+
+	// Get display name for the active profile header
+	$: activeDisplayName = getProfileDisplayName(activeRole, activeProfile);
 
 	$: formattedBalance = showWalletBalance
 		? `N${walletBalance.toLocaleString()}`
@@ -55,7 +86,6 @@
 		} finally {
 			loading = false;
 		}
-		// Fetch wallet balance separately (non-blocking)
 		try {
 			const wallet = await getWalletBalance();
 			const agg = wallet?.aggregatedBalance;
@@ -69,28 +99,49 @@
 		showMenu = false;
 	}
 
-	async function handleProfileClick(role: 'VENDOR' | 'EXHIBITOR' | 'SPEAKER', profile: UserProfileData | null) {
-		const rolePath = role.toLowerCase();
-		if (!profile) {
-			goto(`/${rolePath}/onboarding`);
-		} else if (profile.onboardingStatus === 'INCOMPLETE') {
-			goto(`/${rolePath}/onboarding`);
-		} else {
-			if (token) {
-				try {
-					const result = await switchProfile(profile._id);
-					if (result?.newToken) {
-						authState.update((s) => ({ ...s, token: result.newToken }));
-						localStorage.setItem('auth_token', result.newToken);
-					}
-					setActiveProfile(profile);
-				} catch (e) {
-					console.error('Failed to switch profile', e);
-				}
-			}
-			goto(`/${rolePath}`);
+	async function handleProfileClick(role: string, profile: UserProfileData | null) {
+		const cfg = ROLE_CONFIG[role];
+		const rolePath = cfg?.path || '/overview';
+
+		// For non-organizer roles without a profile, go to onboarding
+		if (role !== 'ORGANIZER' && !profile) {
+			goto(`/${role.toLowerCase()}/onboarding`);
+			onClose();
+			return;
 		}
+		if (role !== 'ORGANIZER' && profile?.onboardingStatus === 'INCOMPLETE') {
+			goto(`/${role.toLowerCase()}/onboarding`);
+			onClose();
+			return;
+		}
+
+		// Show switching animation
+		switchingRole = role.charAt(0) + role.slice(1).toLowerCase();
+		switchingColor = cfg?.color || '#513BE2';
+		switching = true;
 		onClose();
+
+		// For Organizer, find the organizer profile to switch to
+		const targetProfile = profile || allProfiles.find((p) => p.role === role);
+
+		if (token && targetProfile) {
+			try {
+				const result = await switchProfile(targetProfile._id);
+				if (result?.newToken) {
+					authState.update((s) => ({ ...s, token: result.newToken }));
+					localStorage.setItem('auth_token', result.newToken);
+				}
+				setActiveProfile(targetProfile);
+			} catch (e) {
+				console.error('Failed to switch profile', e);
+				switching = false;
+				return;
+			}
+		}
+
+		await new Promise((r) => setTimeout(r, 1200));
+		switching = false;
+		goto(rolePath);
 	}
 
 	function handleLogout() {
@@ -98,7 +149,9 @@
 		goto('/auth');
 	}
 
-	function getStatusTag(profile: UserProfileData | null): 'setup' | 'wrapup' | 'done' {
+	function getStatusTag(role: string, profile: UserProfileData | null): 'setup' | 'wrapup' | 'done' {
+		// Organizer profile always exists (it's the default)
+		if (role === 'ORGANIZER') return 'done';
 		if (!profile) return 'setup';
 		if (profile.onboardingStatus === 'INCOMPLETE') return 'wrapup';
 		return 'done';
@@ -109,8 +162,9 @@
 	}
 </script>
 
+<ProfileSwitchOverlay visible={switching} roleName={switchingRole} roleColor={switchingColor} />
+
 {#if showMenu}
-	<!-- Blur backdrop -->
 	<div
 		class="fixed inset-0 z-20 bg-black/10 backdrop-blur-[2px]"
 		on:click={onClose}
@@ -124,28 +178,31 @@
 		class="triangle bg custom-scrollbar z-30 max-h-[540px] w-83 overflow-y-auto rounded-xl p-6 text-sm md:w-90 {className}"
 	>
 		{#if $isAuthenticated}
-			<!-- Active Profile -->
+			<!-- Active Profile Header -->
 			<div class="flex items-center space-x-3">
 				<img src={avatarUrl} alt="profile" class="h-10 w-10 rounded-full object-cover" />
 				<div class="flex-1 min-w-0">
 					<div class="flex items-center justify-between gap-2">
-						<div class="font-semibold truncate">{activeProfile?.name ?? user?.email ?? 'User'}</div>
-						<span class="ml-auto flex items-center gap-1 bg-[#EFEBFF] text-xs font-semibold text-purple-600 rounded-md px-2 py-1 whitespace-nowrap">
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-							{activeProfile?.role ?? 'ORGANIZER'}
+						<div class="font-semibold truncate">{activeDisplayName}</div>
+						<span
+							class="ml-auto flex items-center gap-1 text-xs font-semibold rounded-md px-2 py-1 whitespace-nowrap"
+							style="background-color: {activeCfg.bg}; color: {activeCfg.color};"
+						>
+							<span class="flex items-center">{@html ROLE_ICONS[activeRole] || ROLE_ICONS.ORGANIZER}</span>
+							{activeRole}
 						</span>
 					</div>
 					<div class="text-xs font-light text-gray-500 truncate">{user?.email ?? user?.phoneNumber ?? ''}</div>
 				</div>
 			</div>
 
-			<!-- Switchable Profiles -->
+			<!-- Switchable Profiles (excludes the active role) -->
 			<div class="mt-4 space-y-2 rounded-md bg-[#FFFFFF] p-2 shadow-sm">
 				{#if loading}
 					<div class="py-4 text-center text-xs text-gray-400">Loading profiles...</div>
 				{:else}
-					{#each displayedOtherProfiles as { role, profile }}
-						{@const status = getStatusTag(profile)}
+					{#each displayedProfiles as { role, profile }}
+						{@const status = getStatusTag(role, profile)}
 						{@const cfg = ROLE_CONFIG[role]}
 						<div
 							class="selected flex cursor-pointer items-center p-2 transition"
@@ -163,7 +220,7 @@
 								<div class="flex items-center justify-between gap-2">
 									<div class="text-sm font-medium truncate">
 										{#if status === 'done'}
-											{profile?.name}
+											{getProfileDisplayName(role, profile)}
 										{:else}
 											{role.charAt(0) + role.slice(1).toLowerCase()}
 										{/if}
@@ -173,7 +230,10 @@
 									{:else if status === 'wrapup'}
 										<span class="ml-auto rounded-md px-2 py-1 text-xs font-semibold bg-orange-100 text-orange-600 whitespace-nowrap">Wrap Up</span>
 									{:else}
-										<span class="ml-auto rounded-md px-2 py-1 text-xs font-semibold whitespace-nowrap" style="background-color:{cfg.bg};color:{cfg.color}">{role}</span>
+										<span class="ml-auto flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold whitespace-nowrap" style="background-color:{cfg.bg};color:{cfg.color}">
+											<span class="flex items-center">{@html ROLE_ICONS[role] || ''}</span>
+											{role}
+										</span>
 									{/if}
 								</div>
 								{#if status === 'done'}
@@ -199,7 +259,6 @@
 
 			<!-- Menu Actions -->
 			<div class="mt-4 space-y-3">
-				<!-- Dashboard -->
 				<a href="/overview" on:click={onClose} class="flex cursor-pointer items-center gap-2">
 					<div class="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-[#E2E8FC]">
 						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -210,7 +269,6 @@
 					<span>Dashboard</span>
 				</a>
 
-				<!-- Wallet -->
 				<div class="flex cursor-pointer items-center gap-2" on:click={() => { goto('/settings?tab=wallet'); onClose(); }} on:keydown={(e) => e.key === 'Enter' && (goto('/settings?tab=wallet'), onClose())} role="button" tabindex="0">
 					<div class="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-[#E3F4E1]">
 						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -230,25 +288,14 @@
 							aria-label={showWalletBalance ? 'Hide wallet balance' : 'Show wallet balance'}
 						>
 							{#if showWalletBalance}
-								<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-									<path d="M11.6849 9C11.6849 10.485 10.4849 11.685 8.99994 11.685C7.51494 11.685 6.31494 10.485 6.31494 9C6.31494 7.515 7.51494 6.315 8.99994 6.315C10.4849 6.315 11.6849 7.515 11.6849 9Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-									<path d="M9.00006 15.2025C11.6476 15.2025 14.1151 13.6425 15.8326 10.9425C16.5076 9.88504 16.5076 8.10754 15.8326 7.05004C14.1151 4.35004 11.6476 2.79004 9.00006 2.79004C6.35256 2.79004 3.88506 4.35004 2.16756 7.05004C1.49256 8.10754 1.49256 9.88504 2.16756 10.9425C3.88506 13.6425 6.35256 15.2025 9.00006 15.2025Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-								</svg>
+								<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M11.6849 9C11.6849 10.485 10.4849 11.685 8.99994 11.685C7.51494 11.685 6.31494 10.485 6.31494 9C6.31494 7.515 7.51494 6.315 8.99994 6.315C10.4849 6.315 11.6849 7.515 11.6849 9Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.00006 15.2025C11.6476 15.2025 14.1151 13.6425 15.8326 10.9425C16.5076 9.88504 16.5076 8.10754 15.8326 7.05004C14.1151 4.35004 11.6476 2.79004 9.00006 2.79004C6.35256 2.79004 3.88506 4.35004 2.16756 7.05004C1.49256 8.10754 1.49256 9.88504 2.16756 10.9425C3.88506 13.6425 6.35256 15.2025 9.00006 15.2025Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 							{:else}
-								<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-									<path d="M10.9425 7.0575L7.0575 10.9425C6.585 10.47 6.3 9.8325 6.3 9.105C6.3 7.6425 7.4925 6.45 8.955 6.45C9.6825 6.45 10.32 6.735 10.9425 7.0575Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-									<path d="M13.3575 4.3275C12.0375 3.3375 10.5375 2.7975 9 2.7975C6.3525 2.7975 3.885 4.3575 2.1675 7.0575C1.4925 8.115 1.4925 9.8925 2.1675 10.95C2.76 11.8725 3.4425 12.675 4.185 13.32" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-									<path d="M6.3 14.6475C7.1475 15.0375 8.0625 15.2475 9 15.2475C11.6475 15.2475 14.115 13.6875 15.8325 10.9875C16.5075 9.93 16.5075 8.1525 15.8325 7.095C15.585 6.7125 15.315 6.3525 15.0375 6.015" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-									<path d="M11.6325 9.525C11.4375 10.575 10.575 11.4375 9.525 11.6325" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-									<path d="M7.0575 10.9425L1.5 16.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-									<path d="M16.5 1.5L10.9425 7.0575" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-								</svg>
+								<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M10.9425 7.0575L7.0575 10.9425C6.585 10.47 6.3 9.8325 6.3 9.105C6.3 7.6425 7.4925 6.45 8.955 6.45C9.6825 6.45 10.32 6.735 10.9425 7.0575Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.3575 4.3275C12.0375 3.3375 10.5375 2.7975 9 2.7975C6.3525 2.7975 3.885 4.3575 2.1675 7.0575C1.4925 8.115 1.4925 9.8925 2.1675 10.95C2.76 11.8725 3.4425 12.675 4.185 13.32" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.3 14.6475C7.1475 15.0375 8.0625 15.2475 9 15.2475C11.6475 15.2475 14.115 13.6875 15.8325 10.9875C16.5075 9.93 16.5075 8.1525 15.8325 7.095C15.585 6.7125 15.315 6.3525 15.0375 6.015" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.6325 9.525C11.4375 10.575 10.575 11.4375 9.525 11.6325" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.0575 10.9425L1.5 16.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 1.5L10.9425 7.0575" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 							{/if}
 						</button>
 					</div>
 				</div>
 
-				<!-- Settings -->
 				<a href="/settings" on:click={onClose} class="flex cursor-pointer items-center gap-2">
 					<div class="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-[#E2E4E5]">
 						<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -275,7 +322,6 @@
 				</button>
 			</div>
 		{:else}
-			<!-- Not authenticated: show Sign in -->
 			<div class="flex flex-col items-center gap-4 py-2">
 				<p class="text-sm text-gray-500">You're not signed in</p>
 				<a
@@ -284,11 +330,6 @@
 					class="flex w-full items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium text-white"
 					style="background: linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%);"
 				>
-					<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<path d="M6.67578 5.66969C6.90828 2.96969 8.29578 1.86719 11.3333 1.86719H11.4308C14.7833 1.86719 16.1258 3.20969 16.1258 6.56219V11.4522C16.1258 14.8047 14.7833 16.1472 11.4308 16.1472H11.3333C8.31828 16.1472 6.93078 15.0597 6.68328 12.4047" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M11.2498 9H2.71484" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-						<path d="M4.3875 6.48438L1.875 8.99688L4.3875 11.5094" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-					</svg>
 					Sign in
 				</a>
 			</div>
@@ -302,13 +343,11 @@
 		box-shadow: 0px 0px 80px rgba(0, 0, 0, 0.08);
 		border-radius: 8px;
 	}
-
 	.selected:hover {
 		background: #f9f9f9;
 		box-shadow: inset 0px 0px 0px 3px #ffffff;
 		border-radius: 11px;
 	}
-
 	@media (min-width: 739px) {
 		.triangle::before {
 			content: '';

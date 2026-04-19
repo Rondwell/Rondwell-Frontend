@@ -1612,6 +1612,145 @@ export async function getCollectionVerificationStatus(collectionId: string): Pro
   return data;
 }
 
+// ==================== EVENT BLAST APIs ====================
+
+export async function createEventBlast(eventId: string, payload: {
+  subject: string;
+  htmlContent: string;
+  recipientStatuses: string[];
+  scheduledAt?: string;
+}): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to create blast');
+  return data;
+}
+
+export async function getEventBlasts(eventId: string, params: Record<string, string> = {}): Promise<any> {
+  const query = new URLSearchParams(params).toString();
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts?${query}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch blasts');
+  return data;
+}
+
+export async function getBlastQuota(eventId: string): Promise<{ used: number; limit: number; tier: string }> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts/quota`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch quota');
+  return data;
+}
+
+export async function cancelEventBlast(eventId: string, blastId: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts/${blastId}/cancel`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to cancel blast');
+  return data;
+}
+
+export async function sendBlastNow(eventId: string, blastId: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts/${blastId}/send-now`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to send blast');
+  return data;
+}
+
+export async function previewEventBlast(eventId: string, blastId: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts/${blastId}/preview`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to send preview');
+  return data;
+}
+
+export async function previewBlastDraft(eventId: string, subject: string, htmlContent: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts/preview-draft`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subject, htmlContent }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to send preview');
+  return data;
+}
+
+export async function uploadBlastImage(eventId: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('image', file);
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blast-image`, {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to upload image');
+  return data.url;
+}
+
+// ==================== COLLECTION BLAST APIs ====================
+
+export async function createCollectionBlast(collectionId: string, payload: {
+  subject: string; htmlContent: string; recipientFilters?: { source?: string[] }; scheduledAt?: string;
+}): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to create blast');
+  return data;
+}
+
+export async function getCollectionBlasts(collectionId: string, params: Record<string, string> = {}): Promise<any> {
+  const query = new URLSearchParams(params).toString();
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts?${query}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch blasts');
+  return data;
+}
+
+export async function getCollectionBlastQuota(collectionId: string): Promise<{ used: number; limit: number; tier: string }> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts/quota`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch quota');
+  return data;
+}
+
+export async function cancelCollectionBlast(collectionId: string, blastId: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts/${blastId}/cancel`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to cancel blast');
+  return data;
+}
+
+export async function sendCollectionBlastNow(collectionId: string, blastId: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts/${blastId}/send-now`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to send blast');
+  return data;
+}
+
+export async function previewCollectionBlastDraft(collectionId: string, subject: string, htmlContent: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts/preview-draft`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, htmlContent }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to send preview');
+  return data;
+}
+
+export async function uploadCollectionBlastImage(collectionId: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('image', file);
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blast-image`, {
+    method: 'POST', body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Failed to upload image');
+  return data.url;
+}
+
 
 // ==================== CHECK-IN APIs ====================
 

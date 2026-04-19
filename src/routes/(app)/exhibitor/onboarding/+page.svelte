@@ -5,12 +5,12 @@
 	import PaymentPricingStep from '$lib/components/onboarding/PaymentPricingStep.svelte';
 	import SummaryRow from '$lib/components/onboarding/SummaryRow.svelte';
 	import TaxRateModal from '$lib/components/onboarding/TaxRateModal.svelte';
+	import { uploadExhibitorCover, uploadExhibitorLogo } from '$lib/services/exhibitor.services';
 	import { completeOnboarding } from '$lib/services/profile.services';
 	import { setActiveProfile } from '$lib/stores/auth.store';
 	import { toast } from '$lib/stores/toast.store';
 	import { colors, type Color } from '$lib/utils/colors';
 	import countries from '$lib/utils/countries.json';
-	import { onDestroy } from 'svelte';
 	import OnboardingNavbar from '../../components/OnboardingNavbar.svelte';
 
 	// ============================================
@@ -50,7 +50,7 @@
 	let websiteURL = $state('');
 	let tempLocation = $state('');
 	let error = $state('');
-	let selectedCountry = $state(countries[0]);
+	let selectedCountry = $state(countries.find(c => c.code === 'NG') || countries[0]);
 	let showBusinessTypeDropdown = $state(false);
 	let otherBusinessType = $state('');
 	let showModal = $state(false);
@@ -234,6 +234,26 @@
 				currencies,
 				taxRate
 			});
+
+			const profileId = data?.profile?._id;
+
+			// Upload logo and cover images if provided
+			if (profileId) {
+				if (businessLogo) {
+					try {
+						await uploadExhibitorLogo(profileId, businessLogo);
+					} catch (e) {
+						console.error('Failed to upload exhibitor logo:', e);
+					}
+				}
+				if (coverImage) {
+					try {
+						await uploadExhibitorCover(profileId, coverImage);
+					} catch (e) {
+						console.error('Failed to upload exhibitor cover:', e);
+					}
+				}
+			}
 
 			if (data?.profile) {
 				setActiveProfile({

@@ -19,7 +19,7 @@
 <section class="w-full max-w-5xl space-y-6 rounded-2xl p-4 md:p-6">
   <!-- Header -->
   <header class="space-y-1">
-    <h1 class="text-2xl font-semibold text-gray-900 md:text-3xl">Public Vendor Profile</h1>
+    <h1 class="text-lg font-bold text-gray-900">Public Vendor Profile</h1>
     <p class="max-w-md text-sm leading-snug text-gray-500">
       This is how Organizers and guests see your business on Rondwell
     </p>
@@ -39,7 +39,7 @@
         />
 
         <div class="space-y-3 p-4">
-          <h2 class="text-2xl font-semibold leading-none text-[#241f1a] sm:text-3xl md:text-[40px]">Megaexe Party</h2>
+          <h2 class="text-lg font-bold leading-none text-[#241f1a]">Megaexe Party</h2>
 
           <div class="space-y-2 text-sm text-[#3d372f]">
             <div class="flex items-start gap-2">
@@ -67,11 +67,11 @@
 
     <!-- Right customization panel -->
     <aside class="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
-      <h3 class="text-2xl font-semibold text-gray-900 md:text-3xl">Customization Options</h3>
+      <h3 class="text-lg font-bold text-gray-900">Customization Options</h3>
 
       <div class="space-y-4">
         <div class="flex items-center justify-between border-b border-gray-200 pb-3">
-          <p class="text-base text-gray-800 md:text-lg">Show Customer Reviews</p>
+          <p class="text-sm text-gray-800">Show Customer Reviews</p>
           <button
             type="button"
             aria-label="Toggle customer reviews"
@@ -85,7 +85,7 @@
         </div>
 
         <div class="flex items-center justify-between border-b border-gray-200 pb-3">
-          <p class="text-base text-gray-800 md:text-lg">Show Contact Information</p>
+          <p class="text-sm text-gray-800">Show Contact Information</p>
           <button
             type="button"
             aria-label="Toggle contact information"
@@ -100,7 +100,7 @@
 
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <p class="text-base text-gray-800 md:text-lg">Manage Displayed Listings:</p>
+            <p class="text-sm text-gray-800">Manage Displayed Listings:</p>
             <button
               type="button"
               aria-label="Toggle listing display"

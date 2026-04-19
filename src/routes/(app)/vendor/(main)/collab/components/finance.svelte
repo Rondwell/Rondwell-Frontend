@@ -63,7 +63,7 @@
 <div class="p-0 m-0">
 	<div class="flex items-start justify-between mb-6">
 		<div>
-			<h2 class="text-2xl font-semibold flex items-center gap-2">
+			<h2 class="text-lg font-bold flex items-center gap-2">
 				Financials
 				<span class="inline-flex items-center justify-center w-5 h-5 rounded-full text-black text-xs border border-gray-600">1</span>
 			</h2>

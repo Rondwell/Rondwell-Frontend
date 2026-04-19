@@ -70,7 +70,7 @@
 			</div>
 
 			<!-- Horizontal scrollable nav (same as SideMenu mobile) -->
-			<nav class="custom-scrollbar -mx-3 flex gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap px-6 pb-4">
+			<nav class="custom-scrollbar flex gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap px-4 pb-4">
 				{#each menuItems as item}
 					<a
 						href={item.path}
@@ -80,6 +80,8 @@
 						{item.label}
 					</a>
 				{/each}
+				<!-- Right padding spacer so last item isn't clipped -->
+				<div class="w-4 flex-shrink-0"></div>
 			</nav>
 		{/if}
 

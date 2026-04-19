@@ -12,6 +12,10 @@
 	export let eventTitle = '';
 	participant = participant.charAt(0).toUpperCase() + participant.slice(1);
 
+	// Collaboration-added participants should not be editable by the organizer
+	$: isCollaborationAdded = speakerData?.source === 'COLLABORATION' || speakerData?.status === 'APPLIED' || speakerData?.status === 'APPROVED' && speakerData?.applicationDetails?.additionalInfo?.collaborationId;
+	$: isEditable = !isCollaborationAdded;
+
 	let editDisplayName = '';
 	let editBio = '';
 	let editIsPublic = true;
@@ -81,9 +85,13 @@
 						<p>{participant} Details</p>
 					</div>
 					<div class="flex items-center gap-3">
-						<button on:click={saveChanges} disabled={isSaving} class="flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
-							{isSaving ? 'Saving...' : 'Save Changes'}
-						</button>
+						{#if isEditable}
+							<button on:click={saveChanges} disabled={isSaving} class="flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
+								{isSaving ? 'Saving...' : 'Save Changes'}
+							</button>
+						{:else}
+							<span class="rounded-lg bg-yellow-50 px-3 py-1.5 text-xs font-medium text-yellow-700">Added via Collaboration — View Only</span>
+						{/if}
 						<button on:click={closeModal} class="flex items-center gap-1 rounded-lg bg-[#F0F1F1] px-3 py-1.5 text-sm font-medium text-[#727375]">
 							Close
 						</button>
@@ -117,7 +125,7 @@
 
 					<div class="mb-4">
 						<label class="mb-1 block font-medium" for="edit_display_name">Display Name</label>
-						<input id="edit_display_name" type="text" bind:value={editDisplayName} placeholder="Speaker's display name for this event" class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+						<input id="edit_display_name" type="text" bind:value={editDisplayName} disabled={!isEditable} placeholder="Speaker's display name for this event" class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500" />
 					</div>
 
 					<!-- Contact Details (Read-only) -->
@@ -157,10 +165,14 @@
 					<div>
 						<div class="flex items-center gap-1">
 							<h3 class="font-medium">{participant} Bio</h3>
-							<span class="text-sm text-gray-400">(Editable for this event)</span>
+							{#if isEditable}
+								<span class="text-sm text-gray-400">(Editable for this event)</span>
+							{:else}
+								<span class="text-sm text-yellow-600">(Read-only — added via collaboration)</span>
+							{/if}
 						</div>
 						<div class="relative">
-							<textarea bind:value={editBio} rows="3" maxlength="2000" placeholder="Speaker bio for this event..." class="mt-2 w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+							<textarea bind:value={editBio} rows="3" maxlength="2000" disabled={!isEditable} placeholder="Speaker bio for this event..." class="mt-2 w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"></textarea>
 							<div class="absolute right-2 bottom-3 text-xs text-gray-500">
 								{editBio.length}/2000
 							</div>

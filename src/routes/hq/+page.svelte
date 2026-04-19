@@ -163,8 +163,8 @@
 				{#if stats?.latestEvents?.length}
 					<div class="space-y-3">
 						{#each stats.latestEvents as event}
-							<div class="flex items-center justify-between rounded-lg p-2 transition hover:bg-gray-50">
-								<div class="min-w-0 flex-1 overflow-hidden">
+							<div class="flex items-center gap-2 rounded-lg p-2 transition hover:bg-gray-50">
+								<div class="min-w-0 flex-1">
 									<p class="truncate text-sm font-medium text-gray-800">{event.title}</p>
 									<p class="text-xs text-gray-400">{timeAgo(event.createdAt)}</p>
 								</div>
@@ -188,8 +188,8 @@
 				{#if stats?.latestUsers?.length}
 					<div class="space-y-3">
 						{#each stats.latestUsers as user}
-							<div class="flex items-center justify-between rounded-lg p-2 transition hover:bg-gray-50">
-								<div class="flex items-center gap-2 sm:gap-3">
+							<div class="flex items-center gap-2 rounded-lg p-2 transition hover:bg-gray-50">
+								<div class="flex min-w-0 flex-1 items-center gap-2">
 									<div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#F2E4F8] text-xs font-semibold text-[#AB46DD]">
 										{(user.email || '?').charAt(0).toUpperCase()}
 									</div>

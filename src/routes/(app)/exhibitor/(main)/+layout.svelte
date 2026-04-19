@@ -7,7 +7,7 @@
 	import Sidebar from '../../components/Sidebar.svelte';
 	import SideMenu from '../../components/SideMenu.svelte';
 
-	import { showSubMenu, subMenuItems, activeSubItem } from '$lib/stores/uiStore.js';
+	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 
 	const exhibitorIcons = {
 		overviewIcon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -140,7 +140,7 @@
 			<SideMenu items={menuItems} {activeItem} />
 		</div>
 	{/if}
-	<main class="relative mb-[106px] flex min-h-screen w-full flex-col p-3 md:mb-0 md:p-5">
+	<main class="relative mb-[106px] flex min-h-screen w-full min-w-0 flex-col overflow-x-hidden p-3 md:mb-0 md:p-5">
 		<div class="bg flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
 			{#if isSubMenuVisible && menuItems.length > 0}
 				<div class="relative mb-6 md:hidden">

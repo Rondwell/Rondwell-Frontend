@@ -6,6 +6,7 @@
 	import SummaryRow from '$lib/components/onboarding/SummaryRow.svelte';
 	import TaxRateModal from '$lib/components/onboarding/TaxRateModal.svelte';
 	import { completeOnboarding } from '$lib/services/profile.services';
+	import { uploadSpeakerPhoto, uploadSpeakerPortfolio } from '$lib/services/speaker.services';
 	import { setActiveProfile } from '$lib/stores/auth.store';
 	import { toast } from '$lib/stores/toast.store';
 	import { colors, type Color } from '$lib/utils/colors';
@@ -200,6 +201,29 @@
 				currencies,
 				taxRate
 			});
+
+			const profileId = data?.profile?._id;
+
+			// Upload profile photo if provided
+			if (profileId) {
+				if (profilePhoto) {
+					try {
+						await uploadSpeakerPhoto(profileId, profilePhoto);
+					} catch (e) {
+						console.error('Failed to upload speaker photo:', e);
+					}
+				}
+
+				// Upload portfolio files if provided
+				if (portfolioFiles.length > 0) {
+					try {
+						const files = portfolioFiles.map((pf) => pf.file);
+						await uploadSpeakerPortfolio(profileId, files);
+					} catch (e) {
+						console.error('Failed to upload speaker portfolio:', e);
+					}
+				}
+			}
 
 			if (data?.profile) {
 				setActiveProfile({

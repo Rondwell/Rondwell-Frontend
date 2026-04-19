@@ -484,58 +484,6 @@
 			</div>
 		{/if}
 	</div>
-
-	<!-- Registration Emails / Templates Section -->
-	<div class="rounded-lg">
-		<h2 class="mb-2 text-xl font-medium">Registration Emails / Templates</h2>
-		<p class="mb-4 text-sm text-[#8C8F93]">
-			Customize the emails sent when a guest registers for the event and for when you approve or decline their registration.
-		</p>
-		<div class="flex flex-wrap gap-4">
-			{#each registrationEmails as email}
-				<div class="relative w-full md:max-w-[300px]" use:clickOutside={() => { if (showEmailTemplate === email.id) showEmailTemplate = null; }}>
-					<button
-						on:click={() => (showEmailTemplate = showEmailTemplate === email.id ? null : email.id)}
-						class="w-full rounded-lg bg-[#FDFDFD] shadow-sm md:max-w-[300px]"
-					>
-						<div class="mb-3 flex flex-col items-start gap-2 rounded-lg p-4" style="background: linear-gradient(90deg, #FDFDFD 0%, #F5F5F5 100%);">
-							<div class="flex w-full items-center justify-between">
-								<!-- svelte-ignore a11y-click-events-have-key-events -->
-								<!-- svelte-ignore a11y-no-static-element-interactions -->
-								<div
-									on:click|stopPropagation={() => handleToggleOrganizerNotification()}
-									class="relative h-6 w-10 rounded-full transition-colors duration-300 cursor-pointer"
-									class:bg-gray-300={!notifyOrganizerOnRegistration}
-									class:bg-[#131517]={notifyOrganizerOnRegistration}
-								>
-									<span
-										class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300"
-										class:translate-x-4={notifyOrganizerOnRegistration}
-									></span>
-								</div>
-								<span class="text-xs font-medium {notifyOrganizerOnRegistration ? 'text-green-600' : 'text-gray-400'}">
-									{notifyOrganizerOnRegistration ? 'On' : 'Off'}
-								</span>
-							</div>
-							<div class="mt-3 flex w-full flex-col gap-2">
-								<div class="h-3 w-full rounded-md bg-[#E6E7E7]"></div>
-								<div class="h-3 w-1/2 rounded-md bg-[#E6E7E7]"></div>
-							</div>
-						</div>
-						<div class="px-4 py-2 text-sm font-medium text-gray-800">{email.type}</div>
-					</button>
-					<EmailTemplate
-						open={showEmailTemplate === email.id}
-						title={email.title}
-						description={email.description}
-						subject={email.subject}
-						onSave={() => {}}
-						onPreview={() => {}}
-					/>
-				</div>
-			{/each}
-		</div>
-	</div>
 </div>
 
 <!-- Create/Edit Ticket Modal -->

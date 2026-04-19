@@ -1,308 +1,304 @@
-<script>
-	import { TrendingUp, ArrowRight } from 'lucide-svelte';
+<script lang="ts">
+	import DashboardSkeleton from '$lib/components/DashboardSkeleton.svelte';
+	import { getExhibitorCollaborations, getExhibitorCollaborationStats, getMyBooths } from '$lib/services/exhibitor.services';
+	import { getActiveProfile, type UserProfileData } from '$lib/services/profile.services';
+	import Icon from '@iconify/svelte';
+	import { onMount } from 'svelte';
 
-	let stats = {
-		totalBoothViews: { value: 1245, change: -2 },
-		leadsCaptured: { value: 128, change: +5 },
-		activeParticipations: { value: 6, change: +5 },
-		pendingApplications: { value: 8, change: +5 }
+	// ─── State ────────────────────────────────────────────────────────────────
+	let loading = true;
+	let exhibitorName = '';
+	let logoUrl = '';
+	let profileData: UserProfileData | null = null;
+
+	// Stats
+	let boothCount = 0;
+	let pendingApplications = 0;
+	let totalBoothViews = 0;
+	let leadsCaptured = 0;
+
+	// Lists
+	let collaborationRequests: any[] = [];
+	let recentTransactions: any[] = [];
+
+	// ─── Helpers ──────────────────────────────────────────────────────────────
+	const formatCurrency = (amount: number, currency = 'NGN') => {
+		const symbol = currency === 'NGN' ? '₦' : currency === 'USD' ? '$' : currency;
+		return `${symbol}${amount.toLocaleString()}`;
 	};
 
-	let collaborationRequests = [
-		{ id: 1, from: 'John Odoemenem', for: 'Megaexe award ceremony' },
-		{ id: 2, from: 'John Odoemenem', for: 'Megaexe Induction ceremony' },
-		{ id: 3, from: 'John Odoemenem', for: 'Megaexe award ceremony' }
-	];
+	const timeAgo = (dateStr: string) => {
+		const diff = Date.now() - new Date(dateStr).getTime();
+		const mins = Math.floor(diff / 60000);
+		if (mins < 60) return `${mins} Minutes Ago`;
+		const hrs = Math.floor(mins / 60);
+		if (hrs < 24) return `${hrs} hour${hrs > 1 ? 's' : ''} Ago`;
+		const days = Math.floor(hrs / 24);
+		return `${days} day${days > 1 ? 's' : ''} Ago`;
+	};
 
-	let booths = [
-		{ id: 1, name: 'Popcorn Booth', time: '12 Minutes Ago' },
-		{ id: 2, name: 'Food Stand', time: '12 Minutes Ago' }
-	];
+	// ─── Data Fetching ────────────────────────────────────────────────────────
+	onMount(async () => {
+		try {
+			const profile = await getActiveProfile();
+			profileData = profile;
+			const ed = (profile as any)?.exhibitorDetails;
+			exhibitorName = ed?.companyName || profile?.name || 'Exhibitor';
+			logoUrl = ed?.logoUrl || profile?.profilePictureUrl || '';
 
-	let transactions = [
+			// Fetch collaboration stats
+			try {
+				const stats = await getExhibitorCollaborationStats();
+				pendingApplications = stats?.pending || 0;
+			} catch {}
+
+			// Fetch actual booth count
+			try {
+				const boothResult = await getMyBooths({ limit: 1 });
+				boothCount = boothResult?.pagination?.totalItems || boothResult?.data?.length || 0;
+			} catch {}
+
+			// Fetch recent collaborations for the list
+			try {
+				const collabResult = await getExhibitorCollaborations({ limit: 3, sortBy: 'createdAt', sortOrder: 'desc' });
+				collaborationRequests = collabResult?.collaborations || [];
+			} catch {
+				collaborationRequests = [];
+			}
+		} catch (err) {
+			console.error('Failed to load exhibitor dashboard:', err);
+		} finally {
+			loading = false;
+		}
+	});
+
+	// ─── Stat card configs ────────────────────────────────────────────────────
+	$: topStats = [
 		{
-			id: 1,
-			to: 'Megaexe Limited',
-			for: 'Megaexe Award Ceremony',
-			amount: '₦1,250,000',
-			time: '12 Minutes Ago'
+			title: 'Booths / Stands',
+			count: String(boothCount),
+			icon: '/brand2.svg',
+			bg: 'bg-blue-50',
+			btn: 'View Booths',
+			href: '/exhibitor/booths'
 		},
 		{
-			id: 2,
-			to: 'Megaexe Limited',
-			for: 'Megaexe Award Ceremony',
-			amount: '₦1,250,000',
-			time: '12 Minutes Ago'
+			title: 'Pending Applications',
+			count: String(pendingApplications),
+			icon: '/brand4.svg',
+			bg: 'bg-purple-50',
+			btn: 'Review Applications',
+			href: '/exhibitor/collab'
+		},
+		{
+			title: 'Total Booth Views',
+			count: String(totalBoothViews),
+			icon: '/brand3.svg',
+			bg: 'bg-green-50',
+			btn: 'View Booths',
+			href: '/exhibitor/booths'
+		}
+	];
+
+	$: bottomStats = [
+		{
+			title: 'Leads Captured',
+			value: String(leadsCaptured),
+			icon: '/brand6.svg',
+			bg: 'bg-yellow-50',
+			type: 'chart',
+			barColor: 'bg-yellow-400',
+			fillAmount: 0
+		},
+		{
+			title: 'Profile Views',
+			value: '0',
+			icon: '/brand5.svg',
+			bg: 'bg-pink-50',
+			type: 'chart',
+			barColor: 'bg-pink-400',
+			fillAmount: 0
+		},
+		{
+			title: 'Engagement Rate',
+			value: '0%',
+			icon: 'brand.svg',
+			bg: 'bg-teal-50',
+			type: 'chart',
+			barColor: 'bg-teal-600',
+			fillAmount: 0
 		}
 	];
 </script>
 
-<div class="min-h-screen xl:p-8">
-	<div class="mx-auto max-w-7xl">
-		<!-- Header -->
-		<div class="mb-8">
-			<div class="mb-2 flex items-center gap-5">
-				<img alt="loader" src="/loader.svg" class="hidden h-[28.5px] w-[28.5px] md:block" />
-				<h1 class="text-[24px] font-normal text-gray-900 xl:text-[35.25px]">Sleekwareandslides</h1>
-			</div>
-			<p
-				class="mt-5 flex flex-wrap items-center text-[18px] text-[#00000080] md:mt-10 xl:text-[29.48px]"
-			>
-				Welcome Back <span class="font-semibold text-[#171717] ml-3"> Megaexe Limited</span>
-				<span class="text-text-[29.48px]">👋🏻</span>
-			</p>
-		</div>
+{#if loading}
+	<DashboardSkeleton variant="exhibitor" />
+{:else}
+<div class="min-h-screen w-full text-[#101828]">
+	<!-- Header -->
+	<div class="mb-8 flex items-center gap-3">
+		{#if logoUrl}
+			<img src={logoUrl} alt="logo" class="h-8 w-8 rounded-lg object-cover" />
+		{:else}
+			<img src="/loader.svg" alt="logo" class="h-8 w-8 rounded-lg object-cover" />
+		{/if}
+		<h1 class="text-2xl font-bold">{exhibitorName}</h1>
+	</div>
 
+	<div class="flex w-full flex-col gap-8">
 		<!-- Stats Grid -->
-		<div class="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-4">
-			{#each Object.entries(stats) as [key, stat]}
-				<div class="rounded-xl border border-[#EBEBEB] bg-white px-6 py-3 xl:py-6 shadow-sm">
-					<div class="mb-5 flex items-center justify-between">
-						<img alt="arrow-left-down" src="arrow-left-down.svg" class="w-[29.6px]" />
-						<img src="/Chart.svg" alt="chart" class="w-[88.8px]" />
-					</div>
-					<div class="flex flex-col">
-						<div class="text-[12.28px] tracking-wider text-[#5C5C5C]">
-							{key === 'totalBoothViews'
-								? 'Total Booth Views'
-								: key === 'leadsCaptured'
-									? 'Leads Captured'
-									: key === 'activeParticipations'
-										? 'Active Event Participations'
-										: 'Pending Applications'}
+		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			{#each topStats as stat}
+				<div class="flex h-[180px] flex-col justify-between rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+					<div class="mb-1">
+						<div class={`mb-3 flex h-10 w-10 items-center justify-center rounded-full ${stat.bg}`}>
+							<img src={stat.icon} class="h-10 w-10" alt={stat.title} />
 						</div>
-						<div class="flex items-center gap-2">
-							<div class="text-[23.67px] font-medium text-[#171717]">
-								{stat.value.toLocaleString()}
+						<div class="mb-1 text-2xl font-bold">{stat.count}</div>
+						<div class="text-xs text-gray-500">{stat.title}</div>
+					</div>
+					<a
+						href={stat.href}
+						class="flex w-full items-center justify-center gap-1 rounded-xl bg-black py-3 text-xs font-bold text-white transition hover:bg-gray-800"
+					>
+						{stat.btn}
+						<Icon icon="heroicons:paper-airplane" class="h-3 w-3 -rotate-45" />
+					</a>
+				</div>
+			{/each}
+
+			{#each bottomStats as stat}
+				<div class="flex h-[180px] flex-col justify-between rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+					<div class="mb-1 w-full">
+						<div class="mb-3 flex items-start justify-between">
+							<div class={`flex h-10 w-10 items-center justify-center rounded-full ${stat.bg}`}>
+								<img src={stat.icon} class="h-10 w-10" alt={stat.title} />
 							</div>
+						</div>
+						<div class="mb-1 text-2xl font-bold">{stat.value}</div>
+						<div class="text-xs text-gray-500">{stat.title}</div>
+					</div>
+					<div class="mt-auto flex h-8 w-full items-end gap-1">
+						{#each Array(20) as _, i}
 							<div
-								class="flex h-[14.7px] w-[29.5px] items-center justify-center rounded-full text-[8.88px] font-medium {stat.change <
-								0
-									? 'bg-[#FFC0C5] text-[#681219]'
-									: 'bg-[#C2F5DA] text-[#0B4627]'}"
-							>
-								{stat.change > 0 ? '+' : ''}{stat.change}%
-							</div>
-						</div>
+								class={`h-full flex-1 rounded-sm ${i < (stat.fillAmount || 0) ? stat.barColor : 'bg-gray-100'}`}
+							></div>
+						{/each}
 					</div>
-					<!-- <svg class="w-full h-12 mt-4 border-8" viewBox="0 0 100 30">
-            <path
-              d="M0,15 Q25,10 50,15 T100,12"
-              fill="none"
-              stroke="#6366f1"
-              stroke-width="2"
-              opacity="0.3"
-            />
-          </svg> -->
 				</div>
 			{/each}
 		</div>
 
-		<div class="my-10 h-[1px] w-full bg-[#E2E4E5]"></div>
-
-		<!-- Recent Collaboration Requests -->
-		<div class="mb-8 rounded-xl xl:p-5">
-			<div
-				class="mb-6 flex flex-col items-start justify-between space-y-5 xl:flex-row xl:items-center"
-			>
-				<div class="w-full xl:w-auto">
-					<div class="mb-1 flex items-center gap-3">
-						<h2 class="text-[24px] text-[#192226] xl:text-[27.02px]">
-							Recent Collaboration Requests
-						</h2>
-						<span
-							class="ml-auto flex h-[29.5px] min-w-[29.5px] items-center justify-center rounded-full border border-black text-[17.2px] font-medium xl:ml-0"
-						>
-							4
-						</span>
-					</div>
-					<p class="text-[19.65px] text-[#737577]">
-						You have <span class="text-[#000000]">3</span> new requests.
-					</p>
-				</div>
-
-				<button
-					class="flex h-[44.65px] items-center gap-2 rounded-lg bg-[#00000033] px-4 py-2 text-[17.2px] font-normal shadow-sm transition-colors hover:bg-gray-200"
-				>
-					View All Request
-					<img src="arrow-right-black.svg" alt="arrow-right-black" class="w-[12px]" />
-				</button>
+		<!-- Collaboration Requests -->
+		<div class="flex min-h-[200px] flex-col overflow-hidden rounded-2xl border border-gray-100">
+			<div class="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 px-4 py-4 sm:p-5">
+				<h2 class="text-sm font-bold text-gray-900 sm:text-base">Collaboration Requests</h2>
+				{#if collaborationRequests.length > 0}
+					<a
+						href="/exhibitor/collab"
+						class="flex items-center gap-1.5 rounded-lg bg-gray-200 px-2.5 py-1.5 text-[10px] font-bold text-gray-500 hover:text-gray-900 sm:gap-2 sm:px-3 sm:py-2 sm:text-xs"
+					>
+						<span class="hidden sm:inline">View All Collaboration Requests</span>
+						<span class="sm:hidden">View All</span>
+						<img src="/arrow-left.svg" alt="arrow" class="h-3 w-3" />
+					</a>
+				{/if}
 			</div>
 
-			<div class="flex flex-col items-stretch  gap-8 xl:flex-row">
-				<div
-					class="relative flex min-h-[257.5px] w-full flex-col justify-between rounded-[13.51px] bg-[#FDFDFD] px-5 py-6 text-left xl:w-[235px]"
-				>
-					<p class="mb-2 text-[24.57px] text-[#B6B7B7]">
-						You have <span class="text-black">3</span> new <br />requests.
-					</p>
-					<div class="text-[44.17px] font-bold text-black">
-						3<span class="text-[29.48px] text-[#0000004D]">/40</span>
-					</div>
-					<div
-						class="absolute top-4 right-4 h-[20px] w-[18px] cursor-pointer xl:h-[17px] xl:w-[13.7px]"
-					>
-						<img src="/fullscreen.svg" alt="fullscreen" class="h-full w-full" />
-					</div>
-				</div>
-
-				<div
-					class=" w-full flex-1 flex-col justify-between space-y-3 rounded-[13.51px] bg-[#FDFDFD] py-5"
-				>
-					<div
-						class="mb-3 block w-full border-b-[1.23px] border-[#EAEBEB] px-5 text-[16.57px] font-normal tracking-wide text-gray-400 uppercase xl:hidden"
-					>
-						Recently Request
-					</div>
-					<div
-						class="mb-3 hidden w-full border-b-[1.23px] border-[#EAEBEB] px-5 text-[16.57px] font-normal tracking-wide text-gray-400 uppercase xl:block"
-					>
-						Recently <br />Request
-					</div>
-
-					{#each collaborationRequests as request}
-						<div
-							class="flex w-full  flex-col gap-3 border-b-[1.23px] border-[#EAEBEB] px-5 py-2 last:border-0 xl:flex-row xl:items-center"
-						>
-							<span class="text-[19.65px] text-[#808080]">Invitation from</span>
-							<div class="flex gap-3" >
-								<div class="flex w-[33.34px] items-center justify-center">
-									<img src="Profile Gravater.svg" alt="Profile Gravater" class="h-full w-full" />
+			<div class="flex flex-1 flex-col justify-center p-5">
+				{#if collaborationRequests.length > 0}
+					<div class="space-y-4">
+						{#each collaborationRequests as req}
+							<div class="grid grid-cols-12 items-center gap-4 rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+								<div class="col-span-12 flex items-center gap-3 sm:col-span-5">
+									<img
+										src="/rondwell-attendee.png"
+										alt="avatar"
+										class="h-10 w-10 shrink-0 rounded-full bg-gray-200"
+									/>
+									<div class="flex flex-col">
+										<div class="flex items-center gap-1">
+											<span class="text-sm font-bold text-gray-900">{req.creatorId?.username || req.organizerName || 'Organizer'}</span>
+											<span class="h-1.5 w-1.5 rounded-full bg-yellow-400"></span>
+										</div>
+										<span class="text-xs text-gray-400">{req.creatorId?.email || ''}</span>
+									</div>
 								</div>
-								<span class="text-[18.65px] text-[#131517]" >{request.from}</span>
+								<div class="col-span-12 text-sm font-bold text-gray-900 sm:col-span-3">
+									{req.title || req.eventName || 'Collaboration'}
+								</div>
+								<div class="col-span-6 text-xs text-gray-400 sm:col-span-2">
+									{req.createdAt ? timeAgo(req.createdAt) : ''}
+								</div>
+								<div class="col-span-6 text-right sm:col-span-2">
+									<a
+										href="/exhibitor/collab"
+										class="rounded-lg border border-gray-200 px-4 py-2 text-xs font-bold text-gray-700 transition hover:bg-gray-50"
+									>View Details</a>
+								</div>
 							</div>
-
-							<span class="text-[18.65px] text-[#808080] flex-1 w-60 truncate">for {request.for}</span>
-							
-						</div>
-					{/each}
-				</div>
+						{/each}
+					</div>
+				{:else}
+					<div class="flex flex-col items-center justify-center py-6 text-center">
+						<img src="/empty-state.svg" alt="No data" class="mx-auto mb-4 h-auto w-32" />
+						<h3 class="text-sm font-bold text-gray-900">No Collaboration Requests, yet</h3>
+						<p class="mt-1 max-w-[250px] text-xs text-gray-400">
+							Collaboration requests will appear here once organizers reach out.
+						</p>
+					</div>
+				{/if}
 			</div>
 		</div>
 
-		<div class="my-10 h-[1px] w-full bg-[#E2E4E5]"></div>
-
-		<!-- My Latest Booths and Stands -->
-		<div class="mb-8 xl:p-5">
-			<div
-				class="mb-6 flex flex-col items-start justify-between space-y-5 xl:flex-row xl:items-center"
-			>
-				<div class=" w-full xl:w-auto">
-					<div class="mb-1 flex w-full items-center gap-3">
-						<h2 class="text-[24px] text-[#192226] xl:text-[27.02px]">
-							My Latest Booths and Stands
-						</h2>
-						<span
-							class="ml-auto flex h-[29.5px] min-w-[29.5px] items-center justify-center rounded-full border border-black text-[17.2px] font-medium xl:ml-0"
-						>
-							2
-						</span>
-					</div>
-					<p class="text-[19.65px] text-[#737577]">Latest Payments & Transactions</p>
-				</div>
-				<button
-					class="flex h-[44.65px] items-center gap-2 rounded-lg bg-[#00000033] px-4 py-2 text-[17.2px] font-normal shadow-sm transition-colors hover:bg-gray-200"
+		<!-- My Booths & Stands -->
+		<div class="relative min-h-[200px]">
+			<div class="mb-4 flex items-center justify-between sm:mb-6">
+				<h2 class="text-sm font-bold text-gray-900 sm:text-lg">My Booths & Stands</h2>
+				<a
+					href="/exhibitor/booths"
+					class="flex items-center gap-1.5 rounded-lg bg-gray-200 px-2.5 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-300 sm:gap-2 sm:px-3 sm:py-2 sm:text-xs"
 				>
 					Manage Booths
-					<img src="arrow-right-black.svg" alt="arrow-right-black" class="w-[12px]" />
-				</button>
+					<img src="/arrow-left.svg" alt="arrow" class="h-3 w-3" />
+				</a>
 			</div>
 
-			<div class="space-y-4">
-				{#each booths as booth}
-					<div
-						class="flex flex-col items-start justify-between space-y-3 rounded-[13.8px] bg-white px-5 py-3 last:border-0 xl:flex-row xl:items-center"
-					>
-						<div class="flex items-center gap-5">
-							<div class="flex w-[33.34px] items-center justify-center">
-								<img src="Profile Gravater.svg" alt="Profile Gravater" class="h-full w-full" />
-							</div>
-							<span class="w-[150px] text-[19.65px] font-normal text-[#131517]">{booth.name}</span>
-						</div>
-						<div class="flex items-center gap-4">
-							<span class="text-[17.49px] text-[#A9AAAA]">{booth.time}</span>
-						</div>
-						<button
-							class="flex h-[31.94px] items-center rounded-[7.37px] bg-[#EBECED] px-2 text-[16.57px] font-normal transition-colors hover:bg-gray-200"
-						>
-							View Details
-						</button>
-					</div>
-				{/each}
+			<div class="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white py-12 text-center shadow-sm">
+				<img src="/empty-state.svg" alt="No booths" class="mx-auto mb-4 h-auto w-32" />
+				<h3 class="text-sm font-bold text-gray-900">No Booths or Stands, yet</h3>
+				<p class="mt-1 mb-6 max-w-[200px] text-xs text-gray-400">
+					Your booths will appear here once you're approved for events.
+				</p>
+				<a
+					href="/exhibitor/booths"
+					class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-bold text-gray-700 transition hover:bg-gray-100"
+				>
+					Browse Events
+				</a>
 			</div>
 		</div>
 
-		<div class="my-10 h-[1px] w-full bg-[#E2E4E5]"></div>
-
-		<!-- Recent Transaction History -->
-		<div class="xl:p-5">
-			<div
-				class="mb-6 flex flex-col items-start justify-between space-y-5 xl:flex-row xl:items-center"
-			>
-				<div class="w-full xl:w-auto">
-					<div class="mb-1 flex items-center gap-3">
-						<h2 class="text-[24px] text-[#192226] xl:text-[27.02px]">Recent Transaction History</h2>
-						<span
-							class="ml-auto flex h-[29.5px] min-w-[29.5px] items-center justify-center rounded-full border border-black text-[17.2px] font-medium xl:ml-0"
-						>
-							2
-						</span>
-					</div>
-					<p class="text-[19.65px] text-[#737577]">Your Latest Booths</p>
+		<!-- Recent Transactions -->
+		<div class="mt-4 flex min-h-[200px] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+			<div class="border-b border-gray-100 px-4 py-4 sm:p-5">
+				<div class="flex items-center gap-2">
+					<h2 class="text-sm font-bold text-gray-900 sm:text-lg">Recent Transactions</h2>
+					<span class="ml-auto flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-black text-xs font-medium sm:h-[25.5px] sm:min-w-[25.5px] sm:text-[17.2px] xl:ml-0">
+						{recentTransactions.length}
+					</span>
 				</div>
-				<button
-					class="flex h-[44.65px] items-center gap-2 rounded-lg bg-[#00000033] px-4 py-2 text-[17.2px] font-normal shadow-sm transition-colors hover:bg-gray-200"
-				>
-					View All Transactions
-					<img src="arrow-right-black.svg" alt="arrow-right-black" class="w-[12px]" />
-				</button>
+				<p class="mt-1 text-xs text-gray-500">View transaction history</p>
 			</div>
 
-			<div class="space-y-4">
-				{#each transactions as transaction}
-					<div
-						class="flex flex-col items-start justify-between rounded-[13.8px] bg-white px-5 py-5 last:border-0 xl:flex 2xl:flex-row"
-					>
-						<div class="flex items-center gap-4">
-							<div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50">
-								<img src="Brand-desktop.svg" alt="Brand" class="w-[40.52px]" />
-							</div>
-							<div>
-								<p class="text=[16px] text-[#131517] lg:text-[19.65px]">
-									<span class="text-[#808080]">Payment to </span>
-									<span class="font-bold">{transaction.to}</span>
-									<span class="text-[#808080]"> for </span>
-									<span class="font-bold">{transaction.for}</span>
-								</p>
-							</div>
-						</div>
-						<div
-							class="flex w-full flex-col items-start gap-4 xl:mt-3 xl:flex-row xl:items-center xl:justify-between xl:pl-15 2xl:mt-0 2xl:pl-0"
-						>
-							<div class="mt-4 flex items-center gap-4 xl:mt-0">
-								<span class="block text-[15px] text-[#B6B7B7] xl:hidden">#12332</span>
-								<span class="-mr-2 block text-[17.49px] text-black xl:hidden">Sale</span>
-								<span class="text-[17.49px] font-bold text-[#171717] xl:text-[19.65px]"
-									>{transaction.amount}</span
-								>
-							</div>
-
-							<div
-								class="flex flex-col-reverse gap-3 xl:flex-row-reverse xl:justify-between 2xl:flex-col"
-							>
-								<button
-									class="flex h-[31.94px] items-center rounded-[7.37px] bg-[#EBECED] px-3 text-[16.57px] font-normal transition-colors hover:bg-gray-200"
-								>
-									View Details
-								</button>
-								<p class="mt-1 text-[17.49px] text-[#A9AAAA] xl:text-[17.49px]">
-									{transaction.time}
-								</p>
-							</div>
-						</div>
-					</div>
-				{/each}
+			<div class="flex flex-1 flex-col justify-center p-5">
+				<div class="flex flex-col items-center justify-center py-6 text-center">
+					<img src="/empty-state.svg" alt="No transactions" class="mx-auto mb-4 h-auto w-32" />
+					<h3 class="text-sm font-bold text-gray-900">No Transaction history, yet</h3>
+					<p class="mt-1 text-xs text-gray-400">No recent transactions.</p>
+				</div>
 			</div>
 		</div>
 	</div>
 </div>
+{/if}

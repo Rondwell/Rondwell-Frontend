@@ -170,23 +170,23 @@
 	{:else if events.length > 0}
 		<div class="rounded-xl bg-white">
 			{#each events as event}
-				<button class="flex w-full items-center justify-between border-b border-gray-50 px-4 py-3 text-left transition last:border-b-0 hover:bg-gray-50"
+				<button class="flex w-full items-center gap-2 border-b border-gray-50 px-4 py-3 text-left transition last:border-b-0 hover:bg-gray-50"
 					on:click={() => { selectedEvent = event; showModal = true; }}>
-					<div class="flex items-center gap-3">
+					<div class="flex min-w-0 flex-1 items-center gap-3">
 						{#if event.displayPictureUrl || event.coverPictureUrl}
-							<img src={event.displayPictureUrl || event.coverPictureUrl} alt="" class="h-10 w-10 rounded-lg object-cover" />
+							<img src={event.displayPictureUrl || event.coverPictureUrl} alt="" class="h-10 w-10 flex-shrink-0 rounded-lg object-cover" />
 						{:else}
-							<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E2E8FC] text-xs font-semibold text-[#146AEB]">
+							<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#E2E8FC] text-xs font-semibold text-[#146AEB]">
 								{(event.title || '?').charAt(0).toUpperCase()}
 							</div>
 						{/if}
-						<div>
-							<p class="text-sm font-medium text-gray-800">{event.title}</p>
-							<p class="text-xs text-gray-400">{event.eventOrganizerName || 'Unknown'} · {event.attendeeCount || 0} attendees</p>
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-sm font-medium text-gray-800">{event.title}</p>
+							<p class="truncate text-xs text-gray-400">{event.eventOrganizerName || 'Unknown'} · {event.attendeeCount || 0} attendees</p>
 						</div>
 					</div>
-					<div class="flex items-center gap-3">
-						<span class="rounded-full px-2.5 py-0.5 text-[10px] font-medium {getStatusClass(event.eventStatus)}">{event.eventStatus}</span>
+					<div class="flex flex-shrink-0 items-center gap-2">
+						<span class="rounded-full px-2 py-0.5 text-[10px] font-medium {getStatusClass(event.eventStatus)}">{event.eventStatus}</span>
 						<span class="hidden text-xs text-gray-400 sm:block">{timeAgo(event.createdAt)}</span>
 					</div>
 				</button>
@@ -194,13 +194,16 @@
 		</div>
 
 		{#if totalPages > 1}
-			<div class="mt-4 flex items-center justify-center gap-2">
-				<button on:click={() => goToPage(currentPage - 1)} disabled={currentPage === 1} class="rounded-lg px-3 py-1.5 text-sm text-[#616265] transition hover:bg-white disabled:opacity-40">Previous</button>
-				{#each Array(Math.min(totalPages, 5)) as _, i}
-					{@const pageNum = totalPages <= 5 ? i + 1 : Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + i}
-					<button on:click={() => goToPage(pageNum)} class="h-8 w-8 rounded-lg text-sm transition {currentPage === pageNum ? 'bg-[#513BE2] text-white' : 'text-[#616265] hover:bg-white'}">{pageNum}</button>
-				{/each}
-				<button on:click={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} class="rounded-lg px-3 py-1.5 text-sm text-[#616265] transition hover:bg-white disabled:opacity-40">Next</button>
+			<div class="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+				<p class="text-xs text-gray-400">Showing {(currentPage - 1) * limit + 1}–{Math.min(currentPage * limit, total)} of {total}</p>
+				<div class="flex items-center gap-1">
+					<button on:click={() => goToPage(currentPage - 1)} disabled={currentPage === 1} class="rounded-lg px-3 py-1.5 text-sm text-[#616265] transition hover:bg-white disabled:opacity-40">Prev</button>
+					{#each Array(Math.min(totalPages, 5)) as _, i}
+						{@const pageNum = totalPages <= 5 ? i + 1 : Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + i}
+						<button on:click={() => goToPage(pageNum)} class="h-8 w-8 rounded-lg text-sm transition {currentPage === pageNum ? 'bg-[#513BE2] text-white' : 'text-[#616265] hover:bg-white'}">{pageNum}</button>
+					{/each}
+					<button on:click={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} class="rounded-lg px-3 py-1.5 text-sm text-[#616265] transition hover:bg-white disabled:opacity-40">Next</button>
+				</div>
 			</div>
 		{/if}
 	{:else}

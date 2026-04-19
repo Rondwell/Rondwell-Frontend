@@ -25,6 +25,14 @@
 	$: isPending = status === 'PENDING' || status === 'APPLIED';
 	$: profileUrl = request?.publicProfileUrl || '';
 	$: attachments = request?.attachments || [];
+	$: additionalInfo = request?.additionalInfo || {};
+	$: serviceName = additionalInfo?.serviceName || '';
+	$: serviceDescription = additionalInfo?.serviceDescription || '';
+	$: productImageUrl = additionalInfo?.productImageUrl || '';
+	$: budget = additionalInfo?.budget;
+	$: currency = additionalInfo?.currency || 'NGN';
+	$: deadline = additionalInfo?.deadline;
+	$: companyName = request?.companyName || senderName;
 
 	function getRoleBadgeColor(): string {
 		if (role === 'SPEAKER') return 'bg-[#EFEBFF] text-purple-500';
@@ -173,6 +181,69 @@
 						</div>
 					{/if}
 				</section>
+
+				<!-- Vendor Service/Product Info -->
+				{#if serviceName || budget || companyName}
+					<section class="rounded-xl bg-white p-4">
+						<p class="mb-3 text-lg font-medium text-gray-900">Service / Product Details</p>
+						<div class="space-y-3">
+							{#if serviceName}
+								<div class="flex items-start gap-3">
+									{#if productImageUrl}
+										<img src={productImageUrl} alt={serviceName} class="h-12 w-12 shrink-0 rounded-lg object-cover" />
+									{:else}
+										<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-purple-50">
+											<Icon icon="mdi:package-variant-closed" class="h-6 w-6 text-purple-400" />
+										</div>
+									{/if}
+									<div>
+										<p class="text-xs text-gray-400">Product / Service Name</p>
+										<p class="text-sm font-medium text-gray-800">{serviceName}</p>
+										{#if serviceDescription}
+											<p class="mt-1 text-xs leading-relaxed text-gray-500">{serviceDescription}</p>
+										{/if}
+									</div>
+								</div>
+							{/if}
+							{#if companyName && companyName !== senderName}
+								<div class="flex items-start gap-2">
+									<Icon icon="mdi:domain" class="mt-0.5 h-4 w-4 shrink-0 text-teal-500" />
+									<div>
+										<p class="text-xs text-gray-400">Business Name</p>
+										<p class="text-sm font-medium text-gray-800">{companyName}</p>
+									</div>
+								</div>
+							{/if}
+							{#if budget}
+								<div class="flex items-start gap-2">
+									<Icon icon="mdi:cash" class="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+									<div>
+										<p class="text-xs text-gray-400">Proposed Price / Fee</p>
+										<p class="text-sm font-bold text-gray-900">{currency === 'NGN' ? '₦' : currency === 'USD' ? '$' : currency}{Number(budget).toLocaleString()}</p>
+									</div>
+								</div>
+							{/if}
+							{#if deadline}
+								<div class="flex items-start gap-2">
+									<Icon icon="mdi:calendar-clock" class="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+									<div>
+										<p class="text-xs text-gray-400">Proposed Date</p>
+										<p class="text-sm font-medium text-gray-800">{new Date(deadline).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+									</div>
+								</div>
+							{/if}
+							{#if request?.specialRequirements}
+								<div class="flex items-start gap-2">
+									<Icon icon="mdi:information-outline" class="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+									<div>
+										<p class="text-xs text-gray-400">Additional Info</p>
+										<p class="text-sm text-gray-700">{request.specialRequirements}</p>
+									</div>
+								</div>
+							{/if}
+						</div>
+					</section>
+				{/if}
 
 				<!-- Proposed Contribution -->
 				<section class="rounded-xl bg-white p-4">

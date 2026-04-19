@@ -4,6 +4,7 @@
   import { page } from '$app/stores';
   import { getPostLoginRedirect, smartRequestOTP, smartVerifyOTP } from '$lib/services/auth.services';
   import { authState } from '$lib/stores/auth.store';
+  import { consumePostAuthRedirect } from '$lib/utils/redirect';
   import { onDestroy, onMount } from 'svelte';
   import Header from '../components/Header.svelte';
 
@@ -85,7 +86,10 @@
       localStorage.removeItem('pending-is-phone');
       localStorage.removeItem('pending-is-new-user');
       message = 'Verified successfully';
-      const redirect = await getPostLoginRedirect(token);
+
+      // Priority: stored redirect (onboarding link / invitation) > default redirect
+      const storedRedirect = consumePostAuthRedirect();
+      const redirect = storedRedirect || await getPostLoginRedirect(token);
       goto(redirect);
     } catch (err) {
       message = err instanceof Error ? err.message : 'OTP verification failed';

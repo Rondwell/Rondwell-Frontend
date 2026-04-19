@@ -371,7 +371,7 @@ async function handleVisibilityChange(newVisibility: string) {
 					}}
 				>
 					<button
-						on:click={() => (showInviteGuestsModal = !showInviteGuestsModal)}
+						on:click={() => goto(`/events/${eventId}/planning`)}
 						class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
 					>
 						<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E2E8FC]">
@@ -392,13 +392,12 @@ async function handleVisibilityChange(newVisibility: string) {
 								/>
 							</svg>
 						</div>
-						Invite Attendee
+						Plan Event / Community
 					</button>
-					<InviteGuestsModal bind:open={showInviteGuestsModal} />
 				</div>
 
 				<button
-					on:click={() => (showSendPostModal = !showSendPostModal)}
+					on:click={() => goto(`/events/${eventId}/registration?tab=email_blasts`)}
 					class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium sm:min-w-70 md:w-fit"
 				>
 					<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#F2E4F8]">
@@ -415,9 +414,8 @@ async function handleVisibilityChange(newVisibility: string) {
 							/>
 						</svg>
 					</div>
-					Send a Post
+					Send a Blast
 				</button>
-				<SendPostModal bind:open={showSendPostModal} eventTitle={eventData?.title ?? ''} />
 
 				<button
 					on:click={() => goto(`/events/${eventId}/earnings`)}

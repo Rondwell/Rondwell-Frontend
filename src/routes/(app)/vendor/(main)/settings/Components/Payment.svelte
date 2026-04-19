@@ -5,8 +5,8 @@
 </script>
 
 <div class="w-full max-w-5xl p-4 md:p-6">
-	<h1 class="text-xl font-semibold md:text-2xl">Payment & Financial Settings</h1>
-	<p class="text-gray-400">Configure how you'll receive payments and set your default currency</p>
+	<h1 class="text-lg font-bold text-gray-900">Payment & Financial Settings</h1>
+	<p class="text-sm text-gray-400">Configure how you'll receive payments and set your default currency</p>
 		<hr class="mt-4 border-gray-200" />
 		<div class="pt-4">
 			<h2 class="text-lg font-medium text-gray-900 mb-1">

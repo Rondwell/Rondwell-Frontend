@@ -4,12 +4,19 @@
   import { page } from '$app/stores';
   import { smartRequestOTP } from '$lib/services/auth.services';
   import { authState } from '$lib/stores/auth.store';
+  import { setPostAuthRedirect } from '$lib/utils/redirect';
   import Header from './components/Header.svelte';
 
   let email = $page.url.searchParams.get('email') || '';
   let phone = '';
   let usePhone = false;
   let errorMsg = '';
+
+  // Persist the returnUrl so the verify page can redirect back after auth
+  const returnUrl = $page.url.searchParams.get('returnUrl');
+  if (returnUrl) {
+    setPostAuthRedirect(returnUrl);
+  }
 
   const toggleInputType = () => {
     usePhone = !usePhone;

@@ -154,7 +154,7 @@
 	<!-- Modal Container -->
 	<div
 		id="date"
-		class="triangle absolute top-full right-[-90px] z-40 mt-2 w-[270px] md:right-auto md:left-0"
+		class="triangle absolute top-full left-1/2 z-40 mt-2 w-[270px] -translate-x-1/2 md:left-0 md:translate-x-0"
 	>
 		<div class="bg relative h-full max-h-[300px] min-h-[280px] w-full space-y-3 p-3">
 			<!-- Header -->
@@ -257,7 +257,8 @@
 		content: '';
 		position: absolute;
 		top: -18px;
-		left: 120px;
+		left: 50%;
+		transform: translateX(-50%);
 		border-width: 8px;
 		border-style: solid;
 		border-color: transparent transparent white transparent;
@@ -265,13 +266,8 @@
 
 	@media (min-width: 739px) {
 		.triangle::before {
-			content: '';
-			position: absolute;
-			top: -18px;
 			left: 60px;
-			border-width: 8px;
-			border-style: solid;
-			border-color: transparent transparent white transparent;
+			transform: none;
 		}
 	}
 </style>

@@ -127,8 +127,8 @@
 		</div>
 
 		<!-- Search and Filters -->
-		<div class="mb-4 flex flex-col justify-between lg:flex-row lg:items-center">
-			<div class="relative mb-4 w-full max-w-xl">
+		<div class="mb-4 flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
+			<div class="relative mb-4 w-full max-w-sm lg:mb-0">
 				<input
 					type="text"
 					bind:value={searchQuery}

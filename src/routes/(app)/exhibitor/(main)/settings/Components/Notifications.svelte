@@ -38,13 +38,13 @@ function handleCheckboxChange(category: Category, type: string) {
 </script>
 
 <div>
-	<h1>Notification Preferences</h1>
-	<p>Checkboxes for various notification types.</p>
+	<h1 class="text-lg font-bold text-gray-900">Notification Preferences</h1>
+	<p class="text-sm text-gray-400">Manage how you receive notifications.</p>
 	<hr
-		class="my-4 w-[90%] border-gray-200"
+		class="my-4 border-gray-200"
 	/>
 	<div>
-            <h2 class="text-xl font-semibold text-gray-900 mb-1">Email Notifications</h2>
+            <h2 class="text-base font-semibold text-gray-900 mb-1">Email Notifications</h2>
           </div>
 	<div class="space-y-4">
          {#each notificationTypes.email as type}
@@ -59,7 +59,7 @@ function handleCheckboxChange(category: Category, type: string) {
     <button
       on:click={() => handleCheckboxChange('email', type)}
       class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-        ${notificationPrefs.email[type] ? 'bg-blue-600' : 'bg-gray-300'}`}
+        ${notificationPrefs.email[type] ? 'bg-gray-800' : 'bg-gray-300'}`}
     >
       <span
         class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform

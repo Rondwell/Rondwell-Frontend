@@ -91,8 +91,8 @@
 		</div>
 
 		<!-- Search and Filters -->
-		<div class="mb-4 flex flex-col justify-between lg:flex-row lg:items-center">
-			<div class="relative mb-4 w-full max-w-xl">
+		<div class="mb-4 flex flex-col justify-between gap-2 lg:flex-row lg:items-center">
+			<div class="relative mb-4 w-full max-w-sm lg:mb-0">
 				<input type="text" bind:value={searchQuery} placeholder="Search requests by name, role, or topic..." class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-[#C5C6C6] focus:ring-0 focus:outline-none" />
 				<span class="absolute top-2.5 left-3 text-gray-400">
 					<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />

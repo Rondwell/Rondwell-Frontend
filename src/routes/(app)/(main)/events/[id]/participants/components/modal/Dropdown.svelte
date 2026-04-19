@@ -40,6 +40,9 @@
 		visibility = speakerData?.isPublic ?? true;
 	}
 
+	// Check if participant was added via collaboration (not manually)
+	$: isCollaborationAdded = speakerData?.source === 'COLLABORATION' || (speakerData?.applicationDetails?.additionalInfo?.collaborationId);
+
 	if (participant === 'speaker') {
 		items = [
 			{ label: 'View/Edit Details', icon: '/eye.svg' },
@@ -65,7 +68,7 @@
 		];
 	} else if (participant === 'vendor') {
 		items = [
-			{ label: 'View/Edit Details', icon: '/eye.svg' },
+			{ label: 'View/Edit Details', icon: '/eye.svg', dynamicLabel: () => isCollaborationAdded ? 'View Details' : 'View/Edit Details' },
 			{ label: 'Create Order', icon: '/box-tick.svg', condition: () => speakerData?.status === 'APPROVED' || speakerData?.status === 'CONFIRMED' },
 			{ label: 'View All Orders', icon: '/document-search.svg' },
 			{ label: 'Approve Application', icon: '/clipboard-tick.svg', condition: () => speakerData?.status === 'INVITED' || speakerData?.status === 'APPLIED' },
@@ -156,7 +159,7 @@
 				on:click={() => handleItemClick(item.label)}
 				class="flex w-full cursor-pointer items-center justify-between p-2 hover:bg-[#EBECED]"
 			>
-				<span>{item.label}</span>
+				<span>{item.dynamicLabel ? item.dynamicLabel() : item.label}</span>
 				{#if item.label === 'Manage Visibility'}
 					<div
 						class="flex h-5 w-8 items-center rounded-full p-1 transition-all"

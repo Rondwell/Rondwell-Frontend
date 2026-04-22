@@ -42,8 +42,8 @@ export interface CreateEventPayload {
 export interface CreateEventResponse {
   message: string;
   eventId: string;
-  eventUrl?: string;
-  customLinkSlug?: string;
+  eventUrl: string;
+  customLinkSlug: string;
 }
 
 export async function createEvent(payload: CreateEventPayload): Promise<CreateEventResponse> {

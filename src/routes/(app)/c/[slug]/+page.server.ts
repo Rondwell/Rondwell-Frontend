@@ -1,10 +1,17 @@
 import type { PageServerLoad } from './$types';
+import { env } from '$env/dynamic/private';
 
-const EVENT_URL = process.env.VITE_EVENT_API_URL || 'http://localhost:3000';
+function getEventUrl() {
+	return env.VITE_EVENT_API_URL
+		|| env.EVENT_API_URL
+		|| env.VITE_API_URL
+		|| 'https://api.rondwell.com';
+}
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
 	const { slug } = params;
 	if (!slug) return { seo: null };
+	const EVENT_URL = getEventUrl();
 
 	try {
 		const res = await fetch(

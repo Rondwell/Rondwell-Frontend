@@ -1,9 +1,16 @@
 import type { PageServerLoad } from './$types';
+import { env } from '$env/dynamic/private';
 
-const EVENT_URL = process.env.VITE_EVENT_API_URL || 'http://localhost:3000';
+function getEventUrl() {
+	return env.VITE_EVENT_API_URL
+		|| env.EVENT_API_URL
+		|| env.VITE_API_URL
+		|| 'https://api.rondwell.com';
+}
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
 	const { id } = params;
+	const EVENT_URL = getEventUrl();
 	try {
 		const res = await fetch(`${EVENT_URL}/api/v1/events/${id}/public`);
 		if (!res.ok) return { seo: null };

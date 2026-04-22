@@ -40,6 +40,8 @@
 	{#if seo}
 		<title>{seo.title}</title>
 		<meta name="description" content={seo.description} />
+
+		<!-- Open Graph (Facebook, WhatsApp, Telegram, LinkedIn, iMessage) -->
 		<meta property="og:title" content={seo.title} />
 		<meta property="og:description" content={seo.description} />
 		<meta property="og:image" content={seo.image} />
@@ -52,12 +54,26 @@
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content="Rondwell" />
 		<meta property="og:locale" content="en_US" />
+
+		<!-- Twitter / X -->
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content={seo.title} />
 		<meta name="twitter:description" content={seo.description} />
 		<meta name="twitter:image" content={seo.image} />
 		<meta name="twitter:site" content="@rondwellhq" />
+
+		<!-- Rich event info for crawlers -->
+		{#if seo.dateLabel}
+			<meta name="event:start_date" content={seo.startDate} />
+			<meta name="event:end_date" content={seo.endDate} />
+		{/if}
+		{#if seo.location}
+			<meta name="event:location" content={seo.location} />
+		{/if}
+
 		<link rel="canonical" href={seo.url} />
+
+		<!-- JSON-LD Structured Data -->
 		{#if seo.jsonLd}
 			{@html `<script type="application/ld+json">${JSON.stringify(seo.jsonLd)}</script>`}
 		{/if}

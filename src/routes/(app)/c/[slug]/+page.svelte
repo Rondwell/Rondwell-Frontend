@@ -121,6 +121,8 @@
 	{#if seo}
 		<title>{seo.title}</title>
 		<meta name="description" content={seo.description} />
+
+		<!-- Open Graph (Facebook, WhatsApp, Telegram, LinkedIn, iMessage) -->
 		<meta property="og:title" content={seo.title} />
 		<meta property="og:description" content={seo.description} />
 		<meta property="og:image" content={seo.image} />
@@ -133,26 +135,20 @@
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content="Rondwell" />
 		<meta property="og:locale" content="en_US" />
+
+		<!-- Twitter / X -->
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content={seo.title} />
 		<meta name="twitter:description" content={seo.description} />
 		<meta name="twitter:image" content={seo.image} />
 		<meta name="twitter:site" content="@rondwellhq" />
+
 		<link rel="canonical" href={seo.url} />
-		{@html `<script type="application/ld+json">${JSON.stringify({
-			"@context": "https://schema.org",
-			"@type": "CollectionPage",
-			"name": seo.collection?.name ?? seo.title,
-			"description": seo.description,
-			"url": seo.url,
-			"image": seo.image,
-			"publisher": { "@type": "Organization", "name": "Rondwell", "url": "https://rondwell.com" },
-			"mainEntity": {
-				"@type": "ItemList",
-				"numberOfItems": seo.collection?.eventCount ?? 0,
-				"name": seo.collection?.name ?? seo.title
-			}
-		})}</script>`}
+
+		<!-- JSON-LD Structured Data -->
+		{#if seo.jsonLd}
+			{@html `<script type="application/ld+json">${JSON.stringify(seo.jsonLd)}</script>`}
+		{/if}
 	{:else if collection}
 		<title>{collection.name} | Rondwell</title>
 		<meta name="description" content={collection.description ? stripHtml(collection.description).slice(0, 160) : `${collection.name} on Rondwell`} />

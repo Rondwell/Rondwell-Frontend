@@ -264,7 +264,7 @@
 		<title>{seo.title}</title>
 		<meta name="description" content={seo.description} />
 
-		<!-- Open Graph (Facebook, WhatsApp, Telegram, LinkedIn) -->
+		<!-- Open Graph (Facebook, WhatsApp, Telegram, LinkedIn, iMessage) -->
 		<meta property="og:title" content={seo.title} />
 		<meta property="og:description" content={seo.description} />
 		<meta property="og:image" content={seo.image} />
@@ -278,33 +278,27 @@
 		<meta property="og:site_name" content="Rondwell" />
 		<meta property="og:locale" content="en_US" />
 
-		<!-- Twitter -->
+		<!-- Twitter / X -->
 		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content={seo.title} />
 		<meta name="twitter:description" content={seo.description} />
 		<meta name="twitter:image" content={seo.image} />
 		<meta name="twitter:site" content="@rondwellhq" />
 
+		<!-- Rich event info for crawlers -->
+		{#if seo.startDate}
+			<meta name="event:start_date" content={seo.startDate} />
+			<meta name="event:end_date" content={seo.endDate} />
+		{/if}
+		{#if seo.location}
+			<meta name="event:location" content={seo.location} />
+		{/if}
+
 		<link rel="canonical" href={seo.url} />
 
+		<!-- JSON-LD Structured Data -->
 		{#if seo.jsonLd}
 			{@html `<script type="application/ld+json">${JSON.stringify(seo.jsonLd)}</script>`}
-		{:else if seo.event}
-			<!-- JSON-LD Structured Data for Events -->
-			{@html `<script type="application/ld+json">${JSON.stringify({
-				"@context": "https://schema.org",
-				"@type": "Event",
-				"name": seo.event.name,
-				"startDate": seo.event.startDate,
-				"endDate": seo.event.endDate,
-				"eventAttendanceMode": seo.event.eventType === 'VIRTUAL' ? "https://schema.org/OnlineEventAttendanceMode" : seo.event.eventType === 'HYBRID' ? "https://schema.org/MixedEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
-				"location": seo.event.eventType === 'VIRTUAL' ? { "@type": "VirtualLocation", "url": seo.url } : { "@type": "Place", "name": seo.event.location },
-				"image": [seo.image],
-				"description": seo.description,
-				"organizer": { "@type": "Organization", "name": seo.event.organizer, "url": "https://rondwell.com" },
-				"offers": { "@type": "Offer", "url": seo.url, "availability": "https://schema.org/InStock" },
-				"eventStatus": "https://schema.org/EventScheduled"
-			})}</script>`}
 		{/if}
 	{:else if event}
 		<title>{event.title} | Rondwell</title>

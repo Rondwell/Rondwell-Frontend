@@ -9,63 +9,6 @@
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="msapplication-navbutton-color" content="#ffffff" />
-		<title>Rondwell – AI-powered Event Management SaaS</title>
-
-		<!-- Open Graph -->
-		<meta property="og:title" content="Rondwell – AI-powered Event Management SaaS" />
-		<meta
-			property="og:description"
-			content="Rondwell is a smart, scalable, microservices-powered SaaS platform for event creation, analytics, real-time engagement, and intelligent automation."
-		/>
-		<meta
-			property="og:image"
-			content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png"
-		/>
-		<meta property="og:url" content="https://rondwell.com" />
-		<meta property="og:type" content="website" />
-		<meta property="og:site_name" content="Rondwell" />
-		<meta property="og:locale" content="en_US" />
-		<meta property="og:locale:alternate" content="en_GB" />
-		<meta property="og:locale:alternate" content="en_NG" />
-
-		<!-- Twitter -->
-		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:title" content="Rondwell – AI-powered Event Management SaaS" />
-		<meta
-			name="twitter:description"
-			content="Host smarter events with Rondwell — your all-in-one platform for ticketing, analytics, automation, Web3, and virtual rooms."
-		/>
-		<meta
-			name="twitter:image"
-			content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png"
-		/>
-		<meta name="twitter:url" content="https://rondwell.com" />
-		<meta name="twitter:site" content="@rondwellhq" />
-		<meta name="twitter:creator" content="@rondwellhq" />
-		<meta name="twitter:label1" content="Category" />
-		<meta name="twitter:data1" content="Event SaaS, AI, Microservices" />
-		<meta name="twitter:label2" content="Tech Stack" />
-		<meta name="twitter:data2" content="Kafka, Redis, S3, WebRTC, Web3" />
-
-		<!-- Schema.org -->
-		<meta itemprop="name" content="Rondwell – AI-powered Event Management SaaS" />
-		<meta
-			itemprop="description"
-			content="Rondwell is a powerful, real-time SaaS platform that helps teams create, manage, analyze, and automate events at scale using AI and microservices."
-		/>
-		<meta
-			itemprop="image"
-			content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png"
-		/>
-		<meta itemprop="url" content="https://rondwell.com" />
-		<meta itemprop="author" content="Rondwell Team" />
-		<meta itemprop="datePublished" content="2025-01-01" />
-		<meta itemprop="dateModified" content="2025-05-19" />
-		<meta itemprop="articleSection" content="Event SaaS, AI, Virtual Rooms" />
-		<meta
-			itemprop="keywords"
-			content="Event Management, SaaS, AI, Web3, Analytics, Virtual Room, Microservices, Redis, Kafka, S3"
-		/>
 
 		<!-- Manifest -->
 		<link rel="manifest" href="%sveltekit.assets%/site.webmanifest" />
@@ -77,11 +20,10 @@
 
 		<!-- Prevent flash of unstyled content -->
 		<script>
-			// This script runs before Svelte hydrates to prevent theme flash
 			(function () {
 				function getTheme() {
-					const stored = localStorage.getItem('theme');
-					if (stored && ['light', 'dark', 'system'].includes(stored)) {
+					var stored = localStorage.getItem('theme');
+					if (stored && ['light', 'dark', 'system'].indexOf(stored) !== -1) {
 						if (stored === 'system') {
 							return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 						}
@@ -93,10 +35,8 @@
 				var theme = getTheme();
 				document.documentElement.classList.add(theme);
 
-				// Set initial theme-color for browser chrome (status bar, URL bar)
-				var defaultColor = '#ffffff';
 				var meta = document.getElementById('theme-color-meta');
-				if (meta) meta.setAttribute('content', defaultColor);
+				if (meta) meta.setAttribute('content', '#ffffff');
 			})();
 		</script>
 

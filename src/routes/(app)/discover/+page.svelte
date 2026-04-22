@@ -22,12 +22,14 @@
 	<meta name="description" content="Discover and explore upcoming events near you. Find conferences, meetups, workshops, and more on Rondwell." />
 	<meta property="og:title" content="Discover Events | Rondwell" />
 	<meta property="og:description" content="Discover and explore upcoming events near you. Find conferences, meetups, workshops, and more." />
-	<meta property="og:image" content="https://rondwell.com/og-default.png" />
+	<meta property="og:image" content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" />
 	<meta property="og:url" content="https://rondwell.com/discover" />
 	<meta property="og:type" content="website" />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content="Discover Events | Rondwell" />
 	<meta name="twitter:description" content="Discover and explore upcoming events near you." />
+	<meta name="twitter:image" content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" />
+	<meta name="twitter:site" content="@rondwellhq" />
 	<link rel="canonical" href="https://rondwell.com/discover" />
 </svelte:head>
 

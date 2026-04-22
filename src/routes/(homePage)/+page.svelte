@@ -7,25 +7,35 @@
 </script>
 
 <svelte:head>
-	<title>Rondwell — Smart Event Management Platform</title>
-	<meta name="description" content="Create, manage, and grow unforgettable events with Rondwell. AI-powered event management with ticketing, check-in, community chat, analytics, and more." />
-	<meta property="og:title" content="Rondwell — Smart Event Management Platform" />
-	<meta property="og:description" content="Create, manage, and grow unforgettable events. AI-powered ticketing, check-in, community, and analytics." />
-	<meta property="og:image" content="https://rondwell.com/og-default.png" />
+	<title>Rondwell — Create, Manage & Grow Unforgettable Events</title>
+	<meta name="description" content="Rondwell is the all-in-one event platform for organizers. Create events, sell tickets, manage check-ins, engage attendees with community chat, and track everything with real-time analytics. Free to start." />
+
+	<!-- Open Graph -->
+	<meta property="og:title" content="Rondwell — Create, Manage & Grow Unforgettable Events" />
+	<meta property="og:description" content="The all-in-one event platform. Create events, sell tickets, manage check-ins, engage attendees, and track analytics — all in one place. Free to start." />
+	<meta property="og:image" content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
 	<meta property="og:url" content="https://rondwell.com" />
 	<meta property="og:type" content="website" />
 	<meta property="og:site_name" content="Rondwell" />
+	<meta property="og:locale" content="en_US" />
+
+	<!-- Twitter / X -->
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="Rondwell — Smart Event Management Platform" />
-	<meta name="twitter:description" content="Create, manage, and grow unforgettable events. AI-powered ticketing, check-in, community, and analytics." />
-	<meta name="twitter:image" content="https://rondwell.com/og-default.png" />
+	<meta name="twitter:title" content="Rondwell — Create, Manage & Grow Unforgettable Events" />
+	<meta name="twitter:description" content="The all-in-one event platform. Create events, sell tickets, manage check-ins, engage attendees, and track analytics. Free to start." />
+	<meta name="twitter:image" content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" />
+	<meta name="twitter:site" content="@rondwellhq" />
+
 	<link rel="canonical" href="https://rondwell.com" />
+
 	{@html `<script type="application/ld+json">${JSON.stringify({
 		"@context": "https://schema.org",
 		"@type": "WebApplication",
 		"name": "Rondwell",
 		"url": "https://rondwell.com",
-		"description": "AI-powered event management platform with ticketing, check-in, community chat, analytics, and more.",
+		"description": "All-in-one event management platform with ticketing, check-in, community engagement, and real-time analytics.",
 		"applicationCategory": "EventManagement",
 		"operatingSystem": "Web",
 		"offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "description": "Free plan available" },

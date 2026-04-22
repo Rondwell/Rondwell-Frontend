@@ -27,7 +27,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		const title = event.title || 'Event';
 		const rawDesc = event.description?.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() || '';
 		const description = rawDesc.slice(0, 160) || `Join ${title} on Rondwell`;
-		const image = event.coverPictureUrl || event.displayPictureUrl || 'https://rondwell.com/og-default.png';
+		const image = event.coverPictureUrl || event.displayPictureUrl || 'https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png';
 		const url = `https://rondwell.com/e/${slug}`;
 		const startDate = event.startDateTime ? new Date(event.startDateTime).toISOString() : '';
 		const endDate = event.endDateTime ? new Date(event.endDateTime).toISOString() : '';

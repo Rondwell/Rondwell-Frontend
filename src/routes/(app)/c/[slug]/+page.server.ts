@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		const name = collection.name || 'Collection';
 		const rawDesc = collection.description?.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() || '';
 		const description = rawDesc.slice(0, 160) || `Explore ${name} — a curated collection of events on Rondwell`;
-		const image = collection.coverBannerUrl || collection.profilePictureUrl || 'https://rondwell.com/og-default.png';
+		const image = collection.coverBannerUrl || collection.profilePictureUrl || 'https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png';
 		const url = `https://rondwell.com/c/${slug}`;
 		const events = data.events ?? [];
 		const eventCount = events.length;

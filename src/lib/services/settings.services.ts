@@ -158,6 +158,48 @@ export async function invalidateSession(sessionId: string) {
   return json;
 }
 
+// ─── Passkey Registration (Settings) ──────────────────────────────────────────
+
+export async function beginPasskeyRegistration(email: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/auth/passkeys/register/begin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to begin passkey registration');
+  return json;
+}
+
+export async function completePasskeyRegistration(userId: string, data: any) {
+  const res = await authFetch(`${BASE_URL}/api/v1/auth/passkeys/register/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, ...data }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to complete passkey registration');
+  return json;
+}
+
+// ─── Passkey Management ───────────────────────────────────────────────────────
+
+export async function listPasskeys() {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/passkeys`);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to fetch passkeys');
+  return json.data as Array<{ id: string; name: string; createdIndex: number; createdAt: string }>;
+}
+
+export async function removePasskey(credentialId: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/passkeys/${encodeURIComponent(credentialId)}`, {
+    method: 'DELETE',
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to remove passkey');
+  return json;
+}
+
 // ─── Delete Account ───────────────────────────────────────────────────────────
 
 export async function deleteAccount() {

@@ -3,12 +3,16 @@
 	import { getActiveProfile } from '$lib/services/profile.services';
 	import {
 		begin2FASetup,
+		beginPasskeyRegistration,
 		changePrimaryEmail,
+		completePasskeyRegistration,
 		confirm2FASetup,
 		disable2FA,
 		getActiveSessions,
 		getMe,
 		invalidateSession,
+		listPasskeys,
+		removePasskey,
 		requestPasswordSetup,
 		updatePersonalInfo,
 		updatePhoneNumber,
@@ -57,6 +61,12 @@
 	let toastType: 'success' | 'error' = 'success';
 	let showDeleteModal = false;
 
+	// Passkey state
+	let passkeys: Array<{ id: string; name: string; createdIndex: number; createdAt: string }> = [];
+	let passkeyLoading = false;
+	let passkeyRegistering = false;
+	let passkeyNameInput = '';
+
 	const socialLinksMeta = [
 		{ key: 'instagram', icon: 'mdi:instagram', label: 'instagram.com/' },
 		{ key: 'x', icon: 'ri:twitter-x-fill', label: 'x.com/' },
@@ -103,6 +113,8 @@
 				website: sl.website ?? ''
 			};
 			setActiveProfile(ap);
+			// Load passkeys
+			try { passkeys = await listPasskeys(); } catch { /* no passkeys */ }
 		} catch (e) {
 			console.error('Failed to load settings', e);
 			showToast('Failed to load settings data', 'error');
@@ -370,6 +382,108 @@
 					</button>
 					<button on:click={() => (twoFAStep = 'idle')} class="rounded bg-gray-200 px-4 py-2 text-sm">Cancel</button>
 				</div>
+			</div>
+		{/if}
+	</div>
+</div>
+
+<!-- Passkeys -->
+<div class="mb-12 border-t pt-12">
+	<h1 class="mb-1 text-xl font-bold">Passkeys</h1>
+	<p class="mb-4 text-sm text-[#8C8F93]">Sign in faster and more securely with passkeys. You can register multiple devices.</p>
+
+	<div class="mb-4 rounded-lg bg-[#FDFDFD] p-4">
+		<div class="flex flex-col items-start justify-between gap-3 md:flex-row">
+			<div class="flex items-start gap-3">
+				<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.25 6.75C11.25 8.82 9.57 10.5 7.5 10.5C5.43 10.5 3.75 8.82 3.75 6.75C3.75 4.68 5.43 3 7.5 3C9.57 3 11.25 4.68 11.25 6.75Z" stroke="#A3A5A5" stroke-width="1.5"/><path d="M12.75 10.5V15L14.25 13.875L15.75 15V10.5" stroke="#A3A5A5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.0075 13.2675C3.0075 13.2675 4.5 12 7.5 12C8.1 12 8.6475 12.0675 9.135 12.18" stroke="#A3A5A5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+				<div>
+					<h3 class="font-medium">Registered Passkeys</h3>
+					<p class="mt-1 text-xs text-gray-500">
+						{passkeys.length === 0 ? 'No passkeys registered yet. Add one to enable passwordless sign-in.' : `${passkeys.length} passkey${passkeys.length > 1 ? 's' : ''} registered.`}
+					</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Add passkey form -->
+		<div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+			<input type="text" bind:value={passkeyNameInput} placeholder="e.g. Work Laptop, iPhone, Security Key" class="h-[42px] w-full rounded-[7.5px] bg-white px-3 shadow-sm focus:outline-none text-sm" />
+			<button on:click={async () => {
+				if (!passkeyNameInput.trim()) { showToast('Please enter a name for this passkey', 'error'); return; }
+				passkeyRegistering = true;
+				try {
+					const options = await beginPasskeyRegistration(userEmail);
+					// Use WebAuthn browser API
+					const publicKeyOptions = {
+						...options,
+						challenge: Uint8Array.from(atob(options.challenge.replace(/-/g, '+').replace(/_/g, '/')), (c: string) => c.charCodeAt(0)),
+						user: { ...options.user, id: Uint8Array.from(atob(options.user.id.replace(/-/g, '+').replace(/_/g, '/')), (c: string) => c.charCodeAt(0)) },
+						excludeCredentials: (options.excludeCredentials || []).map((c: any) => ({
+							...c,
+							id: Uint8Array.from(atob(c.id.replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0)),
+						})),
+					};
+					const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
+					if (!credential) throw new Error('Passkey creation cancelled');
+					const cred = credential as PublicKeyCredential;
+					const response = cred.response as AuthenticatorAttestationResponse;
+					const userId = get(authState).user?.id;
+					if (!userId) throw new Error('Not authenticated');
+
+					// Convert ArrayBuffers to base64url for @simplewebauthn/server
+					function bufferToBase64url(buffer: ArrayBuffer): string {
+						const bytes = new Uint8Array(buffer);
+						let binary = '';
+						for (const b of bytes) binary += String.fromCharCode(b);
+						return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+					}
+
+					await completePasskeyRegistration(userId, {
+						email: userEmail,
+						passkeyName: passkeyNameInput.trim(),
+						response: {
+							id: cred.id,
+							rawId: bufferToBase64url(cred.rawId),
+							type: cred.type,
+							response: {
+								attestationObject: bufferToBase64url(response.attestationObject),
+								clientDataJSON: bufferToBase64url(response.clientDataJSON),
+							},
+							clientExtensionResults: cred.getClientExtensionResults(),
+						},
+					});
+					passkeys = await listPasskeys();
+					passkeyNameInput = '';
+					showToast('Passkey registered successfully');
+				} catch (e: any) {
+					if (e.name !== 'NotAllowedError') showToast(e.message || 'Failed to register passkey', 'error');
+				} finally { passkeyRegistering = false; }
+			}} disabled={passkeyRegistering} class="h-[42px] w-full rounded bg-black px-4 text-sm font-medium text-white whitespace-nowrap disabled:opacity-50 sm:w-auto">
+				{passkeyRegistering ? 'Registering...' : 'Add Passkey'}
+			</button>
+		</div>
+
+		{#if passkeys.length > 0}
+			<div class="mt-4 border-t pt-3 space-y-2">
+				{#each passkeys as pk, i}
+					<div class="flex items-center justify-between rounded bg-gray-50 px-3 py-2">
+						<div class="flex items-center gap-2">
+							<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6.667V5.333C4 3.124 4.667 1.333 8 1.333c3.333 0 4 1.791 4 4v1.334" stroke="#A3A5A5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.333 14.667H4.667c-2.667 0-3.334-.667-3.334-3.334v-1.333c0-2.667.667-3.333 3.334-3.333h6.666c2.667 0 3.334.666 3.334 3.333v1.333c0 2.667-.667 3.334-3.334 3.334z" stroke="#A3A5A5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+							<div>
+								<span class="text-sm font-medium">{pk.name}</span>
+								<p class="text-xs text-gray-400">Added {new Date(pk.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+							</div>
+						</div>
+						<button on:click={async () => {
+							passkeyLoading = true;
+							try {
+								await removePasskey(pk.id);
+								passkeys = passkeys.filter(p => p.id !== pk.id);
+								showToast('Passkey removed');
+							} catch (e: any) { showToast(e.message, 'error'); } finally { passkeyLoading = false; }
+						}} disabled={passkeyLoading} class="text-xs text-red-500 hover:underline disabled:opacity-50">Remove</button>
+					</div>
+				{/each}
 			</div>
 		{/if}
 	</div>

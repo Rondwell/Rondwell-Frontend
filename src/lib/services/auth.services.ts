@@ -104,14 +104,14 @@ export async function smartRequestOTP(
 
 /**
  * Verifies OTP — uses isNewUser flag to call the correct endpoint directly.
- * Saves auth state on success.
+ * Saves auth state on success. Returns 2FA_REQUIRED status if user has 2FA enabled.
  */
 export async function smartVerifyOTP(
   emailOrPhone: string,
   otp: string,
   isPhone = false,
   isNewUser = true
-): Promise<{ token: string; refreshToken: string; user: any; isNewUser: boolean }> {
+): Promise<{ token: string; refreshToken: string; user: any; isNewUser: boolean; status?: string; tempToken?: string }> {
   setLoading(true);
   setError('');
   try {
@@ -121,6 +121,11 @@ export async function smartVerifyOTP(
       data = await verifyRegistrationOTP(emailOrPhone, otp, isPhone);
     } else {
       data = await verifyLoginOTP(emailOrPhone, otp, isPhone);
+    }
+
+    // Check if 2FA is required
+    if (data.status === '2FA_REQUIRED') {
+      return { token: '', refreshToken: '', user: data.user, isNewUser: false, status: '2FA_REQUIRED', tempToken: data.tempToken };
     }
 
     const { token, refreshToken, user } = data;
@@ -136,6 +141,120 @@ export async function smartVerifyOTP(
   } finally {
     setLoading(false);
   }
+}
+
+// ─── Google Sign-In ──────────────────────────────────────────────────────────
+
+/**
+ * Sends the Google ID token (credential) to the backend for verification.
+ * Handles both sign-up and login — backend links accounts by email automatically.
+ * If 2FA is enabled, returns { status: '2FA_REQUIRED', tempToken, user }.
+ */
+export async function googleSignIn(
+  credential: string
+): Promise<{ token: string; refreshToken: string; user: any; isNewUser: boolean; status?: string; tempToken?: string }> {
+  setLoading(true);
+  setError('');
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/auth/google/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(parseApiError(res, data));
+
+    // Check if 2FA is required
+    if (data.status === '2FA_REQUIRED') {
+      return { token: '', refreshToken: '', user: data.user, isNewUser: false, status: '2FA_REQUIRED', tempToken: data.tempToken };
+    }
+
+    const { token, refreshToken, user, isNewUser } = data;
+    setUser(user, token, refreshToken);
+    setVerified();
+
+    return { token, refreshToken, user, isNewUser };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Google sign-in failed';
+    setError(msg);
+    toast.error(msg);
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ─── 2FA Login Verification ─────────────────────────────────────────────────
+
+/**
+ * Verify 2FA code during login flow.
+ * Called after OTP verify or Google sign-in returns 2FA_REQUIRED.
+ */
+export async function verify2FALogin(
+  email: string,
+  twoFactorCode: string,
+  backupCode?: string
+): Promise<{ token: string; refreshToken: string; user: any }> {
+  setLoading(true);
+  setError('');
+  try {
+    const body: Record<string, string> = { email };
+    if (backupCode) {
+      body.backupCode = backupCode;
+    } else {
+      body.twoFactorCode = twoFactorCode;
+    }
+    const res = await fetch(`${BASE_URL}/api/v1/auth/login/2fa-verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(parseApiError(res, data));
+
+    const { token, refreshToken, user } = data;
+    setUser(user, token, refreshToken);
+    setVerified();
+
+    return { token, refreshToken, user };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '2FA verification failed';
+    setError(msg);
+    toast.error(msg);
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ─── Passkey Authentication ─────────────────────────────────────────────────
+
+/**
+ * Begin passkey authentication — gets challenge options from the server.
+ */
+export async function beginPasskeyAuth(email: string): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/passkeys/authenticate/begin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(parseApiError(res, data));
+  return data;
+}
+
+/**
+ * Complete passkey authentication — sends assertion response to the server.
+ */
+export async function completePasskeyAuth(userId: string, assertionData: any): Promise<any> {
+  const res = await fetch(`${BASE_URL}/api/v1/auth/passkeys/authenticate/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, ...assertionData }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(parseApiError(res, data));
+  return data;
 }
 
 // ─── Post-auth redirect helper ────────────────────────────────────────────────

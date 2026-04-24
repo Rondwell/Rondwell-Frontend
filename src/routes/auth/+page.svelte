@@ -2,20 +2,206 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { smartRequestOTP } from '$lib/services/auth.services';
-  import { authState } from '$lib/stores/auth.store';
-  import { setPostAuthRedirect } from '$lib/utils/redirect';
+  import { smartRequestOTP, googleSignIn, getPostLoginRedirect, beginPasskeyAuth, completePasskeyAuth } from '$lib/services/auth.services';
+  import { authState, setUser, setVerified } from '$lib/stores/auth.store';
+  import { toast } from '$lib/stores/toast.store';
+  import { setPostAuthRedirect, consumePostAuthRedirect } from '$lib/utils/redirect';
+  import { onMount } from 'svelte';
   import Header from './components/Header.svelte';
 
   let email = $page.url.searchParams.get('email') || '';
   let phone = '';
   let usePhone = false;
   let errorMsg = '';
+  let googleLoading = false;
+  let passkeyLoading = false;
+
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   // Persist the returnUrl so the verify page can redirect back after auth
   const returnUrl = $page.url.searchParams.get('returnUrl');
   if (returnUrl) {
     setPostAuthRedirect(returnUrl);
+  }
+
+  onMount(() => {
+    // Initialize Google Identity Services
+    if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+      initGoogleSignIn();
+    } else {
+      // Wait for the GSI script to load
+      const checkGoogle = setInterval(() => {
+        if (window.google?.accounts?.id) {
+          clearInterval(checkGoogle);
+          initGoogleSignIn();
+        }
+      }, 100);
+      // Stop checking after 10 seconds
+      setTimeout(() => clearInterval(checkGoogle), 10000);
+    }
+  });
+
+  function initGoogleSignIn() {
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleResponse,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
+  }
+
+  function triggerGoogleSignIn() {
+    if (!window.google?.accounts?.id) {
+      errorMsg = 'Google Sign-In is not ready. Please try again.';
+      return;
+    }
+    googleLoading = true;
+    errorMsg = '';
+    // Prompt the One Tap / popup
+    window.google.accounts.id.prompt((notification: any) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        // Fallback: use the popup flow via requestAccessToken or renderButton
+        // For now, use the built-in popup
+        googleLoading = false;
+        // Try the button-based flow as fallback
+        const popup = window.open(
+          `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/google/callback')}&response_type=id_token&scope=openid%20email%20profile&nonce=${Date.now()}`,
+          'google-signin',
+          'width=500,height=600,menubar=no,toolbar=no'
+        );
+        if (popup) {
+          const messageHandler = (event: MessageEvent) => {
+            if (event.origin === window.location.origin && event.data?.credential) {
+              window.removeEventListener('message', messageHandler);
+              completeGoogleSignIn(event.data.credential);
+            }
+          };
+          window.addEventListener('message', messageHandler);
+        }
+      }
+    });
+  }
+
+  async function handleGoogleResponse(response: any) {
+    if (response.credential) {
+      await completeGoogleSignIn(response.credential);
+    } else {
+      googleLoading = false;
+      errorMsg = 'Google sign-in was cancelled.';
+    }
+  }
+
+  async function completeGoogleSignIn(credential: string) {
+    googleLoading = true;
+    errorMsg = '';
+    try {
+      const result = await googleSignIn(credential);
+
+      // Check if 2FA is required
+      if (result.status === '2FA_REQUIRED') {
+        localStorage.setItem('2fa-pending-email', result.user.email);
+        goto(`/auth/2fa?email=${encodeURIComponent(result.user.email)}`);
+        return;
+      }
+
+      toast.success(result.isNewUser ? 'Account created successfully!' : 'Signed in successfully!');
+
+      const storedRedirect = consumePostAuthRedirect();
+      const redirect = storedRedirect || await getPostLoginRedirect(result.token);
+      goto(redirect);
+    } catch (err) {
+      errorMsg = err instanceof Error ? err.message : 'Google sign-in failed. Please try again.';
+    } finally {
+      googleLoading = false;
+    }
+  }
+
+  async function handlePasskeySignIn() {
+    if (!email && !usePhone) {
+      errorMsg = 'Please enter your email first to sign in with a passkey.';
+      return;
+    }
+    const contact = usePhone ? phone : email;
+    if (!contact) { errorMsg = 'Please enter your email first.'; return; }
+
+    passkeyLoading = true;
+    errorMsg = '';
+    try {
+      // 1. Get authentication options from server (includes userId)
+      const options = await beginPasskeyAuth(contact);
+      const userId = options.userId;
+
+      // 2. Convert base64url to Uint8Array for WebAuthn API
+      function base64urlToBuffer(base64url: string): Uint8Array {
+        const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+        return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+      }
+
+      function bufferToBase64url(buffer: ArrayBuffer): string {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (const b of bytes) binary += String.fromCharCode(b);
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      }
+
+      const publicKeyOptions = {
+        ...options,
+        challenge: base64urlToBuffer(options.challenge),
+        allowCredentials: (options.allowCredentials || []).map((c: any) => ({
+          ...c,
+          id: base64urlToBuffer(c.id),
+        })),
+      };
+      delete publicKeyOptions.userId;
+
+      // 3. Trigger browser passkey prompt
+      const assertion = await navigator.credentials.get({ publicKey: publicKeyOptions });
+      if (!assertion) throw new Error('Passkey authentication cancelled');
+
+      const cred = assertion as PublicKeyCredential;
+      const response = cred.response as AuthenticatorAssertionResponse;
+
+      // 4. Send assertion to server
+      const result = await completePasskeyAuth(userId, {
+        email: contact,
+        credentialId: cred.id,
+        assertionResponse: {
+          id: cred.id,
+          rawId: bufferToBase64url(cred.rawId),
+          type: cred.type,
+          response: {
+            authenticatorData: bufferToBase64url(response.authenticatorData),
+            clientDataJSON: bufferToBase64url(response.clientDataJSON),
+            signature: bufferToBase64url(response.signature),
+            userHandle: response.userHandle ? bufferToBase64url(response.userHandle) : null,
+          },
+        },
+      });
+
+      // 5. Check if 2FA is required
+      if (result.status === '2FA_REQUIRED') {
+        localStorage.setItem('2fa-pending-email', contact);
+        goto(`/auth/2fa?email=${encodeURIComponent(contact)}`);
+        return;
+      }
+
+      // 6. Save auth state and redirect
+      const { token, refreshToken, user } = result;
+      setUser(user, token, refreshToken);
+      setVerified();
+      toast.success('Signed in with passkey!');
+
+      const storedRedirect = consumePostAuthRedirect();
+      const redirect = storedRedirect || await getPostLoginRedirect(token);
+      goto(redirect);
+    } catch (err: any) {
+      if (err.name !== 'NotAllowedError') {
+        errorMsg = err.message || 'Passkey sign-in failed. Please try again.';
+      }
+    } finally {
+      passkeyLoading = false;
+    }
   }
 
   const toggleInputType = () => {
@@ -145,7 +331,9 @@
 
 				<!-- Google sign in button -->
 				<button
-					class="flex w-full items-center justify-center space-x-2 rounded-md bg-[#F4F2F1] py-2 text-[#7C7C7E]"
+					on:click={triggerGoogleSignIn}
+					disabled={googleLoading || loading}
+					class="flex w-full items-center justify-center space-x-2 rounded-md bg-[#F4F2F1] py-2 text-[#7C7C7E] hover:bg-[#EBE9E8] disabled:opacity-60"
 				>
 					<svg
 						width="17"
@@ -160,11 +348,14 @@
 						/>
 					</svg>
 
-					<span>Sign in with Google</span>
+					<span>{googleLoading ? 'Signing in...' : 'Sign in with Google'}</span>
 				</button>
 
+				<!-- Passkey sign in button -->
 				<button
-					class="flex w-full items-center justify-center space-x-2 rounded-md bg-[#F4F2F1] py-2 text-[#7C7C7E]"
+					on:click={handlePasskeySignIn}
+					disabled={passkeyLoading || loading}
+					class="flex w-full items-center justify-center space-x-2 rounded-md bg-[#F4F2F1] py-2 text-[#7C7C7E] hover:bg-[#EBE9E8] disabled:opacity-60"
 				>
 					<svg
 						width="21"
@@ -193,7 +384,7 @@
 						/>
 					</svg>
 
-					<span>Sign in with Passkey</span>
+					<span>{passkeyLoading ? 'Authenticating...' : 'Sign in with Passkey'}</span>
 				</button>
 			</div>
 		</div>

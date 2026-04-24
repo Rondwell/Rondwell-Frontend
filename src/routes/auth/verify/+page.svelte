@@ -81,7 +81,15 @@
     loading = true;
     message = '';
     try {
-      const { token } = await smartVerifyOTP(email, otp, isPhone, isNewUser);
+      const result = await smartVerifyOTP(email, otp, isPhone, isNewUser);
+
+      // Check if 2FA is required
+      if (result.status === '2FA_REQUIRED') {
+        localStorage.setItem('2fa-pending-email', email);
+        goto(`/auth/2fa?email=${encodeURIComponent(email)}`);
+        return;
+      }
+
       localStorage.removeItem('pending-email');
       localStorage.removeItem('pending-is-phone');
       localStorage.removeItem('pending-is-new-user');
@@ -89,7 +97,7 @@
 
       // Priority: stored redirect (onboarding link / invitation) > default redirect
       const storedRedirect = consumePostAuthRedirect();
-      const redirect = storedRedirect || await getPostLoginRedirect(token);
+      const redirect = storedRedirect || await getPostLoginRedirect(result.token);
       goto(redirect);
     } catch (err) {
       message = err instanceof Error ? err.message : 'OTP verification failed';

@@ -41,6 +41,8 @@
     }
   });
 
+  let googleBtnContainer: HTMLDivElement;
+
   function initGoogleSignIn() {
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
@@ -48,6 +50,15 @@
       auto_select: false,
       cancel_on_tap_outside: true,
     });
+    // Render a hidden Google button as fallback for when One Tap is blocked
+    if (googleBtnContainer) {
+      window.google.accounts.id.renderButton(googleBtnContainer, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        width: 380,
+      });
+    }
   }
 
   function triggerGoogleSignIn() {
@@ -57,26 +68,16 @@
     }
     googleLoading = true;
     errorMsg = '';
-    // Prompt the One Tap / popup
+    // Try One Tap first
     window.google.accounts.id.prompt((notification: any) => {
       if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        // Fallback: use the popup flow via requestAccessToken or renderButton
-        // For now, use the built-in popup
         googleLoading = false;
-        // Try the button-based flow as fallback
-        const popup = window.open(
-          `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/google/callback')}&response_type=id_token&scope=openid%20email%20profile&nonce=${Date.now()}`,
-          'google-signin',
-          'width=500,height=600,menubar=no,toolbar=no'
-        );
-        if (popup) {
-          const messageHandler = (event: MessageEvent) => {
-            if (event.origin === window.location.origin && event.data?.credential) {
-              window.removeEventListener('message', messageHandler);
-              completeGoogleSignIn(event.data.credential);
-            }
-          };
-          window.addEventListener('message', messageHandler);
+        // Fallback: click the hidden rendered Google button
+        const btn = googleBtnContainer?.querySelector('div[role="button"]') as HTMLElement;
+        if (btn) {
+          btn.click();
+        } else {
+          errorMsg = 'Google Sign-In unavailable. Please try again.';
         }
       }
     });
@@ -328,6 +329,9 @@
 				{#if errorMsg}
 					<p class="text-sm text-center text-red-500">{errorMsg}</p>
 				{/if}
+
+				<!-- Hidden Google rendered button (fallback for One Tap) -->
+				<div bind:this={googleBtnContainer} class="hidden"></div>
 
 				<!-- Google sign in button -->
 				<button

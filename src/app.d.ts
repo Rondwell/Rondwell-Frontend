@@ -19,7 +19,6 @@ declare global {
 						callback: (response: { credential: string; select_by?: string }) => void;
 						auto_select?: boolean;
 						cancel_on_tap_outside?: boolean;
-						ux_mode?: 'popup' | 'redirect';
 					}) => void;
 					prompt: (callback?: (notification: {
 						isNotDisplayed: () => boolean;

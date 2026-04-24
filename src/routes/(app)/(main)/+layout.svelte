@@ -6,12 +6,21 @@
 	import { activeEventPageTheme } from '$lib/stores/eventTheme';
 	import { resetThemeColor, themeColor } from '$lib/stores/themeColor';
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
+	import { setPostAuthRedirect } from '$lib/utils/redirect';
 	import { onDestroy, onMount } from 'svelte';
 	import Sidebar from '../components/Sidebar.svelte';
 	import SideMenu from '../components/SideMenu.svelte';
 
 	// Auth guard — skip for public event pages
-	$: if (browser && !$isAuthenticated && !$page.url.pathname.startsWith('/event-page/')) {
+	$: isPublicPage = $page.url.pathname.startsWith('/event-page/');
+	$: isAuthed = $isAuthenticated;
+
+	// Gate content rendering: hide until auth is confirmed (or it's a public page)
+	$: showContent = isPublicPage || isAuthed;
+
+	$: if (browser && !isAuthed && !isPublicPage) {
+		const currentUrl = $page.url.pathname + $page.url.search;
+		setPostAuthRedirect(currentUrl);
 		goto('/auth');
 	}
 
@@ -103,6 +112,7 @@
 	});
 </script>
 
+{#if showContent}
 <div
 	class="relative flex min-h-screen flex-col text-sm font-medium md:flex-row"
 	style="background-image: {isEventPage ? 'none' : selectedTheme}; background-color: {isEventPage ? eventPageBg : 'transparent'};"
@@ -133,6 +143,11 @@
 		</div>
 	</main>
 </div>
+{:else}
+	<div class="flex min-h-screen items-center justify-center" style="background: linear-gradient(180deg, #d1e8f5 0%, #EAF2F5 17%, #f4f5f6 35%);">
+		<div class="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-[#513BE2]"></div>
+	</div>
+{/if}
 
 <style>
 	.bg {

@@ -140,8 +140,10 @@
 		}
 
 		await new Promise((r) => setTimeout(r, 1200));
+		await goto(rolePath);
+		// Small extra delay to let the new page render before removing overlay
+		await new Promise((r) => setTimeout(r, 100));
 		switching = false;
-		goto(rolePath);
 	}
 
 	function handleLogout() {

@@ -5,7 +5,7 @@
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" id="theme-color-meta" content="#ffffff" />
-		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="msapplication-navbutton-color" content="#ffffff" />
@@ -35,8 +35,20 @@
 				var theme = getTheme();
 				document.documentElement.classList.add(theme);
 
+				// Set initial theme-color based on the current path so the status bar
+				// is tinted correctly even before Svelte hydrates
+				var path = window.location.pathname;
+				var color = '#d1e8f5'; // default
+				if (path.startsWith('/vendor')) color = '#d1e8f5';
+				else if (path.startsWith('/exhibitor')) color = '#DBD4F1';
+				else if (path.startsWith('/speaker')) color = '#d1e8f5';
+				else if (path.startsWith('/events/') && path.indexOf('/registration') !== -1) color = '#DDD1E1';
+				else if (path.startsWith('/events/')) color = '#DBD4F1';
+				else if (path.startsWith('/collections/')) color = '#F4E1D2';
+				else if (path.startsWith('/auth')) color = '#ffffff';
+
 				var meta = document.getElementById('theme-color-meta');
-				if (meta) meta.setAttribute('content', '#ffffff');
+				if (meta) meta.setAttribute('content', color);
 			})();
 		</script>
 

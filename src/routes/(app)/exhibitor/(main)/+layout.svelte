@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { get } from 'svelte/store';
 
 	import Sidebar from '../../components/Sidebar.svelte';
 	import SideMenu from '../../components/SideMenu.svelte';
 
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
+	import { resetThemeColor, themeColor } from '$lib/stores/themeColor';
 
 	const exhibitorIcons = {
 		overviewIcon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -125,6 +126,17 @@
 	$: showSubMenuValue = $showSubMenu;
 
 	$: isSubMenuVisible = isMobile ? menuItems.length > 0 : showSubMenuValue;
+
+	// Set browser chrome / status bar color to match the gradient top
+	const EXHIBITOR_THEME_COLOR = '#DBD4F1';
+	$: if (browser) {
+		themeColor.set(EXHIBITOR_THEME_COLOR);
+	}
+
+	// Reset theme color when leaving this layout
+	onDestroy(() => {
+		resetThemeColor();
+	});
 </script>
 
 <div

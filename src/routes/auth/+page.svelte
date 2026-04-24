@@ -50,37 +50,17 @@
       auto_select: false,
       cancel_on_tap_outside: true,
     });
-    // Render a hidden Google button as fallback for when One Tap is blocked
+    // Render Google's official button
     if (googleBtnContainer) {
       window.google.accounts.id.renderButton(googleBtnContainer, {
         type: 'standard',
         theme: 'outline',
         size: 'large',
-        width: 380,
+        text: 'signin_with',
+        shape: 'rectangular',
+        width: 357,
       });
     }
-  }
-
-  function triggerGoogleSignIn() {
-    if (!window.google?.accounts?.id) {
-      errorMsg = 'Google Sign-In is not ready. Please try again.';
-      return;
-    }
-    googleLoading = true;
-    errorMsg = '';
-    // Try One Tap first
-    window.google.accounts.id.prompt((notification: any) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        googleLoading = false;
-        // Fallback: click the hidden rendered Google button
-        const btn = googleBtnContainer?.querySelector('div[role="button"]') as HTMLElement;
-        if (btn) {
-          btn.click();
-        } else {
-          errorMsg = 'Google Sign-In unavailable. Please try again.';
-        }
-      }
-    });
   }
 
   async function handleGoogleResponse(response: any) {
@@ -330,30 +310,8 @@
 					<p class="text-sm text-center text-red-500">{errorMsg}</p>
 				{/if}
 
-				<!-- Hidden Google rendered button (fallback for One Tap) -->
-				<div bind:this={googleBtnContainer} class="hidden"></div>
-
-				<!-- Google sign in button -->
-				<button
-					on:click={triggerGoogleSignIn}
-					disabled={googleLoading || loading}
-					class="flex w-full items-center justify-center space-x-2 rounded-md bg-[#F4F2F1] py-2 text-[#7C7C7E] hover:bg-[#EBE9E8] disabled:opacity-60"
-				>
-					<svg
-						width="17"
-						height="18"
-						viewBox="0 0 17 18"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M16.6653 8.27563C16.6247 7.86126 16.2753 7.55249 15.8609 7.55249H9.72656C9.27969 7.55249 8.91406 7.91812 8.91406 8.36499V9.75439C8.91406 10.2013 9.27969 10.5669 9.72656 10.5669H13.3909C13.3016 11.3144 12.8141 12.4438 11.7334 13.1994C11.0428 13.6788 10.1247 14.0119 8.91406 14.0119C8.85719 14.0119 8.80844 14.0119 8.75157 14.0037C6.67969 13.9387 4.92469 12.5494 4.29094 10.64C4.12032 10.1281 4.02282 9.59187 4.02282 9.03125C4.02282 8.47063 4.12032 7.92624 4.28282 7.42249C4.33157 7.27624 4.38844 7.13001 4.45344 6.98376C5.20094 5.30188 6.83407 4.11563 8.75157 4.05875C8.80032 4.05063 8.85719 4.05062 8.91406 4.05062C10.0759 4.05062 10.9453 4.43249 11.5547 4.85499C11.8716 5.07436 12.2941 5.02562 12.5703 4.75749L13.6997 3.6525C14.0572 3.30313 14.0247 2.70999 13.6184 2.41749C12.3266 1.46686 10.7503 0.90625 8.91406 0.90625C8.85719 0.90625 8.80844 0.906258 8.75157 0.914383C5.63969 0.971258 2.96656 2.77501 1.65844 5.38313C1.10594 6.48813 0.789062 7.72312 0.789062 9.03125C0.789062 10.3394 1.10594 11.5744 1.65844 12.6794H1.66656C2.97469 15.2875 5.64782 17.0912 8.75157 17.1481C8.80844 17.1562 8.85719 17.1562 8.91406 17.1562C11.1078 17.1562 12.9522 16.4331 14.2928 15.19C15.8284 13.7681 16.7141 11.6881 16.7141 9.21C16.7141 8.86063 16.6978 8.56001 16.6653 8.27563Z"
-							fill="black"
-						/>
-					</svg>
-
-					<span>{googleLoading ? 'Signing in...' : 'Sign in with Google'}</span>
-				</button>
+				<!-- Google Sign-In (rendered by Google Identity Services) -->
+				<div bind:this={googleBtnContainer} class="w-full overflow-hidden rounded-md"></div>
 
 				<!-- Passkey sign in button -->
 				<button

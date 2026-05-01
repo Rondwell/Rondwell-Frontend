@@ -1,400 +1,232 @@
 <script lang="ts">
-  import Icon from "@iconify/svelte";
-  import * as d3 from "d3";
-  import { onMount } from "svelte";
+	import { onMount } from 'svelte';
+	import { DonutChart, StackedAreaChart } from '@carbon/charts-svelte';
+	import '@carbon/charts-svelte/styles.css';
+	import Icon from '@iconify/svelte';
+	import {
+		getExhibitorAnalyticsOverview,
+		generateAnalyticsSummary,
+		chatWithAnalytics
+	} from '$lib/services/analytics.services';
+	import InsightsSkeleton from '$lib/components/analytics/InsightsSkeleton.svelte';
+	import { browser } from '$app/environment';
 
-  const user = {
-    name: "Innocent James"
-  };
+	let loading = true;
+	let analytics: any = null;
+	let profileId = '';
+	let aiSummary = '';
+	let aiLoading = false;
+	let chatQuestion = '';
+	let chatAnswer = '';
+	let chatLoading = false;
+	let activeTab = 'analytics';
 
-  const stats = {
-    revenue: '$96,000.00',
-    growth: "+5%"
-  };
-  type RevenueDatum = {
-  month: string;
-  pending: number;
-  accepted: number;
-  completed: number;
-};
+	let eventChart: any[] = [];
+	let participationDonut: any[] = [];
 
+	const areaOptions: any = {
+		title: 'Event Participation Over Time',
+		axes: { left: { mapsTo: 'value', scaleType: 'linear' }, bottom: { mapsTo: 'date', scaleType: 'labels' } },
+		curve: 'curveMonotoneX',
+		legend: { enabled: true, position: 'bottom' },
+		height: '330px',
+		color: { scale: { 'Events': '#f59e0b', 'Leads': '#3b82f6' } }
+	};
+	const donutOptions = { title: 'Participation Status', height: '330px', legend: { position: 'bottom' } };
 
-  const chartData: RevenueDatum[] = [
-  { month: "J", pending: 2200, accepted: 3000, completed: 10000 },
-  { month: "F", pending: 2000, accepted: 3200, completed: 10000 },
-  { month: "Ma", pending: 2000, accepted: 3100, completed: 10000 },
-  { month: "A", pending: 2000, accepted: 3300, completed: 10000 },
-  { month: "Ma", pending: 2000, accepted: 3500, completed: 10000 },
-  { month: "Ju", pending: 2000, accepted: 3600, completed: 10000 },
-  { month: "Jul", pending: 2000, accepted: 3700, completed: 10000 },
-  { month: "Au", pending: 2000, accepted: 3800, completed: 10000 },
-  { month: "S", pending: 2000, accepted: 3900, completed: 10000 },
-  { month: "O", pending: 2000, accepted: 4000, completed: 10000 },
-  { month: "N", pending: 2000, accepted: 4100, completed: 10000 },
-  { month: "D", pending: 2000, accepted: 4300, completed: 10000 }
-];
+	onMount(async () => {
+		if (browser) profileId = localStorage.getItem('active_profile_id') || '';
+		if (!profileId) { loading = false; return; }
 
+		analytics = await getExhibitorAnalyticsOverview(profileId);
 
-  onMount(() => {
-    const container = document.getElementById("revenue-chart");
-    if (!container) return;
+		if (analytics) {
+			const months = analytics.participation?.eventsByMonth || [];
+			eventChart = months.map((m: any) => ({ group: 'Events', date: m.month, value: m.count || 0 }));
 
-    const width = container.clientWidth;
-    const height = 220;
-    const margin = { top: 10, right: 10, bottom: 30, left: 40 };
+			const leadMonths = analytics.leads?.leadsByMonth || [];
+			eventChart = [...eventChart, ...leadMonths.map((m: any) => ({ group: 'Leads', date: m.month, value: m.leads || 0 }))];
 
-    d3.select(container).selectAll("*").remove();
+			const p = analytics.participation || {};
+			participationDonut = [
+				{ group: 'Accepted', value: p.totalEventsAccepted || 0 },
+				{ group: 'Declined', value: p.totalEventsDeclined || 0 },
+				{ group: 'Pending', value: Math.max(0, (p.totalEventsInvited || 0) - (p.totalEventsAccepted || 0) - (p.totalEventsDeclined || 0)) },
+			].filter(d => d.value > 0);
+			if (participationDonut.length === 0) participationDonut = [{ group: 'No Data', value: 1 }];
+		}
+		loading = false;
+	});
 
-    const svg = d3
-      .select(container)
-      .append("svg")
-      .attr("width", width)
-      .attr("height", height + margin.top + margin.bottom);
+	async function loadAISummary() {
+		aiLoading = true;
+		const result = await generateAnalyticsSummary('exhibitor', profileId);
+		aiSummary = result?.summary || 'Unable to generate summary.';
+		aiLoading = false;
+	}
+	async function askQuestion() {
+		if (!chatQuestion.trim()) return;
+		chatLoading = true;
+		const result = await chatWithAnalytics('exhibitor', profileId, chatQuestion);
+		chatAnswer = result?.answer || 'Unable to answer.';
+		chatLoading = false;
+	}
 
-    const chart = svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    const stack = d3
-  .stack<RevenueDatum>()
-  .keys(["pending", "accepted", "completed"]);
-
-const series = stack(chartData);
-type StackKey = "pending" | "accepted" | "completed";
-
-
-
-    const x = d3
-      .scaleBand()
-      .domain(chartData.map(d => d.month))
-      .range([0, width - margin.left - margin.right])
-      .padding(0.45);
-
-    const y = d3
-      .scaleLinear()
-      .domain([0, 20000])
-      .range([height, 0]);
-
-   const colors: Record<StackKey, string> = {
-  pending: "#fb923c",
-  accepted: "#60a5fa",
-  completed: "#22c55e"
-};
-
-
-    chart
-      .selectAll("g")
-      .data(series)
-      .enter()
-      .append("g")
-      .attr("fill", d => colors[d.key as StackKey])
-      .selectAll("rect")
-      .data(d => d)
-      .enter()
-      .append("rect")
-      .attr("x", d => x(d.data.month)!)
-      .attr("y", d => y(d[1]))
-      .attr("height", d => y(d[0]) - y(d[1]))
-      .attr("width", x.bandwidth())
-      .attr("rx", 4);
-
-    chart.append("g")
-      .call(d3.axisLeft(y).ticks(4).tickFormat(d => `${Number(d) / 1000}k`))
-      .selectAll("path,line")
-      .remove();
-
-    chart.append("g")
-      .attr("transform", `translate(0,${height})`)
-      .call(d3.axisBottom(x))
-      .selectAll("path,line")
-      .remove();
-  });
+	function fmt(n: number | undefined): string { if (!n) return '0'; return n >= 1000 ? (n / 1000).toFixed(1) + 'K' : n.toLocaleString(); }
+	function fmtCurrency(n: number | undefined): string { if (!n) return '$0'; return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(n); }
+	function fmtPercent(n: number | undefined): string { return (n || 0).toFixed(1) + '%'; }
 </script>
 
+<div class="max-w-6xl space-y-6">
+	<div class="mb-6">
+		<h1 class="mb-2 text-3xl font-bold md:text-4xl">Exhibitor Insights</h1>
+		<p class="text-sm text-gray-500">Track your event participation, booth performance, leads, and ROI.</p>
+		<div class="mt-4 flex gap-1 rounded-lg bg-gray-100 p-1">
+			{#each ['analytics', 'ai'] as tab}
+				<button on:click={() => activeTab = tab}
+					class="rounded-md px-4 py-2 text-sm font-medium transition-colors {activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}">
+					{tab === 'analytics' ? 'Analytics' : 'AI Insights'}
+				</button>
+			{/each}
+		</div>
+	</div>
 
-<div class="min-h-screen w-full space-y-6 text-[#101828]">
+	{#if loading}
+		<InsightsSkeleton variant="exhibitor" />
+	{:else if !analytics}
+		<div class="flex h-64 flex-col items-center justify-center text-gray-400">
+			<Icon icon="mdi:presentation" class="mb-3 text-5xl" />
+			<p class="text-lg font-medium">No analytics data yet</p>
+			<p class="text-sm">Analytics will appear once you participate in events as an exhibitor.</p>
+		</div>
+	{:else if activeTab === 'analytics'}
 
-  <!-- ================= PRODUCTS / SERVICES ================= -->
-  <div class="bg-white rounded-xl p-6 shadow-sm space-y-6">
-   <!-- Header Row -->
-<div class="flex items-center justify-between gap-6 whitespace-nowrap">
-  <!-- LEFT -->
-  <div class="flex items-center gap-6 text-sm flex-nowrap">
-    <span class="text-sm font-medium text-gray-900">Products/Services</span>
+	<!-- Stats Cards -->
+	<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+		<div class="rounded-xl bg-white p-4 shadow-sm">
+			<p class="text-xs uppercase text-gray-500">Events Invited</p>
+			<p class="mt-1 text-2xl font-bold">{fmt(analytics.participation?.totalEventsInvited)}</p>
+			<p class="mt-1 text-xs text-gray-400">Acceptance: {fmtPercent(analytics.participation?.acceptanceRate)}</p>
+		</div>
+		<div class="rounded-xl bg-white p-4 shadow-sm">
+			<p class="text-xs uppercase text-gray-500">Events Accepted</p>
+			<p class="mt-1 text-2xl font-bold text-green-600">{fmt(analytics.participation?.totalEventsAccepted)}</p>
+			<p class="mt-1 text-xs text-gray-400">Upcoming: {fmt(analytics.participation?.upcomingEvents)}</p>
+		</div>
+		<div class="rounded-xl bg-white p-4 shadow-sm">
+			<p class="text-xs uppercase text-gray-500">Total Leads</p>
+			<p class="mt-1 text-2xl font-bold text-blue-600">{fmt(analytics.leads?.totalLeads)}</p>
+			<p class="mt-1 text-xs text-gray-400">Qualified: {fmt(analytics.leads?.qualifiedLeads)}</p>
+		</div>
+		<div class="rounded-xl bg-white p-4 shadow-sm">
+			<p class="text-xs uppercase text-gray-500">ROI</p>
+			<p class="mt-1 text-2xl font-bold text-amber-600">{fmtPercent(analytics.financials?.roi)}</p>
+			<p class="mt-1 text-xs text-gray-400">Investment: {fmtCurrency(analytics.financials?.totalInvestment)}</p>
+		</div>
+	</div>
 
-    <span class="flex items-center gap-2 text-gray-500">
-      <span class="w-2 h-2 bg-orange-500 rounded-full"></span>
-      Pending orders
-    </span>
+	<!-- Charts -->
+	<div class="grid gap-4 rounded-2xl bg-[#FDFDFD] p-1">
+		<div class="flex w-full flex-col gap-10 p-4 lg:flex-row">
+			<div class="w-full">
+				{#if eventChart.length > 0}
+					<StackedAreaChart data={eventChart} options={areaOptions} />
+				{:else}
+					<div class="flex h-80 items-center justify-center text-gray-400">No trend data yet</div>
+				{/if}
+			</div>
+			<div class="flex w-full max-w-100 items-center justify-center">
+				<DonutChart data={participationDonut} options={donutOptions} />
+			</div>
+		</div>
 
-    <span class="flex items-center gap-2 text-gray-500">
-      <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
-      Accepted orders
-    </span>
+		<div class="flex w-full flex-col items-start gap-6 rounded-b-2xl bg-[#F4F4F4] p-4 lg:flex-row">
+			<!-- Booth & Leads -->
+			<div class="w-full space-y-4 text-sm">
+				<h3 class="font-semibold text-black">Booth Performance</h3>
+				<div class="flex gap-4">
+					<div><div class="text-[#BABABA]">Total Booths</div><div class="text-xl font-semibold">{fmt(analytics.booth?.totalBooths)}</div></div>
+					<div><div class="text-[#BABABA]">Published</div><div class="text-xl font-semibold text-green-600">{fmt(analytics.booth?.publishedBooths)}</div></div>
+					<div><div class="text-[#BABABA]">Draft</div><div class="text-xl font-semibold">{fmt(analytics.booth?.draftBooths)}</div></div>
+					<div><div class="text-[#BABABA]">Views</div><div class="text-xl font-semibold">{fmt(analytics.booth?.boothViews)}</div></div>
+				</div>
 
-    <span class="flex items-center gap-2 text-gray-500">
-      <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-      Completed orders
-    </span>
-  </div>
+				<h3 class="mt-4 font-semibold text-black">Lead Generation</h3>
+				<div class="flex gap-4">
+					<div><div class="text-[#BABABA]">Total Leads</div><div class="text-xl font-semibold">{fmt(analytics.leads?.totalLeads)}</div></div>
+					<div><div class="text-[#BABABA]">Qualified</div><div class="text-xl font-semibold text-green-600">{fmt(analytics.leads?.qualifiedLeads)}</div></div>
+					<div><div class="text-[#BABABA]">Conversion</div><div class="text-xl font-semibold">{fmtPercent(analytics.leads?.leadConversionRate)}</div></div>
+				</div>
 
-  <!-- RIGHT -->
-  <button
-  class="border px-4 py-1.5 rounded-lg text-sm text-gray-600 flex items-center gap-2 flex-shrink-0"
->
-  This Month
-  <img src="/arrow-down.png"class="h-2 w-3"/>
-</button>
+				<h3 class="mt-4 font-semibold text-black">Visibility</h3>
+				<div class="flex gap-4">
+					<div><div class="text-[#BABABA]">Profile Views</div><div class="text-xl font-semibold">{fmt(analytics.visibility?.profileViews)}</div></div>
+					<div><div class="text-[#BABABA]">Impressions</div><div class="text-xl font-semibold">{fmt(analytics.visibility?.boothImpressions)}</div></div>
+					<div><div class="text-[#BABABA]">Contact Requests</div><div class="text-xl font-semibold">{fmt(analytics.visibility?.contactRequests)}</div></div>
+				</div>
+			</div>
 
-</div>
+			<div class="h-0 w-full border lg:h-full lg:w-0"></div>
 
-    <!-- Revenue -->
-     <div class="flex items-start gap-4">
-    <img src="/see.svg" alt="revenue" class="w-10 h-10" />
-      <div>
-        <p class="text-xs text-gray-500 uppercase">TOTAL REVENUE</p>
-        <div class="flex items-center gap-2">
-          <p class="text-xl font-bold">{stats.revenue}</p>
-          <span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
-            {stats.growth}
-          </span>
-        </div>
-      </div>
-      </div>
+			<!-- Financials & Collaborations -->
+			<div class="w-full space-y-3 text-sm">
+				<h3 class="font-semibold text-black">Financial Summary</h3>
+				<div class="flex justify-between"><span class="text-gray-500">Total Sponsorship</span><span class="font-medium">{fmtCurrency(analytics.financials?.totalSponsorship)}</span></div>
+				<div class="flex justify-between"><span class="text-gray-500">Total Investment</span><span class="font-medium">{fmtCurrency(analytics.financials?.totalInvestment)}</span></div>
+				<div class="flex justify-between"><span class="text-gray-500">ROI</span><span class="font-medium text-amber-600">{fmtPercent(analytics.financials?.roi)}</span></div>
 
-<!-- Chart Wrapper -->
-<div class="bg-white rounded-xl p-4">
-  <div class="flex">
-    <!-- Y Axis labels -->
-    <div class="flex flex-col justify-between h-56 text-xs text-gray-400 pr-3">
-      <span>15k</span>
-      <span>10k</span>
-      <span>5k</span>
-      <span>0</span>
-    </div>
+				<h3 class="mt-4 font-semibold text-black">Collaborations</h3>
+				<div class="flex justify-between"><span class="text-gray-500">Total</span><span class="font-medium">{fmt(analytics.collaborations?.totalCollaborations)}</span></div>
+				<div class="flex justify-between"><span class="text-gray-500">Active</span><span class="font-medium text-green-600">{fmt(analytics.collaborations?.activeCollaborations)}</span></div>
+				<div class="flex justify-between"><span class="text-gray-500">Completed</span><span class="font-medium">{fmt(analytics.collaborations?.completedCollaborations)}</span></div>
 
-    <!-- Chart Area -->
-    <div class="flex-1">
-      <div
-        id="revenue-chart"
-        class="h-56 border-l border-b border-gray-300"
-      ></div>
-    </div>
-  </div>
-</div>
-</div>
+				{#if analytics.predictions?.confidence > 0}
+				<h3 class="mt-4 font-semibold text-black">Predictions</h3>
+				<div class="rounded-lg bg-white p-3">
+					<div class="flex justify-between"><span class="text-gray-500">Est. Leads Next Quarter</span><span class="font-medium">{analytics.predictions.estimatedLeadsNextQuarter}</span></div>
+					<div class="flex justify-between"><span class="text-gray-500">Est. Events</span><span class="font-medium">{analytics.predictions.estimatedEventsNextQuarter}</span></div>
+					<div class="flex justify-between"><span class="text-gray-500">Growth Trend</span>
+						<span class="font-medium capitalize {analytics.predictions.growthTrend === 'growing' ? 'text-green-600' : analytics.predictions.growthTrend === 'declining' ? 'text-red-500' : ''}">{analytics.predictions.growthTrend}</span>
+					</div>
+				</div>
+				{/if}
 
+				<!-- Leads by Event -->
+				{#if analytics.leads?.leadsByEvent?.length > 0}
+				<h3 class="mt-4 font-semibold text-black">Leads by Event</h3>
+				{#each analytics.leads.leadsByEvent.slice(0, 5) as le}
+					<div class="flex justify-between"><span class="text-gray-500">{le.eventTitle}</span><span class="font-medium">{le.leads} leads</span></div>
+				{/each}
+				{/if}
+			</div>
+		</div>
+	</div>
 
-
-
-
-  <!-- ================= QUICK ACTIONS ================= -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="relative overflow-hidden rounded-xl p-4 flex items-start gap-3
-            bg-gradient-to-br from-green-50 via-green-100 to-green-50">
-
-  <!-- Decorative lines -->
-  <span class="absolute top-0 right-0 w-32 h-32 border-t-2 border-r-2 border-green-200/60"></span>
-  <span class="absolute bottom-0 left-0 w-32 h-32 border-b-2 border-l-2 border-green-200/60"></span>
-
-  <!-- Icon -->
-  <img src="/acc2.svg" />
-
-  <!-- Text -->
-  <div class="z-10">
-    <h3 class="font-medium text-green-900">Manage Product/Services</h3>
-    <p class="text-sm text-green-700/70">View and manage listings</p>
-  </div>
-</div>
-
-   <div class="relative overflow-hidden rounded-xl p-4 flex items-start gap-3
-            bg-gradient-to-br from-yellow-50 via-yellow-100 to-yellow-50">
-
-  <!-- Icon -->
-  <img src="/acc3.svg"/>
-
-  <!-- Text wrapper -->
-  <div>
-    <h3 class="font-medium">Manage Orders</h3>
-    <p class="text-sm text-gray-500">Unlimited</p>
-  </div>
-
-</div>
-
-
-    <div class="bg-purple-50 p-4 rounded-xl flex items-start gap-3">
-  <!-- In Progress Icon -->
-  <img src="/acc.svg"/>
-
-  <!-- Text -->
-  <div>
-    <h3 class="font-medium">Manage Profile</h3>
-    <p class="text-sm text-gray-500">View and manage your profile</p>
-  </div>
-</div>
-
-  </div>
-
-  <!-- ================= PERFORMANCE ================= -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-    <!-- Performance Insights -->
-    <div class="bg-white rounded-xl p-6 shadow-sm space-y-4">
-      <h3 class="font-medium">Performance Insights</h3>
-
-      <div class="flex gap-10">
-        <div>
-          <p class="text-xs text-gray-500">Yesterday</p>
-          <p class="text-2xl font-semibold">4</p>
-        </div>
-        <div>
-          <p class="text-xs text-gray-500">Past Month</p>
-          <p class="text-2xl font-semibold">6</p>
-        </div>
-      </div>
-
-      <div>
-  <div>
-  <p class="text-sm font-medium mb-2">Live Traffic</p>
-  <div class="space-y-2">
-
-    <!-- Visitor from Direct -->
-    <div class="bg-gray-100 rounded-lg p-3 text-sm flex justify-between items-start">
-      <!-- Left: Icon + Text -->
-      <div class="flex flex-col">
-        <div class="flex items-center gap-2">
-          <Icon icon="mdi:account" class="w-4 h-4 text-gray-500" />
-          <span>Visitor from Direct</span>
-        </div>
-        <div class="flex items-center gap-1 ml-6 mt-1 text-gray-500">
-          <Icon icon="mdi:map-marker" class="w-3 h-3 text-gray-500" />
-          <span>Lagos,Lagos</span>
-        </div>
-      </div>
-
-      <!-- Right: Time + Slide-down Icon -->
-      <div class="flex items-center gap-2 mt-1">
-        <span class="text-xs text-gray-400">18m</span>
-        <Icon icon="mdi:chevron-down" class="w-4 h-4 text-gray-400" />
-      </div>
-    </div>
-
-    <!-- Visitor from rondwell.com -->
-    <div class="bg-gray-100 rounded-lg p-3 text-sm flex justify-between items-start">
-      <div class="flex flex-col">
-        <div class="flex items-center gap-2">
-          <Icon icon="mdi:web" class="w-4 h-4 text-gray-500" />
-          <span>Visitor from rondwell.com</span>
-        </div>
-        <div class="flex items-center gap-1 ml-6 mt-1 text-gray-500">
-          <Icon icon="mdi:map-marker" class="w-3 h-3 text-gray-500" />
-          <span>Lagos,Lagos</span>
-        </div>
-      </div>
-
-      <!-- Right: Time + Slide-down Icon -->
-      <div class="flex items-center gap-2 mt-1">
-        <span class="text-xs text-gray-400">1h</span>
-        <Icon icon="mdi:chevron-down" class="w-4 h-4 text-gray-400" />
-      </div>
-    </div>  
-
-  </div>
-</div>
-
-
-</div>
-
-    </div>
-
-    <!-- Top Stats -->
-  <div class="bg-white rounded-xl p-6 shadow-sm space-y-4">
-  <!-- Top Product -->
-  <div class="flex justify-between items-center">
-    <p class="text-sm font-medium">Top Product</p>
-  </div>
-  <div class="flex justify-between items-center">
-  <p class="text-sm text-gray-500">rondwell.com</p>
-  <span class="text-sm text-gray-500">100%</span>
-  </div>
-  <!-- Top Cities Orders -->
-  <div>
-    <p class="text-sm font-medium mt-4">Top Cities Orders</p>
-    <div class="flex justify-between text-sm text-gray-500 mt-6">
-      <span>Lagos</span>
-      <span>67%</span>
-    </div>
-    <div class="flex justify-between text-sm text-gray-500">
-      <span>Port Harcourt</span>
-      <span>33%</span>
-    </div>
-  </div>
-
-  <!-- Top Sources -->
-  <div>
-    <p class="text-sm font-medium">Top <br>Sources</p>
-    <p class="text-xs text-gray-400">
-      Set up a tracking link by adding? 
-    </p>
-    <div class="mt-4 space-y-2 text-gray-500">
-    <span class="text-sm text-gray-400">utm_source=your-link-name</span> <span class="text-sm font-medium text-gray-500">to your URL</span>
-    </div>
-  </div>
-</div>
-
-
-  </div>
-
-  <!-- ================= PRODUCT LISTING ================= -->
-  <div class="bg-white rounded-xl p-6 shadow-sm space-y-4">
-    <div class="flex justify-between items-center">
-      <h3 class="font-medium">Product/Service Listing</h3>
-      <div class="flex gap-2">
-        <button class="px-3 py-1 rounded bg-gray-200 text-sm">Active</button>
-        <button class="px-3 py-1 rounded text-sm">Inactive</button>
-      </div>
-    </div>
-<div
-								class="absolute top-0 -left-[29px] h-3 w-3 rounded-full bg-gray-300 ring-4 ring-gray-50"
-							></div>
-    <div class="flex gap-4 items-center">
-      <div class="text-center text-sm text-gray-500">
-        <p>Sep</p>
-        <p class="font-semibold">25</p>
-        <p>Wednesday</p>
-      </div>
-
-     <div class="flex-1 bg-gray-50 rounded-lg p-4 flex justify-between items-center">
-  <div>
-    <h4 class="font-medium">Cake Making</h4>
-    <p class="text-sm text-gray-500">
-      Baking and delivery of all kinds of cakes at affordable rates
-    </p>
-    <!-- Customers icons -->
-    <div class="flex items-center mt-3 gap-2">
-      <div class="flex -space-x-2">
-        <img src="/user1.png" alt="customer" class="w-6 h-6 rounded-full border-2 border-white" />
-        <img src="/user2.png" alt="customer" class="w-6 h-6 rounded-full border-2 border-white" />
-        <img src="/user3.png" alt="customer" class="w-6 h-6 rounded-full border-2 border-white" />
-      </div>
-      <span class="text-xs text-gray-500 ml-2">+4 customers</span>
-    </div>
-
-    <!-- Active badge -->
-    <span class="inline-block mt-2 text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
-      Active
-    </span>
-
-    
-  </div>
-
-  <!-- Cover image -->
-  <div class="w-20 h-20 bg-gray-200 rounded-lg">
-    <img src="/events.png" alt="cover" class="object-cover w-full h-full rounded-lg" />
-  </div>
-</div>
-
-    </div>
-  </div>
-
+	{:else if activeTab === 'ai'}
+	<div class="space-y-6">
+		<div class="rounded-xl bg-white p-6 shadow-sm">
+			<div class="mb-4 flex items-center justify-between">
+				<h3 class="text-lg font-medium">AI-Generated Summary</h3>
+				<button on:click={loadAISummary} disabled={aiLoading}
+					class="flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50">
+					{#if aiLoading}<div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div> Generating...
+					{:else}<Icon icon="mdi:auto-fix" class="h-4 w-4" /> Generate Summary{/if}
+				</button>
+			</div>
+			{#if aiSummary}<div class="prose prose-sm max-w-none rounded-lg bg-gray-50 p-4">{@html aiSummary.replace(/\n/g, '<br>')}</div>
+			{:else}<p class="text-sm text-gray-400">Click "Generate Summary" for an AI analysis of your exhibitor performance.</p>{/if}
+		</div>
+		<div class="rounded-xl bg-white p-6 shadow-sm">
+			<h3 class="mb-4 text-lg font-medium">Chat with Your Data</h3>
+			<div class="flex gap-2">
+				<input type="text" bind:value={chatQuestion} placeholder="Ask about your exhibitor analytics..."
+					class="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-amber-500 focus:outline-none"
+					on:keydown={(e) => e.key === 'Enter' && askQuestion()} />
+				<button on:click={askQuestion} disabled={chatLoading || !chatQuestion.trim()}
+					class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50">{chatLoading ? '...' : 'Ask'}</button>
+			</div>
+			{#if chatAnswer}<div class="mt-4 rounded-lg bg-gray-50 p-4 text-sm">{@html chatAnswer.replace(/\n/g, '<br>')}</div>{/if}
+		</div>
+	</div>
+	{/if}
 </div>

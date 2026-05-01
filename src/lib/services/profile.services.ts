@@ -12,6 +12,8 @@ export interface UserProfileData {
   bio?: string;
   isDefault: boolean;
   onboardingStatus: 'INCOMPLETE' | 'COMPLETED';
+  publicProfileSlug?: string;
+  isPublicProfile?: boolean;
   socialLinks?: {
     instagram?: string;
     x?: string;

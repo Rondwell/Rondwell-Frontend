@@ -5,6 +5,7 @@
 		updateExhibitorDetails,
 		updateSocialLinks
 	} from '$lib/services/profile.services';
+	import PublicPageSlug from '$lib/components/PublicPageSlug.svelte';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -306,6 +307,9 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- ═══ PUBLIC PAGE URL ═══ -->
+		<PublicPageSlug slug={profile?.publicProfileSlug || ''} prefix="x" label="Exhibitor" />
 
 		<!-- ═══ SECTION 2: Location & Contact ═══ -->
 		<div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-6">

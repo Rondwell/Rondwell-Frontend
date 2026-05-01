@@ -1,19 +1,29 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
 	import { DonutChart, StackedAreaChart } from '@carbon/charts-svelte';
 	import '@carbon/charts-svelte/styles.css';
 	import Icon from '@iconify/svelte';
 	import Nav from '../../../../components/Nav.svelte';
+	import {
+		getEventAnalyticsOverview,
+		getEventTimeseries,
+		generateAnalyticsSummary,
+		chatWithAnalytics
+	} from '$lib/services/analytics.services';
+	import InsightsSkeleton from '$lib/components/analytics/InsightsSkeleton.svelte';
 
-	$: eventId = $page.params.id;
+	$: eventId = $page.params.id ?? '';
 
-	const eventData = {
-		title: 'Megaexe Party',
-		collection: 'John Collection'
-	};
-
-	let searchQuery = '';
+	let loading = true;
+	let analytics: any = null;
+	let aiSummary = '';
+	let aiLoading = false;
+	let chatQuestion = '';
+	let chatAnswer = '';
+	let chatLoading = false;
 	let activeTab = 'analytics';
+	let searchQuery = '';
 
 	const tabs = [
 		{
@@ -22,385 +32,346 @@
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.5 18.3307H12.5C16.6667 18.3307 18.3333 16.6641 18.3333 12.4974V7.4974C18.3333 3.33073 16.6667 1.66406 12.5 1.66406H7.5C3.33333 1.66406 1.66667 3.33073 1.66667 7.4974V12.4974C1.66667 16.6641 3.33333 18.3307 7.5 18.3307Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.25 12.1849L8.15833 9.60156L10.3333 11.3516L12.2 8.85156" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 		},
 		{
+			id: 'ai',
+			label: 'AI Insights',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 1.66406L12.575 6.88073L18.3333 7.72573L14.1667 11.7841L15.15 17.5174L10 14.8091L4.85 17.5174L5.83333 11.7841L1.66667 7.72573L7.425 6.88073L10 1.66406Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+		},
+		{
 			id: 'surveys',
 			label: 'Surveys & Feedback',
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M18.3327 8.33073V12.4974C18.3327 16.6641 16.666 18.3307 12.4993 18.3307H7.49935C3.33268 18.3307 1.66602 16.6641 1.66602 12.4974V7.4974C1.66602 3.33073 3.33268 1.66406 7.49935 1.66406H11.666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.3327 8.33073H14.9993C12.4993 8.33073 11.666 7.4974 11.666 4.9974V1.66406L18.3327 8.33073Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.83398 10.8359H10.834" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.83398 14.1641H9.16732" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 		}
 	];
 
-	// Chart data for Page Views line chart
-	const pageViewsData = [
-		{ date: '2024-10-01', views: 150, uniqueVisitors: 80 },
-		{ date: '2024-10-02', views: 100, uniqueVisitors: 100 },
-		{ date: '2024-10-03', views: 250, uniqueVisitors: 120 },
-		{ date: '2024-10-04', views: 200, uniqueVisitors: 150 },
-		{ date: '2024-10-05', views: 350, uniqueVisitors: 180 },
-		{ date: '2024-10-06', views: 300, uniqueVisitors: 200 },
-		{ date: '2024-10-07', views: 450, uniqueVisitors: 220 }
-	];
+	// Chart data derived from API
+	let chartData: any[] = [];
+	let donutData: any[] = [];
 
-	// Convert to Carbon Charts structure
-	const chartData = pageViewsData.flatMap((item) => [
-		{ group: 'Page Views', date: item.date, value: item.views },
-		{ group: 'Unique Visitors', date: item.date, value: item.uniqueVisitors }
-	]);
-
-	const pageViewsOptions: any = {
-		title: 'Unique Visitor Distribution',
+	const areaOptions: any = {
+		title: 'Registration Trends',
 		axes: {
-			left: {
-				mapsTo: 'value',
-				scaleType: 'linear',
-				title: ''
-			},
-			bottom: {
-				mapsTo: 'date',
-				scaleType: 'time',
-				title: ''
-			}
+			left: { mapsTo: 'value', scaleType: 'linear', title: '' },
+			bottom: { mapsTo: 'date', scaleType: 'labels', title: '' }
 		},
-		curves: {
-			curve: 'curveMonotoneX'
-		},
-		legend: {
-			enabled: true,
-			position: 'bottom'
-		},
-		height: '330px'
-		// color: {
-		// 	scale: {
-		// 		'Page Views': '#FF6B6B',
-		// 		'Unique Visitors': '#4ECDC4'
-		// 	}
-		// }
+		curve: 'curveMonotoneX',
+		legend: { enabled: true, position: 'bottom' },
+		height: '330px',
+		color: { scale: { 'Registrations': '#3b82f6', 'Check-ins': '#22c55e', 'Cancellations': '#ef4444' } }
 	};
 
-	// Donut chart for Page Views Distribution
-	const pageViewsDistribution = [
-		{ group: 'Male', value: 15.6 },
-		{ group: 'Female', value: 84.4 }
-	];
+	const donutOptions = { title: 'Attendee Status', height: '330px', legend: { position: 'bottom' } };
 
-	const donutOptions = {
-		title: 'Page Views Distribution',
-		height: '330px'
-		// width: '330px'
-	};
+	onMount(async () => {
+		loading = true;
+		analytics = await getEventAnalyticsOverview(eventId);
 
-	// Stats data for left column
-	const pageView = [
-		{ label: 'Yesterday', value: 4 },
-		{ label: 'Past Month', value: 6 }
-	];
+		if (analytics) {
+			// Build area chart from daily snapshots
+			const snapshots = analytics.dailySnapshots || [];
+			chartData = snapshots.flatMap((s: any) => [
+				{ group: 'Registrations', date: s.date, value: s.registrations || 0 },
+				{ group: 'Check-ins', date: s.date, value: s.checkIns || 0 },
+			]);
 
-	let visits = [
-		{
-			source: 'Direct',
-			time: '18m',
-			location: 'Lagos, Lagos',
-			icon: '/mobile.svg' // phone icon
-		},
-		{
-			source: 'rondwell.com',
-			time: '1h',
-			location: 'Lagos, Lagos',
-			icon: '/monitor.svg', // desktop icon
-			extra: 'Embed'
+			// Build donut from registration status
+			const reg = analytics.registrations || {};
+			donutData = [
+				{ group: 'Attending', value: reg.attending || 0 },
+				{ group: 'Pending', value: reg.pending || 0 },
+				{ group: 'Checked In', value: reg.checkedIn || 0 },
+				{ group: 'Waitlisted', value: reg.waitlisted || 0 },
+				{ group: 'Declined', value: reg.declined || 0 },
+			].filter(d => d.value > 0);
+
+			if (donutData.length === 0) donutData = [{ group: 'No Data', value: 1 }];
 		}
-	];
+		loading = false;
+	});
 
-	// Top Referrers
-	const topReferrers = [{ name: 'rondwell.com', percent: '100%' }];
+	async function loadAISummary() {
+		aiLoading = true;
+		const result = await generateAnalyticsSummary('event', eventId);
+		aiSummary = result?.summary || 'Unable to generate summary at this time.';
+		aiLoading = false;
+	}
 
-	// Top Cities
-	const topCities = [
-		{ name: 'Lagos, Nigeria', percent: '67%' },
-		{ name: 'Port Harcourt, Nigeria', percent: '33%' }
-	];
+	async function askQuestion() {
+		if (!chatQuestion.trim()) return;
+		chatLoading = true;
+		const result = await chatWithAnalytics('event', eventId, chatQuestion);
+		chatAnswer = result?.answer || 'Unable to answer at this time.';
+		chatLoading = false;
+	}
 
-	// Top Sources
-	const topSources: any[] = [];
+	function fmt(n: number | undefined): string {
+		if (n === undefined || n === null) return '0';
+		if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+		if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+		return n.toLocaleString();
+	}
+
+	function fmtCurrency(n: number | undefined, currency = 'USD'): string {
+		if (!n) return '$0';
+		return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(n);
+	}
+
+	function fmtPercent(n: number | undefined): string {
+		if (!n) return '0%';
+		return n.toFixed(1) + '%';
+	}
 </script>
 
 <div class="max-w-6xl">
-	<!-- Event Header -->
+	<!-- Header -->
 	<div class="mb-6">
 		<div class="mb-2 flex items-center justify-between">
-			<div class="flex items-center gap-2">
-				<span class="text-sm text-[#83808D]">John Collection</span>
-				<svg
-					width="11"
-					height="11"
-					viewBox="0 0 11 11"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M0.827148 0.795898C1.49266 0.146359 2.45588 0.00140483 3.28223 0.438477L8.91895 3.4043H8.91797C9.61211 3.76739 10.0449 4.48319 10.0449 5.26758C10.0449 6.05184 9.61196 6.76678 8.91797 7.12988L8.91895 7.13086L3.28223 10.0957C2.96323 10.2657 2.62676 10.3467 2.29004 10.3467C1.75372 10.3466 1.23549 10.137 0.827148 9.73926C0.160836 9.0889 0.000384912 8.12521 0.416016 7.29395L1.2041 5.71875C1.34288 5.44119 1.34292 5.10404 1.20312 4.82031V4.81934L0.416016 3.24023C0.000612916 2.4091 0.161042 1.44617 0.827148 0.795898ZM2.29492 1.29199C2.01826 1.29212 1.77162 1.42109 1.59961 1.58887L1.59863 1.58984C1.34194 1.83849 1.16551 2.27322 1.40332 2.75293L2.19043 4.32812L2.28711 4.55469C2.47977 5.09324 2.44715 5.69271 2.19043 6.21094V6.21191L1.40234 7.78711V7.78809C1.16122 8.26626 1.34076 8.7005 1.59863 8.9502C1.85851 9.20169 2.2935 9.37235 2.76758 9.12305L8.40332 6.15723H8.4043C8.74149 5.98034 8.94037 5.64982 8.94043 5.27246C8.94043 4.89509 8.74146 4.56463 8.4043 4.3877H8.40332L2.76758 1.41113C2.60129 1.32386 2.44117 1.29199 2.29492 1.29199Z"
-						fill="#83808D"
-						stroke="#83808D"
-						stroke-width="0.37461"
-					/>
-					<rect
-						x="5.0584"
-						y="5.85137"
-						width="3.37149"
-						height="1.12383"
-						rx="0.561915"
-						transform="rotate(-180 5.0584 5.85137)"
-						fill="#83808D"
-						stroke="#83808D"
-						stroke-width="0.37461"
-					/>
-				</svg>
-			</div>
-			<a
-				href="/event-page/{eventId}"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="flex items-center gap-1.5 rounded-md bg-[#F0EFF1] px-3 py-1.5 text-sm font-medium text-[#5D646F] transition-colors hover:bg-[#E4E3E6]"
-			>
+			<span class="text-sm text-[#83808D]">{analytics?.collectionId ? 'Collection' : ''}</span>
+			<a href="/event-page/{eventId}" target="_blank" rel="noopener noreferrer"
+				class="flex items-center gap-1.5 rounded-md bg-[#F0EFF1] px-3 py-1.5 text-sm font-medium text-[#5D646F] transition-colors hover:bg-[#E4E3E6]">
 				Event Page
 				<Icon icon="mdi:open-in-new" class="h-3.5 w-3.5 text-[#8A8D90]" />
 			</a>
 		</div>
-		<h1 class="mb-4 text-3xl font-bold md:text-4xl">{eventData.title}</h1>
-
+		<h1 class="mb-4 text-3xl font-bold md:text-4xl">{analytics?.eventTitle || 'Event Insights'}</h1>
 		<Nav {tabs} bind:activeTab />
 	</div>
 
-	{#if activeTab === 'analytics'}
-	<div class="mb-6 flex flex-col">
-		<div class="mb-1 flex items-center justify-between gap-4">
-			<h2 class="text-xl font-semibold">Page Views</h2>
-			<button
-				class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
-			>
-				<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
-				Past Week
-				<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
-			</button>
+	{#if loading}
+		<InsightsSkeleton variant="event" />
+	{:else if activeTab === 'analytics'}
+
+	<!-- Stats Cards -->
+	<div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+		<div class="rounded-xl bg-white p-4 shadow-sm">
+			<p class="text-xs uppercase text-gray-500">Total Registrations</p>
+			<p class="mt-1 text-2xl font-bold">{fmt(analytics?.registrations?.total)}</p>
+			<p class="mt-1 text-xs text-gray-400">Conversion: {fmtPercent(analytics?.registrations?.conversionRate)}</p>
 		</div>
-		<p class="text-sm text-gray-600">See recent page views of the calendar page.</p>
+		<div class="rounded-xl bg-white p-4 shadow-sm">
+			<p class="text-xs uppercase text-gray-500">Attending</p>
+			<p class="mt-1 text-2xl font-bold text-green-600">{fmt(analytics?.registrations?.attending)}</p>
+			<p class="mt-1 text-xs text-gray-400">Check-in rate: {fmtPercent(analytics?.registrations?.checkInRate)}</p>
+		</div>
+		<div class="rounded-xl bg-white p-4 shadow-sm">
+			<p class="text-xs uppercase text-gray-500">Tickets Sold</p>
+			<p class="mt-1 text-2xl font-bold">{fmt(analytics?.tickets?.totalSold)}</p>
+			<p class="mt-1 text-xs text-gray-400">Avg price: {fmtCurrency(analytics?.tickets?.averageTicketPrice)}</p>
+		</div>
+		<div class="rounded-xl bg-white p-4 shadow-sm">
+			<p class="text-xs uppercase text-gray-500">Total Revenue</p>
+			<p class="mt-1 text-2xl font-bold text-blue-600">{fmtCurrency(analytics?.tickets?.totalRevenue, analytics?.tickets?.currency)}</p>
+			<p class="mt-1 text-xs text-gray-400">Refunds: {fmtCurrency(analytics?.tickets?.refunds?.amount)}</p>
+		</div>
 	</div>
 
+	<!-- Charts -->
 	<div class="mb-6 grid gap-4 rounded-2xl bg-[#FDFDFD] p-1">
-		<!-- Main charts area -->
-		<div class="flex w-full flex-col gap-20 p-4 lg:flex-row">
-			<!-- Left charts col -->
-
+		<div class="flex w-full flex-col gap-10 p-4 lg:flex-row">
 			<div class="w-full">
-				<StackedAreaChart data={chartData} options={pageViewsOptions} />
+				{#if chartData.length > 0}
+					<StackedAreaChart data={chartData} options={areaOptions} />
+				{:else}
+					<div class="flex h-80 items-center justify-center text-gray-400">No trend data yet</div>
+				{/if}
 			</div>
-
-			<!-- Right donut chart col -->
-			<div class=" flex w-full max-w-100 items-center justify-center">
-				<DonutChart data={pageViewsDistribution} options={donutOptions} />
+			<div class="flex w-full max-w-100 items-center justify-center">
+				<DonutChart data={donutData} options={donutOptions} />
 			</div>
 		</div>
 
-		<!-- Stats + lists -->
-		<div class="flex w-full flex-col items-center gap-6 rounded-b-2xl bg-[#F4F4F4] p-4 lg:flex-row">
-			<!-- Left stats -->
+		<!-- Stats + Lists -->
+		<div class="flex w-full flex-col items-start gap-6 rounded-b-2xl bg-[#F4F4F4] p-4 lg:flex-row">
 			<div class="w-full space-y-4 text-sm text-gray-700">
 				<div>
-					<h3 class="mb-2 font-semibold text-black">Page Views</h3>
-					<div class="flex items-center gap-2">
-						{#each pageView as stat}
-							<div class="w-full">
-								<div class="mb-1 text-[#BABABA]">{stat.label}</div>
-								<div class="text-xl font-semibold text-gray-900">{stat.value}</div>
-							</div>
-						{/each}
+					<h3 class="mb-2 font-semibold text-black">Registration Sources</h3>
+					<div class="flex items-center gap-4">
+						<div>
+							<div class="mb-1 text-[#BABABA]">Self-Registered</div>
+							<div class="text-xl font-semibold text-gray-900">{fmt(analytics?.demographics?.bySource?.selfRegistered)}</div>
+						</div>
+						<div>
+							<div class="mb-1 text-[#BABABA]">Manual Invite</div>
+							<div class="text-xl font-semibold text-gray-900">{fmt(analytics?.demographics?.bySource?.manualInvite)}</div>
+						</div>
+						<div>
+							<div class="mb-1 text-[#BABABA]">Bulk Invite</div>
+							<div class="text-xl font-semibold text-gray-900">{fmt(analytics?.demographics?.bySource?.bulkInvite)}</div>
+						</div>
 					</div>
 				</div>
+
+				<!-- Engagement -->
 				<div>
-					<h3 class="mb-2 font-semibold text-black">Live Traffic</h3>
-					<div class="flex flex-col gap-3">
-						{#each visits as v}
-							<div class="flex items-center justify-between rounded-lg bg-[#FDFDFD] p-3">
-								<!-- Left side -->
-								<div class="flex items-center gap-3">
-									<div class="text-gray-500">
-										<img src={v.icon} alt="" class="h-4 w-4" />
-									</div>
-
-									<div class="flex flex-col">
-										<p class="font-medium text-gray-800">
-											Visitor from {v.source}
-										</p>
-
-										<div class="flex items-center gap-1 text-sm text-gray-500">
-											<img src="/location.svg" alt="" class="h-4 w-4" />
-											<span>{v.location}</span>
-
-											{#if v.extra}
-												<span class="ml-2 flex items-center gap-1">
-													<img src="/document.svg" alt="icon" class="h-4 w-4" />
-													{v.extra}
-												</span>
-											{/if}
-										</div>
-									</div>
-								</div>
-
-								<!-- Time -->
-								<p class="text-sm text-gray-500">{v.time}</p>
-							</div>
-						{/each}
+					<h3 class="mb-2 font-semibold text-black">Check-in Methods</h3>
+					<div class="flex flex-wrap gap-3">
+						<span class="rounded-full bg-white px-3 py-1 text-xs">QR Code: {fmt(analytics?.engagement?.checkInsByMethod?.qrCode)}</span>
+						<span class="rounded-full bg-white px-3 py-1 text-xs">Passcode: {fmt(analytics?.engagement?.checkInsByMethod?.passcode)}</span>
+						<span class="rounded-full bg-white px-3 py-1 text-xs">Manual: {fmt(analytics?.engagement?.checkInsByMethod?.manual)}</span>
 					</div>
 				</div>
+
+				<!-- Waitlist -->
+				{#if analytics?.waitlist?.totalJoined > 0}
+				<div>
+					<h3 class="mb-2 font-semibold text-black">Waitlist</h3>
+					<div class="flex items-center gap-4">
+						<div>
+							<div class="mb-1 text-[#BABABA]">Joined</div>
+							<div class="text-xl font-semibold">{fmt(analytics?.waitlist?.totalJoined)}</div>
+						</div>
+						<div>
+							<div class="mb-1 text-[#BABABA]">Promoted</div>
+							<div class="text-xl font-semibold">{fmt(analytics?.waitlist?.promoted)}</div>
+						</div>
+						<div>
+							<div class="mb-1 text-[#BABABA]">Rate</div>
+							<div class="text-xl font-semibold">{fmtPercent(analytics?.waitlist?.promotionRate)}</div>
+						</div>
+					</div>
+				</div>
+				{/if}
 			</div>
 
 			<div class="h-0 w-full border lg:h-full lg:w-0"></div>
 
-			<!-- Right lists -->
+			<!-- Ticket Breakdown -->
 			<div class="flex w-full flex-col gap-3">
-				<div>
-					<h3 class="mb-2 font-semibold text-black">Top Referrers</h3>
-					<ul class="space-y-2 text-sm font-medium">
-						{#each topReferrers as ref}
-							<li class="flex justify-between">
-								<span class="text-[#BABABA]">{ref.name}</span>
-								<span class="text-[#565759]">{ref.percent}</span>
-							</li>
-						{/each}
-					</ul>
-				</div>
+				<h3 class="font-semibold text-black">Ticket Types</h3>
+				{#if analytics?.tickets?.byType?.length > 0}
+					{#each analytics.tickets.byType as tt}
+						<div class="flex items-center justify-between text-sm">
+							<span class="text-gray-600">{tt.name}</span>
+							<div class="flex items-center gap-3">
+								<span class="text-gray-400">{tt.sold} sold</span>
+								<span class="font-medium">{fmtCurrency(tt.revenue)}</span>
+								{#if tt.available > 0}
+									<span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600">{tt.percentSold}%</span>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				{:else}
+					<p class="text-sm text-gray-400">No ticket types configured</p>
+				{/if}
 
-				<div>
-					<h3 class="mb-2 font-semibold text-black">Top Cities</h3>
-					<ul class="space-y-2 text-sm font-medium">
-						{#each topCities as city}
-							<li class="flex justify-between">
-								<span class="text-[#BABABA]">{city.name}</span>
-								<span class="text-[#565759]">{city.percent}</span>
-							</li>
-						{/each}
-					</ul>
+				<!-- Predictions -->
+				{#if analytics?.predictions?.confidence > 0}
+				<div class="mt-4">
+					<h3 class="font-semibold text-black">Predictions</h3>
+					<div class="mt-2 rounded-lg bg-white p-3 text-sm">
+						<div class="flex justify-between">
+							<span class="text-gray-500">Est. Final Attendance</span>
+							<span class="font-medium">{fmt(analytics.predictions.estimatedFinalAttendance)}</span>
+						</div>
+						<div class="mt-1 flex justify-between">
+							<span class="text-gray-500">Est. Final Revenue</span>
+							<span class="font-medium">{fmtCurrency(analytics.predictions.estimatedFinalRevenue)}</span>
+						</div>
+						<div class="mt-1 flex justify-between">
+							<span class="text-gray-500">Trend</span>
+							<span class="font-medium capitalize {analytics.predictions.attendanceTrend === 'growing' ? 'text-green-600' : analytics.predictions.attendanceTrend === 'declining' ? 'text-red-500' : 'text-gray-600'}">
+								{analytics.predictions.attendanceTrend}
+							</span>
+						</div>
+					</div>
 				</div>
-
-				<div>
-					<h3 class="mb-2 font-semibold text-black">Top Sources</h3>
-					<ul class="space-y-2 text-sm font-medium">
-						{#each topSources as source}
-							<span class="text-[#BABABA]">{source.name}</span>
-						{:else}
-							<span class="w-[50%] text-[#BABABA]"
-								>Set up a tracking link by adding ?utm_source=your-link-name to your URL.</span
-							>
-						{/each}
-					</ul>
-				</div>
+				{/if}
 			</div>
 		</div>
 	</div>
 
-	<!-- Registration Referrals -->
-	<div class="mb-6">
-		<div class="mb-4 space-y-4">
-			<div class="mb-5">
-				<span class="flex items-center gap-1">
-					<h4 class="text-lg font-medium">Registration Referrals</h4>
-					<p
-						class="hidden h-[22px] w-[22px] items-center justify-center rounded-full border bg-[#EBECED] lg:flex"
-					>
-						0
-					</p>
-				</span>
-				<p class="hidden text-sm text-[#737577] lg:block">
-					Each guest receives a unique referral link to invite friends. See who has referred the
-					most guests.
-				</p>
+	<!-- Funnel -->
+	<div class="mb-6 rounded-xl bg-white p-6 shadow-sm">
+		<h3 class="mb-4 text-lg font-medium">Registration Funnel</h3>
+		<div class="grid grid-cols-2 gap-4 md:grid-cols-5">
+			<div class="text-center">
+				<p class="text-2xl font-bold">{fmt(analytics?.funnel?.registrationStarts)}</p>
+				<p class="text-xs text-gray-500">Started</p>
 			</div>
-
-			<div class="relative mb-4 w-full">
-				<input
-					type="text"
-					bind:value={searchQuery}
-					placeholder="Search"
-					class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-[#C5C6C6] focus:ring-0 focus:outline-none"
-				/>
-				<span class="absolute top-2.5 left-3 text-gray-400">
-					<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />
-				</span>
-				<span class="absolute top-2.5 right-0 border-l px-4 py-1.5 text-gray-400">
-					<img src="/search-download.svg" alt=""  class="w-4 h-4"/>
-				</span>
+			<div class="text-center">
+				<p class="text-2xl font-bold">{fmt(analytics?.funnel?.registrationCompletes)}</p>
+				<p class="text-xs text-gray-500">Completed</p>
 			</div>
+			<div class="text-center">
+				<p class="text-2xl font-bold">{fmt(analytics?.funnel?.paymentStarts)}</p>
+				<p class="text-xs text-gray-500">Payment Started</p>
+			</div>
+			<div class="text-center">
+				<p class="text-2xl font-bold">{fmt(analytics?.funnel?.paymentCompletes)}</p>
+				<p class="text-xs text-gray-500">Payment Complete</p>
+			</div>
+			<div class="text-center">
+				<p class="text-2xl font-bold text-red-500">{fmtPercent(analytics?.funnel?.dropOffRate)}</p>
+				<p class="text-xs text-gray-500">Drop-off Rate</p>
+			</div>
+		</div>
+	</div>
 
+	<!-- Communications -->
+	<div class="mb-6 rounded-xl bg-white p-6 shadow-sm">
+		<h3 class="mb-4 text-lg font-medium">Communications</h3>
+		<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+			<div>
+				<p class="text-2xl font-bold">{fmt(analytics?.communications?.emailsSent)}</p>
+				<p class="text-xs text-gray-500">Emails Sent</p>
+			</div>
+			<div>
+				<p class="text-2xl font-bold">{fmt(analytics?.communications?.invitationsSent)}</p>
+				<p class="text-xs text-gray-500">Invitations</p>
+			</div>
+			<div>
+				<p class="text-2xl font-bold">{fmt(analytics?.communications?.blastsSent)}</p>
+				<p class="text-xs text-gray-500">Blasts Sent</p>
+			</div>
+			<div>
+				<p class="text-2xl font-bold">{fmtPercent(analytics?.communications?.invitationAcceptRate)}</p>
+				<p class="text-xs text-gray-500">Accept Rate</p>
+			</div>
+		</div>
+	</div>
+
+	{:else if activeTab === 'ai'}
+	<!-- AI Insights Tab -->
+	<div class="space-y-6">
+		<div class="rounded-xl bg-white p-6 shadow-sm">
 			<div class="mb-4 flex items-center justify-between">
-				<button
-					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
-				>
-					<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
-					Filter
-					<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
-				</button>
-				<button
-					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
-				>
-					<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
-					Recently Added
-					<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
+				<h3 class="text-lg font-medium">AI-Generated Summary</h3>
+				<button on:click={loadAISummary} disabled={aiLoading}
+					class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50">
+					{#if aiLoading}
+						<div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+						Generating...
+					{:else}
+						<Icon icon="mdi:auto-fix" class="h-4 w-4" />
+						Generate Summary
+					{/if}
 				</button>
 			</div>
+			{#if aiSummary}
+				<div class="prose prose-sm max-w-none rounded-lg bg-gray-50 p-4">{@html aiSummary.replace(/\n/g, '<br>')}</div>
+			{:else}
+				<p class="text-sm text-gray-400">Click "Generate Summary" to get an AI-powered analysis of your event performance.</p>
+			{/if}
 		</div>
 
-		<div class="mt-8 min-h-90 border-t pt-8 text-center">
-			<div class="mb-12 flex w-full justify-between">
-				<button
-					class="ml-auto flex items-start gap-1 rounded-md bg-[#EBECED] px-3 py-2 text-sm font-medium text-[#5D646F] transition-colors hover:bg-gray-200"
-				>
-					Learn More
-					<img src="/send-icon.png" alt="icon" class="h-3 w-3" />
+		<div class="rounded-xl bg-white p-6 shadow-sm">
+			<h3 class="mb-4 text-lg font-medium">Chat with Your Data</h3>
+			<div class="flex gap-2">
+				<input type="text" bind:value={chatQuestion} placeholder="Ask a question about your event analytics..."
+					class="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					on:keydown={(e) => e.key === 'Enter' && askQuestion()} />
+				<button on:click={askQuestion} disabled={chatLoading || !chatQuestion.trim()}
+					class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+					{chatLoading ? '...' : 'Ask'}
 				</button>
 			</div>
-			<div class="flex h-50 flex-col items-center justify-center">
-				<!-- Placeholder icon -->
-				<img src="/noreferral.svg" alt="" />
-				<div class="text-lg font-medium text-[#646568]">No Referrals, yet</div>
-				<div class="mt-1 text-xs text-gray-400">
-					Referrals will start showing up once guests start inviting their friends.
-				</div>
-			</div>
+			{#if chatAnswer}
+				<div class="mt-4 rounded-lg bg-gray-50 p-4 text-sm">{@html chatAnswer.replace(/\n/g, '<br>')}</div>
+			{/if}
 		</div>
 	</div>
 
-	<!-- Event Feedback -->
-	<div class="mb-6 text-sm text-gray-700">
-		<div class="mt-8 mb-5 border-t pt-8">
-			<span class="flex items-center gap-1">
-				<h4 class="text-lg font-medium">Event Feedback</h4>
-				<p
-					class="hidden h-[22px] w-[22px] items-center justify-center rounded-full border bg-[#EBECED] lg:flex"
-				>
-					0
-				</p>
-			</span>
-			<p class="hidden text-sm text-[#737577] lg:block">
-				See how much your guests enjoyed the event.
-			</p>
-		</div>
-
-		<div class="flex min-h-90 flex-col items-center justify-center">
-			<!-- Placeholder icon -->
-			<img src="/feedback.svg" alt="" />
-			<div class="text-lg font-medium text-[#646568]">No Post-Event Email Scheduled</div>
-			<div class="mt-1 text-center text-xs text-gray-400">
-				To collect feedback, schedule a post-event thank you email. We will take care of the rest
-				for you!
-			</div>
-			<button
-				class="mt-4 flex items-center gap-1 rounded-md bg-[#EBECED] px-3 py-2 text-sm font-medium text-[#5D646F] transition-colors hover:bg-gray-200"
-			>
-				<Icon icon="mdi-clock-outline" class="h-4 w-4 font-bold" />
-				Schedule Feedback Email
-			</button>
-		</div>
-	</div>
 	{:else if activeTab === 'surveys'}
-	<!-- Surveys & Feedback Tab -->
 	<div class="flex h-70 flex-col items-center justify-center">
 		<Icon icon="mdi:clipboard-text-outline" class="mb-3 text-6xl text-gray-300" />
 		<p class="text-lg font-medium text-[#A2ACB2]">Surveys & Feedback</p>

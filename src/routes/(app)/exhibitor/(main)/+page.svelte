@@ -136,13 +136,26 @@
 {:else}
 <div class="min-h-screen w-full text-[#101828]">
 	<!-- Header -->
-	<div class="mb-8 flex items-center gap-3">
-		{#if logoUrl}
-			<img src={logoUrl} alt="logo" class="h-8 w-8 rounded-lg object-cover" />
-		{:else}
-			<img src="/loader.svg" alt="logo" class="h-8 w-8 rounded-lg object-cover" />
+	<div class="mb-8 flex items-center justify-between">
+		<div class="flex items-center gap-3">
+			{#if logoUrl}
+				<img src={logoUrl} alt="logo" class="h-8 w-8 rounded-lg object-cover" />
+			{:else}
+				<img src="/loader.svg" alt="logo" class="h-8 w-8 rounded-lg object-cover" />
+			{/if}
+			<h1 class="text-2xl font-bold">{exhibitorName}</h1>
+		</div>
+		{#if profileData?.publicProfileSlug}
+			<a
+				class="flex items-center gap-1.5 rounded-md bg-[#F0EFF1] px-3 py-1.5 text-sm font-medium text-[#5D646F] transition-colors hover:bg-[#E4E3E6]"
+				href="/x/{profileData.publicProfileSlug}"
+				target="_blank"
+				rel="noopener noreferrer"
+			>
+				Exhibitor Page
+				<Icon icon="mdi:open-in-new" class="h-3.5 w-3.5 text-[#8A8D90]" />
+			</a>
 		{/if}
-		<h1 class="text-2xl font-bold">{exhibitorName}</h1>
 	</div>
 
 	<div class="flex w-full flex-col gap-8">

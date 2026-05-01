@@ -6,10 +6,28 @@
 	import LanguageModal from './modal/LanguageModal.svelte';
 	import LocationModal from './modal/LocationModal.svelte';
 	import { clickOutside } from '$lib/utils/constant';
+	import { getDiscoverStats, type DiscoverStats } from '$lib/services/discover.services';
+
+	export let activeItem = 'Events';
 
 	let searchQuery = '';
-	let activeItem = 'Events';
 	let activeModal: string | null;
+
+	// ─── Dynamic stats ────────────────────────────────────────────────────
+	let stats: DiscoverStats | null = null;
+
+	onMount(async () => {
+		try {
+			stats = await getDiscoverStats();
+		} catch {
+			// silent — will show fallback "—"
+		}
+	});
+
+	function fmt(n: number | undefined): string {
+		if (n === undefined || n === null) return '—';
+		return n.toLocaleString();
+	}
 
 	function scrollToId(id: string, options?: ScrollIntoViewOptions) {
 		const el = document.getElementById(id);
@@ -221,6 +239,42 @@
 			selectedIcon: withColor(SPEAKER_ICON)
 		}
 	];
+
+	// ─── Dynamic hero content per tab ─────────────────────────────────────
+	const heroTitles: Record<string, { title: string; placeholder: string }> = {
+		Events: { title: 'Discover Unlimited Events', placeholder: 'Search events, and collections' },
+		Vendors: { title: 'Find Trusted Vendors', placeholder: 'Search vendors and services' },
+		Speakers: { title: 'Discover Expert Speakers', placeholder: 'Search speakers and topics' },
+		Exhibitors: { title: 'Explore Exhibitor Showcases', placeholder: 'Search exhibitors and booths' },
+		Community: { title: 'Join the Community', placeholder: 'Search communities' },
+	};
+
+	$: currentTitle = heroTitles[activeItem]?.title || heroTitles.Events.title;
+	$: currentPlaceholder = heroTitles[activeItem]?.placeholder || heroTitles.Events.placeholder;
+
+	// Stats per tab — derived from the API response
+	$: stat1 = (() => {
+		if (!stats) return { count: '—', label: 'Events' };
+		switch (activeItem) {
+			case 'Vendors': return { count: fmt(stats.vendors), label: 'Vendors' };
+			case 'Speakers': return { count: fmt(stats.speakers), label: 'Speakers' };
+			case 'Exhibitors': return { count: fmt(stats.exhibitors), label: 'Exhibitors' };
+			default: return { count: fmt(stats.events), label: 'Events' };
+		}
+	})();
+
+	$: stat2 = (() => {
+		if (!stats) return { count: '—', label: 'Organizers' };
+		switch (activeItem) {
+			case 'Vendors': return { count: fmt(stats.products), label: 'Products' };
+			case 'Speakers': return { count: fmt(stats.portfolios), label: 'Portfolios' };
+			case 'Exhibitors': return { count: fmt(stats.booths), label: 'Booths' };
+			default: return { count: fmt(stats.organizers), label: 'Organizers' };
+		}
+	})();
+
+	// Event-specific filters
+	const eventFilters = ['Category', 'Event Type', 'Location', 'Language', 'Currency'];
 </script>
 
 <header class="relative h-full">
@@ -229,14 +283,14 @@
 			class="mb-4 flex flex-col items-center justify-center gap-6 px-6 py-15 pb-20 text-center md:mb-8 lg:pb-28"
 		>
 			<!-- Main Title -->
-			<h1 class="text-3xl font-bold text-gray-800 md:text-5xl">Discover Unlimited Events</h1>
+			<h1 class="text-3xl font-bold text-gray-800 md:text-5xl">{currentTitle}</h1>
 
 			<!-- Search Bar -->
 			<div class="relative w-full max-w-3xl">
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder="Search events, and collections"
+					placeholder={currentPlaceholder}
 					class="h-[43px] w-full rounded-lg border border-gray-300 py-2 pr-4 pl-10 focus:ring-2 focus:ring-purple-500 focus:outline-none"
 				/>
 				<span class="absolute top-2.5 left-3 text-gray-400">
@@ -247,9 +301,9 @@
 
 			<!-- Stats -->
 			<div class="md:text-md flex gap-4 text-sm font-bold text-gray-400 md:gap-6">
-				<span>39,374 <span class="font-medium">Events</span></span>
+				<span>{stat1.count} <span class="font-medium">{stat1.label}</span></span>
 				<div class="border border-l border-gray-600"></div>
-				<span>1,599,060 <span class="font-medium">Organizers</span></span>
+				<span>{stat2.count} <span class="font-medium">{stat2.label}</span></span>
 			</div>
 		</div>
 
@@ -282,9 +336,10 @@
 			activeModal = '';
 		}}
 	>
-		<!-- Filters (optional - can be moved to main content later) -->
+		<!-- Filters (only shown for Events tab) -->
+		{#if activeItem === 'Events'}
 		<div class="custom-scrollbar flex gap-4 overflow-x-auto overflow-y-hidden whitespace-nowrap">
-			{#each ['Category', 'Event Type', 'Location', 'Language', 'Currency'] as filter}
+			{#each eventFilters as filter}
 				<button
 					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-sm text-[#616265]"
 					on:click={(e) => handleFilterClick(filter, e)}
@@ -344,6 +399,7 @@
 		{/if}
 		{#if activeModal === 'Currency'}
 			<!-- Add CurrencyModal here -->
+		{/if}
 		{/if}
 	</div>
 </header>

@@ -1,6 +1,6 @@
 <!-- src/lib/components/Sidebar.svelte -->
 <script lang="ts">
-	let activeItem = 'Events';
+	export let activeItem = 'Events';
 
 	const GRAY = '#545260';
 	const PURPLE = '#A667E4';

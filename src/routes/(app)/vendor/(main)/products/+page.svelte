@@ -10,6 +10,7 @@
 	let loading = true;
 	let vendorName = '';
 	let logoUrl = '';
+	let vendorProfileSlug = '';
 	let products: any[] = [];
 	let showModal = false;
 	let editingProduct: any = null;
@@ -68,6 +69,7 @@
 			const vd = (profile as any)?.vendorDetails;
 			vendorName = vd?.businessName || '';
 			logoUrl = vd?.logoUrl || profile?.profilePictureUrl || '';
+			vendorProfileSlug = profile?.publicProfileSlug || '';
 		} catch {
 			// silent
 		}
@@ -348,6 +350,12 @@
 							<button on:click={() => handleEdit(product)} class="flex items-center gap-1 rounded-md border border-gray-200 px-3 py-1.5 text-[10px] font-bold text-gray-600 hover:bg-gray-50">
 								<Icon icon="mdi:pencil-outline" class="h-3 w-3" /> Edit
 							</button>
+							{#if vendorProfileSlug && product.slug && product.isPublic}
+								<a href="/v/{vendorProfileSlug}/{product.slug}" target="_blank" rel="noopener noreferrer"
+									class="flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1.5 text-[10px] font-bold text-[#5D646F] hover:bg-gray-50">
+									<Icon icon="mdi:open-in-new" class="h-3 w-3" />
+								</a>
+							{/if}
 							<div class="relative ml-auto">
 								<button on:click={() => (showActionMenu = showActionMenu === product._id ? null : product._id)} class="rounded p-1 hover:bg-gray-100">
 									<Icon icon="mdi:dots-horizontal" class="h-4 w-4 text-gray-400" />

@@ -41,7 +41,7 @@
 	let errors: Record<string, string> = {};
 	let submitting = false;
 	let submitError = '';
-	let selectedGateway: 'PAYSTACK' | 'FLUTTERWAVE' = 'PAYSTACK';
+	let selectedGateway: 'PAYSTACK' = 'PAYSTACK';
 
 	// Terms expand/collapse state per field
 	let termsExpanded: Record<string, boolean> = {};
@@ -488,7 +488,7 @@
 					});
 					handler.openIframe();
 				} else {
-					// Flutterwave or others — redirect to checkout URL
+					// Non-Paystack gateways — redirect to checkout URL
 					window.location.href = paymentData.checkoutUrl;
 				}
 			} else {
@@ -1000,20 +1000,6 @@
 							<div class="text-left">
 								<p class="text-sm font-medium" style="color: {themeColor.text};">Paystack</p>
 								<p class="text-xs" style="color: {themeColor.lightText};">Pay with card, bank transfer, or USSD</p>
-							</div>
-						</button>
-
-						<button
-							class="flex items-center gap-4 w-full rounded-xl p-4 border-2 transition-all"
-							style="background-color: {themeColor.cover}; border-color: {selectedGateway === 'FLUTTERWAVE' ? themeColor.button : themeColor.toggle};"
-							on:click={() => selectedGateway = 'FLUTTERWAVE'}
-						>
-							<div class="flex h-12 w-12 items-center justify-center rounded-lg" style="background-color: {themeColor.smallCover};">
-								<span class="text-lg font-bold" style="color: #F5A623;">F</span>
-							</div>
-							<div class="text-left">
-								<p class="text-sm font-medium" style="color: {themeColor.text};">Flutterwave</p>
-								<p class="text-xs" style="color: {themeColor.lightText};">Pay with card, mobile money, or bank</p>
 							</div>
 						</button>
 					</div>

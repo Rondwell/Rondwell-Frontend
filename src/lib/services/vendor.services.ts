@@ -338,16 +338,23 @@ export async function discoverVendors(filters: { page?: number; limit?: number; 
   if (filters.businessType) params.set('businessType', filters.businessType);
   if (filters.location) params.set('location', filters.location);
 
-  const res = await fetch(`${BASE_URL}/api/v1/products/public/vendors?${params}`);
+  const res = await fetch(`${PRODUCTS_API}/public/discover/vendors?${params}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Failed to fetch vendors');
   return data.data;
 }
 
 export async function getPublicVendorBySlug(slug: string) {
-  const res = await fetch(`${BASE_URL}/api/v1/products/public/vendor/${slug}`);
+  const res = await fetch(`${PRODUCTS_API}/public/discover/vendor/${slug}`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.message ?? 'Vendor not found');
+  return data.data;
+}
+
+export async function getPublicVendorProduct(vendorSlug: string, productSlug: string) {
+  const res = await fetch(`${PRODUCTS_API}/public/discover/vendor/${vendorSlug}/product/${productSlug}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? 'Product not found');
   return data.data;
 }
 

@@ -6,28 +6,33 @@
 	import Hero from './components/Hero.svelte';
 	import DiscoverSidebar from './components/Sidebar.svelte';
 	import VendorList from './components/VendorList.svelte';
+	import SpeakerList from './components/SpeakerList.svelte';
+	import ExhibitorList from './components/ExhibitorList.svelte';
 
 	let show = false;
-	let activeTab: 'events' | 'vendors' = 'events';
+	let activeItem = 'Events';
 
 	if (typeof window !== 'undefined') {
 		const params = new URLSearchParams(window.location.search);
 		show = params.get('show') === 'true';
-		if (params.get('tab') === 'vendors') activeTab = 'vendors';
+		const tab = params.get('tab');
+		if (tab === 'vendors') activeItem = 'Vendors';
+		else if (tab === 'speakers') activeItem = 'Speakers';
+		else if (tab === 'exhibitors') activeItem = 'Exhibitors';
 	}
 </script>
 
 <svelte:head>
-	<title>Discover Events | Rondwell</title>
-	<meta name="description" content="Discover and explore upcoming events near you. Find conferences, meetups, workshops, and more on Rondwell." />
-	<meta property="og:title" content="Discover Events | Rondwell" />
-	<meta property="og:description" content="Discover and explore upcoming events near you. Find conferences, meetups, workshops, and more." />
+	<title>Discover | Rondwell</title>
+	<meta name="description" content="Discover events, vendors, speakers, and exhibitors on Rondwell. Find conferences, meetups, workshops, and more." />
+	<meta property="og:title" content="Discover | Rondwell" />
+	<meta property="og:description" content="Discover events, vendors, speakers, and exhibitors on Rondwell." />
 	<meta property="og:image" content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" />
 	<meta property="og:url" content="https://rondwell.com/discover" />
 	<meta property="og:type" content="website" />
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content="Discover Events | Rondwell" />
-	<meta name="twitter:description" content="Discover and explore upcoming events near you." />
+	<meta name="twitter:title" content="Discover | Rondwell" />
+	<meta name="twitter:description" content="Discover events, vendors, speakers, and exhibitors on Rondwell." />
 	<meta name="twitter:image" content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" />
 	<meta name="twitter:site" content="@rondwellhq" />
 	<link rel="canonical" href="https://rondwell.com/discover" />
@@ -44,35 +49,32 @@
 		</div>
 		<div class="px-2 pt-7 md:px-3 lg:flex lg:pt-10">
 			<!-- Sidebar -->
-			<DiscoverSidebar />
+			<DiscoverSidebar bind:activeItem />
 
 			<!-- Main Content Areas -->
 			<div
 				class="custom-scrollbar flex h-full flex-1 flex-col gap-7 overflow-x-hidden overflow-y-auto px-2 lg:px-4"
 			>
 				<!-- Hero -->
-				<Hero />
+				<Hero bind:activeItem={activeItem} />
 
-				<!-- Tabs -->
-				<div class="flex gap-1 border-b border-gray-200">
-					<button
-						class="px-4 pb-2 text-sm font-medium transition-colors {activeTab === 'events' ? 'border-b-2 border-[#513BE2] text-[#513BE2]' : 'text-gray-500 hover:text-gray-700'}"
-						on:click={() => (activeTab = 'events')}
-					>
-						Events
-					</button>
-					<button
-						class="px-4 pb-2 text-sm font-medium transition-colors {activeTab === 'vendors' ? 'border-b-2 border-[#513BE2] text-[#513BE2]' : 'text-gray-500 hover:text-gray-700'}"
-						on:click={() => (activeTab = 'vendors')}
-					>
-						Vendors
-					</button>
-				</div>
-
-				{#if activeTab === 'events'}
+				<!-- Content based on sidebar selection -->
+				{#if activeItem === 'Events'}
 					<EventList />
-				{:else}
+				{:else if activeItem === 'Vendors'}
 					<VendorList />
+				{:else if activeItem === 'Speakers'}
+					<SpeakerList />
+				{:else if activeItem === 'Exhibitors'}
+					<ExhibitorList />
+				{:else if activeItem === 'Community'}
+					<div class="flex flex-col items-center justify-center gap-4 rounded-2xl bg-white py-20">
+						<p class="text-5xl">💬</p>
+						<h3 class="text-lg font-semibold text-gray-900">Community</h3>
+						<p class="max-w-sm text-center text-sm text-gray-500">Community features are coming soon. Stay tuned!</p>
+					</div>
+				{:else}
+					<EventList />
 				{/if}
 			</div>
 		</div>

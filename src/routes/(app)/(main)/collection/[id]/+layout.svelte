@@ -12,6 +12,8 @@
 	let collectionName = '';
 	let collectionImage = '';
 	let collectionSlug = '';
+	let accessDenied = false;
+	let loadError = '';
 
 	onMount(async () => {
 		const id = $page.params.id;
@@ -22,8 +24,16 @@
 			collectionImage = c.profilePictureUrl ?? '';
 			collectionSlug = c.slug ?? '';
 			collectionStore.set(c);
-		} catch {
-			// silent
+		} catch (err: any) {
+			const msg = err?.message ?? '';
+			const status = err?.status;
+			if (status === 403 || msg.includes('403') || msg.includes('access') || msg.includes('Forbidden')) {
+				accessDenied = true;
+			} else if (status === 404 || msg.includes('404') || msg.includes('not found')) {
+				loadError = 'not_found';
+			} else {
+				loadError = 'error';
+			}
 		}
 	});
 
@@ -134,6 +144,73 @@
 	}
 </script>
 
+<!-- Access Denied / Error States -->
+{#if accessDenied}
+<div class="flex h-[70vh] w-full items-center justify-center px-4">
+	<div class="flex max-w-md flex-col items-center text-center gap-5">
+		<div class="flex h-24 w-24 items-center justify-center rounded-full bg-red-50">
+			<svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+				<path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M12 8V13" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M11.9945 16H12.0035" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+		</div>
+		<h2 class="text-xl font-semibold text-gray-800">Access Denied</h2>
+		<p class="text-sm leading-relaxed text-gray-500">
+			You don't have permission to manage this collection. Only the collection owner can access this page.
+		</p>
+		<div class="flex gap-3 mt-2">
+			<a href="/discover" class="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 no-underline">
+				Discover Events
+			</a>
+			<button on:click={() => history.back()} class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+				Go Back
+			</button>
+		</div>
+	</div>
+</div>
+
+{:else if loadError === 'not_found'}
+<div class="flex h-[70vh] w-full items-center justify-center px-4">
+	<div class="flex max-w-md flex-col items-center text-center gap-5">
+		<div class="flex h-24 w-24 items-center justify-center rounded-full bg-gray-100">
+			<svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+				<path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="#D1D5DB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M12 8V13" stroke="#D1D5DB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M11.9945 16H12.0035" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+		</div>
+		<h2 class="text-xl font-semibold text-gray-800">Collection Not Found</h2>
+		<p class="text-sm leading-relaxed text-gray-500">
+			This collection may have been removed or the link might be incorrect.
+		</p>
+		<a href="/discover" class="mt-2 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 no-underline">
+			Discover Events
+		</a>
+	</div>
+</div>
+
+{:else if loadError}
+<div class="flex h-[70vh] w-full items-center justify-center px-4">
+	<div class="flex max-w-md flex-col items-center text-center gap-5">
+		<div class="flex h-24 w-24 items-center justify-center rounded-full bg-gray-100">
+			<svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+				<path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="#D1D5DB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M12 8V13" stroke="#D1D5DB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M11.9945 16H12.0035" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+		</div>
+		<h2 class="text-xl font-semibold text-gray-800">Something went wrong</h2>
+		<p class="text-sm leading-relaxed text-gray-500">
+			We couldn't load this collection. Please try again.
+		</p>
+		<button on:click={() => window.location.reload()} class="mt-2 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800">
+			Try Again
+		</button>
+	</div>
+</div>
+
+{:else}
 <!-- Collection Header — shared across all modules -->
 <div class="px-2 py-4 sm:px-4">
 	<div class="mb-4 flex items-center justify-between">
@@ -167,3 +244,4 @@
 </div>
 
 <slot />
+{/if}

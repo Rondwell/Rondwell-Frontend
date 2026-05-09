@@ -57,7 +57,7 @@
 			Popular <span class="text-[#7B2CBF]">Events.</span>
 		</h2>
 
-		<div class="mb-12 grid gap-4 lg:grid-cols-2">
+		<div class="mb-12 grid grid-cols-1 gap-4 lg:grid-cols-2 max-w-3xl mx-auto lg:max-w-none">
 			{#if loading}
 				{#each Array(6) as _}
 					<div class="flex animate-pulse gap-4 rounded-md bg-[#FDFDFD] p-6">

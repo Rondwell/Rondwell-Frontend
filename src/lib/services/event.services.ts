@@ -83,7 +83,11 @@ export async function getMySubscribedCollections(): Promise<any[]> {
 export async function getEventById(eventId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}`);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch event');
+  if (!res.ok) {
+    const err = new Error(data.message ?? 'Failed to fetch event');
+    (err as any).status = res.status;
+    throw err;
+  }
   return data.event;
 }
 
@@ -1473,7 +1477,11 @@ export async function updateCollection(collectionId: string, payload: Record<str
 export async function getCollectionById(collectionId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}`);
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch collection');
+  if (!res.ok) {
+    const err = new Error(data.message ?? 'Failed to fetch collection');
+    (err as any).status = res.status;
+    throw err;
+  }
   return data.collection ?? data;
 }
 

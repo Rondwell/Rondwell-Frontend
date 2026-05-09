@@ -2,6 +2,16 @@
 	import { page } from '$app/stores';
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 	import { get } from 'svelte/store';
+	import { getEventCache } from '$lib/stores/eventCache.store';
+
+	$: eventId = $page.params.id ?? '';
+	$: ({ error: errorStore, loading: loadingStore } = getEventCache(eventId));
+	$: error = $errorStore;
+	$: loading = $loadingStore;
+
+	// Detect access denied vs other errors
+	$: accessDenied = error && (error.includes('403') || error.includes('access') || error.includes('Forbidden') || error.includes('do not have'));
+	$: notFound = error && (error.includes('404') || error.includes('not found') || error.includes('Not found'));
 
 	const eventsIcon = {
 		overviewIcon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -121,4 +131,51 @@
 	}
 </script>
 
+{#if accessDenied}
+<div class="flex h-[70vh] w-full items-center justify-center px-4">
+	<div class="flex max-w-md flex-col items-center text-center gap-5">
+		<div class="flex h-24 w-24 items-center justify-center rounded-full bg-red-50">
+			<svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+				<path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M12 8V13" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M11.9945 16H12.0035" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+		</div>
+		<h2 class="text-xl font-semibold text-gray-800">Access Denied</h2>
+		<p class="text-sm leading-relaxed text-gray-500">
+			You don't have permission to manage this event. Only the event organizer and invited admins can access this page.
+		</p>
+		<div class="flex gap-3 mt-2">
+			<a href="/discover" class="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 no-underline">
+				Discover Events
+			</a>
+			<button on:click={() => history.back()} class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+				Go Back
+			</button>
+		</div>
+	</div>
+</div>
+
+{:else if notFound}
+<div class="flex h-[70vh] w-full items-center justify-center px-4">
+	<div class="flex max-w-md flex-col items-center text-center gap-5">
+		<div class="flex h-24 w-24 items-center justify-center rounded-full bg-gray-100">
+			<svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+				<path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="#D1D5DB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M12 8V13" stroke="#D1D5DB" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M11.9945 16H12.0035" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+		</div>
+		<h2 class="text-xl font-semibold text-gray-800">Event Not Found</h2>
+		<p class="text-sm leading-relaxed text-gray-500">
+			This event may have been removed or the link might be incorrect.
+		</p>
+		<a href="/discover" class="mt-2 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 no-underline">
+			Discover Events
+		</a>
+	</div>
+</div>
+
+{:else}
 <slot />
+{/if}

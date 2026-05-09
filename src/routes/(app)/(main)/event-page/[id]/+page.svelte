@@ -226,6 +226,11 @@
 		|| (organizers.length > 0 ? organizers[0].email : '')
 		|| '';
 
+	// Check if the current logged-in user is the organizer or an admin of this event
+	$: isEventOrganizer = $isAuthenticated && $authState.user
+		? (event?.organizerId === $authState.user.id || organizers.some((a: any) => a.userId === $authState.user?.id))
+		: false;
+
 	let showSubscribeModal = false;
 	let eventSubscribing = false;
 
@@ -421,8 +426,8 @@
 				on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/events.png'; }}
 			/>
 
-			<!-- Organizer Access Card (only if logged in) -->
-			{#if $isAuthenticated}
+			<!-- Organizer Access Card (only if user is the actual organizer/admin of this event) -->
+			{#if isEventOrganizer}
 			<div
 				class="mb-4 mt-3 max-w-[378px] rounded-lg px-3 py-2.5 sm:px-4 sm:py-3"
 				style="background-color: {themeColor.cover}; border: 1px solid {themeColor.toggle};"
@@ -444,7 +449,7 @@
 			{/if}
 
 			<!-- Desktop Only Sections -->
-			<div class="hidden md:block {$isAuthenticated ? '' : 'mt-4'}">
+			<div class="hidden md:block {isEventOrganizer ? '' : 'mt-4'}">
 				<!-- Presented By -->
 				{#if collectionInfo}
 				<div class="rounded-2xl p-4" style="background-color: {themeColor.cover};">

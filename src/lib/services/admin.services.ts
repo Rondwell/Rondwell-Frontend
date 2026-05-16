@@ -3,6 +3,7 @@
  * All admin API calls go through the gateway at VITE_API_URL.
  */
 import { browser } from '$app/environment';
+import { throwApiError } from '$lib/utils/errorMessage';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -46,7 +47,6 @@ async function adminFetch(path: string, options: RequestInit = {}): Promise<any>
   headers.set('Content-Type', 'application/json');
 
   const res = await fetch(`${API_URL}/api/v1/admin${path}`, { ...options, headers });
-  const data = await res.json();
 
   if (res.status === 401) {
     clearAdminAuth();
@@ -54,8 +54,8 @@ async function adminFetch(path: string, options: RequestInit = {}): Promise<any>
     throw new Error('Session expired');
   }
 
-  if (!res.ok) throw new Error(data.message || 'Request failed');
-  return data;
+  if (!res.ok) await throwApiError(res, 'Request failed');
+  return res.json();
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────
@@ -65,8 +65,8 @@ export async function adminLogin(email: string, password: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
+  if (!res.ok) await throwApiError(res, 'Login failed');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Login failed');
   return data.data;
 }
 

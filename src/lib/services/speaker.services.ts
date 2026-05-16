@@ -1,5 +1,6 @@
 import { authFetch } from '$lib/services/api.client';
 
+import { throwApiError } from '$lib/utils/errorMessage';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 /**
@@ -13,8 +14,8 @@ export async function uploadSpeakerPhoto(profileId: string, file: File) {
     method: 'POST',
     body: formData
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload speaker photo');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload speaker photo');
   return data.data;
 }
 
@@ -32,8 +33,8 @@ export async function uploadSpeakerPortfolio(profileId: string, files: File[]) {
     method: 'POST',
     body: formData
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload speaker portfolio');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload speaker portfolio');
   return data.data;
 }
 
@@ -49,8 +50,8 @@ export async function updateSpeakerDetails(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(details)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update speaker details');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update speaker details');
   return data.data;
 }
 
@@ -82,8 +83,8 @@ export async function getSpeakerCollaborations(filters: SpeakerCollaborationFilt
   if (filters.sortOrder) params.set('sortOrder', filters.sortOrder);
 
   const res = await authFetch(`${PRODUCTS_API}/speaker/collaborations?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch speaker collaborations');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch speaker collaborations');
   return data.data;
 }
 
@@ -92,8 +93,8 @@ export async function getSpeakerCollaborations(filters: SpeakerCollaborationFilt
  */
 export async function getSpeakerCollaborationStats() {
   const res = await authFetch(`${PRODUCTS_API}/speaker/collaborations/stats`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch speaker stats');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch speaker stats');
   return data.data;
 }
 
@@ -102,8 +103,8 @@ export async function getSpeakerCollaborationStats() {
  */
 export async function getSpeakerCollaboration(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/speaker/collaborations/${collaborationId}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch collaboration');
   return data.data;
 }
 
@@ -116,8 +117,8 @@ export async function sendSpeakerCollaborationRequest(requestData: Record<string
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(requestData)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send collaboration request');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send collaboration request');
   return data.data;
 }
 
@@ -130,8 +131,8 @@ export async function sendSpeakerQuote(collaborationId: string, quote: { quotedA
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(quote)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send quote');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send quote');
   return data.data;
 }
 
@@ -142,8 +143,8 @@ export async function acceptSpeakerCollaboration(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/speaker/collaborations/${collaborationId}/accept`, {
     method: 'POST'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to accept collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to accept collaboration');
   return data.data;
 }
 
@@ -154,8 +155,8 @@ export async function declineSpeakerCollaboration(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/speaker/collaborations/${collaborationId}/decline`, {
     method: 'POST'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to decline collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to decline collaboration');
   return data.data;
 }
 
@@ -166,8 +167,8 @@ export async function withdrawSpeakerCollaboration(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/speaker/collaborations/${collaborationId}/withdraw`, {
     method: 'PUT'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to withdraw collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to withdraw collaboration');
   return data.data;
 }
 
@@ -176,8 +177,8 @@ export async function withdrawSpeakerCollaboration(collaborationId: string) {
  */
 export async function getSpeakerInvitations() {
   const res = await authFetch(`${PRODUCTS_API}/speaker/invitations`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch speaker invitations');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch speaker invitations');
   return data.data;
 }
 
@@ -186,8 +187,8 @@ export async function getSpeakerInvitations() {
  */
 export async function getSpeakerProductProfile() {
   const res = await authFetch(`${PRODUCTS_API}/speaker/profile`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch speaker profile');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch speaker profile');
   return data.data;
 }
 
@@ -214,15 +215,15 @@ export async function getSpeakerPortfolios(filters: PortfolioFilters = {}) {
   if (filters.sortOrder) params.set('sortOrder', filters.sortOrder);
 
   const res = await authFetch(`${PRODUCTS_API}/portfolio?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch portfolios');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch portfolios');
   return data;
 }
 
 export async function getSpeakerPortfolio(portfolioId: string) {
   const res = await authFetch(`${PRODUCTS_API}/portfolio/${portfolioId}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch portfolio');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch portfolio');
   return data.data;
 }
 
@@ -232,8 +233,8 @@ export async function createSpeakerPortfolio(portfolioData: Record<string, unkno
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(portfolioData)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create portfolio');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create portfolio');
   return data.data;
 }
 
@@ -243,8 +244,8 @@ export async function updateSpeakerPortfolio(portfolioId: string, updates: Recor
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update portfolio');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update portfolio');
   return data.data;
 }
 
@@ -252,8 +253,8 @@ export async function archiveSpeakerPortfolio(portfolioId: string) {
   const res = await authFetch(`${PRODUCTS_API}/portfolio/${portfolioId}`, {
     method: 'DELETE'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to archive portfolio');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to archive portfolio');
   return data;
 }
 
@@ -261,8 +262,8 @@ export async function duplicateSpeakerPortfolio(portfolioId: string) {
   const res = await authFetch(`${PRODUCTS_API}/portfolio/${portfolioId}/duplicate`, {
     method: 'POST'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to duplicate portfolio');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to duplicate portfolio');
   return data.data;
 }
 
@@ -274,8 +275,8 @@ export async function uploadSpeakerPortfolioMedia(file: File) {
     method: 'POST',
     body: formData
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload file');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload file');
   return data.url;
 }
 
@@ -285,8 +286,8 @@ export async function deleteSpeakerPortfolioMedia(url: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url })
   });
+  if (!res.ok) await throwApiError(res, 'Failed to delete media');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to delete media');
   return data;
 }
 
@@ -299,8 +300,8 @@ export async function sendSpeakerMessage(collaborationId: string, content: strin
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content })
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send message');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send message');
   return data.data;
 }
 
@@ -313,8 +314,8 @@ export async function updateSpeakerCollaborationStatus(collaborationId: string, 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status })
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update collaboration');
   return data.data;
 }
 
@@ -325,8 +326,8 @@ export async function resendSpeakerCollaborationEmail(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/speaker/collaborations/${collaborationId}/resend-email`, {
     method: 'POST'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to resend email');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to resend email');
   return data;
 }
 
@@ -337,8 +338,8 @@ export async function deleteSpeakerCollaboration(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/speaker/collaborations/${collaborationId}`, {
     method: 'DELETE'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to delete collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to delete collaboration');
   return data;
 }
 
@@ -354,7 +355,7 @@ export async function discoverEvents(filters: { search?: string; page?: number; 
   if (filters.organizerId) params.set('organizerId', filters.organizerId);
 
   const res = await fetch(`${BASE}/api/v1/events/discover?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to discover events');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to discover events');
   return data.events || [];
 }

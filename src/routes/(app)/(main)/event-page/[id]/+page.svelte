@@ -206,6 +206,7 @@
 	$: selectedQuantity = ticketQuantity[selectedTicket] ?? 1;
 	$: anyTicketAvailable = ticketTypes.some((t: any) => isTicketAvailable(t));
 	$: selectedTicketAvailable = selectedTicket ? isTicketAvailable(ticketTypes.find((t: any) => t._id === selectedTicket)) : false;
+	$: isFreeNoTicketEvent = ticketTypes.length === 0 && event?.registrationOpen === true;
 
 	function getRegisterButtonLabel(): string {
 		const ticket = ticketTypes.find(t => t._id === selectedTicket);
@@ -708,9 +709,15 @@
 					</a>
 				</div>
 				{:else}
+				{#if isFreeNoTicketEvent}
+				<p class="my-4 px-5 text-base" style="color: {themeColor.text};">
+					Welcome! Register below to attend this event.
+				</p>
+				{:else}
 				<p class="my-4 px-5 text-base" style="color: {themeColor.text};">
 					Welcome! Please choose your desired ticket type:
 				</p>
+				{/if}
 
 				<div class="mb-5 flex flex-col gap-3 px-5">
 					{#each ticketTypes as ticket (ticket._id)}
@@ -792,9 +799,9 @@
 					</button>
 					{/each}
 
-					{#if ticketTypes.length === 0}
+					{#if ticketTypes.length === 0 && !isFreeNoTicketEvent}
 					<p class="text-sm" style="color: {themeColor.lightText};">No tickets available yet.</p>
-					{/if}
+				{/if}
 				</div>
 
 				<!-- Sign-in prompt -->
@@ -819,10 +826,12 @@
 						class="w-full cursor-pointer rounded-lg px-4 py-2.5 text-base font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 						style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
 						on:click={() => (showAddModal = true)}
-						disabled={!selectedTicket || ticketTypes.length === 0 || !anyTicketAvailable || !selectedTicketAvailable}
+						disabled={!isFreeNoTicketEvent && (!selectedTicket || ticketTypes.length === 0 || !anyTicketAvailable || !selectedTicketAvailable)}
 					>
-						{#if !anyTicketAvailable}
+						{#if !anyTicketAvailable && !isFreeNoTicketEvent}
 							Tickets Unavailable
+						{:else if isFreeNoTicketEvent}
+							Register
 						{:else}
 							{getRegisterButtonLabel()}
 						{/if}

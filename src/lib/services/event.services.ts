@@ -1,4 +1,5 @@
 import { authFetch } from '$lib/services/api.client';
+import { throwApiError } from '$lib/utils/errorMessage';
 import { invalidateEventCache } from '$lib/stores/eventCache.store';
 
 const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
@@ -53,8 +54,8 @@ export async function createEvent(payload: CreateEventPayload): Promise<CreateEv
     body: JSON.stringify(payload),
   });
 
+  if (!res.ok) await throwApiError(res, 'Failed to create event');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create event');
   return data;
 }
 
@@ -82,12 +83,8 @@ export async function getMySubscribedCollections(): Promise<any[]> {
 
 export async function getEventById(eventId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch event');
   const data = await res.json();
-  if (!res.ok) {
-    const err = new Error(data.message ?? 'Failed to fetch event');
-    (err as any).status = res.status;
-    throw err;
-  }
   return data.event;
 }
 
@@ -126,8 +123,8 @@ export async function getPublicEventPage(eventId: string): Promise<{
   organizerProfile: any;
 }> {
   const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/public`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch event page');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch event page');
   return data;
 }
 
@@ -172,8 +169,8 @@ export async function updateEvent(eventId: string, payload: Partial<CreateEventP
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update event');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update event');
   invalidateEventCache(eventId);
   return data.event;
 }
@@ -182,8 +179,8 @@ export async function publishEvent(eventId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/publish`, {
     method: 'PUT',
   });
+  if (!res.ok) await throwApiError(res, 'Failed to publish event');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to publish event');
   invalidateEventCache(eventId);
   return data;
 }
@@ -200,8 +197,8 @@ export async function uploadEventPhoto(eventId: string, file: File, category: 'C
     method: 'POST',
     body: formData,
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload photo');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload photo');
 
   const pictureField = category === 'COVER' ? 'coverPictureUrl' : 'displayPictureUrl';
   updateEvent(eventId, { [pictureField]: data.url } as any).catch(() => {});
@@ -261,22 +258,22 @@ export async function getEventAttendeesPaginated(
   if (options.sortOrder) params.set('sortOrder', options.sortOrder);
 
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/paginated?${params.toString()}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch attendees');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch attendees');
   return data.data;
 }
 
 export async function getMyEvents(): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/organizer/all`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch events');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch events');
   return data.events ?? [];
 }
 
 export async function getMyAttendingEvents(): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/attending`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch attending events');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch attending events');
   return data.events ?? [];
 }
 
@@ -292,15 +289,15 @@ export async function inviteAttendees(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ attendees, customMessage }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to invite attendees');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to invite attendees');
   return data.data;
 }
 
 export async function getEmailUsage(userId: string): Promise<{ used: number; limit: number; tier: string }> {
   const res = await authFetch(`${EVENT_URL}/api/v1/email/usage/${userId}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch email usage');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch email usage');
   return data.data;
 }
 
@@ -309,8 +306,8 @@ export async function getEmailUsage(userId: string): Promise<{ used: number; lim
 
 export async function getTicketTypes(eventId: string): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/tickets`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch ticket types');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch ticket types');
   return data.ticketTypes ?? [];
 }
 
@@ -331,8 +328,8 @@ export async function createTicketType(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create ticket type');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create ticket type');
   return data.ticketType;
 }
 
@@ -353,8 +350,8 @@ export async function updateTicketType(eventId: string, ticketTypeId: string, pa
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update ticket type');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update ticket type');
   return data.updated;
 }
 
@@ -362,8 +359,8 @@ export async function deleteTicketType(eventId: string, ticketTypeId: string): P
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/tickets/${ticketTypeId}`, {
     method: 'DELETE',
   });
+  if (!res.ok) await throwApiError(res, 'Failed to delete ticket type');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to delete ticket type');
 }
 
 // ==================== REGISTRATION STATUS / GROUP REGISTRATION / CAPACITY ====================
@@ -413,8 +410,8 @@ export async function updateRegistrationFormSettings(eventId: string, settings: 
 
 export async function getRegistrationFields(eventId: string): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/registration-fields`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch registration fields');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch registration fields');
   return data.fields ?? [];
 }
 
@@ -437,8 +434,8 @@ export async function createRegistrationField(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create registration field');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create registration field');
   return data.field;
 }
 
@@ -461,8 +458,8 @@ export async function updateRegistrationField(eventId: string, fieldId: string, 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update registration field');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update registration field');
   return data.field;
 }
 
@@ -470,10 +467,7 @@ export async function deleteRegistrationField(eventId: string, fieldId: string):
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/registration-fields/${fieldId}`, {
     method: 'DELETE',
   });
-  if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.message ?? 'Failed to delete registration field');
-  }
+  if (!res.ok) await throwApiError(res, 'Failed to delete registration field');
 }
 
 export async function reorderRegistrationFields(eventId: string, fieldOrders: { fieldId: string; order: number }[]): Promise<any[]> {
@@ -482,8 +476,8 @@ export async function reorderRegistrationFields(eventId: string, fieldOrders: { 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fieldOrders }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to reorder registration fields');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to reorder registration fields');
   return data.fields ?? [];
 }
 
@@ -491,15 +485,15 @@ export async function reorderRegistrationFields(eventId: string, fieldOrders: { 
 
 export async function getSeatLayouts(eventId: string): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/seat-layouts`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch seat layouts');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch seat layouts');
   return data;
 }
 
 export async function getSeatLayoutById(eventId: string, layoutId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/seat-layouts/${layoutId}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch seat layout');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch seat layout');
   return data;
 }
 
@@ -515,8 +509,8 @@ export async function createSeatLayout(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create seat layout');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create seat layout');
   return data;
 }
 
@@ -526,8 +520,8 @@ export async function updateSeatLayout(eventId: string, layoutId: string, payloa
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update seat layout');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update seat layout');
   return data;
 }
 
@@ -535,8 +529,8 @@ export async function publishSeatLayout(eventId: string, layoutId: string): Prom
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/seat-layouts/${layoutId}/publish`, {
     method: 'PATCH',
   });
+  if (!res.ok) await throwApiError(res, 'Failed to publish seat layout');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to publish seat layout');
   return data;
 }
 
@@ -544,10 +538,7 @@ export async function deleteSeatLayout(eventId: string, layoutId: string): Promi
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/seat-layouts/${layoutId}`, {
     method: 'DELETE',
   });
-  if (!res.ok) {
-    const data = await res.json();
-    throw new Error(data.message ?? 'Failed to delete seat layout');
-  }
+  if (!res.ok) await throwApiError(res, 'Failed to delete seat layout');
 }
 
 
@@ -560,8 +551,8 @@ export async function getEventSpeakers(eventId: string, filters?: { status?: str
   if (filters?.search) params.set('search', filters.search);
 
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants?${params.toString()}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch speakers');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch speakers');
   return (data.participants ?? data ?? []).filter((p: any) => p.role === 'SPEAKER');
 }
 
@@ -580,8 +571,8 @@ export async function inviteSpeakerByEmail(eventId: string, payload: {
       inviteType: 'EMAIL',
     }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to invite speaker');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to invite speaker');
   return data;
 }
 
@@ -599,8 +590,8 @@ export async function inviteSpeakerByProfile(eventId: string, payload: {
       inviteType: 'RONDWELL_PROFILE',
     }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to invite speaker');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to invite speaker');
   return data;
 }
 
@@ -616,8 +607,8 @@ export async function manualAddSpeaker(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...payload, role: 'SPEAKER' }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to add speaker');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to add speaker');
   return data;
 }
 
@@ -634,8 +625,8 @@ export async function updateSpeakerDetails(eventId: string, participantId: strin
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update speaker details');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update speaker details');
   return data;
 }
 
@@ -649,8 +640,8 @@ export async function sendSpeakerMessage(eventId: string, participantId: string,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send message');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send message');
   return data;
 }
 
@@ -665,8 +656,8 @@ export async function sendSpeakerReminder(eventId: string, participantId: string
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send reminder');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send reminder');
   return data;
 }
 
@@ -674,8 +665,8 @@ export async function resendSpeakerInvitation(eventId: string, participantId: st
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants/${participantId}/resend-invitation`, {
     method: 'POST',
   });
+  if (!res.ok) await throwApiError(res, 'Failed to resend invitation');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to resend invitation');
   return data;
 }
 
@@ -683,10 +674,7 @@ export async function removeSpeaker(eventId: string, participantId: string): Pro
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants/${participantId}`, {
     method: 'DELETE',
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message ?? 'Failed to remove speaker');
-  }
+  if (!res.ok) await throwApiError(res, 'Failed to remove speaker');
 }
 
 export async function assignSpeakerSessions(eventId: string, participantId: string, sessionIds: string[]): Promise<any> {
@@ -695,8 +683,8 @@ export async function assignSpeakerSessions(eventId: string, participantId: stri
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionIds }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to assign sessions');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to assign sessions');
   return data;
 }
 
@@ -728,8 +716,8 @@ export async function getEventExhibitors(eventId: string, filters?: { status?: s
   if (filters?.search) params.set('search', filters.search);
 
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants?${params.toString()}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch exhibitors');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch exhibitors');
   return (data.participants ?? data ?? []).filter((p: any) => p.role === 'EXHIBITOR');
 }
 
@@ -745,8 +733,8 @@ export async function inviteExhibitorByEmail(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...payload, role: 'EXHIBITOR', inviteType: 'EMAIL' }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to invite exhibitor');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to invite exhibitor');
   return data;
 }
 
@@ -760,8 +748,8 @@ export async function inviteExhibitorByProfile(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...payload, role: 'EXHIBITOR', inviteType: 'RONDWELL_PROFILE' }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to invite exhibitor');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to invite exhibitor');
   return data;
 }
 
@@ -778,8 +766,8 @@ export async function manualAddExhibitor(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...payload, role: 'EXHIBITOR' }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to add exhibitor');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to add exhibitor');
   return data;
 }
 
@@ -798,8 +786,8 @@ export async function updateExhibitorDetails(eventId: string, participantId: str
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update exhibitor details');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update exhibitor details');
   return data;
 }
 
@@ -840,8 +828,8 @@ export async function approveParticipant(eventId: string, participantId: string,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to approve participant');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to approve participant');
   return data;
 }
 
@@ -853,8 +841,8 @@ export async function declineParticipant(eventId: string, participantId: string,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to decline participant');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to decline participant');
   return data;
 }
 
@@ -862,8 +850,8 @@ export async function sendPaymentRequest(eventId: string, participantId: string)
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants/${participantId}/send-payment-request`, {
     method: 'POST',
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send payment request');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send payment request');
   return data;
 }
 
@@ -876,8 +864,8 @@ export async function markPaidOffline(eventId: string, participantId: string, pa
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload || {}),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to mark as paid');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to mark as paid');
   return data;
 }
 
@@ -891,8 +879,8 @@ export async function getEventVendors(eventId: string, filters?: { status?: stri
   if (filters?.search) params.set('search', filters.search);
 
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants?${params.toString()}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch vendors');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch vendors');
   return (data.participants ?? data ?? []).filter((p: any) => p.role === 'VENDOR');
 }
 
@@ -908,8 +896,8 @@ export async function inviteVendorByEmail(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...payload, role: 'VENDOR', inviteType: 'EMAIL' }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to invite vendor');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to invite vendor');
   return data;
 }
 
@@ -925,8 +913,8 @@ export async function manualAddVendor(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...payload, role: 'VENDOR' }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to add vendor');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to add vendor');
   return data;
 }
 
@@ -940,8 +928,8 @@ export async function getCollaborationRequests(eventId: string, filters?: { stat
   if (filters?.search) params.set('search', filters.search);
 
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants/collaboration-requests?${params.toString()}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch collaboration requests');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch collaboration requests');
   return data.data ?? [];
 }
 
@@ -951,8 +939,8 @@ export async function respondToCollaborationRequest(eventId: string, requestId: 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, message }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to respond to request');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to respond to request');
   return data.data;
 }
 
@@ -961,8 +949,8 @@ export async function respondToCollaborationRequest(eventId: string, requestId: 
 
 export async function getEventRooms(eventId: string): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/rooms`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch rooms');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch rooms');
   return data ?? [];
 }
 
@@ -980,8 +968,8 @@ export async function createEventRoom(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...payload, accessType: payload.accessType || 'PUBLIC' }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create room');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create room');
   return data;
 }
 
@@ -1003,8 +991,8 @@ export async function updateEventRoom(eventId: string, roomId: string, payload: 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update room');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update room');
   return data;
 }
 
@@ -1012,10 +1000,7 @@ export async function deleteEventRoom(eventId: string, roomId: string): Promise<
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/rooms/${roomId}`, {
     method: 'DELETE',
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message ?? 'Failed to delete room');
-  }
+  if (!res.ok) await throwApiError(res, 'Failed to delete room');
 }
 
 
@@ -1031,8 +1016,8 @@ export async function uploadRoomBanner(eventId: string, file: File): Promise<{ u
     method: 'POST',
     body: formData,
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload room banner');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload room banner');
   return { url: data.url, title: data.title || file.name };
 }
 
@@ -1054,15 +1039,15 @@ export async function deleteEventMediaByUrl(eventId: string, mediaUrl: string): 
 
 export async function getAllEventSessionsForEvent(eventId: string): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/sessions`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch sessions');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch sessions');
   return data ?? [];
 }
 
 export async function getSessionsForRoom(eventId: string, roomId: string): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/rooms/${roomId}/sessions`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch room sessions');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch room sessions');
   return data ?? [];
 }
 
@@ -1083,8 +1068,8 @@ export async function createEventSession(eventId: string, roomId: string, payloa
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create session');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create session');
   return data;
 }
 
@@ -1106,8 +1091,8 @@ export async function updateEventSession(eventId: string, roomId: string, sessio
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update session');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update session');
   return data;
 }
 
@@ -1115,10 +1100,7 @@ export async function deleteEventSession(eventId: string, roomId: string, sessio
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/rooms/${roomId}/sessions/${sessionId}`, {
     method: 'DELETE',
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message ?? 'Failed to delete session');
-  }
+  if (!res.ok) await throwApiError(res, 'Failed to delete session');
 }
 
 export async function uploadSessionThumbnail(eventId: string, file: File): Promise<{ url: string; title: string }> {
@@ -1133,8 +1115,8 @@ export async function uploadSessionThumbnail(eventId: string, file: File): Promi
     method: 'POST',
     body: formData,
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload session thumbnail');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload session thumbnail');
   return { url: data.url, title: data.title || file.name };
 }
 
@@ -1143,8 +1125,8 @@ export async function uploadSessionThumbnail(eventId: string, file: File): Promi
 
 export async function getEventAgenda(eventId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/agenda`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch agenda');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch agenda');
   return data;
 }
 
@@ -1157,8 +1139,8 @@ export async function enableEventCommunity(eventId: string, settings?: any): Pro
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(settings || {}),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to enable community');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to enable community');
   return data;
 }
 
@@ -1175,8 +1157,8 @@ export async function updateCommunitySettings(communityId: string, settings: any
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(settings),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update community settings');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update community settings');
   return data;
 }
 
@@ -1188,14 +1170,14 @@ export async function getEventMedia(eventId: string, typeFilter?: string): Promi
   params.set('category', 'EVENT_GALLERY');
   if (typeFilter && typeFilter !== 'All') params.set('type', typeFilter);
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/media?${params.toString()}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch media');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch media');
   return data.media ?? data ?? [];
 }
 
 export async function deleteEventMedia(eventId: string, mediaId: string): Promise<void> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/media/${mediaId}`, { method: 'DELETE' });
-  if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.message ?? 'Failed to delete media'); }
+  if (!res.ok) await throwApiError(res, 'Failed to delete media');
 }
 
 export async function uploadEventMedia(eventId: string, file: File, title?: string, description?: string, isPublic: boolean = true): Promise<any> {
@@ -1207,8 +1189,8 @@ export async function uploadEventMedia(eventId: string, file: File, title?: stri
   formData.append('title', title || file.name);
   if (description) formData.append('description', description);
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/media`, { method: 'POST', body: formData });
+  if (!res.ok) await throwApiError(res, 'Failed to upload media');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload media');
   return data;
 }
 
@@ -1216,8 +1198,8 @@ export async function uploadEventMedia(eventId: string, file: File, title?: stri
 
 export async function getEventFaqs(eventId: string): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/faqs`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch FAQs');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch FAQs');
   return data.faqs ?? data ?? [];
 }
 
@@ -1225,8 +1207,8 @@ export async function createEventFaq(eventId: string, payload: { question: strin
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/faqs`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create FAQ');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create FAQ');
   return data;
 }
 
@@ -1234,14 +1216,14 @@ export async function updateEventFaq(eventId: string, faqId: string, payload: { 
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/faqs/${faqId}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update FAQ');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update FAQ');
   return data;
 }
 
 export async function deleteEventFaq(eventId: string, faqId: string): Promise<void> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/faqs/${faqId}`, { method: 'DELETE' });
-  if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.message ?? 'Failed to delete FAQ'); }
+  if (!res.ok) await throwApiError(res, 'Failed to delete FAQ');
 }
 
 
@@ -1249,39 +1231,118 @@ export async function deleteEventFaq(eventId: string, faqId: string): Promise<vo
 
 export async function getEventAdmins(eventId: string): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/admin?_t=${Date.now()}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch admins');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch admins');
   return data ?? [];
 }
 
-export async function inviteEventAdmin(eventId: string, payload: { userId: string; role: string; email?: string; message?: string }): Promise<any> {
+export interface InviteEventAdminPayload {
+  email: string;
+  role: string;
+  displayName?: string;
+  permissions?: string[];
+  personalMessage?: string;
+  showOnEventPage?: boolean;
+}
+
+export async function inviteEventAdmin(eventId: string, payload: InviteEventAdminPayload): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/admin/invite`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to invite admin');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to invite admin');
   return data;
 }
 
-export async function updateEventAdminPermissions(eventId: string, adminId: string, payload: { role?: string; permissions?: string[] }): Promise<any> {
+export async function updateEventAdminPermissions(eventId: string, adminId: string, payload: { role?: string; permissions?: string[]; showOnEventPage?: boolean }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/admin/${adminId}/permissions`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update admin');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update admin');
   return data;
 }
 
 export async function removeEventAdmin(eventId: string, adminId: string): Promise<void> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/admin/${adminId}`, { method: 'DELETE' });
-  if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.message ?? 'Failed to remove admin'); }
+  if (!res.ok) await throwApiError(res, 'Failed to remove admin');
 }
 
 export async function resendAdminInvite(eventId: string, adminId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/admin/${adminId}/resend-invite`, { method: 'POST' });
+  if (!res.ok) await throwApiError(res, 'Failed to resend invitation');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to resend invitation');
   return data;
+}
+
+/**
+ * Public — no auth. Returns a sanitized invitation preview for the
+ * /admin-invitation/[token] confirmation page. Throws Error with code on:
+ *   - 404 invitation not found
+ *   - 409 already accepted/declined/revoked
+ *   - 410 invitation expired
+ */
+export async function getAdminInvitation(eventId: string, token: string): Promise<any> {
+  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/admin/invitation/${encodeURIComponent(token)}`);
+  if (!res.ok) {
+    // Preserve the specific code used by the confirmation page so it can
+    // render the right empty state (expired, already processed, not found).
+    const codeByStatus =
+      res.status === 404 ? 'NOT_FOUND' :
+      res.status === 409 ? 'ALREADY_PROCESSED' :
+      res.status === 410 ? 'EXPIRED' : 'ERROR';
+    try {
+      await throwApiError(res, 'Failed to load invitation');
+    } catch (err: any) {
+      err.code = codeByStatus;
+      throw err;
+    }
+  }
+  const data = await res.json().catch(() => ({}));
+  return data.data ?? data;
+}
+
+/** Auth required. Accepts the invitation, links the userId, marks ACCEPTED. */
+export async function acceptAdminInvite(eventId: string, token: string): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/admin/accept-invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to accept invitation');
+  const data = await res.json().catch(() => ({}));
+  return data.data ?? data;
+}
+
+/** Public — no auth. Declines the invitation by token. */
+export async function declineAdminInvite(eventId: string, token: string): Promise<any> {
+  const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/admin/decline-invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to decline invitation');
+  const data = await res.json().catch(() => ({}));
+  return data.data ?? data;
+}
+
+/** Loads the public roles catalog from the backend (single source of truth). */
+export async function getAdminRolesCatalog(): Promise<Array<{
+  value: string;
+  label: string;
+  description: string;
+  icon: string;
+  permissions: string[];
+  requiresPlus: boolean;
+}>> {
+  try {
+    const res = await fetch(`${EVENT_URL}/api/v1/events/admin/roles`);
+    const data = await res.json();
+    if (!res.ok) return [];
+    return data.data ?? [];
+  } catch {
+    return [];
+  }
 }
 
 // ==================== ATTENDEE DETAIL & TIMELINE APIs ====================
@@ -1296,15 +1357,15 @@ export async function getAttendeeDetail(eventId: string, attendeeId: string): Pr
   seatInfo: any;
 }> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/detail?_t=${Date.now()}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch attendee detail');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch attendee detail');
   return data.data;
 }
 
 export async function getAttendeeTimeline(eventId: string, attendeeId: string): Promise<any[]> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/timeline?_t=${Date.now()}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch timeline');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch timeline');
   return data.data ?? [];
 }
 
@@ -1314,8 +1375,8 @@ export async function updateAttendeeStatus(eventId: string, attendeeId: string, 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ newStatus, notifyAttendee, message }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update status');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update status');
   return data.data;
 }
 
@@ -1325,8 +1386,8 @@ export async function reportAttendee(eventId: string, attendeeId: string, notes:
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ notes, blockForFutureEvents }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to report attendee');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to report attendee');
   return data.data;
 }
 
@@ -1334,8 +1395,8 @@ export async function deleteAttendee(eventId: string, attendeeId: string): Promi
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}`, {
     method: 'DELETE',
   });
+  if (!res.ok) await throwApiError(res, 'Failed to delete attendee');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to delete attendee');
   return data.data;
 }
 
@@ -1347,8 +1408,8 @@ export async function addAttendeeTag(eventId: string, attendeeId: string, tagNam
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tagName }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to add tag');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to add tag');
   return data.data;
 }
 
@@ -1356,8 +1417,8 @@ export async function removeAttendeeTag(eventId: string, attendeeId: string, tag
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/attendees/${attendeeId}/tags/${encodeURIComponent(tagName)}`, {
     method: 'DELETE',
   });
+  if (!res.ok) await throwApiError(res, 'Failed to remove tag');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to remove tag');
   return data.data;
 }
 
@@ -1374,8 +1435,8 @@ export async function createEventTag(eventId: string, name: string, color: strin
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, color }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create tag');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create tag');
   return data.data;
 }
 
@@ -1385,8 +1446,8 @@ export async function updateEventTag(eventId: string, tagId: string, name: strin
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, color }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update tag');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update tag');
   return data.data;
 }
 
@@ -1404,8 +1465,8 @@ export async function cloneEvent(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to clone event');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to clone event');
   return data;
 }
 
@@ -1415,8 +1476,8 @@ export async function transferEventCollection(eventId: string, newCollectionId: 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ newCollectionId }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to transfer event');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to transfer event');
   invalidateEventCache(eventId);
   return data;
 }
@@ -1425,8 +1486,8 @@ export async function cancelEvent(eventId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/cancel`, {
     method: 'PUT',
   });
+  if (!res.ok) await throwApiError(res, 'Failed to cancel event');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to cancel event');
   invalidateEventCache(eventId);
   return data;
 }
@@ -1435,10 +1496,7 @@ export async function deleteEvent(eventId: string): Promise<void> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}`, {
     method: 'DELETE',
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message ?? 'Failed to delete event');
-  }
+  if (!res.ok) await throwApiError(res, 'Failed to delete event');
 }
 
 
@@ -1458,8 +1516,8 @@ export async function createCollection(payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create collection');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create collection');
   return data.collection ?? data;
 }
 
@@ -1469,8 +1527,8 @@ export async function updateCollection(collectionId: string, payload: Record<str
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update collection');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update collection');
   return data.collection ?? data;
 }
 
@@ -1498,8 +1556,8 @@ export async function addExistingEventToCollection(collectionId: string, eventId
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ eventId }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to add event to collection');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to add event to collection');
   return data;
 }
 
@@ -1509,8 +1567,8 @@ export async function resolveEventUrl(collectionId: string, url: string): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url }),
   });
+  if (!res.ok) await throwApiError(res, 'Could not resolve event from URL');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Could not resolve event from URL');
   return data.event;
 }
 
@@ -1530,8 +1588,8 @@ export async function addExternalEventToCollection(collectionId: string, payload
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to add external event');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to add external event');
   return data;
 }
 
@@ -1550,8 +1608,8 @@ export async function uploadCollectionProfilePicture(collectionId: string, file:
     method: 'POST',
     body: form,
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload profile picture');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload profile picture');
   return data;
 }
 
@@ -1562,16 +1620,16 @@ export async function uploadCollectionCoverBanner(collectionId: string, file: Fi
     method: 'POST',
     body: form,
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload cover banner');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload cover banner');
   return data;
 }
 
 
 export async function getPublicCollectionBySlug(slug: string): Promise<{ collection: any; events: any[] }> {
   const res = await fetch(`${EVENT_URL}/api/v1/collections/by-slug/${encodeURIComponent(slug)}`);
+  if (!res.ok) await throwApiError(res, 'Collection not found');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Collection not found');
   return { collection: data.collection, events: data.events ?? [] };
 }
 
@@ -1591,8 +1649,8 @@ export async function scrapeExternalEventUrl(url: string): Promise<{
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to fetch URL');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch URL');
   return data;
 }
 
@@ -1608,15 +1666,15 @@ export async function requestCollectionVerification(collectionId: string, payloa
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to submit verification request');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to submit verification request');
   return data;
 }
 
 export async function getCollectionVerificationStatus(collectionId: string): Promise<{ approvalStatus: string; verificationRequest?: any }> {
   const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/verification-status`);
+  if (!res.ok) await throwApiError(res, 'Failed to get verification status');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to get verification status');
   return data;
 }
 
@@ -1633,44 +1691,44 @@ export async function createEventBlast(eventId: string, payload: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create blast');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create blast');
   return data;
 }
 
 export async function getEventBlasts(eventId: string, params: Record<string, string> = {}): Promise<any> {
   const query = new URLSearchParams(params).toString();
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts?${query}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch blasts');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch blasts');
   return data;
 }
 
 export async function getBlastQuota(eventId: string): Promise<{ used: number; limit: number; tier: string }> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts/quota`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch quota');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch quota');
   return data;
 }
 
 export async function cancelEventBlast(eventId: string, blastId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts/${blastId}/cancel`, { method: 'POST' });
+  if (!res.ok) await throwApiError(res, 'Failed to cancel blast');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to cancel blast');
   return data;
 }
 
 export async function sendBlastNow(eventId: string, blastId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts/${blastId}/send-now`, { method: 'POST' });
+  if (!res.ok) await throwApiError(res, 'Failed to send blast');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send blast');
   return data;
 }
 
 export async function previewEventBlast(eventId: string, blastId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts/${blastId}/preview`, { method: 'POST' });
+  if (!res.ok) await throwApiError(res, 'Failed to send preview');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send preview');
   return data;
 }
 
@@ -1680,8 +1738,8 @@ export async function previewBlastDraft(eventId: string, subject: string, htmlCo
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ subject, htmlContent }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send preview');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send preview');
   return data;
 }
 
@@ -1692,8 +1750,8 @@ export async function uploadBlastImage(eventId: string, file: File): Promise<str
     method: 'POST',
     body: formData,
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload image');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload image');
   return data.url;
 }
 
@@ -1705,37 +1763,37 @@ export async function createCollectionBlast(collectionId: string, payload: {
   const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create blast');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create blast');
   return data;
 }
 
 export async function getCollectionBlasts(collectionId: string, params: Record<string, string> = {}): Promise<any> {
   const query = new URLSearchParams(params).toString();
   const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts?${query}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch blasts');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch blasts');
   return data;
 }
 
 export async function getCollectionBlastQuota(collectionId: string): Promise<{ used: number; limit: number; tier: string }> {
   const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts/quota`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch quota');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch quota');
   return data;
 }
 
 export async function cancelCollectionBlast(collectionId: string, blastId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts/${blastId}/cancel`, { method: 'POST' });
+  if (!res.ok) await throwApiError(res, 'Failed to cancel blast');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to cancel blast');
   return data;
 }
 
 export async function sendCollectionBlastNow(collectionId: string, blastId: string): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts/${blastId}/send-now`, { method: 'POST' });
+  if (!res.ok) await throwApiError(res, 'Failed to send blast');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send blast');
   return data;
 }
 
@@ -1743,8 +1801,8 @@ export async function previewCollectionBlastDraft(collectionId: string, subject:
   const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts/preview-draft`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, htmlContent }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send preview');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send preview');
   return data;
 }
 
@@ -1754,8 +1812,8 @@ export async function uploadCollectionBlastImage(collectionId: string, file: Fil
   const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blast-image`, {
     method: 'POST', body: formData,
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload image');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload image');
   return data.url;
 }
 
@@ -1769,8 +1827,8 @@ export async function verifyCheckinPasscode(eventId: string, passcode: string): 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ eventId, passcode }),
   });
+  if (!res.ok) await throwApiError(res, 'Verification failed');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Verification failed');
   return data.data ?? data;
 }
 
@@ -1781,8 +1839,8 @@ export async function verifyCheckinQr(eventId: string, checkinToken: string): Pr
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ eventId, checkinToken }),
   });
+  if (!res.ok) await throwApiError(res, 'QR verification failed');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'QR verification failed');
   return data.data ?? data;
 }
 
@@ -1793,8 +1851,8 @@ export async function checkinByPasscode(eventId: string, passcode: string): Prom
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ eventId, passcode }),
   });
+  if (!res.ok) await throwApiError(res, 'Check-in failed');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Check-in failed');
   return data.data ?? data;
 }
 
@@ -1805,8 +1863,8 @@ export async function checkinByQrCode(eventId: string, checkinToken: string): Pr
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ eventId, checkinToken }),
   });
+  if (!res.ok) await throwApiError(res, 'QR check-in failed');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'QR check-in failed');
   return data.data ?? data;
 }
 
@@ -1838,8 +1896,8 @@ export async function createEventDay(eventId: string, payload: EventDayPayload):
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create event day');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create event day');
   return data.day;
 }
 
@@ -1849,8 +1907,8 @@ export async function updateEventDay(dayId: string, payload: Partial<EventDayPay
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update event day');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update event day');
   return data.day;
 }
 
@@ -1858,10 +1916,7 @@ export async function deleteEventDay(dayId: string): Promise<void> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/days/${dayId}`, {
     method: 'DELETE',
   });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message ?? 'Failed to delete event day');
-  }
+  if (!res.ok) await throwApiError(res, 'Failed to delete event day');
 }
 
 export async function bulkReplaceEventDays(eventId: string, days: EventDayPayload[]): Promise<any[]> {
@@ -1870,7 +1925,7 @@ export async function bulkReplaceEventDays(eventId: string, days: EventDayPayloa
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ days }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to replace event days');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to replace event days');
   return data.days ?? [];
 }

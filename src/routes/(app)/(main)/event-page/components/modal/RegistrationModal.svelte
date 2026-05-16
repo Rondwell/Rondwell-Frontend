@@ -299,7 +299,7 @@
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						eventId,
-						ticketTypeId: selectedTicketId,
+						ticketTypeId: selectedTicketId || undefined,
 						leadDetails: {
 							attendeeId,
 							email: email.trim().toLowerCase(),
@@ -340,7 +340,7 @@
 						firstName: firstName.trim(),
 						lastName: lastName.trim(),
 					},
-					ticketTypeId: selectedTicketId,
+					ticketTypeId: selectedTicketId || undefined,
 					form_answers: formAnswers,
 					linked_seat_id: selectedSeatId || undefined,
 				}),

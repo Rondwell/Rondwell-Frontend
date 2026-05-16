@@ -5,13 +5,18 @@
 	import { getEventCache } from '$lib/stores/eventCache.store';
 
 	$: eventId = $page.params.id ?? '';
-	$: ({ error: errorStore, loading: loadingStore } = getEventCache(eventId));
+	$: ({ error: errorStore, errorStatus: errorStatusStore, loading: loadingStore } = getEventCache(eventId));
 	$: error = $errorStore;
+	$: errorStatus = $errorStatusStore;
 	$: loading = $loadingStore;
 
-	// Detect access denied vs other errors
-	$: accessDenied = error && (error.includes('403') || error.includes('access') || error.includes('Forbidden') || error.includes('do not have'));
-	$: notFound = error && (error.includes('404') || error.includes('not found') || error.includes('Not found'));
+	// Status-driven gating wins over message text. Anything else (network
+	// flake, transient 5xx) keeps showing the inner page so the existing
+	// child-level error UIs handle it.
+	$: accessDenied = errorStatus === 403
+		|| (error && (error.toLowerCase().includes('forbidden') || error.toLowerCase().includes('do not have access') || error.toLowerCase().includes("don't have access") || error.toLowerCase().includes("don't have permission")));
+	$: notFound = errorStatus === 404
+		|| (error && (error.toLowerCase().includes('not found')));
 
 	const eventsIcon = {
 		overviewIcon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -103,25 +108,34 @@
 		if (eventMatch) {
 			const eventId = eventMatch[1];
 
-			// Build the submenu dynamically for this event
-			updateEventSubMenu(eventId);
+			if (accessDenied || notFound) {
+				// Suppress the event-scoped sub-nav when the user no longer has access.
+				// Without this, a revoked co-organizer could still see Overview /
+				// Attendees / Settings tabs even though every click 403s.
+				showSubMenu.set(false);
+				subMenuItems.set([]);
+				activeSubItem.set('');
+			} else {
+				// Build the submenu dynamically for this event
+				updateEventSubMenu(eventId);
 
-			// Find matching submenu item
-			const currentMenu = get(subMenuItems);
-			let active = currentMenu.find((item) => path === item.nav)?.label;
-			
-			// Special case: check-in page should highlight Attendees menu
-			if (!active && path.includes('/check-in')) {
-				active = 'Attendees';
+				// Find matching submenu item
+				const currentMenu = get(subMenuItems);
+				let active = currentMenu.find((item) => path === item.nav)?.label;
+
+				// Special case: check-in page should highlight Attendees menu
+				if (!active && path.includes('/check-in')) {
+					active = 'Attendees';
+				}
+
+				// Default to Overview if no match
+				if (!active) {
+					active = 'Overview';
+				}
+
+				activeSubItem.set(active);
+				showSubMenu.set(true);
 			}
-			
-			// Default to Overview if no match
-			if (!active) {
-				active = 'Overview';
-			}
-			
-			activeSubItem.set(active);
-			showSubMenu.set(true);
 		} else {
 			// Reset submenu outside of event routes
 			showSubMenu.set(false);

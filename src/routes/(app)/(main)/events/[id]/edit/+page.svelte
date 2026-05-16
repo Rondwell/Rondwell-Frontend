@@ -236,6 +236,15 @@
 	async function saveChanges() {
 		saving = true;
 		saveError = '';
+
+		// Validate required fields
+		if (!name || !name.trim()) {
+			saveError = 'Event name is required.';
+			toast.error('Event name is required.');
+			saving = false;
+			return;
+		}
+
 		try {
 			const etMap: Record<string, string> = { 'Virtual': 'VIRTUAL', 'Physical': 'PHYSICAL', 'Hybrid': 'HYBRID' };
 			const locationDetails: any = {};
@@ -252,7 +261,7 @@
 			}
 
 			await updateEvent(eventId, {
-				title: name,
+				title: name.trim(),
 				description: descriptionHtml,
 				themeColor: selectedColor.name,
 				customLinkSlug: publicUrl || undefined,

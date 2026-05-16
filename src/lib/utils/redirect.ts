@@ -27,6 +27,7 @@ const ALLOWED_PATH_PREFIXES = [
   '/overview',
   '/collections/',
   '/create-event',
+  '/admin-invitation/',
 ];
 
 /**

@@ -23,6 +23,8 @@ interface CacheEntry {
   collections: Writable<any[]>;
   loading: Writable<boolean>;
   error: Writable<string>;
+  /** HTTP status from the last failed fetch (0 when no error). */
+  errorStatus: Writable<number>;
   fetchedAt: number;
   promise: Promise<void> | null;
 }
@@ -35,6 +37,7 @@ function createEntry(): CacheEntry {
     collections: writable([]),
     loading: writable(true),
     error: writable(''),
+    errorStatus: writable(0),
     fetchedAt: 0,
     promise: null,
   };
@@ -49,6 +52,7 @@ async function fetchAndPopulate(eventId: string, entry: CacheEntry, showLoading 
     entry.loading.set(true);
   }
   entry.error.set('');
+  entry.errorStatus.set(0);
   try {
     const [event, collections] = await Promise.all([
       getEventById(eventId),
@@ -58,7 +62,18 @@ async function fetchAndPopulate(eventId: string, entry: CacheEntry, showLoading 
     entry.collections.set(collections);
     entry.fetchedAt = Date.now();
   } catch (e: any) {
+    const status = typeof e.status === 'number' ? e.status : 0;
     entry.error.set(e.message ?? 'Failed to load event');
+    entry.errorStatus.set(status);
+    // Drop any stale event payload so a forbidden / not-found response doesn't
+    // keep showing data the user no longer has access to.
+    entry.event.set(null);
+    // For permission/identity errors, fully reset cache freshness so any
+    // subsequent navigation re-fetches against the API instead of replaying
+    // the in-memory error.
+    if (status === 401 || status === 403 || status === 404) {
+      entry.fetchedAt = 0;
+    }
   } finally {
     entry.loading.set(false);
     entry.promise = null;
@@ -99,6 +114,7 @@ export function getEventCache(eventId: string) {
     collections: entry.collections,
     loading: entry.loading,
     error: entry.error,
+    errorStatus: entry.errorStatus,
   };
 }
 

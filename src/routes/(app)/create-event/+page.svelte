@@ -343,6 +343,14 @@
 	async function doCreateEvent() {
 		submitting = true;
 		submitError = '';
+
+		// Validate required fields
+		if (!eventName.trim()) {
+			submitError = 'Event name is required.';
+			submitting = false;
+			return;
+		}
+
 		try {
 			// For multi-day events, compute overall start/end from the days
 			let finalStartDateTime = buildDateTime(startDate, startTime);
@@ -355,7 +363,7 @@
 			}
 
 			const payload = {
-				title: eventName || 'Untitled Event',
+				title: eventName.trim(),
 				description: description ? description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() || undefined : undefined,
 				category: eventCategories[0] ?? 'General',
 				eventOrganizerName: $authState.activeProfile?.name ?? $authState.user?.email ?? 'Organizer',
@@ -409,7 +417,7 @@
 
 			const params = new URLSearchParams({
 				from: 'event',
-				eventName: eventName || 'Your Event',
+				eventName: eventName.trim(),
 				redirect: `/events/${eventId}`,
 			});
 			goto(`/welcome?${params.toString()}`);
@@ -420,6 +428,13 @@
 	}
 
 	async function handleCreateEvent() {
+		// Validate required fields before proceeding (for both logged-in and non-logged-in users)
+		submitError = '';
+		if (!eventName.trim()) {
+			submitError = 'Event name is required.';
+			return;
+		}
+
 		if ($isAuthenticated) {
 			await doCreateEvent();
 		} else {
@@ -719,10 +734,14 @@
 			<input
 				type="text"
 				bind:value={eventName}
-				placeholder="Event Name"
+				placeholder="Event Name *"
+				required
 				class="w-full py-1.5 text-4xl font-semibold focus:outline-none"
 				style="--placeholder-color: {selectedColor.lightText}; color: {selectedColor.lightText}"
 			/>
+			{#if submitError && !eventName.trim()}
+				<p class="text-sm text-red-500">Event name is required</p>
+			{/if}
 
 			<div class="relative h-[360px] w-full overflow-hidden rounded-xl lg:hidden">
 				<button class="w-full" on:click={() => (showImageSelectorModal = !showImageSelectorModal)}>

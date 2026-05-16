@@ -7,6 +7,7 @@
  *   /x/[slug]/[boothSlug] (Booth detail page)
  */
 
+import { throwApiError } from '$lib/utils/errorMessage';
 const BASE_URL = import.meta.env.VITE_API_URL;
 const PRODUCTS_API = `${BASE_URL}/api/v1/products`;
 
@@ -28,8 +29,8 @@ export async function discoverExhibitors(
   if (filters.industry) params.set('industry', filters.industry);
 
   const res = await fetch(`${PRODUCTS_API}/public/discover/exhibitors?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch exhibitors');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch exhibitors');
   return data.data;
 }
 
@@ -38,8 +39,8 @@ export async function discoverExhibitors(
  */
 export async function getPublicExhibitorBySlug(slug: string) {
   const res = await fetch(`${PRODUCTS_API}/public/discover/exhibitor/${slug}`);
+  if (!res.ok) await throwApiError(res, 'Exhibitor not found');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Exhibitor not found');
   return data.data;
 }
 
@@ -48,7 +49,7 @@ export async function getPublicExhibitorBySlug(slug: string) {
  */
 export async function getPublicExhibitorBooth(exhibitorSlug: string, boothSlug: string) {
   const res = await fetch(`${PRODUCTS_API}/public/discover/exhibitor/${exhibitorSlug}/booth/${boothSlug}`);
+  if (!res.ok) await throwApiError(res, 'Booth not found');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Booth not found');
   return data.data;
 }

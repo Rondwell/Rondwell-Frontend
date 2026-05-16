@@ -1,5 +1,6 @@
 import { authFetch } from '$lib/services/api.client';
 
+import { throwApiError } from '$lib/utils/errorMessage';
 const BASE_URL = import.meta.env.VITE_API_URL;
 const PRODUCTS_API = `${BASE_URL}/api/v1/products`;
 
@@ -7,8 +8,8 @@ const PRODUCTS_API = `${BASE_URL}/api/v1/products`;
 
 export async function getVendorProfile() {
   const res = await authFetch(`${PRODUCTS_API}/vendor/profile`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch vendor profile');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch vendor profile');
   return data.data; // May be null if no product-service vendor record exists
 }
 
@@ -18,8 +19,8 @@ export async function updateVendorProfile(updates: Record<string, unknown>) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update vendor profile');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update vendor profile');
   return data.data;
 }
 
@@ -42,15 +43,15 @@ export async function getProducts(filters: ProductFilters = {}) {
   if (filters.limit) params.set('limit', String(filters.limit));
 
   const res = await authFetch(`${PRODUCTS_API}/vendor/products/products?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch products');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch products');
   return data.data;
 }
 
 export async function getProduct(productId: string) {
   const res = await authFetch(`${PRODUCTS_API}/vendor/products/products/${productId}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch product');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch product');
   return data.data;
 }
 
@@ -60,8 +61,8 @@ export async function createProduct(productData: Record<string, unknown>) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(productData)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to create product');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to create product');
   return data.data;
 }
 
@@ -71,8 +72,8 @@ export async function updateProduct(productId: string, updates: Record<string, u
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update product');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update product');
   return data.data;
 }
 
@@ -80,8 +81,8 @@ export async function deleteProduct(productId: string) {
   const res = await authFetch(`${PRODUCTS_API}/vendor/products/products/${productId}`, {
     method: 'DELETE'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to delete product');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to delete product');
   return data.data;
 }
 
@@ -89,8 +90,8 @@ export async function duplicateProduct(productId: string) {
   const res = await authFetch(`${PRODUCTS_API}/vendor/products/products/${productId}/duplicate`, {
     method: 'POST'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to duplicate product');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to duplicate product');
   return data.data;
 }
 
@@ -100,8 +101,8 @@ export async function deleteVendorMedia(url: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url })
   });
+  if (!res.ok) await throwApiError(res, 'Failed to delete media');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to delete media');
   return data;
 }
 
@@ -128,15 +129,15 @@ export async function getCollaborations(filters: CollaborationFilters = {}) {
   if (filters.sortOrder) params.set('sortOrder', filters.sortOrder);
 
   const res = await authFetch(`${PRODUCTS_API}/vendor/collaborations?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch collaborations');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch collaborations');
   return data.data;
 }
 
 export async function getCollaboration(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/vendor/collaborations/${collaborationId}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch collaboration');
   return data.data;
 }
 
@@ -146,8 +147,8 @@ export async function updateCollaborationStatus(collaborationId: string, status:
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status })
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update collaboration');
   return data.data;
 }
 
@@ -165,8 +166,8 @@ export async function sendCollaborationQuote(collaborationId: string, quote: { q
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(quote)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send quote');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send quote');
   return data.data;
 }
 
@@ -176,8 +177,8 @@ export async function sendOutboundCollaboration(requestData: Record<string, unkn
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(requestData)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send collaboration request');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send collaboration request');
   return data.data;
 }
 
@@ -185,8 +186,8 @@ export async function withdrawCollaboration(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/vendor/collaborations/${collaborationId}/withdraw`, {
     method: 'PUT'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to withdraw collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to withdraw collaboration');
   return data.data;
 }
 
@@ -194,8 +195,8 @@ export async function deleteCollaboration(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/vendor/collaborations/${collaborationId}`, {
     method: 'DELETE'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to delete collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to delete collaboration');
   return data.data;
 }
 
@@ -203,8 +204,8 @@ export async function resendCollaborationEmail(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/vendor/collaborations/${collaborationId}/resend-email`, {
     method: 'POST'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to resend email');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to resend email');
   return data;
 }
 
@@ -212,8 +213,8 @@ export async function resendInvoiceEmail(collaborationId: string) {
   const res = await authFetch(`${PRODUCTS_API}/vendor/collaborations/${collaborationId}/resend-invoice`, {
     method: 'POST'
   });
+  if (!res.ok) await throwApiError(res, 'Failed to resend invoice');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to resend invoice');
   return data;
 }
 
@@ -223,8 +224,8 @@ export async function sendCollaborationMessage(collaborationId: string, message:
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message })
   });
+  if (!res.ok) await throwApiError(res, 'Failed to send message');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to send message');
   return data.data;
 }
 
@@ -234,8 +235,8 @@ export async function uploadCollaborationDeliverable(collaborationId: string, de
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(deliverable)
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload deliverable');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload deliverable');
   return data.data;
 }
 
@@ -245,8 +246,8 @@ export async function cancelCollaboration(collaborationId: string, reason?: stri
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ reason })
   });
+  if (!res.ok) await throwApiError(res, 'Failed to cancel collaboration');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to cancel collaboration');
   return data.data;
 }
 
@@ -261,8 +262,8 @@ export async function getFinancials(filters: { page?: number; limit?: number; ty
   if (filters.endDate) params.set('endDate', filters.endDate);
 
   const res = await authFetch(`${PRODUCTS_API}/vendor/financials?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch financials');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch financials');
   return data.data;
 }
 
@@ -270,8 +271,8 @@ export async function getFinancials(filters: { page?: number; limit?: number; ty
 
 export async function getAnalyticsSummary() {
   const res = await authFetch(`${PRODUCTS_API}/vendor/analytics/summary`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch analytics');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch analytics');
   return data.data;
 }
 
@@ -279,8 +280,8 @@ export async function getAnalyticsSummary() {
 
 export async function getCalendarBookings() {
   const res = await authFetch(`${PRODUCTS_API}/vendor/calendar`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch calendar');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch calendar');
   return data.data;
 }
 
@@ -294,8 +295,8 @@ export async function uploadVendorMedia(file: File) {
     method: 'POST',
     body: formData
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload file');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload file');
   return data.url;
 }
 
@@ -309,8 +310,8 @@ export async function uploadVendorLogo(profileId: string, file: File) {
     method: 'POST',
     body: formData
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload vendor logo');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload vendor logo');
   return data.data;
 }
 
@@ -322,8 +323,8 @@ export async function uploadVendorCover(profileId: string, file: File) {
     method: 'POST',
     body: formData
   });
+  if (!res.ok) await throwApiError(res, 'Failed to upload vendor cover');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to upload vendor cover');
   return data.data;
 }
 
@@ -339,22 +340,22 @@ export async function discoverVendors(filters: { page?: number; limit?: number; 
   if (filters.location) params.set('location', filters.location);
 
   const res = await fetch(`${PRODUCTS_API}/public/discover/vendors?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch vendors');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch vendors');
   return data.data;
 }
 
 export async function getPublicVendorBySlug(slug: string) {
   const res = await fetch(`${PRODUCTS_API}/public/discover/vendor/${slug}`);
+  if (!res.ok) await throwApiError(res, 'Vendor not found');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Vendor not found');
   return data.data;
 }
 
 export async function getPublicVendorProduct(vendorSlug: string, productSlug: string) {
   const res = await fetch(`${PRODUCTS_API}/public/discover/vendor/${vendorSlug}/product/${productSlug}`);
+  if (!res.ok) await throwApiError(res, 'Product not found');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Product not found');
   return data.data;
 }
 
@@ -366,8 +367,8 @@ export async function updateVendorVisibility(updates: { showReviews?: boolean; s
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ publicProfileSettings: updates })
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update visibility');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update visibility');
   return data.data;
 }
 
@@ -381,7 +382,7 @@ export async function discoverEvents(filters: { search?: string; page?: number; 
   if (filters.organizerId) params.set('organizerId', filters.organizerId);
 
   const res = await fetch(`${BASE_URL}/api/v1/events/discover?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to discover events');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to discover events');
   return data.events || [];
 }

@@ -112,6 +112,12 @@
 						</div>
 					{/if}
 				{:else}
+					{#if event.isCoOrganizer}
+						<div class="flex items-center gap-1 rounded-full bg-[#FCE7F3] px-2 py-0.5 text-[10px] font-medium text-[#DB3EC6] sm:text-[11px]">
+							<Icon icon="mdi:account-group-outline" class="h-3 w-3" />
+							<span>Co-organizer</span>
+						</div>
+					{/if}
 					{#if event.category}
 						<div class="flex items-center gap-1 rounded-full bg-[#F4F4F4] px-2 py-0.5 text-[10px] text-[#7F7F81] sm:text-[11px]">
 							<span class="text-[9px]">#</span>

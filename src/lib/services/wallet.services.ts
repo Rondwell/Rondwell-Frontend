@@ -1,13 +1,14 @@
 import { authFetch } from '$lib/services/api.client';
 
+import { throwApiError } from '$lib/utils/errorMessage';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 // ==================== WALLET ====================
 
 export async function getWalletBalance(): Promise<any> {
 	const res = await authFetch(`${BASE_URL}/api/v1/payment/wallet/balance`);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch wallet balance');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to fetch wallet balance');
 	return data.data ?? data;
 }
 
@@ -15,8 +16,8 @@ export async function getWalletBalance(): Promise<any> {
 
 export async function getBankList(): Promise<any[]> {
 	const res = await authFetch(`${BASE_URL}/api/v1/payment/transaction/bank/`);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch bank list');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to fetch bank list');
 	return data.data ?? data ?? [];
 }
 
@@ -26,8 +27,8 @@ export async function resolveBankAccount(accountNumber: string, bankCode: string
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ accountNumber, bankCode })
 	});
+	if (!res.ok) await throwApiError(res, 'Failed to resolve bank account');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to resolve bank account');
 	return data.data ?? data;
 }
 
@@ -37,15 +38,15 @@ export async function addBankAccount(accountNumber: string, bankCode: string, ba
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ accountNumber, bankCode, bankName })
 	});
+	if (!res.ok) await throwApiError(res, 'Failed to add bank account');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to add bank account');
 	return data.data ?? data;
 }
 
 export async function getBankAccounts(): Promise<any[]> {
 	const res = await authFetch(`${BASE_URL}/api/v1/payment/beneficiary/`);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch bank accounts');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to fetch bank accounts');
 	return data.data ?? data ?? [];
 }
 
@@ -53,10 +54,7 @@ export async function removeBankAccount(beneficiaryId: string): Promise<void> {
 	const res = await authFetch(`${BASE_URL}/api/v1/payment/beneficiary/${beneficiaryId}/`, {
 		method: 'DELETE'
 	});
-	if (!res.ok) {
-		const data = await res.json();
-		throw new Error(data.message ?? 'Failed to remove bank account');
-	}
+	if (!res.ok) await throwApiError(res, 'Failed to remove bank account');
 }
 
 // ==================== WITHDRAWAL ====================
@@ -67,8 +65,8 @@ export async function requestWithdrawalOtp(amount: number): Promise<void> {
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ amount })
 	});
+	if (!res.ok) await throwApiError(res, 'Failed to send OTP');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to send OTP');
 }
 
 export async function verifyWithdrawalOtp(
@@ -82,8 +80,8 @@ export async function verifyWithdrawalOtp(
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ otp, amount, currency, beneficiaryId })
 	});
+	if (!res.ok) await throwApiError(res, 'Withdrawal failed');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Withdrawal failed');
 	return data;
 }
 
@@ -98,8 +96,8 @@ export async function withdrawFunds(
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ amount, currency, beneficiaryId, userPin, reason: 'Wallet withdrawal' })
 	});
+	if (!res.ok) await throwApiError(res, 'Withdrawal failed');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Withdrawal failed');
 	return data;
 }
 
@@ -107,8 +105,8 @@ export async function withdrawFunds(
 
 export async function getEarningsSummary(): Promise<any[]> {
 	const res = await authFetch(`${BASE_URL}/api/v1/payment/wallet/earnings-summary`);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch earnings summary');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to fetch earnings summary');
 	return data.data ?? [];
 }
 
@@ -129,8 +127,8 @@ export async function getUserTransactions(options?: {
 	if (options?.endDate) params.set('endDate', options.endDate);
 
 	const res = await authFetch(`${BASE_URL}/api/v1/payment/transaction/list?${params.toString()}`);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch transactions');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to fetch transactions');
 	return data;
 }
 
@@ -158,8 +156,8 @@ export async function getEventEarnings(
 	const res = await authFetch(
 		`${BASE_URL}/api/v1/payment/transaction/event/${eventId}/earnings?${params.toString()}`
 	);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch event earnings');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to fetch event earnings');
 	return data;
 }
 
@@ -168,8 +166,8 @@ export async function getEventEarnings(
 export async function getUserSubscriptionInfo(): Promise<{ tier: string; feeRate: number; feePercent: number; withdrawalFeeRate: number; withdrawalFeeCap: number }> {
 	try {
 		const res = await authFetch(`${BASE_URL}/api/v1/payment/subscription/my-tier`);
+		if (!res.ok) await throwApiError(res, 'Failed to fetch subscription info');
 		const data = await res.json();
-		if (!res.ok) throw new Error(data.message ?? 'Failed to fetch subscription info');
 		const d = data.data ?? {};
 		return {
 			tier: d.tier ?? 'FREE',

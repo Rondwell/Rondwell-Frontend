@@ -2,6 +2,7 @@
  * Discover Services — Platform-wide stats for the discover hero section.
  */
 
+import { throwApiError } from '$lib/utils/errorMessage';
 const BASE_URL = import.meta.env.VITE_API_URL;
 const PRODUCTS_API = `${BASE_URL}/api/v1/products`;
 
@@ -22,7 +23,7 @@ export interface DiscoverStats {
  */
 export async function getDiscoverStats(): Promise<DiscoverStats> {
   const res = await fetch(`${PRODUCTS_API}/public/discover/stats`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch stats');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch stats');
   return data.data;
 }

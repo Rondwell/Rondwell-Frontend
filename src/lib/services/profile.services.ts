@@ -1,5 +1,6 @@
 import { authFetch } from '$lib/services/api.client';
 
+import { throwApiError } from '$lib/utils/errorMessage';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 export interface UserProfileData {
@@ -26,15 +27,15 @@ export interface UserProfileData {
 
 export async function getActiveProfile(): Promise<UserProfileData> {
   const res = await authFetch(`${BASE_URL}/api/v1/profile/me`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch profile');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch profile');
   return data.data;
 }
 
 export async function getAllProfiles(): Promise<UserProfileData[]> {
   const res = await authFetch(`${BASE_URL}/api/v1/profile/all`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch profiles');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch profiles');
   return data.data;
 }
 
@@ -44,8 +45,8 @@ export async function switchProfile(newProfileId: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ newProfileId }),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to switch profile');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to switch profile');
   return data.data;
 }
 
@@ -62,8 +63,8 @@ export async function completeOnboarding(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ onboardingData }),
   });
+  if (!res.ok) await throwApiError(res, 'Onboarding failed');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Onboarding failed');
   return data.data;
 }
 
@@ -79,8 +80,8 @@ export async function updateVendorDetails(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update vendor details');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update vendor details');
   return data.data;
 }
 
@@ -96,8 +97,8 @@ export async function updateSocialLinks(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(links),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update social links');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update social links');
   return data.data;
 }
 
@@ -116,8 +117,8 @@ export async function searchProfiles(
   params.set('limit', String(limit));
 
   const res = await authFetch(`${BASE_URL}/api/v1/profile/search?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to search profiles');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to search profiles');
   return data.data?.profiles || [];
 }
 
@@ -134,7 +135,7 @@ export async function updateExhibitorDetails(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
   });
+  if (!res.ok) await throwApiError(res, 'Failed to update exhibitor details');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to update exhibitor details');
   return data.data;
 }

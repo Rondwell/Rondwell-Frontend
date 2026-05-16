@@ -1,13 +1,14 @@
 import { authFetch } from '$lib/services/api.client';
 
+import { throwApiError } from '$lib/utils/errorMessage';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 // ─── User (account-level) ─────────────────────────────────────────────────────
 
 export async function getMe() {
   const res = await authFetch(`${BASE_URL}/api/v1/profile/user/me`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch user');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch user');
   return data.data as {
     id: string;
     email: string;

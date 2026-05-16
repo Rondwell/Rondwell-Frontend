@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { EVENT_ADMIN_ROLES, getRoleColor, getRoleLabel } from '$lib/constants/event-admin-roles';
 	import { getEventAdmins } from '$lib/services/event.services';
 	import { getActiveProfile } from '$lib/services/profile.services';
 	import { getMe } from '$lib/services/settings.services';
@@ -24,12 +25,14 @@
 	let roleFilter = 'All';
 	let sortOrder = 'recent';
 
-	const roleLabels: Record<string, { label: string; color: string }> = {
-		EVENT_MANAGER: { label: 'Manager', color: 'bg-yellow-100 text-yellow-700' },
-		COMMUNITY_MANAGER: { label: 'Community Manager', color: 'bg-purple-100 text-purple-700' },
-		REGISTRATION_MANAGER: { label: 'Check-In Only', color: 'bg-blue-100 text-blue-700' },
-		SUPPORT_MANAGER: { label: 'Support', color: 'bg-gray-100 text-gray-600' },
-	};
+	// Backwards-compat shim — the canonical role catalog lives in the shared
+	// constants file. Pre-built map for fast lookup in the role filter dropdown.
+	const roleLabels: Record<string, { label: string; color: string }> = Object.fromEntries(
+		EVENT_ADMIN_ROLES.map((r) => [
+			r.value,
+			{ label: r.label, color: `${r.color?.bg || 'bg-gray-100'} ${r.color?.text || 'text-gray-600'}` }
+		])
+	);
 
 	async function loadAdmins() {
 		if (!eventId) return;
@@ -100,12 +103,28 @@
 	}
 
 	function getRoleInfo(admin: any): { label: string; color: string } {
-		return roleLabels[admin.role] || { label: admin.role, color: 'bg-gray-100 text-gray-600' };
+		const c = getRoleColor(admin.role);
+		return { label: getRoleLabel(admin.role), color: `${c.bg} ${c.text}` };
 	}
 
 	function formatDate(dateStr: string): string {
 		if (!dateStr) return '';
 		return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+	}
+
+	function timeSince(dateStr: string | undefined): string {
+		if (!dateStr) return '';
+		const ms = Date.now() - new Date(dateStr).getTime();
+		const m = Math.floor(ms / 60000);
+		if (m < 1) return 'just now';
+		if (m < 60) return `${m}m ago`;
+		const h = Math.floor(m / 60);
+		if (h < 24) return `${h}h ago`;
+		const d = Math.floor(h / 24);
+		if (d < 30) return `${d}d ago`;
+		const mo = Math.floor(d / 30);
+		if (mo < 12) return `${mo}mo ago`;
+		return `${Math.floor(mo / 12)}y ago`;
 	}
 
 	function openUpdate(admin: any) { editAdmin = admin; showUpdateModal = true; }
@@ -196,7 +215,11 @@
 					</span>
 					<span class="rounded-full px-2 py-0.5 text-xs {roleInfo.color}">{roleInfo.label}</span>
 					{#if admin.status === 'PENDING'}
-					<span class="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-600">Pending</span>
+						<span class="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-600">
+							Pending · Invited {timeSince(admin.lastInvitedAt || admin.createdAt)}
+						</span>
+					{:else if admin.status === 'DECLINED'}
+						<span class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600">Declined</span>
 					{/if}
 				</div>
 			</div>

@@ -1,5 +1,6 @@
 import { authFetch } from '$lib/services/api.client';
 
+import { throwApiError } from '$lib/utils/errorMessage';
 const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
 
 export async function getCollectionSubscribers(
@@ -17,8 +18,8 @@ export async function getCollectionSubscribers(
 	const res = await authFetch(
 		`${EVENT_URL}/api/v1/collections/${collectionId}/subscribers?${params.toString()}`
 	);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch subscribers');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to fetch subscribers');
 	return data.data ?? data;
 }
 
@@ -29,8 +30,8 @@ export async function getSubscriberDetail(
 	const res = await authFetch(
 		`${EVENT_URL}/api/v1/collections/${collectionId}/subscribers/${subscriberId}`
 	);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch subscriber detail');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to fetch subscriber detail');
 	return data.data ?? data;
 }
 
@@ -46,8 +47,8 @@ export async function addCollectionSubscriber(
 			body: JSON.stringify(subscriberData)
 		}
 	);
+	if (!res.ok) await throwApiError(res, 'Failed to add subscriber');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to add subscriber');
 	return data;
 }
 
@@ -59,18 +60,15 @@ export async function removeCollectionSubscriber(
 		`${EVENT_URL}/api/v1/collections/${collectionId}/subscribers/${subscriberId}`,
 		{ method: 'DELETE' }
 	);
-	if (!res.ok) {
-		const data = await res.json();
-		throw new Error(data.message ?? 'Failed to remove subscriber');
-	}
+	if (!res.ok) await throwApiError(res, 'Failed to remove subscriber');
 }
 
 export async function confirmCollectionSubscription(token: string): Promise<any> {
 	const res = await fetch(
 		`${EVENT_URL}/api/v1/collections/confirm-subscription?token=${token}`
 	);
+	if (!res.ok) await throwApiError(res, 'Failed to confirm subscription');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to confirm subscription');
 	return data;
 }
 
@@ -86,8 +84,8 @@ export async function publicSubscribeToCollection(
 			body: JSON.stringify(payload),
 		}
 	);
+	if (!res.ok) await throwApiError(res, 'Failed to subscribe');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to subscribe');
 	return data;
 }
 
@@ -104,8 +102,8 @@ export async function addSubscriberTag(
 			body: JSON.stringify({ tagName })
 		}
 	);
+	if (!res.ok) await throwApiError(res, 'Failed to add tag');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to add tag');
 	return data;
 }
 
@@ -118,8 +116,8 @@ export async function removeSubscriberTag(
 		`${EVENT_URL}/api/v1/collections/${collectionId}/subscribers/${subscriberId}/tags/${encodeURIComponent(tagName)}`,
 		{ method: 'DELETE' }
 	);
+	if (!res.ok) await throwApiError(res, 'Failed to remove tag');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to remove tag');
 	return data;
 }
 
@@ -131,10 +129,7 @@ export async function deleteCollectionSubscriber(
 		`${EVENT_URL}/api/v1/collections/${collectionId}/subscribers/${subscriberId}/delete`,
 		{ method: 'DELETE' }
 	);
-	if (!res.ok) {
-		const data = await res.json();
-		throw new Error(data.message ?? 'Failed to delete subscriber');
-	}
+	if (!res.ok) await throwApiError(res, 'Failed to delete subscriber');
 }
 
 export async function blockCollectionSubscriber(
@@ -145,16 +140,13 @@ export async function blockCollectionSubscriber(
 		`${EVENT_URL}/api/v1/collections/${collectionId}/subscribers/${subscriberId}/block`,
 		{ method: 'PUT' }
 	);
-	if (!res.ok) {
-		const data = await res.json();
-		throw new Error(data.message ?? 'Failed to block subscriber');
-	}
+	if (!res.ok) await throwApiError(res, 'Failed to block subscriber');
 }
 
 export async function getCollectionSubscriberTags(collectionId: string): Promise<any[]> {
 	const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/subscriber-tags`);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch tags');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to fetch tags');
 	return data.data ?? [];
 }
 
@@ -168,8 +160,8 @@ export async function createCollectionSubscriberTag(
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ name, color })
 	});
+	if (!res.ok) await throwApiError(res, 'Failed to create tag');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to create tag');
 	return data.data ?? data;
 }
 
@@ -181,7 +173,7 @@ export async function resendSubscriptionConfirmation(
 		`${EVENT_URL}/api/v1/collections/${collectionId}/subscribers/${subscriberId}/resend-confirmation`,
 		{ method: 'POST' }
 	);
+	if (!res.ok) await throwApiError(res, 'Failed to resend confirmation');
 	const data = await res.json();
-	if (!res.ok) throw new Error(data.message ?? 'Failed to resend confirmation');
 	return data;
 }

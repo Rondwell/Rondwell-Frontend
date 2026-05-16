@@ -7,6 +7,7 @@
  *   /s/[slug]/[portfolioSlug] (Portfolio detail page)
  */
 
+import { throwApiError } from '$lib/utils/errorMessage';
 const BASE_URL = import.meta.env.VITE_API_URL;
 const PRODUCTS_API = `${BASE_URL}/api/v1/products`;
 
@@ -28,8 +29,8 @@ export async function discoverSpeakers(
   if (filters.expertise) params.set('expertise', filters.expertise);
 
   const res = await fetch(`${PRODUCTS_API}/public/discover/speakers?${params}`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch speakers');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Failed to fetch speakers');
   return data.data;
 }
 
@@ -38,8 +39,8 @@ export async function discoverSpeakers(
  */
 export async function getPublicSpeakerBySlug(slug: string) {
   const res = await fetch(`${PRODUCTS_API}/public/discover/speaker/${slug}`);
+  if (!res.ok) await throwApiError(res, 'Speaker not found');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Speaker not found');
   return data.data;
 }
 
@@ -48,7 +49,7 @@ export async function getPublicSpeakerBySlug(slug: string) {
  */
 export async function getPublicSpeakerPortfolio(speakerSlug: string, portfolioSlug: string) {
   const res = await fetch(`${PRODUCTS_API}/public/discover/speaker/${speakerSlug}/portfolio/${portfolioSlug}`);
+  if (!res.ok) await throwApiError(res, 'Portfolio not found');
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? 'Portfolio not found');
   return data.data;
 }

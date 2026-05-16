@@ -69,6 +69,8 @@
 			collectionName: e.collectionName ?? '',
 			customLinkSlug: e.customLinkSlug ?? '',
 			organizerAvatar: e.organizerAvatarUrl ?? '',
+			isCoOrganizer: !!e.isCoOrganizer,
+			accessRole: e.accessRole ?? 'OWNER',
 		};
 	}
 

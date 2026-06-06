@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { bulkReplaceEventDays, createEvent, getMyCollections, type EventDayPayload } from '$lib/services/event.services';
+	import { bulkReplaceEventDays, createEvent, getMyCollections, uploadEventPhoto, type EventDayPayload } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { setEventTheme } from '$lib/stores/eventTheme';
 	import { colors, type Color } from '$lib/utils/colors';
@@ -29,6 +29,9 @@
 
 	let showImageSelectorModal = false;
 	let eventImageUrl = '/events.png';
+	// The actual file the organizer picked for the event image (if any). Preset
+	// gallery selections are plain string paths and are not uploaded.
+	let selectedImageFile: File | null = null;
 	let showThemeModal = false;
 	let showSettingsModal = false;
 	let showAIModalMobile = false;
@@ -76,8 +79,7 @@
 	let eventCategories: string[] = [];
 	let location = '';
 	let physicalAddress = '';
-	let description = '';
-	let registrationType: 'FREE' | 'PAID' = 'FREE';
+	let description = '';	let registrationType: 'FREE' | 'PAID' = 'FREE';
 	let maxAttendees: number | null = null;
 	let waitlistEnabled = false;
 	let publicGuestListEnabled = false;
@@ -311,8 +313,10 @@
 	function handleImageSelect(e: CustomEvent<File | string>) {
 		const val = e.detail;
 		if (val instanceof File) {
+			selectedImageFile = val;
 			eventImageUrl = URL.createObjectURL(val);
 		} else if (typeof val === 'string') {
+			selectedImageFile = null;
 			eventImageUrl = val;
 		}
 		showImageSelectorModal = false;
@@ -340,6 +344,12 @@
 		return 'VIRTUAL';
 	}
 
+	// Returns plain text from rich HTML — used only to detect whether the
+	// editor actually contains content (empty editors emit "<p></p>").
+	function stripHtmlToText(html: string): string {
+		return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+	}
+
 	async function doCreateEvent() {
 		submitting = true;
 		submitError = '';
@@ -364,7 +374,7 @@
 
 			const payload = {
 				title: eventName.trim(),
-				description: description ? description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() || undefined : undefined,
+				description: description && stripHtmlToText(description) ? description.trim() : undefined,
 				category: eventCategories[0] ?? 'General',
 				eventOrganizerName: $authState.activeProfile?.name ?? $authState.user?.email ?? 'Organizer',
 				startDateTime: finalStartDateTime,
@@ -394,6 +404,17 @@
 
 			const result = await createEvent(payload);
 			const eventId = result.eventId;
+
+			// Upload the chosen event image (display picture) now that we have an
+			// eventId. Preset gallery picks (string paths) are skipped.
+			if (selectedImageFile) {
+				try {
+					await uploadEventPhoto(eventId, selectedImageFile, 'DISPLAY');
+				} catch (e) {
+					console.warn('Failed to upload event image:', e);
+					// Non-critical — event was still created; image can be added later.
+				}
+			}
 
 			// If multi-day, create the event days
 			if (isMultiDay && eventDays.length > 0) {

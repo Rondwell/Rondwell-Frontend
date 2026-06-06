@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { getPublicExhibitorBooth } from '$lib/services/exhibitor.public.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -154,7 +155,7 @@
 											<div>
 												<p class="text-sm font-medium text-gray-900">{product.productName || 'Product'}</p>
 												{#if product.price}
-													<p class="text-xs text-[#513BE2]">{product.currency || '$'}{Number(product.price?.$numberDecimal || product.price).toFixed(2)}</p>
+													<p class="text-xs text-[#513BE2]">{formatMoney(majorToKobo(Number(product.price?.$numberDecimal || product.price), product.currency || 'USD'), product.currency || 'USD')}</p>
 												{/if}
 											</div>
 										</div>

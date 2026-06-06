@@ -1,6 +1,22 @@
 <script lang="ts">
 	import { cancelCollaboration, getCollaboration, resendInvoiceEmail, sendCollaborationMessage, sendCollaborationQuote, updateCollaborationStatus, uploadCollaborationDeliverable, uploadVendorMedia } from '$lib/services/vendor.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
+
+	// FE-P1-01: every monetary string here routes through `formatMoney`. We
+	// carry the collaboration's `currency` (or `budgetCurrency`) from the
+	// inbound payload — never assume NGN. Quote-side amounts use
+	// `quotedCurrency` from the quote envelope.
+	function formatCollabBudget(c: any): string {
+		if (!c?.budget) return '—';
+		const ccy = c.currency || c.budgetCurrency || 'NGN';
+		return formatMoney(majorToKobo(Number(c.budget), ccy), ccy);
+	}
+	function formatQuoteAmount(quote: any): string {
+		if (!quote?.quotedAmount) return '—';
+		const ccy = quote.quotedCurrency || 'NGN';
+		return formatMoney(majorToKobo(Number(quote.quotedAmount), ccy), ccy);
+	}
 
 	export let open = false;
 	export let collaborationId = '';
@@ -222,7 +238,7 @@
 							{/if}
 							<div class="flex items-center justify-between border-t border-gray-100 pt-2">
 								<span class="text-xs font-medium text-gray-700">Total Amount</span>
-								<span class="text-base font-bold text-gray-900">₦{Number(collab.budget).toLocaleString()}</span>
+								<span class="text-base font-bold text-gray-900">{formatCollabBudget(collab)}</span>
 							</div>
 						</div>
 						<div class="flex gap-2">
@@ -271,7 +287,7 @@
 					{/if}
 					<div class="flex items-start gap-2">
 						<Icon icon="mdi:cash" class="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-						<div><p class="text-[10px] text-gray-400">Product Price</p><p class="text-sm font-bold text-gray-900">{collab.budget ? `₦${collab.budget.toLocaleString()}` : '—'}</p></div>
+						<div><p class="text-[10px] text-gray-400">Product Price</p><p class="text-sm font-bold text-gray-900">{collab.budget ? formatCollabBudget(collab) : '—'}</p></div>
 					</div>
 				</div>
 
@@ -286,7 +302,7 @@
 							</div>
 							<div class="flex items-center justify-between">
 								<span class="text-xs text-gray-400">Amount</span>
-								<span class="text-sm font-bold text-gray-900">{collab.quote.quotedCurrency === 'USD' ? '$' : '₦'}{Number(collab.quote.quotedAmount).toLocaleString()}</span>
+								<span class="text-sm font-bold text-gray-900">{formatQuoteAmount(collab.quote)}</span>
 							</div>
 							<div class="flex items-center justify-between">
 								<span class="text-xs text-gray-400">Payment Status</span>

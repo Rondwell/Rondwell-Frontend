@@ -6,6 +6,7 @@
   import { authState, setUser, setVerified } from '$lib/stores/auth.store';
   import { toast } from '$lib/stores/toast.store';
   import { setPostAuthRedirect, consumePostAuthRedirect } from '$lib/utils/redirect';
+  import { isValidEmail, isValidPhone } from '$lib/utils/validation';
   import { onMount } from 'svelte';
   import Header from './components/Header.svelte';
 
@@ -214,7 +215,17 @@
     if (!usePhone && !email) { errorMsg = 'Please enter your email'; return; }
     if (usePhone && !phone) { errorMsg = 'Please enter your phone number'; return; }
 
-    const contact = usePhone ? phone : email;
+    // Validate format before sending an OTP so malformed input is rejected up front.
+    if (!usePhone && !isValidEmail(email)) {
+      errorMsg = 'Please enter a valid email address (e.g. you@example.com)';
+      return;
+    }
+    if (usePhone && !isValidPhone(phone)) {
+      errorMsg = 'Please enter a valid phone number';
+      return;
+    }
+
+    const contact = usePhone ? phone.trim() : email.trim();
     errorMsg = '';
 
     try {

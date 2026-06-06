@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { formatMoney, majorToKobo } from '$lib/utils/money';
   // import Modal from '$lib/components/ui/Modal.svelte';
   
   // 1. Better Typing (Optional, but recommended)
@@ -70,7 +71,7 @@
     </div>
   {:else}
     <div class="p-4 bg-gray-50 rounded-lg">
-        <p class="font-bold">Contribution: ₦{data.booking.contribution.toLocaleString()}</p>
+        <p class="font-bold">Contribution: {formatMoney(majorToKobo(Number(data.booking.contribution ?? 0), data.booking.currency ?? 'NGN'), data.booking.currency ?? 'NGN')}</p>
         <p class="text-sm text-gray-500">Status: {data.booking.paymentStatus}</p>
     </div>
   {/if}

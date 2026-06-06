@@ -6,6 +6,7 @@
 		removeBankAccount,
 		resolveBankAccount,
 	} from '$lib/services/wallet.services';
+	import { financialErrorMessage } from '$lib/utils/financialErrorCopy';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
@@ -103,7 +104,8 @@
 			newAccountName = '';
 			showAddBankModal = false;
 		} catch (e: any) {
-			addBankError = e.message ?? 'Failed to add bank account';
+			// FE-P2-08: surface BENEFICIARY_NAME_MISMATCH / PENDING_REVIEW etc with specific copy.
+			addBankError = financialErrorMessage(e);
 		} finally {
 			addingBank = false;
 		}

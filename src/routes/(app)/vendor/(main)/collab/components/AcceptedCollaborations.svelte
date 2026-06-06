@@ -1,8 +1,19 @@
 <script lang="ts">
 	import { getCollaborations, type CollaborationFilters } from '$lib/services/vendor.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import AcceptedDetailModal from './AcceptedDetailModal.svelte';
+
+	// FE-P1-01: render the budget through the canonical money helper so
+	// non-NGN collaborations don't render with `₦`. Carries the inbound
+	// `currency` if present, falls back to NGN for legacy rows.
+	function formatBudget(c: any): string {
+		const amount = Number(c?.budget ?? 0);
+		if (!amount) return '—';
+		const ccy = c?.currency || c?.budgetCurrency || 'NGN';
+		return formatMoney(majorToKobo(amount, ccy), ccy);
+	}
 
 	let loading = true;
 	let collabs: any[] = [];
@@ -134,7 +145,7 @@
 					</div>
 					<div class="col-span-2 truncate text-gray-600">{c.eventName || c.title || '—'}</div>
 					<div class="col-span-2 truncate text-gray-400">{c.category || c.description?.slice(0, 20) || '—'}</div>
-					<div class="col-span-1 text-xs font-medium text-green-600">{c.budget ? `₦${c.budget.toLocaleString()}` : '—'}</div>
+					<div class="col-span-1 text-xs font-medium text-green-600">{formatBudget(c)}</div>
 					<div class="col-span-1 text-xs text-gray-400">{formatDate(c.startDate || c.createdAt)}</div>
 					<div class="col-span-1 text-xs font-medium {getStatusClass(c.status)}">{getStatusLabel(c.status)}</div>
 					<div class="col-span-2 flex items-center justify-end gap-1.5">
@@ -152,7 +163,7 @@
 					</div>
 					<div class="flex flex-col items-end gap-0.5 shrink-0">
 						<span class="text-[10px] font-medium {getStatusClass(c.status)}">{getStatusLabel(c.status)}</span>
-						<span class="text-[10px] text-green-600">{c.budget ? `₦${c.budget.toLocaleString()}` : ''}</span>
+						<span class="text-[10px] text-green-600">{c.budget ? formatBudget(c) : ''}</span>
 					</div>
 				</button>
 			{/each}

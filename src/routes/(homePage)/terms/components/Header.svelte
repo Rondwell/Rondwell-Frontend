@@ -118,9 +118,9 @@
 						Discover Events
 					</a>
 
-					<a href="/" class="flex items-center gap-2">
+					<a href="/pricing" class="flex items-center gap-2">
 						<img src="/Verified.svg" alt="Verified" class="h-6 w-6" />
-						Explore Experiences
+						Pricing
 					</a>
 
 					<a href="/create-event" class="flex items-center gap-2">

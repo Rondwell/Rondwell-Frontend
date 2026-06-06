@@ -6,6 +6,8 @@
 	import { getMyEvents, getMySubscribedCollections } from '$lib/services/event.services';
 	import { getEarningsSummary, getWalletBalance } from '$lib/services/wallet.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
+	import { isPlusUser, loadSubscription, subscriptionStore } from '$lib/stores/subscription.store';
+	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
 	let activeTab: 'Created' | 'Attending' = 'Created';
@@ -22,6 +24,7 @@
 
 	onMount(async () => {
 		if (!$isAuthenticated) return;
+		loadSubscription();
 		try {
 			const [events, subCollections] = await Promise.all([
 				getMyEvents(),
@@ -300,6 +303,42 @@
 				{/each}
 			</div>
 
+			<!-- Subscription Tier Card -->
+			{#if $subscriptionStore.loaded}
+				<div class="mb-6 flex items-center justify-between rounded-2xl border {$isPlusUser ? 'border-pink-200 bg-gradient-to-r from-pink-50 to-purple-50' : 'border-gray-100 bg-white'} p-4 shadow-sm transition hover:shadow-md">
+					<div class="flex items-center gap-3">
+						<div class="flex h-10 w-10 items-center justify-center rounded-full {$isPlusUser ? 'bg-pink-100' : 'bg-gray-100'}">
+							<Icon icon={$isPlusUser ? 'mdi:star-circle' : 'mdi:account-circle-outline'} class="{$isPlusUser ? 'text-xl text-pink-500' : 'text-xl text-gray-400'}" />
+						</div>
+						<div>
+							<div class="flex items-center gap-2">
+								<span class="text-sm font-semibold text-gray-900">{$subscriptionStore.tier === 'PLUS' ? 'Rondwell PLUS' : 'Rondwell FREE'}</span>
+								{#if $subscriptionStore.subscriptionStatus}
+									<span class="rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase
+										{$subscriptionStore.subscriptionStatus === 'ACTIVE' ? 'bg-green-100 text-green-700' : ''}
+										{$subscriptionStore.subscriptionStatus === 'TRIALING' ? 'bg-blue-100 text-blue-700' : ''}
+										{$subscriptionStore.subscriptionStatus === 'PAST_DUE' ? 'bg-red-100 text-red-700' : ''}
+									">{$subscriptionStore.subscriptionStatus.toLowerCase().replace('_', ' ')}</span>
+								{/if}
+							</div>
+							<p class="text-xs text-gray-500">
+								{#if $isPlusUser}
+									{$subscriptionStore.feePercent}% platform fee · {$subscriptionStore.billingCycle?.toLowerCase() ?? ''} billing
+								{:else}
+									{$subscriptionStore.feePercent}% platform fee · Upgrade to unlock more
+								{/if}
+							</p>
+						</div>
+					</div>
+					<button
+						on:click={() => goto('/subscription')}
+						class="rounded-lg {$isPlusUser ? 'border border-pink-300 bg-white text-pink-700 hover:bg-pink-50' : 'bg-pink-600 text-white hover:bg-pink-700'} px-4 py-2 text-xs font-medium transition"
+					>
+						{$isPlusUser ? 'Manage' : 'Upgrade'}
+					</button>
+				</div>
+			{/if}
+
 			<!-- Welcome Card -->
 			<div
 				class="flex h-full min-h-[181.5px] flex-col items-start gap-4 rounded-lg bg-[#FDFDFD] p-3 md:flex-row md:p-6"
@@ -317,7 +356,7 @@
 						<h2 class="font-mediun mb-1 text-xl">Welcome to Rondwell</h2>
 						<p class="mb-3 max-w-[724px] text-sm text-[#B9BABA]">
 							Rondwell lets you easily share and manage your events. Every event on Rondwell is part
-							of a calendar. Let's see how they work.
+							of a Collection. You can manage all events in a colltion at once. Head over to events or colleions on the sidebar to get started. 
 						</p>
 					</span>
 
@@ -331,7 +370,7 @@
 						<button
 							class="h-[38px] w-full rounded bg-black px-3 py-1 text-sm font-medium text-white md:w-fit"
 						>
-							Next
+							Close
 						</button>
 					</div>
 				</div>

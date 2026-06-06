@@ -195,10 +195,10 @@
 
 				<button
 					class="flex items-center gap-1 text-[#909EA3] transition-colors hover:text-[#513BE2]"
-					onclick={() => goto('/discover?show=true')}
+					onclick={() => goto('/pricing')}
 				>
 					<img class="h-[17px] w-[18px]" src="/Verified-explore.svg" alt="explore" />
-					<span class="text-[16px]">Explore Experiences</span>
+					<span class="text-[16px]">Pricing</span>
 				</button>
 			</div>
 		</div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { getPublicSpeakerPortfolio } from '$lib/services/speaker.public.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -200,7 +201,7 @@
 								{#if portfolio.feeType === 'PRO_BONO'}
 									Pro Bono
 								{:else if portfolio.feeAmount}
-									{portfolio.feeCurrency || '$'}{portfolio.feeAmount.toFixed(2)} ({portfolio.feeType.toLowerCase()})
+									{formatMoney(majorToKobo(Number(portfolio.feeAmount), portfolio.feeCurrency || 'USD'), portfolio.feeCurrency || 'USD')} ({portfolio.feeType.toLowerCase()})
 								{:else}
 									{portfolio.feeType}
 								{/if}

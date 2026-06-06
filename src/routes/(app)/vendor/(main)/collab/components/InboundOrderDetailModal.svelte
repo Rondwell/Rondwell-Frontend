@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { getCollaboration, sendCollaborationMessage, sendCollaborationQuote, updateCollaborationStatus } from '$lib/services/vendor.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
+
+	function formatCollabBudget(c: any): string {
+		if (!c?.budget) return '—';
+		const ccy = c.currency || c.budgetCurrency || 'NGN';
+		return formatMoney(majorToKobo(Number(c.budget), ccy), ccy);
+	}
 
 	export let open = false;
 	export let collaborationId = '';
@@ -223,7 +230,7 @@
 					<div class="space-y-3">
 						<div class="flex items-start gap-2">
 							<Icon icon="mdi:cash" class="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
-							<div><p class="text-[10px] text-gray-400">Product Price</p><p class="text-xs font-bold text-gray-900">{collab.budget ? `₦${collab.budget.toLocaleString()}` : '—'}</p></div>
+							<div><p class="text-[10px] text-gray-400">Product Price</p><p class="text-xs font-bold text-gray-900">{collab.budget ? formatCollabBudget(collab) : '—'}</p></div>
 						</div>
 						<div class="flex items-start gap-2">
 							<Icon icon="mdi:tag-outline" class="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />

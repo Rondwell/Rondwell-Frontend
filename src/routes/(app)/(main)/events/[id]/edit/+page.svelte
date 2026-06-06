@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import AddressAutocomplete from '$lib/components/AddressAutocomplete.svelte';
-	import { bulkReplaceEventDays, getEventDays, updateEvent, uploadEventPhoto, type EventDayPayload } from '$lib/services/event.services';
+	import { bulkReplaceEventDays, getEventDays, updateEvent, uploadEventDescriptionImage, uploadEventPhoto, type EventDayPayload } from '$lib/services/event.services';
 	import { getEventCache, invalidateEventCache } from '$lib/stores/eventCache.store';
 	import { toast } from '$lib/stores/toast.store';
 	import { colors, type Color } from '$lib/utils/colors';
 	import { clickOutside } from '$lib/utils/constant';
 	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import Icon from '@iconify/svelte';
+	import Image from '@tiptap/extension-image';
+	import Link from '@tiptap/extension-link';
 	import PlaceholderExtension from '@tiptap/extension-placeholder';
 	import StarterKit from '@tiptap/starter-kit';
 	import { onDestroy, onMount } from 'svelte';
@@ -31,6 +33,12 @@
 	let coverInput: HTMLInputElement;
 	let avatarInput: HTMLInputElement;
 	let showDescEditor = false;
+	// Description rich-text image upload + link state
+	let descImageInput: HTMLInputElement;
+	let uploadingDescImage = false;
+	let descImageError = '';
+	let showDescLinkInput = false;
+	let descLinkUrl = '';
 
 	let name = '';
 	let descriptionHtml = ''; // stored as HTML for rich editor
@@ -97,6 +105,8 @@
 			extensions: [
 				StarterKit,
 				PlaceholderExtension.configure({ placeholder: "Who should come? What's the event about?" }),
+				Image.configure({ inline: false, allowBase64: false, HTMLAttributes: { class: 'desc-img' } }),
+				Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow', class: 'desc-link' } }),
 			],
 			content: content || '',
 			editorProps: {
@@ -113,6 +123,51 @@
 
 	function stripHtml(html: string): string {
 		return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+	}
+
+	function triggerDescImageUpload() {
+		descImageError = '';
+		descImageInput?.click();
+	}
+
+	async function handleDescImageUpload(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const file = target.files?.[0];
+		if (!file) return;
+		if (!file.type.startsWith('image/')) {
+			descImageError = 'Please select an image file.';
+			target.value = '';
+			return;
+		}
+		if (file.size > 5 * 1024 * 1024) {
+			descImageError = 'Image must be 5MB or smaller.';
+			target.value = '';
+			return;
+		}
+		uploadingDescImage = true;
+		descImageError = '';
+		try {
+			const url = await uploadEventDescriptionImage(file, eventId);
+			$descEditor?.chain().focus().setImage({ src: url }).run();
+		} catch (err: any) {
+			descImageError = err?.message ?? 'Failed to upload image.';
+		} finally {
+			uploadingDescImage = false;
+			target.value = '';
+		}
+	}
+
+	function insertDescLink() {
+		const value = descLinkUrl.trim();
+		if (!value) {
+			$descEditor?.chain().focus().extendMarkRange('link').unsetLink().run();
+			showDescLinkInput = false;
+			return;
+		}
+		const href = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+		$descEditor?.chain().focus().extendMarkRange('link').setLink({ href }).run();
+		descLinkUrl = '';
+		showDescLinkInput = false;
 	}
 
 	onMount(async () => {
@@ -472,12 +527,40 @@
 									<button type="button" on:click={() => $descEditor.chain().focus().toggleOrderedList().run()}
 										class="rounded px-2 py-1 text-xs hover:bg-gray-200 {$descEditor.isActive('orderedList') ? 'bg-gray-800 text-white' : 'text-gray-700'}">1. List</button>
 									<div class="mx-1 h-4 w-px bg-gray-300"></div>
+									<button type="button" title="Insert link" on:click={() => { showDescLinkInput = !showDescLinkInput; }}
+										class="rounded px-2 py-1 hover:bg-gray-200 {$descEditor.isActive('link') ? 'bg-gray-800 text-white' : 'text-gray-700'}">
+										<Icon icon="mdi:link-variant" class="text-base" />
+									</button>
+									<button type="button" title="Insert image" on:click={triggerDescImageUpload} disabled={uploadingDescImage}
+										class="rounded px-2 py-1 text-gray-700 hover:bg-gray-200 disabled:opacity-50">
+										{#if uploadingDescImage}
+											<Icon icon="mdi:loading" class="animate-spin text-base" />
+										{:else}
+											<Icon icon="mdi:image-outline" class="text-base" />
+										{/if}
+									</button>
+									<div class="mx-1 h-4 w-px bg-gray-300"></div>
 									<button type="button" on:click={() => $descEditor.chain().focus().undo().run()}
 										class="rounded px-2 py-1 text-sm hover:bg-gray-200 text-gray-700">↩</button>
 									<button type="button" on:click={() => $descEditor.chain().focus().redo().run()}
 										class="rounded px-2 py-1 text-sm hover:bg-gray-200 text-gray-700">↪</button>
 								{/if}
 							</div>
+							<!-- Hidden image file input -->
+							<input type="file" accept="image/*" class="hidden" bind:this={descImageInput} on:change={handleDescImageUpload} />
+							<!-- Link input popover -->
+							{#if showDescLinkInput}
+								<div class="flex items-center gap-2 border-b border-gray-100 bg-[#F8F9FA] px-3 py-2">
+									<input type="url" bind:value={descLinkUrl} placeholder="https://example.com"
+										class="flex-1 rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
+										on:keydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); insertDescLink(); } }} />
+									<button type="button" class="rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700" on:click={insertDescLink}>Apply</button>
+									<button type="button" class="rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-200" on:click={() => { showDescLinkInput = false; descLinkUrl = ''; }}>Cancel</button>
+								</div>
+							{/if}
+							{#if descImageError}
+								<div class="border-b border-gray-100 bg-red-50 px-3 py-1.5 text-xs text-red-600">{descImageError}</div>
+							{/if}
 							<!-- Editor area -->
 							<div class="desc-editor min-h-[160px] max-h-[280px] overflow-y-auto p-4 text-sm text-gray-800">
 								{#if $descEditor}
@@ -938,4 +1021,14 @@
 	:global(.desc-editor .ProseMirror strong) { font-weight: 700 !important; }
 	:global(.desc-editor .ProseMirror em) { font-style: italic; }
 	:global(.desc-editor .ProseMirror a) { color: #7c3aed; text-decoration: underline; }
+	:global(.desc-editor .ProseMirror img) {
+		max-width: 100%;
+		height: auto;
+		border-radius: 0.5rem;
+		margin: 0.5rem 0;
+		display: block;
+	}
+	:global(.desc-editor .ProseMirror img.ProseMirror-selectednode) {
+		outline: 2px solid #7c3aed;
+	}
 </style>

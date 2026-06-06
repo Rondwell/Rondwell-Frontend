@@ -36,6 +36,21 @@
 		{ label: 'Users', path: '/hq/users', icon: 'users' },
 		{ label: 'Events', path: '/hq/events', icon: 'events' },
 		{ label: 'Collections', path: '/hq/collections', icon: 'collections' },
+		// FE-P2-07 / FE-P2-08 / FE-P2-09 — compliance review queues.
+		{ label: 'KYC', path: '/hq/kyc', icon: 'compliance' },
+		{ label: 'Beneficiaries', path: '/hq/beneficiaries', icon: 'compliance' },
+		{ label: 'AML', path: '/hq/aml', icon: 'compliance' },
+		// FE-P3-09 (NEW-9.1) — hash-chained wallet audit log lookup.
+		{ label: 'Wallet Audit', path: '/hq/wallet-audit', icon: 'compliance' },
+		// FE-P4-02 — Platform revenue + finance sub-pages.
+		{ label: 'Finance', path: '/hq/finance', icon: 'finance' },
+		// FE-P4-01 — Daily reconciliation runs & frozen wallets.
+		{ label: 'Reconciliation', path: '/hq/reconciliation', icon: 'compliance' },
+		// FE-P4-06 — SLO dashboard + alerts feed.
+		{ label: 'SLOs', path: '/hq/slo', icon: 'finance' },
+		{ label: 'Alerts', path: '/hq/alerts', icon: 'compliance' },
+		// FE-P4-07 — Recon backfill sign-off (rare ops use).
+		{ label: 'Recon Backfill', path: '/hq/recon-backfill', icon: 'compliance' },
 		{ label: 'Settings', path: '/hq/settings', icon: 'settings' },
 	];
 
@@ -112,6 +127,10 @@
 										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M6.667 1.667v2.5M13.333 1.667v2.5M2.917 7.575h14.166M17.5 7.083v5.834c0 2.5-1.25 4.166-4.167 4.166H6.667c-2.917 0-4.167-1.666-4.167-4.166V7.083c0-2.5 1.25-4.166 4.167-4.166h6.666c2.917 0 4.167 1.666 4.167 4.166z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
 									{:else if item.icon === 'collections'}
 										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M14.167 8.333h1.666c1.667 0 2.5-.833 2.5-2.5V4.167c0-1.667-.833-2.5-2.5-2.5h-1.666c-1.667 0-2.5.833-2.5 2.5v1.666c0 1.667.833 2.5 2.5 2.5zM4.167 18.333h1.666c1.667 0 2.5-.833 2.5-2.5v-1.666c0-1.667-.833-2.5-2.5-2.5H4.167c-1.667 0-2.5.833-2.5 2.5v1.666c0 1.667.833 2.5 2.5 2.5z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 8.333A3.333 3.333 0 105 1.667a3.333 3.333 0 000 6.666zM15 18.333a3.333 3.333 0 100-6.666 3.333 3.333 0 000 6.666z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									{:else if item.icon === 'compliance'}
+										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 1.667l-7.5 3.333v5c0 4.583 3.125 8.875 7.5 9.583 4.375-.708 7.5-5 7.5-9.583v-5L10 1.667z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M7.5 10l1.667 1.667L12.5 8.333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									{:else if item.icon === 'finance'}
+										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.5 17.5h15M2.5 17.5V12.5M5.833 17.5V9.167M9.167 17.5V6.667M12.5 17.5V10.833M15.833 17.5V4.167" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 									{:else if item.icon === 'settings'}
 										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.667 10.733V9.267c0-.734.6-1.334 1.333-1.334.95 0 1.342-.666.867-1.483a1.004 1.004 0 01.366-1.367l1.434-.825a.88.88 0 011.2.333l.083.142c.467.816 1.234.816 1.7 0l.084-.142a.88.88 0 011.2-.333l1.433.825a1.004 1.004 0 01.367 1.367c-.475.817-.084 1.483.866 1.483.734 0 1.334.6 1.334 1.334v1.466c0 .734-.6 1.334-1.334 1.334-.95 0-1.341.666-.866 1.483a1.004 1.004 0 01-.367 1.367l-1.433.825a.88.88 0 01-1.2-.333l-.084-.142c-.466-.817-1.233-.817-1.7 0l-.083.142a.88.88 0 01-1.2.333l-1.434-.825a1.004 1.004 0 01-.366-1.367c.475-.817.083-1.483-.867-1.483a1.338 1.338 0 01-1.333-1.334z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
 									{/if}

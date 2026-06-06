@@ -136,6 +136,19 @@ export async function disable2FA(code: string) {
   return json;
 }
 
+/**
+ * Generate a fresh set of 2FA backup codes. This invalidates any previously
+ * issued codes. Requires 2FA to already be enabled.
+ */
+export async function regenerateBackupCodes() {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/2fa/backup-codes`, {
+    method: 'GET',
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to generate backup codes');
+  return json.data as { backupCodes: string[] };
+}
+
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 
 export async function getActiveSessions() {
@@ -202,6 +215,15 @@ export async function removePasskey(credentialId: string) {
 }
 
 // ─── Delete Account ───────────────────────────────────────────────────────────
+//
+// FE-P0-07: this helper is deprecated. The user-service `DELETE /profile/delete`
+// route still works, but its payment-service cascade hop now returns
+// `410 CASCADE_DELETE_DISABLED`, so financial records would be orphaned.
+// `DeleteAccountModal` no longer calls this — it routes to support instead.
+// When P3-10 ships the compliant `POST /api/v1/payment/admin/users/:id/anonymise`
+// flow we'll replace this helper with `requestAccountAnonymisation()`. Keep
+// the export here for now so any out-of-tree caller fails loudly via search,
+// not silently via missing symbol.
 
 export async function deleteAccount() {
   const res = await authFetch(`${BASE_URL}/api/v1/profile/delete`, {

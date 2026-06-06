@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getEventEarnings, getUserSubscriptionInfo } from '$lib/services/wallet.services';
+	import { getEventEarnings, getEventSalesSummary, getUserSubscriptionInfo, type SalesSummary } from '$lib/services/wallet.services';
+	import SalesTimelineChart from '$lib/components/SalesTimelineChart.svelte';
 	import { getEventCache } from '$lib/stores/eventCache.store';
 	import { clickOutside } from '$lib/utils/constant';
+	import { formatMoney, koboToMajor } from '$lib/utils/money';
+	import { COMMON_TIMEZONES, getBrowserTz } from '$lib/utils/tz';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -34,16 +37,72 @@
 	let earningsPage = 1;
 	const earningsPerPage = 20;
 
+	// FE-P3-12 (NEW-1.4 / FA-9.1) — unified sales-summary feed.
+	// Replaces the old client-side merge of getUserTransactions +
+	// getEarningsSummary. Fall back gracefully if the endpoint isn't yet
+	// available in production (loadingSummary stays true → existing
+	// per-row totals continue rendering).
+	let salesSummary: SalesSummary | null = null;
+	let loadingSummary = true;
+	let summaryError = '';
+	// FE-P3-07 (NEW-9.3) — explicit IANA tz so day-buckets match the org's locale.
+	let timezone = getBrowserTz();
+	let showTzDropdown = false;
+
 	const statusOptions = ['All', 'Completed', 'Pending', 'Refunded'];
 	const dateOptions = ['All Time', 'Today', 'This Week', 'This Month', 'Last 3 Months', 'Last 6 Months'];
 
 	function koboToNaira(amount: number): number {
-		return amount / 100;
+		// FE-P1-01 / FE-P1-16 — legacy alias for the kobo→major conversion
+		// in the NGN bucket. New aggregations should call `koboToMajor` and
+		// pass the row's actual currency. Preserved here so the existing
+		// reactive blocks below compile while we transition.
+		return koboToMajor(amount, 'NGN');
 	}
 
-	$: totalEarnings = earnings.reduce((sum: number, e: any) => sum + (e.status !== 'REFUNDED' ? koboToNaira(e.totalAmount ?? 0) : 0), 0);
-	$: completedEarnings = earnings.filter((e: any) => e.status === 'COMPLETED').reduce((sum: number, e: any) => sum + koboToNaira(e.totalAmount ?? 0), 0);
-	$: pendingEarnings = earnings.filter((e: any) => e.status === 'PENDING').reduce((sum: number, e: any) => sum + koboToNaira(e.totalAmount ?? 0), 0);
+	/**
+	 * FE-P1-01 — currency-aware aggregation. The earnings list contains rows
+	 * in whatever currency the ticket was sold in. We bucket by `currency`
+	 * so a USD-only event renders `$X` and an NGN-only event renders `₦X`,
+	 * never mixing them. The pretty-print helper below picks the dominant
+	 * currency for a single-line summary, falling back to the row's own
+	 * currency when iterating per-row.
+	 */
+	function bucketByCurrency(rows: any[], pred: (r: any) => boolean): Record<string, number> {
+		const out: Record<string, number> = {};
+		for (const r of rows) {
+			if (!pred(r)) continue;
+			const ccy = (r.currency || 'NGN').toUpperCase();
+			out[ccy] = (out[ccy] ?? 0) + Number(r.totalAmount ?? 0);
+		}
+		return out;
+	}
+
+	function summarizeBuckets(buckets: Record<string, number>): string {
+		const entries = Object.entries(buckets).filter(([, kobo]) => kobo > 0);
+		if (entries.length === 0) return formatMoney(0, 'NGN');
+		return entries.map(([ccy, kobo]) => formatMoney(kobo, ccy)).join(' · ');
+	}
+
+	function bucketSum(buckets: Record<string, number>, multiplier = 1): Record<string, number> {
+		const out: Record<string, number> = {};
+		for (const [ccy, kobo] of Object.entries(buckets)) {
+			out[ccy] = Math.round(kobo * multiplier);
+		}
+		return out;
+	}
+
+	$: totalEarningsByCurrency = bucketByCurrency(earnings, (e: any) => e.status !== 'REFUNDED');
+	$: completedEarningsByCurrency = bucketByCurrency(earnings, (e: any) => e.status === 'COMPLETED');
+	$: pendingEarningsByCurrency = bucketByCurrency(earnings, (e: any) => e.status === 'PENDING');
+	$: platformFeesByCurrency = bucketSum(completedEarningsByCurrency, feeRate);
+	$: netEarningsByCurrency = bucketSum(completedEarningsByCurrency, 1 - feeRate);
+
+	// Legacy NGN-only scalars retained for any downstream maths that hasn't
+	// migrated yet (none currently — the cards below all use the buckets).
+	$: totalEarnings = (totalEarningsByCurrency.NGN ?? 0) / 100;
+	$: completedEarnings = (completedEarningsByCurrency.NGN ?? 0) / 100;
+	$: pendingEarnings = (pendingEarningsByCurrency.NGN ?? 0) / 100;
 	$: platformFees = completedEarnings * feeRate;
 	$: netEarnings = completedEarnings - platformFees;
 
@@ -85,8 +144,37 @@
 		if (eventId) {
 			fetchEarnings();
 			loadFeeRate();
+			loadSalesSummary();
 		}
 	});
+
+	async function loadSalesSummary() {
+		loadingSummary = true;
+		summaryError = '';
+		try {
+			salesSummary = await getEventSalesSummary(eventId, { tz: timezone });
+		} catch (e: any) {
+			// Fall back to the legacy per-row aggregation. Don't surface a
+			// hard error — the page still renders the table below.
+			console.warn('[earnings] sales-summary unavailable, using legacy aggregation:', e?.message);
+			salesSummary = null;
+		} finally {
+			loadingSummary = false;
+		}
+	}
+
+	async function changeTimezone(tz: string) {
+		timezone = tz;
+		showTzDropdown = false;
+		await loadSalesSummary();
+	}
+
+	// FE-P3-12 — reconciliation guard: warn if the timeline.gross sum
+	// drifts from the headline `gross` figure. The backend already logs
+	// this; surfacing it here lets the organizer refresh.
+	$: timelineDrift = salesSummary
+		? Math.abs(salesSummary.timeline.reduce((sum, d) => sum + d.gross, 0) - salesSummary.gross) > 1
+		: false;
 
 	async function loadFeeRate() {
 		try {
@@ -99,7 +187,7 @@
 	async function fetchEarnings() {
 		loadingEarnings = true;
 		try {
-			const result = await getEventEarnings(eventId, { limit: 100 });
+			const result = await getEventEarnings(eventId, { limit: 100, tz: timezone });
 			earnings = result.data ?? [];
 		} catch (e: any) {
 			console.error('Failed to fetch earnings:', e);
@@ -118,8 +206,12 @@
 		return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 	}
 
-	function formatCurrency(amount: number): string {
-		return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 0 }).format(amount);
+	function formatCurrency(amount: number, currency: string = 'NGN'): string {
+		// FE-P1-01 / FE-P1-16 — replaces a hardcoded `Intl.NumberFormat({
+		// currency: 'NGN' })` block. Drives the canonical helper, which
+		// renders in the row's actual currency.
+		const ccy = currency || 'NGN';
+		return formatMoney(Math.round(amount * 100), ccy);
 	}
 
 	function getStatusStyle(status: string): string {
@@ -200,13 +292,126 @@
 	</div>
 
 	<!-- Summary Cards -->
+	{#if salesSummary && !loadingSummary}
+		<!-- FE-P3-12 — unified sales-summary KPIs. -->
+		<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+			<div class="rounded-xl border bg-white p-4">
+				<p class="text-xs text-gray-500">Gross</p>
+				<p class="mt-1 text-xl font-semibold">{formatMoney(salesSummary.gross, salesSummary.currency)}</p>
+			</div>
+			<div class="rounded-xl border bg-white p-4">
+				<p class="text-xs text-gray-500">Platform fee</p>
+				<p class="mt-1 text-xl font-semibold text-red-500">-{formatMoney(salesSummary.platformFee, salesSummary.currency)}</p>
+			</div>
+			<div class="rounded-xl border bg-white p-4">
+				<p class="text-xs text-gray-500">Gateway fee</p>
+				<p class="mt-1 text-xl font-semibold text-red-500">-{formatMoney(salesSummary.gatewayFee, salesSummary.currency)}</p>
+			</div>
+			<div class="rounded-xl border bg-white p-4">
+				<p class="text-xs text-gray-500">Net</p>
+				<p class="mt-1 text-xl font-semibold text-green-600">{formatMoney(salesSummary.net, salesSummary.currency)}</p>
+			</div>
+		</div>
+		<!-- Inventory + ticket counts -->
+		<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+			<div class="rounded-xl border bg-white p-4">
+				<p class="text-xs text-gray-500">Tickets sold</p>
+				<p class="mt-1 text-xl font-semibold">{salesSummary.ticketsSold}</p>
+			</div>
+			<div class="rounded-xl border bg-white p-4">
+				<p class="text-xs text-gray-500">Refunded</p>
+				<p class="mt-1 text-xl font-semibold text-yellow-600">{salesSummary.ticketsRefunded}</p>
+			</div>
+			<div class="rounded-xl border bg-white p-4">
+				<p class="text-xs text-gray-500">Refunded amount</p>
+				<p class="mt-1 text-xl font-semibold text-yellow-600">{formatMoney(salesSummary.refunded, salesSummary.currency)}</p>
+			</div>
+			<div class="rounded-xl border bg-white p-4">
+				<p class="text-xs text-gray-500">Available</p>
+				<p class="mt-1 text-xl font-semibold">{salesSummary.ticketsAvailable === -1 ? 'Unlimited' : salesSummary.ticketsAvailable}</p>
+			</div>
+		</div>
+
+		{#if timelineDrift}
+			<div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+				<Icon icon="mdi:alert-circle-outline" class="mr-1 inline text-base" />
+				Data sync issue detected — please refresh to see the latest figures.
+			</div>
+		{/if}
+
+		<!-- Daily timeline -->
+		{#if salesSummary.timeline.length > 0}
+			<div class="mb-6">
+				<h3 class="mb-2 text-sm font-medium text-gray-700">Daily timeline</h3>
+				<SalesTimelineChart data={salesSummary.timeline} currency={salesSummary.currency} />
+			</div>
+		{/if}
+
+		<!-- Per-ticket-type breakdown -->
+		{#if salesSummary.byTicketType.length > 0}
+			<div class="mb-6 overflow-hidden rounded-xl border bg-white">
+				<div class="border-b bg-gray-50 px-4 py-2 text-xs font-medium text-gray-500">By ticket type</div>
+				<table class="w-full text-sm">
+					<thead class="text-xs text-gray-400">
+						<tr>
+							<th class="px-4 py-2 text-left font-medium">Ticket</th>
+							<th class="px-4 py-2 text-right font-medium">Sold</th>
+							<th class="px-4 py-2 text-right font-medium">Refunded</th>
+							<th class="px-4 py-2 text-right font-medium">Gross</th>
+							<th class="px-4 py-2 text-right font-medium">Net</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each salesSummary.byTicketType as row}
+							<tr class="border-t">
+								<td class="px-4 py-2">{row.name}</td>
+								<td class="px-4 py-2 text-right">{row.sold}</td>
+								<td class="px-4 py-2 text-right text-yellow-700">{row.refunded}</td>
+								<td class="px-4 py-2 text-right">{formatMoney(row.gross, row.currency)}</td>
+								<td class="px-4 py-2 text-right text-green-700">{formatMoney(row.net, row.currency)}</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+
+		<!-- TZ footer + dropdown -->
+		<div class="mb-4 flex items-center justify-end gap-2">
+			<span class="text-xs text-gray-500" title="All amounts are stored in UTC. Times are converted to your selected zone for display only.">
+				Showing data in {timezone}
+			</span>
+			<div use:clickOutside={() => (showTzDropdown = false)} class="relative">
+				<button on:click={() => (showTzDropdown = !showTzDropdown)} class="flex items-center gap-1 rounded-md bg-[#EBECED] px-2 py-1 text-xs text-[#616265]">
+					<Icon icon="mdi:earth" class="text-sm" /> Change
+				</button>
+				{#if showTzDropdown}
+					<div class="absolute right-0 z-20 mt-1 max-h-72 w-56 overflow-auto rounded-lg border bg-white shadow-lg">
+						{#each COMMON_TIMEZONES as tz}
+							<button on:click={() => changeTimezone(tz.value)} class="block w-full px-3 py-2 text-left text-xs hover:bg-gray-50 {timezone === tz.value ? 'font-medium text-pink-600' : ''}">{tz.label}</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
+	{:else if loadingSummary}
+		<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+			{#each [1, 2, 3, 4] as _}
+				<div class="rounded-xl border bg-white p-4">
+					<div class="h-4 w-16 animate-pulse rounded bg-gray-200"></div>
+					<div class="mt-2 h-7 w-24 animate-pulse rounded bg-gray-200"></div>
+				</div>
+			{/each}
+		</div>
+	{:else}
+	<!-- Legacy summary fallback when sales-summary endpoint is unavailable. -->
 	<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
 		<div class="rounded-xl border bg-white p-4">
 			<p class="text-xs text-gray-500">Total Earnings</p>
 			{#if loadingEarnings}
 				<div class="mt-1 h-7 w-24 animate-pulse rounded bg-gray-200"></div>
 			{:else}
-				<p class="mt-1 text-xl font-semibold">{formatCurrency(totalEarnings)}</p>
+				<p class="mt-1 text-xl font-semibold">{summarizeBuckets(totalEarningsByCurrency)}</p>
 			{/if}
 		</div>
 		<div class="rounded-xl border bg-white p-4">
@@ -214,7 +419,7 @@
 			{#if loadingEarnings}
 				<div class="mt-1 h-7 w-24 animate-pulse rounded bg-gray-200"></div>
 			{:else}
-				<p class="mt-1 text-xl font-semibold text-green-600">{formatCurrency(completedEarnings)}</p>
+				<p class="mt-1 text-xl font-semibold text-green-600">{summarizeBuckets(completedEarningsByCurrency)}</p>
 			{/if}
 		</div>
 		<div class="rounded-xl border bg-white p-4">
@@ -222,7 +427,7 @@
 			{#if loadingEarnings}
 				<div class="mt-1 h-7 w-24 animate-pulse rounded bg-gray-200"></div>
 			{:else}
-				<p class="mt-1 text-xl font-semibold text-red-500">-{formatCurrency(platformFees)}</p>
+				<p class="mt-1 text-xl font-semibold text-red-500">-{summarizeBuckets(platformFeesByCurrency)}</p>
 			{/if}
 		</div>
 		<div class="rounded-xl border bg-white p-4">
@@ -230,10 +435,11 @@
 			{#if loadingEarnings}
 				<div class="mt-1 h-7 w-24 animate-pulse rounded bg-gray-200"></div>
 			{:else}
-				<p class="mt-1 text-xl font-semibold text-yellow-600">{formatCurrency(pendingEarnings)}</p>
+				<p class="mt-1 text-xl font-semibold text-yellow-600">{summarizeBuckets(pendingEarningsByCurrency)}</p>
 			{/if}
 		</div>
 	</div>
+	{/if}
 
 	<!-- Search + Filters -->
 	<div class="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
@@ -298,7 +504,8 @@
 				<div class="w-[10%] text-right">Status</div>
 			</div>
 			{#each pagedEarnings as e}
-				{@const gross = koboToNaira(e.totalAmount ?? 0)}
+				{@const rowCcy = (e.currency || 'NGN').toUpperCase()}
+				{@const gross = koboToMajor(Number(e.totalAmount ?? 0), rowCcy)}
 				{@const fee = e.status === 'COMPLETED' ? gross * feeRate : 0}
 				{@const net = gross - fee}
 				<div class="flex flex-col gap-2 border-b px-4 py-3 last:border-none lg:flex-row lg:items-center lg:gap-0">
@@ -321,11 +528,11 @@
 						<span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">{getTicketType(e)}</span>
 					</div>
 					<!-- Amount -->
-					<div class="text-sm font-medium lg:w-[12%] lg:text-right">{formatCurrency(gross)}</div>
+					<div class="text-sm font-medium lg:w-[12%] lg:text-right">{formatCurrency(gross, rowCcy)}</div>
 					<!-- Platform Fee -->
-					<div class="text-sm text-red-400 lg:w-[10%] lg:text-right">{fee > 0 ? `-${formatCurrency(fee)}` : '–'}</div>
+					<div class="text-sm text-red-400 lg:w-[10%] lg:text-right">{fee > 0 ? `-${formatCurrency(fee, rowCcy)}` : '–'}</div>
 					<!-- Net -->
-					<div class="text-sm font-medium text-green-700 lg:w-[12%] lg:text-right">{formatCurrency(net)}</div>
+					<div class="text-sm font-medium text-green-700 lg:w-[12%] lg:text-right">{formatCurrency(net, rowCcy)}</div>
 					<!-- Status -->
 					<div class="lg:w-[10%] lg:text-right">
 						<span class="rounded-full px-2 py-1 text-xs font-medium {getStatusStyle(e.status)}">{e.status.charAt(0) + e.status.slice(1).toLowerCase()}</span>

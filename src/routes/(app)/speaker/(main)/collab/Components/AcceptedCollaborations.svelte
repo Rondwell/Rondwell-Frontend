@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getSpeakerCollaboration, getSpeakerCollaborations, sendSpeakerMessage, updateSpeakerCollaborationStatus } from '$lib/services/speaker.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -322,7 +323,7 @@
 							</div>
 							<div class="flex items-center justify-between">
 								<span class="text-xs text-gray-400">Amount</span>
-								<span class="text-sm font-bold text-gray-900">{selectedCollab.quote.quotedCurrency === 'USD' ? '$' : '₦'}{Number(selectedCollab.quote.quotedAmount).toLocaleString()}</span>
+								<span class="text-sm font-bold text-gray-900">{formatMoney(majorToKobo(Number(selectedCollab.quote.quotedAmount), selectedCollab.quote.quotedCurrency || 'NGN'), selectedCollab.quote.quotedCurrency || 'NGN')}</span>
 							</div>
 							<div class="flex items-center justify-between">
 								<span class="text-xs text-gray-400">Payment Status</span>

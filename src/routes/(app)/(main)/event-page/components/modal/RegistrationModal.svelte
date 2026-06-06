@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { getPublicEventPage, getPublicSeats } from '$lib/services/event.services';
+	import { getPublicEventPage, getPublicSeats, getGroupRegistrationMembers } from '$lib/services/event.services';
+	import {
+		attendeePaymentInitiate,
+		verifyAndSettleTicketPayment,
+	} from '$lib/services/payment.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { getEventTheme } from '$lib/stores/eventTheme';
 	import type { Color } from '$lib/utils/colors';
 	import { colors } from '$lib/utils/colors';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import Dropdown from '../Dropdown.svelte';
 	import SeatSelector from '../SeatSelector.svelte';
@@ -58,6 +63,37 @@
 	let selectedSeatNumber = '';
 	let hasSeatLayout = false;
 
+	/**
+	 * FE-P1-13 (FA-3.5) — FX preview state.
+	 *
+	 * Populated after `attendeePaymentInitiate` returns. The backend already
+	 * locks the rate at checkout and persists it on the transaction; this is
+	 * a display-only echo so the user knows exactly how much will be charged
+	 * before opening the Paystack popup. Pre-flight FX preview will move to a
+	 * dedicated `/payment/fx/preview` endpoint when it lands.
+	 */
+	type FxPreview = {
+		sourceCurrency: string;
+		sourceAmountKobo: number;
+		targetCurrency: string;
+		targetAmountKobo: number;
+		formattedSource: string;
+		formattedTarget: string;
+		rateLabel: string;
+	};
+	let fxPreview: FxPreview | null = null;
+
+	/**
+	 * FE-P3-05 (FA-3.1, NEW-1.2, NEW-10.2) — Group purchase per-member
+	 * registrations. The backend pre-creates N placeholders on the group
+	 * register call and finalizes each on payment success with its own QR.
+	 * After payment confirmation we fetch them so the modal can show
+	 * every member's QR / passcode instead of only the lead's.
+	 */
+	let groupMemberRegistrations: any[] = [];
+	let loadingGroupMembers = false;
+	let groupQrIndex = 0;
+
 	// Group members state
 	interface GroupMember {
 		firstName: string;
@@ -101,6 +137,10 @@
 		memberLastName = '';
 		memberEmail = '';
 		memberErrors = {};
+		fxPreview = null;
+		groupMemberRegistrations = [];
+		loadingGroupMembers = false;
+		groupQrIndex = 0;
 	}
 
 	$: if (open) {
@@ -110,6 +150,33 @@
 			getPublicSeats(eventId, selectedTicketId).then(data => {
 				hasSeatLayout = !!(data.layout && data.layout.elements?.length > 0);
 			}).catch(() => { hasSeatLayout = false; });
+		}
+	}
+
+	/**
+	 * FE-P3-05 — load every member registration for a group purchase. Best-
+	 * effort: if the endpoint isn't yet enabled we silently fall back to
+	 * the lead-only view.
+	 */
+	async function loadGroupMemberRegistrations() {
+		if (!isGroupRegistration || !registrationResult) return;
+		const groupId =
+			registrationResult.groupId ??
+			registrationResult.group_id ??
+			registrationResult.registration_group_id ??
+			registrationResult.registrationId ??
+			registrationResult.registration_id;
+		if (!groupId) return;
+		loadingGroupMembers = true;
+		try {
+			const members = await getGroupRegistrationMembers(eventId, groupId);
+			if (Array.isArray(members) && members.length > 0) {
+				groupMemberRegistrations = members;
+			}
+		} catch {
+			// Best-effort.
+		} finally {
+			loadingGroupMembers = false;
 		}
 	}
 
@@ -141,10 +208,15 @@
 		return Object.keys(errors).length === 0;
 	}
 
-	function formatPrice(ticket: any): string {
+	function formatTicketTotalForQty(ticket: any, qty: number): string {
+		// FE-P0-01 / FE-P1-16: route every ticket-price string through the
+		// currency-aware `formatMoney(amountKobo, currency)` helper. Until the
+		// backend serves `priceKobo` directly we convert the legacy major-unit
+		// `ticket.price` at the boundary exactly once via `majorToKobo`.
 		if (!ticket || ticket.isFree || !ticket.price) return 'FREE';
 		const currency = ticket.currency ?? 'NGN';
-		return new Intl.NumberFormat('en-NG', { style: 'currency', currency, minimumFractionDigits: 0 }).format(ticket.price);
+		const totalKobo = majorToKobo(ticket.price, currency) * Math.max(1, qty);
+		return formatMoney(totalKobo, currency, { minimumFractionDigits: 0 });
 	}
 
 	function formatDate(dt: string): string {
@@ -284,6 +356,7 @@
 					email: email.trim().toLowerCase(),
 					firstName: firstName.trim(),
 					lastName: lastName.trim(),
+					ticketTypeId: selectedTicketId || undefined,
 				}),
 			});
 			const attendeeData = await attendeeRes.json();
@@ -291,6 +364,10 @@
 
 			const existingAttendee = attendeeData.data;
 			const attendeeId = existingAttendee?._id ?? existingAttendee?.id ?? attendeeData.attendeeId;
+			// P1-15: capture the registration token issued by event-service. The
+			// payment service trusts this token (not raw IDs) for the public
+			// ticket-purchase route.
+			let registrationToken: string | undefined = attendeeData.registrationToken;
 
 			// GROUP REGISTRATION PATH
 			if (isGroupRegistration && groupMembers.length > 0) {
@@ -349,6 +426,14 @@
 			if (!regRes.ok) throw new Error(regData.message ?? 'Registration failed');
 
 			registrationResult = regData.registration;
+			// P1-15: prefer the registration-time token (binds the chosen
+			// ticketTypeId), fall back to the attendee-create token.
+			if (regData.registrationToken) {
+				registrationToken = regData.registrationToken;
+			}
+			if (registrationResult && registrationToken) {
+				registrationResult.registrationToken = registrationToken;
+			}
 
 			if (isPaid) {
 				step = 'payment';
@@ -364,7 +449,31 @@
 			}
 		} catch (e: any) {
 			const msg = e.message ?? '';
-			if (msg.includes('already registered')) {
+			const code = (e.code ?? e.data?.code ?? '').toUpperCase();
+			const meta = e.meta ?? e.data?.meta ?? {};
+
+			// FE-P2-11-A: server-side sales-window enforcement.
+			if (code === 'SALES_NOT_OPEN') {
+				const dt = meta.salesStartDate ? new Date(meta.salesStartDate).toLocaleString() : '';
+				submitError = dt
+					? `Sales open on ${dt}. Set a reminder?`
+					: "Sales for this ticket type haven't opened yet.";
+			} else if (code === 'SALES_CLOSED') {
+				const dt = meta.salesEndDate ? new Date(meta.salesEndDate).toLocaleString() : '';
+				submitError = dt
+					? `Sales for this ticket type ended ${dt}.`
+					: 'Sales for this ticket type have ended.';
+			} else if (code === 'SOLD_OUT') {
+				submitError = 'This ticket type just sold out. Pick another one.';
+			} else if (code === 'SEAT_UNAVAILABLE') {
+				submitError = 'Someone else just picked that seat. Choose another.';
+			} else if (code === 'COUPON_NOT_APPLICABLE_TO_TICKET_TYPE') {
+				submitError = "This coupon doesn't apply to the selected ticket type.";
+			} else if (code === 'COUPON_PER_USER_LIMIT_REACHED') {
+				submitError = "You've already used this coupon the maximum number of times.";
+			} else if (e.status === 409 && /coupon/i.test(msg)) {
+				submitError = 'This coupon has reached its usage limit. Try another one.';
+			} else if (msg.includes('already registered')) {
 				submitError = "You're already registered for this event with this email address. Check your inbox for confirmation details.";
 			} else if (msg.includes('blocked from registering')) {
 				submitError = 'This email has been restricted from registering for events in this collection.';
@@ -412,44 +521,78 @@
 		submitting = true;
 		submitError = '';
 
-		const PAYMENT_URL = import.meta.env.VITE_PAYMENT_API_URL || import.meta.env.VITE_API_URL || import.meta.env.VITE_EVENT_API_URL;
 		const qty = isGroupRegistration ? ticketQuantity : 1;
 
 		try {
-			const paymentRes = await fetch(`${PAYMENT_URL}/api/v1/payment/ticketPayment/attendee-ticket-purchase/`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					attendeeName: `${firstName.trim()} ${lastName.trim()}`.trim() || 'Attendee',
-					attendeeId: registrationResult.attendeeId,
-					attendeeEmail: email.trim().toLowerCase(),
-					eventId,
-					organizerId: eventData?.organizerId ?? '',
-					ticketDetails: {
-						ticketTypeId: selectedTicketId,
-						quantity: qty,
-						unitPrice: selectedTicket?.price ?? 0,
-					},
-					paymentMethodDetails: {
-						payment_gateway: selectedGateway,
-						cardToken: '',
-						currency: selectedTicket?.currency ?? 'NGN',
-					},
-					isGroupPurchase: isGroupRegistration,
-					groupMembersEmails: isGroupRegistration ? groupMembers.map(m => m.email) : undefined,
-					successCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=success&reg=${registrationResult.registration_id}`,
-					failureCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=failed&reg=${registrationResult.registration_id}`,
-					returnWalletPaymentLink: false,
-					registrationIds: [registrationResult.registration_id],
-				}),
+			// FE-P0-04: typed initiate via the centralised service helper.
+			// The helper enforces the FE-P0-01 contract (no client-side prices)
+			// and parses the typed response, including the HMAC verification
+			// token needed for `verify-and-settle`.
+			const paymentData = await attendeePaymentInitiate({
+				attendeeName: `${firstName.trim()} ${lastName.trim()}`.trim() || 'Attendee',
+				// P1-15 (FA-10.3): registrationToken is the only trusted source for
+				// the (eventId, attendeeId, ticketTypeId) trio. The legacy
+				// `attendeeId` field is intentionally omitted — the server
+				// rejects it under STRICT_REGISTRATION_TOKEN.
+				registrationToken: registrationResult.registrationToken,
+				attendeeEmail: email.trim().toLowerCase(),
+				eventId,
+				organizerId: eventData?.organizerId ?? '',
+				ticketDetails: {
+					ticketTypeId: selectedTicketId,
+					quantity: qty,
+					// P1-16 (NEW-2.2 / FA-3.3): unitPrice / price / amount /
+					// discountAmount are server-side only. The server resolves the
+					// canonical price from event-service.
+				},
+				paymentMethodDetails: {
+					payment_gateway: selectedGateway,
+					cardToken: '',
+					currency: selectedTicket?.currency ?? 'NGN',
+				},
+				isGroupPurchase: isGroupRegistration,
+				groupMembersEmails: isGroupRegistration ? groupMembers.map(m => m.email) : undefined,
+				successCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=success&reg=${registrationResult.registration_id}`,
+				failureCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=failed&reg=${registrationResult.registration_id}`,
+				returnWalletPaymentLink: false,
+				registrationIds: [registrationResult.registration_id],
 			});
-			const paymentData = await paymentRes.json();
-			if (!paymentRes.ok) throw new Error(paymentData.message ?? 'Payment initiation failed');
 
 			if (paymentData.checkoutUrl) {
+				// FE-P1-13: capture the FX preview if the backend converted
+				// the ticket currency for this gateway (e.g. USD-priced
+				// ticket paid in NGN via Paystack). The rate is locked on
+				// the transaction; this display block echoes it so the user
+				// knows the exact amount that will hit their card.
+				const ticketCcy = selectedTicket?.currency ?? 'NGN';
+				const settledCcy = paymentData.currency ?? ticketCcy;
+				if (settledCcy && settledCcy !== ticketCcy) {
+					const sourceMajor = Number(selectedTicket?.price ?? 0) * qty;
+					const sourceKobo = majorToKobo(sourceMajor, ticketCcy);
+					const targetKobo = Number(paymentData.totalAmount ?? 0);
+					const sourceMajorActual = sourceKobo / 100;
+					const targetMajorActual = targetKobo / 100;
+					const rate = sourceMajorActual > 0 ? targetMajorActual / sourceMajorActual : 0;
+					fxPreview = {
+						sourceCurrency: ticketCcy,
+						sourceAmountKobo: sourceKobo,
+						targetCurrency: settledCcy,
+						targetAmountKobo: targetKobo,
+						formattedSource: formatMoney(sourceKobo, ticketCcy),
+						formattedTarget: formatMoney(targetKobo, settledCcy),
+						rateLabel: rate > 0 ? formatMoney(majorToKobo(rate, settledCcy), settledCcy) : `1 ${settledCcy}`,
+					};
+				} else {
+					fxPreview = null;
+				}
+
 				if (selectedGateway === 'PAYSTACK') {
 					// Use Paystack inline popup instead of redirect
 					await loadPaystackScript();
+					// P0-04: capture the HMAC verification token issued by the
+					// payment service. The follow-up `verify-and-settle` POST
+					// must echo this in the `x-verification-token` header.
+					const verificationToken = paymentData.verificationToken ?? '';
 					const handler = (window as any).PaystackPop.setup({
 						key: paymentData.paystackPublicKey || import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
 						email: email.trim().toLowerCase(),
@@ -457,29 +600,29 @@
 						currency: paymentData.currency || selectedTicket?.currency || 'NGN',
 						ref: paymentData.reference || '',
 						channels: ['card', 'bank', 'ussd', 'bank_transfer'],
-						callback: (response: any) => {
-							// Payment successful — verify and settle, then finalize
+						callback: (_response: any) => {
 							const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
-							const PAYMENT_URL = import.meta.env.VITE_PAYMENT_API_URL || import.meta.env.VITE_API_URL || EVENT_URL;
 
 							// Step 1: Verify and settle payment (creates wallets, credits organizer, etc.)
-							fetch(`${PAYMENT_URL}/api/v1/payment/ticketPayment/verify-and-settle/${paymentData.reference}`, {
-								method: 'POST', headers: { 'Content-Type': 'application/json' }
-							}).then(() => {
-								// Step 2: Finalize registration on event service
-								return fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`, {
-									method: 'POST', headers: { 'Content-Type': 'application/json' }
+							// P0-04 / P0-05: forward the HMAC verification token. The
+							// route is fully idempotent — calling it once per
+							// reference is safe even if the webhook beats us to it.
+							verifyAndSettleTicketPayment(paymentData.reference, verificationToken)
+								.then(() =>
+									// Step 2: Finalize registration on event service
+									fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`, {
+										method: 'POST', headers: { 'Content-Type': 'application/json' }
+									})
+								).then(() => {
+									registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
+									step = 'confirmation';
+									submitting = false;
+								}).catch(() => {
+									// Settlement or finalize might be handled by webhook — still show confirmation
+									registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
+									step = 'confirmation';
+									submitting = false;
 								});
-							}).then(() => {
-								registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
-								step = 'confirmation';
-								submitting = false;
-							}).catch(() => {
-								// Settlement or finalize might be handled by webhook — still show confirmation
-								registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
-								step = 'confirmation';
-								submitting = false;
-							});
 						},
 						onClose: () => {
 							submitError = 'Payment window was closed. You can try again.';
@@ -511,6 +654,12 @@
 			script.onerror = () => reject(new Error('Failed to load Paystack script'));
 			document.head.appendChild(script);
 		});
+	}
+
+	// FE-P3-05 — fetch the per-member registrations whenever the modal
+	// reaches the confirmation step for a group purchase.
+	$: if (step === 'confirmation' && isGroupRegistration && registrationResult && groupMemberRegistrations.length === 0 && !loadingGroupMembers) {
+		loadGroupMemberRegistrations();
 	}
 </script>
 
@@ -560,11 +709,7 @@
 				<div class="flex justify-between items-center">
 					<p class="text-base" style="color: {themeColor.lightText};">Total</p>
 					<p class="text-xl font-semibold" style="color: {themeColor.text};">
-						{#if selectedTicket && !selectedTicket.isFree && selectedTicket.price}
-							{new Intl.NumberFormat('en-NG', { style: 'currency', currency: selectedTicket.currency ?? 'NGN', minimumFractionDigits: 0 }).format(selectedTicket.price * (isGroupRegistration ? ticketQuantity : 1))}
-						{:else}
-							FREE
-						{/if}
+						{formatTicketTotalForQty(selectedTicket, isGroupRegistration ? ticketQuantity : 1)}
 					</p>
 				</div>
 				{#if isGroupRegistration}
@@ -940,6 +1085,7 @@
 							selectedSeatId = e.detail.seatId;
 							selectedSeatNumber = e.detail.seatNumber;
 						}}
+						on:unavailable={(e) => { submitError = e.detail.message; }}
 					/>
 
 					<div class="flex gap-3">
@@ -1016,15 +1162,28 @@
 						</div>
 						{/if}
 						<div class="flex justify-between">
-							<span class="text-sm" style="color: {themeColor.lightText};">Amount</span>
+							<span class="text-sm" style="color: {themeColor.lightText};">Ticket price</span>
 							<span class="text-lg font-bold" style="color: {themeColor.text};">
-								{#if selectedTicket && !selectedTicket.isFree && selectedTicket.price}
-									{new Intl.NumberFormat('en-NG', { style: 'currency', currency: selectedTicket.currency ?? 'NGN', minimumFractionDigits: 0 }).format(selectedTicket.price * (isGroupRegistration ? ticketQuantity : 1))}
-								{:else}
-									FREE
-								{/if}
+								{formatTicketTotalForQty(selectedTicket, isGroupRegistration ? ticketQuantity : 1)}
 							</span>
 						</div>
+						<!-- FE-P1-13 (FA-3.5) — FX preview. Until the dedicated
+						     `/payment/fx/preview` endpoint ships we render the
+						     locked rate from `paymentData.fxLockedRate` AFTER
+						     initiate (set in handlePayment). The rate is
+						     locked at checkout — the user pays the exact
+						     converted amount even if the market moves. -->
+						{#if fxPreview && fxPreview.targetCurrency !== fxPreview.sourceCurrency}
+							<div class="mt-3 border-t pt-3" style="border-color: {themeColor.toggle};">
+								<div class="flex justify-between">
+									<span class="text-sm" style="color: {themeColor.lightText};">You'll be charged</span>
+									<span class="text-base font-semibold" style="color: {themeColor.text};">≈ {fxPreview.formattedTarget}</span>
+								</div>
+								<p class="mt-1 text-[11px]" style="color: {themeColor.lightText};">
+									Rate locked at checkout: 1 {fxPreview.sourceCurrency} = {fxPreview.rateLabel}. You pay exactly this amount even if the market moves.
+								</p>
+							</div>
+						{/if}
 					</div>
 
 					<button
@@ -1039,7 +1198,7 @@
 								Processing...
 							</span>
 						{:else}
-							Pay {formatPrice(selectedTicket)}
+							Pay {fxPreview?.formattedTarget ?? formatTicketTotalForQty(selectedTicket, isGroupRegistration ? ticketQuantity : 1)}
 						{/if}
 					</button>
 
@@ -1062,13 +1221,73 @@
 						{#if isGroupRegistration}
 							{selectedTicket?.requiresApproval
 								? `Your group request for ${ticketQuantity} tickets has been submitted. The organizer will review and approve your registration.`
-								: `You've registered ${ticketQuantity} attendees for ${eventData?.title ?? 'this event'}. Group members will receive an email to complete their profile.`}
+								: `You've registered ${ticketQuantity} attendees for ${eventData?.title ?? 'this event'}. All ${ticketQuantity} members will receive their own ticket email at the address you provided.`}
 						{:else}
 							{selectedTicket?.requiresApproval
 								? 'Your request has been submitted. The organizer will review and approve your registration.'
 								: `You're registered for ${eventData?.title ?? 'this event'}. Check your email for confirmation details.`}
 						{/if}
 					</p>
+
+					<!-- FE-P3-05 — multi-QR carousel for group purchases. -->
+					{#if isGroupRegistration && (groupMemberRegistrations.length > 0 || loadingGroupMembers)}
+						<div class="w-full rounded-xl border p-4 text-left" style="border-color: {themeColor.toggle}; background-color: {themeColor.cover};">
+							{#if loadingGroupMembers}
+								<div class="flex h-32 items-center justify-center">
+									<span class="text-sm" style="color: {themeColor.lightText};">Loading member tickets…</span>
+								</div>
+							{:else}
+								{@const total = groupMemberRegistrations.length}
+								{@const idx = Math.min(groupQrIndex, Math.max(0, total - 1))}
+								{@const current = groupMemberRegistrations[idx] ?? {}}
+								{@const memberName = (current.firstName || current.attendee_details?.firstName || current.metaData?.firstName || `Attendee ${idx + 1}`).toString()}
+								{@const memberEmailAddr = (current.email || current.attendee_details?.email || current.metaData?.email || '').toString()}
+								{@const passcode = current.passcode || current.qrPasscode || current.checkInPasscode || current.registration_id || ''}
+								<div class="flex items-center justify-between">
+									<button
+										type="button"
+										class="rounded-full p-1.5 disabled:opacity-30"
+										style="background-color: {themeColor.smallCover}; color: {themeColor.text};"
+										on:click={() => (groupQrIndex = Math.max(0, idx - 1))}
+										disabled={idx === 0}
+										aria-label="Previous member"
+									>
+										<Icon icon="mdi:chevron-left" class="text-lg" />
+									</button>
+									<div class="flex-1 text-center">
+										<p class="text-xs" style="color: {themeColor.lightText};">Ticket {idx + 1} of {total}</p>
+										<p class="mt-0.5 text-sm font-medium" style="color: {themeColor.text};">{memberName}</p>
+										{#if memberEmailAddr}
+											<p class="text-[11px]" style="color: {themeColor.lightText};">{memberEmailAddr}</p>
+										{/if}
+									</div>
+									<button
+										type="button"
+										class="rounded-full p-1.5 disabled:opacity-30"
+										style="background-color: {themeColor.smallCover}; color: {themeColor.text};"
+										on:click={() => (groupQrIndex = Math.min(total - 1, idx + 1))}
+										disabled={idx >= total - 1}
+										aria-label="Next member"
+									>
+										<Icon icon="mdi:chevron-right" class="text-lg" />
+									</button>
+								</div>
+								{#if passcode}
+									<div class="mt-3 flex items-center justify-center">
+										<div class="rounded-lg bg-white p-3" style="border: 1px solid {themeColor.toggle};">
+											<img
+												alt="Ticket QR"
+												src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=2&data=${encodeURIComponent(passcode)}`}
+												width="180"
+												height="180"
+											/>
+										</div>
+									</div>
+									<p class="mt-2 text-center text-[11px]" style="color: {themeColor.lightText};">Passcode · <span class="font-mono">{passcode}</span></p>
+								{/if}
+							{/if}
+						</div>
+					{/if}
 
 					{#if registrationResult}
 					<div class="w-full rounded-xl p-4 text-left space-y-3" style="background-color: {themeColor.cover}; border: 1px solid {themeColor.toggle};">

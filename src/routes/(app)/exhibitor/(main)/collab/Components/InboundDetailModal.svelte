@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getExhibitorCollaboration, sendExhibitorMessage, updateExhibitorCollaborationStatus } from '$lib/services/exhibitor.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 
 	export let open = false;
@@ -183,7 +184,7 @@
 							</div>
 							<div class="flex items-center justify-between">
 								<span class="text-xs text-gray-400">Amount</span>
-								<span class="text-sm font-bold text-gray-900">{collab.invoice.currency === 'USD' ? '$' : '₦'}{Number(collab.invoice.amount).toLocaleString()}</span>
+								<span class="text-sm font-bold text-gray-900">{formatMoney(majorToKobo(Number(collab.invoice.amount), collab.invoice.currency || 'NGN'), collab.invoice.currency || 'NGN')}</span>
 							</div>
 							<div class="flex items-center justify-between">
 								<span class="text-xs text-gray-400">Payment Status</span>

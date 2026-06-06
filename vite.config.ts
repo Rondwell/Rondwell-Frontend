@@ -1,13 +1,13 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
-import { VitePWA } from 'vite-plugin-pwa';
+import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
 		sveltekit(),
-		VitePWA({
+		SvelteKitPWA({
 			registerType: 'autoUpdate',
 			includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
 			manifest: {
@@ -44,8 +44,5 @@ export default defineConfig({
 	],
 	server: {
 		allowedHosts: []
-	},
-	css: {
-		postcss: './postcss.config.cjs'
 	}
 });

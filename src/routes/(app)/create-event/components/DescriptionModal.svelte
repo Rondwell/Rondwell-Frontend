@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { generateDescriptionWithAI } from '$lib/services/ai.services';
+	import { uploadEventDescriptionImage } from '$lib/services/event.services';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
+	import Image from '@tiptap/extension-image';
+	import Link from '@tiptap/extension-link';
 	import PlaceholderExtension from '@tiptap/extension-placeholder';
 	import StarterKit from '@tiptap/starter-kit';
 	import { onDestroy, onMount, tick } from 'svelte';
@@ -22,6 +25,15 @@
 	let aiGenerating = false;
 	let aiError = '';
 
+	// Inline image upload state
+	let imageInput: HTMLInputElement;
+	let uploadingImage = false;
+	let imageError = '';
+
+	// Link insertion state
+	let showLinkInput = false;
+	let linkUrl = '';
+
 	let descEditor: Readable<Editor>;
 
 	onMount(() => {
@@ -29,6 +41,8 @@
 			extensions: [
 				StarterKit,
 				PlaceholderExtension.configure({ placeholder: "Who should come? What's the event about?" }),
+				Image.configure({ inline: false, allowBase64: false, HTMLAttributes: { class: 'desc-img' } }),
+				Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow', class: 'desc-link' } }),
 			],
 			content: description || '',
 			editorProps: {
@@ -86,6 +100,53 @@
 		} finally {
 			aiGenerating = false;
 		}
+	}
+
+	function triggerImageUpload() {
+		imageError = '';
+		imageInput?.click();
+	}
+
+	async function handleImageUpload(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const file = target.files?.[0];
+		if (!file) return;
+		// Client-side guard — backend also validates type & size (5MB).
+		if (!file.type.startsWith('image/')) {
+			imageError = 'Please select an image file.';
+			target.value = '';
+			return;
+		}
+		if (file.size > 5 * 1024 * 1024) {
+			imageError = 'Image must be 5MB or smaller.';
+			target.value = '';
+			return;
+		}
+		uploadingImage = true;
+		imageError = '';
+		try {
+			// No eventId during creation → draft upload scoped to the organizer.
+			const url = await uploadEventDescriptionImage(file);
+			$descEditor?.chain().focus().setImage({ src: url }).run();
+		} catch (err: any) {
+			imageError = err?.message ?? 'Failed to upload image.';
+		} finally {
+			uploadingImage = false;
+			target.value = '';
+		}
+	}
+
+	function insertLink() {
+		const value = linkUrl.trim();
+		if (!value) {
+			$descEditor?.chain().focus().extendMarkRange('link').unsetLink().run();
+			showLinkInput = false;
+			return;
+		}
+		const href = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+		$descEditor?.chain().focus().extendMarkRange('link').setLink({ href }).run();
+		linkUrl = '';
+		showLinkInput = false;
 	}
 </script>
 
@@ -152,6 +213,24 @@
 
 					<div class="mx-1 h-4 w-px bg-gray-300"></div>
 
+					<button type="button" title="Insert link"
+						on:click={() => { showLinkInput = !showLinkInput; }}
+						class="rounded px-2 py-1 hover:bg-gray-200 {$descEditor.isActive('link') ? 'bg-gray-800 text-white' : 'text-gray-700'}">
+						<Icon icon="mdi:link-variant" class="text-base" />
+					</button>
+					<button type="button" title="Insert image"
+						on:click={triggerImageUpload}
+						disabled={uploadingImage}
+						class="rounded px-2 py-1 text-gray-700 hover:bg-gray-200 disabled:opacity-50">
+						{#if uploadingImage}
+							<Icon icon="mdi:loading" class="animate-spin text-base" />
+						{:else}
+							<Icon icon="mdi:image-outline" class="text-base" />
+						{/if}
+					</button>
+
+					<div class="mx-1 h-4 w-px bg-gray-300"></div>
+
 					<button type="button" title="Undo"
 						on:click={() => $descEditor.chain().focus().undo().run()}
 						class="rounded px-2 py-1 text-sm hover:bg-gray-200 text-gray-700">↩</button>
@@ -160,6 +239,34 @@
 						class="rounded px-2 py-1 text-sm hover:bg-gray-200 text-gray-700">↪</button>
 				{/if}
 			</div>
+
+			<!-- Hidden image file input -->
+			<input
+				type="file"
+				accept="image/*"
+				class="hidden"
+				bind:this={imageInput}
+				on:change={handleImageUpload}
+			/>
+
+			<!-- Link input popover -->
+			{#if showLinkInput}
+				<div class="flex items-center gap-2 border-b border-gray-100 bg-[#F8F9FA] px-3 py-2">
+					<input
+						type="url"
+						bind:value={linkUrl}
+						placeholder="https://example.com"
+						class="flex-1 rounded-md border border-gray-200 px-2 py-1 text-sm outline-none"
+						on:keydown={(e) => { if (e.key === 'Enter') { e.preventDefault(); insertLink(); } }}
+					/>
+					<button type="button" class="rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700" on:click={insertLink}>Apply</button>
+					<button type="button" class="rounded-md px-2 py-1 text-xs text-gray-500 hover:bg-gray-200" on:click={() => { showLinkInput = false; linkUrl = ''; }}>Cancel</button>
+				</div>
+			{/if}
+
+			{#if imageError}
+				<div class="border-b border-gray-100 bg-red-50 px-3 py-1.5 text-xs text-red-600">{imageError}</div>
+			{/if}
 
 			<!-- Editor area -->
 			<div class="desc-editor min-h-[180px] max-h-[300px] overflow-y-auto p-4 text-sm text-gray-800">
@@ -286,4 +393,14 @@
 	:global(.desc-editor .ProseMirror strong) { font-weight: 700 !important; }
 	:global(.desc-editor .ProseMirror em) { font-style: italic; }
 	:global(.desc-editor .ProseMirror a) { color: #7c3aed; text-decoration: underline; }
+	:global(.desc-editor .ProseMirror img) {
+		max-width: 100%;
+		height: auto;
+		border-radius: 0.5rem;
+		margin: 0.5rem 0;
+		display: block;
+	}
+	:global(.desc-editor .ProseMirror img.ProseMirror-selectednode) {
+		outline: 2px solid #7c3aed;
+	}
 </style>

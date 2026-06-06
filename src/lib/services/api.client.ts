@@ -3,6 +3,20 @@ import { clearUser } from '$lib/stores/auth.store';
 
 const USER_URL = import.meta.env.VITE_API_URL;
 
+/**
+ * FE-P1-09 (FA-8.1) — Idempotency-Key convention.
+ *
+ * Any new payment-service write endpoint that may legitimately be retried
+ * (wallet topup, vendor invoice payment, subscription initiate, etc.)
+ * accepts an `Idempotency-Key` header. Service helpers that wrap such
+ * endpoints SHOULD accept an optional `idempotencyKey` parameter and
+ * forward it as the `Idempotency-Key` request header.
+ *
+ * Use `getOrCreateIdempotencyKey(scope)` from `$lib/utils/idempotency` to
+ * generate a stable per-intent UUID — the same scope returns the same key
+ * across refreshes within the session. Reset the scope when the user
+ * starts a new intent that should not collapse with the previous one.
+ */
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 

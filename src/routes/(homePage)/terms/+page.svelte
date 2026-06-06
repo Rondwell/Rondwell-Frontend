@@ -80,4 +80,39 @@
 			jurisdiction of Rondwell's incorporation.
 		</p>
 	</article>
+
+	<!-- FE-P4-10 — Compliance documentation links. -->
+	<article class="mb-8 flex flex-col gap-4 rounded-xl border bg-white p-5">
+		<h2 class="text-xl font-bold">Compliance & policy library</h2>
+		<p class="leading-relaxed text-gray-700">
+			The full policies behind our financial, identity, and data-handling practices live below.
+			Each is reviewed regularly and updated alongside platform releases.
+		</p>
+		<ul class="mt-2 space-y-2 text-sm">
+			<li>
+				<a href="/legal/data-retention" class="text-pink-600 underline">Data retention policy</a>
+				<span class="ml-1 text-gray-500">— how long we keep financial vs personal records.</span>
+			</li>
+			<li>
+				<a href="/legal/aml-policy" class="text-pink-600 underline">AML policy</a>
+				<span class="ml-1 text-gray-500">— anti-money-laundering thresholds and reporting.</span>
+			</li>
+			<li>
+				<a href="/legal/kyc-policy" class="text-pink-600 underline">KYC policy</a>
+				<span class="ml-1 text-gray-500">— identity verification tiers and requirements.</span>
+			</li>
+			<li>
+				<a href="/legal/refund-policy" class="text-pink-600 underline">Refund policy</a>
+				<span class="ml-1 text-gray-500">— windows, processes, and customer guarantees.</span>
+			</li>
+			<li>
+				<a href="/legal/vendor-payout-policy" class="text-pink-600 underline">Vendor payout policy</a>
+				<span class="ml-1 text-gray-500">— escrow window and dispute process.</span>
+			</li>
+			<li>
+				<a href="/legal/pci-scope" class="text-pink-600 underline">PCI scope</a>
+				<span class="ml-1 text-gray-500">— how card data is handled (we never store PANs).</span>
+			</li>
+		</ul>
+	</article>
 </div>

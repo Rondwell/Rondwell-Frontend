@@ -2,6 +2,8 @@
 	import { page } from '$app/stores';
 	import { authFetch } from '$lib/services/api.client';
 	import { getCollaboration } from '$lib/services/vendor.services';
+	import { getOrCreateIdempotencyKey } from '$lib/utils/idempotency';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -45,10 +47,21 @@
 	});
 
 	function getCurrencySymbol(c: string): string {
+		// FE-P1-01: legacy callsites still produce a symbol; prefer formatMoney
+		// for full currency-aware formatting. Kept for the gateway-button
+		// label only — the totals below now route through formatMoney.
 		if (c === 'NGN') return '₦';
 		if (c === 'USD') return '$';
 		if (c === 'GBP') return '£';
 		return c;
+	}
+
+	function formatInvoiceTotal(amountMajor: number | undefined | null, currency: string): string {
+		// FE-P1-01 / FE-P1-16 — render every monetary string through the
+		// currency-aware helper. Convert the legacy major-unit `quotedAmount`
+		// at the boundary exactly once via majorToKobo.
+		const ccy = currency || 'NGN';
+		return formatMoney(majorToKobo(Number(amountMajor ?? 0), ccy), ccy);
 	}
 
 	function formatDate(d: string): string {
@@ -62,9 +75,21 @@
 		errorMessage = '';
 
 		try {
+			// FE-P1-09 (FA-8.1) — stable Idempotency-Key per (collab, invoice).
+			// A flaky network or mid-flight refresh re-uses the same in-flight
+			// transaction instead of opening a duplicate. The backend derives
+			// its own key when omitted, but supplying a stable client key is
+			// the canonical safe path.
+			const idempotencyScope = `invoice:${collaborationId}:${collab.quote.invoiceNumber}`;
+			const idempotencyKey = getOrCreateIdempotencyKey(idempotencyScope);
+
 			const res = await authFetch(`${PAYMENT_URL}/api/v1/payment/vendor-invoice/initiate`, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					'Idempotency-Key': idempotencyKey,
+					'x-idempotency-key': idempotencyKey,
+				},
 				body: JSON.stringify({
 					collaborationId,
 					invoiceNumber: collab.quote.invoiceNumber,
@@ -187,7 +212,7 @@
 							{/if}
 						</div>
 						<p class="shrink-0 text-sm font-bold text-gray-900">
-							{getCurrencySymbol(collab.quote?.quotedCurrency || 'NGN')}{Number(collab.quote?.quotedAmount || 0).toLocaleString()}
+							{formatInvoiceTotal(collab.quote?.quotedAmount, collab.quote?.quotedCurrency || 'NGN')}
 						</p>
 					</div>
 				</div>
@@ -196,7 +221,7 @@
 				<div class="mb-6 flex items-center justify-between rounded-lg bg-gray-900 px-4 py-3">
 					<p class="text-sm font-medium text-gray-300">Total Due</p>
 					<p class="text-xl font-bold text-white">
-						{getCurrencySymbol(collab.quote?.quotedCurrency || 'NGN')}{Number(collab.quote?.quotedAmount || 0).toLocaleString()}
+						{formatInvoiceTotal(collab.quote?.quotedAmount, collab.quote?.quotedCurrency || 'NGN')}
 					</p>
 				</div>
 
@@ -246,7 +271,7 @@
 						Processing...
 					{:else}
 						<Icon icon="mdi:lock-outline" class="h-4 w-4" />
-						Pay {getCurrencySymbol(collab.quote?.quotedCurrency || 'NGN')}{Number(collab.quote?.quotedAmount || 0).toLocaleString()}
+						Pay {formatInvoiceTotal(collab.quote?.quotedAmount, collab.quote?.quotedCurrency || 'NGN')}
 					{/if}
 				</button>
 

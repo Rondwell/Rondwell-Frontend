@@ -43,6 +43,9 @@
 	let allowedEventDayIds: string[] = [];
 	let eventDays: any[] = [];
 	let showDayAccessDropdown = false;
+	// FE-P2-11-B (NEW-4.3): Early-bird editor.
+	let isEarlyBird = false;
+	let earlyBirdDiscountPercentage: number | string = '';
 
 	// Date/time picker toggles
 	let openSalesStartDatePicker = false;
@@ -111,6 +114,8 @@
 			// Re-init editor with existing description
 			if (typeof window !== 'undefined') initEditor(ticket.description ?? '');
 			allowedEventDayIds = ticket.allowedEventDayIds ?? [];
+			isEarlyBird = !!ticket.isEarlyBird;
+			earlyBirdDiscountPercentage = ticket.earlyBirdDiscountPercentage ?? '';
 		} else {
 			name = '';
 			description = '';
@@ -127,6 +132,8 @@
 			salesEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 			salesEndTime = '11:59 PM';
 			allowedEventDayIds = [];
+			isEarlyBird = false;
+			earlyBirdDiscountPercentage = '';
 			// Re-init editor empty
 			if (typeof window !== 'undefined') initEditor('');
 		}
@@ -204,6 +211,12 @@
 				tags,
 				quantityAvailable: totalTickets ? Number(totalTickets) : undefined,
 				allowedEventDayIds: allowedEventDayIds.length > 0 ? allowedEventDayIds : undefined,
+				// FE-P2-11-B: early-bird is paid-only.
+				isEarlyBird: !isFree && isEarlyBird,
+				earlyBirdDiscountPercentage:
+					!isFree && isEarlyBird && earlyBirdDiscountPercentage
+						? Number(earlyBirdDiscountPercentage)
+						: undefined,
 			};
 
 			if (isEditing) {
@@ -378,6 +391,53 @@
 									class="h-[40px] w-full rounded-md border border-gray-200 bg-white px-3 text-sm focus:outline-none"
 								/>
 							</div>
+						</div>
+
+						<!-- FE-P2-11-B: Early-bird discount editor -->
+						<div class="mt-4 rounded-md border border-gray-100 bg-white p-3">
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="text-sm font-medium text-gray-700">Early-bird discount</p>
+									<p class="text-xs text-gray-400">
+										Auto-applied when checkout is more than 7 days before sales end.
+									</p>
+								</div>
+								<button
+									type="button"
+									aria-label="Toggle early-bird"
+									class="relative h-6 w-10 rounded-full transition-colors duration-300"
+									class:bg-gray-300={!isEarlyBird}
+									class:bg-pink-600={isEarlyBird}
+									on:click={() => (isEarlyBird = !isEarlyBird)}
+								>
+									<span
+										class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300"
+										class:translate-x-4={isEarlyBird}
+									></span>
+								</button>
+							</div>
+							{#if isEarlyBird}
+								<div class="mt-3">
+									<label class="mb-1 block text-xs font-medium text-[#666769]">
+										Discount percentage (1–100)
+									</label>
+									<input
+										type="number"
+										min="1"
+										max="100"
+										bind:value={earlyBirdDiscountPercentage}
+										placeholder="e.g. 20"
+										class="h-[40px] w-full rounded-md border border-gray-200 bg-[#F8F8F9] px-3 text-sm focus:outline-none"
+									/>
+									<p class="mt-1 text-[11px] text-gray-400">
+										Active until {salesEndDate
+											? new Date(
+													salesEndDate.getTime() - 7 * 24 * 60 * 60 * 1000
+												).toLocaleDateString()
+											: '—'} (sales end − 7 days).
+									</p>
+								</div>
+							{/if}
 						</div>
 					{/if}
 				</div>

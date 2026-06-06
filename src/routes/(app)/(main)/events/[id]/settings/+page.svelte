@@ -131,6 +131,70 @@
 	let showTransferModal = false;
 	let showCancelModal = false;
 	let showDeleteModal = false;
+
+	// FE-P2-01-C / FE-P2-03-C — refund policy + vendor escrow window editors.
+	type RefundPolicyWindow = 'BEFORE_START' | 'WITHIN_X_HOURS_AFTER' | 'NEVER';
+	let refundPolicyWindow: RefundPolicyWindow = 'WITHIN_X_HOURS_AFTER';
+	let refundPolicyHoursAfter: number = 24;
+	let vendorEscrowDays: number = 7;
+	// FE-P3-08 (NEW-10.3) — ticket transfer / resale guardrails.
+	let allowResale: boolean = false;
+	let resalePlatformFeePercent: number = 1000; // basis points (10%)
+	let transferCutoffHoursBeforeStart: number = 6;
+	let policySaving = false;
+	let policySaved = '';
+	let policyError = '';
+
+	$: if (rawEvent) {
+		const rp = rawEvent.refundPolicy;
+		if (rp) {
+			refundPolicyWindow = rp.window || 'WITHIN_X_HOURS_AFTER';
+			refundPolicyHoursAfter = rp.hoursAfter ?? 24;
+		}
+		if (typeof rawEvent.vendorEscrowDays === 'number') {
+			vendorEscrowDays = rawEvent.vendorEscrowDays;
+		}
+		if (typeof rawEvent.allowResale === 'boolean') allowResale = rawEvent.allowResale;
+		if (typeof rawEvent.resalePlatformFeePercent === 'number') resalePlatformFeePercent = rawEvent.resalePlatformFeePercent;
+		if (typeof rawEvent.transferCutoffHoursBeforeStart === 'number') transferCutoffHoursBeforeStart = rawEvent.transferCutoffHoursBeforeStart;
+	}
+
+	async function savePolicies() {
+		policySaving = true;
+		policySaved = '';
+		policyError = '';
+		try {
+			const { updateEvent } = await import('$lib/services/event.services');
+			await updateEvent(eventId!, {
+				refundPolicy: {
+					window: refundPolicyWindow,
+					hoursAfter: refundPolicyWindow === 'WITHIN_X_HOURS_AFTER' ? Math.max(1, Math.min(168, refundPolicyHoursAfter)) : 0,
+				},
+				vendorEscrowDays: Math.max(1, Math.min(14, vendorEscrowDays)),
+				// FE-P3-08 — clamp resale fee to 0..50% (5000 bps), cutoff to 0..168h.
+				allowResale,
+				resalePlatformFeePercent: Math.max(0, Math.min(5000, Math.round(resalePlatformFeePercent))),
+				transferCutoffHoursBeforeStart: Math.max(0, Math.min(168, Math.round(transferCutoffHoursBeforeStart))),
+			} as any);
+			policySaved = 'Saved.';
+			toast.success('Policies updated.');
+		} catch (e: any) {
+			policyError = cleanErrorMessage(e.message || 'Failed to save policies');
+			toast.error(policyError);
+		} finally {
+			policySaving = false;
+		}
+	}
+
+	$: refundPolicyPreview = (() => {
+		if (refundPolicyWindow === 'BEFORE_START') {
+			return 'Refunds will be allowed up until the event starts.';
+		}
+		if (refundPolicyWindow === 'NEVER') {
+			return 'No refunds will be allowed for this event.';
+		}
+		return `Refunds will be allowed up to ${refundPolicyHoursAfter} hour${refundPolicyHoursAfter === 1 ? '' : 's'} after the event starts.`;
+	})();
 </script>
 
 {#if error}
@@ -282,6 +346,160 @@
 				<rect x="15.9287" y="15.7344" width="1.49844" height="3.9334" transform="rotate(90 15.9287 15.7344)" fill="white"/>
 			</svg>
 			Move to Another Collection
+		</button>
+	</div>
+
+	<!-- FE-P2-01-C / FE-P2-03-C: Refund policy + vendor escrow window -->
+	<div class="mt-6 mb-6 border-t pt-6 sm:mt-8 sm:mb-8 sm:pt-8">
+		<h2 class="mb-2 text-lg font-semibold sm:text-xl">Refund policy</h2>
+		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm lg:max-w-[70%]">
+			Decide when attendees can be refunded. Refunds are blocked server-side once the window closes.
+			Super-admins can still issue refunds outside the window.
+		</p>
+		<div class="space-y-2">
+			<label class="flex items-start gap-2 rounded-md border border-gray-200 bg-white p-3 text-sm">
+				<input
+					type="radio"
+					name="refund-policy"
+					value="BEFORE_START"
+					bind:group={refundPolicyWindow}
+					class="mt-0.5 h-4 w-4"
+				/>
+				<div>
+					<p class="font-medium">Before event start</p>
+					<p class="text-xs text-gray-500">Refunds blocked once the event begins.</p>
+				</div>
+			</label>
+			<label class="flex items-start gap-2 rounded-md border border-gray-200 bg-white p-3 text-sm">
+				<input
+					type="radio"
+					name="refund-policy"
+					value="WITHIN_X_HOURS_AFTER"
+					bind:group={refundPolicyWindow}
+					class="mt-0.5 h-4 w-4"
+				/>
+				<div class="flex-1">
+					<p class="font-medium">Within N hours after start</p>
+					<p class="text-xs text-gray-500">Allow refunds for a grace window after the event begins.</p>
+					{#if refundPolicyWindow === 'WITHIN_X_HOURS_AFTER'}
+						<div class="mt-2 flex items-center gap-2">
+							<input
+								type="number"
+								min="1"
+								max="168"
+								bind:value={refundPolicyHoursAfter}
+								class="w-24 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none"
+							/>
+							<span class="text-xs text-gray-500">hours (1–168)</span>
+						</div>
+					{/if}
+				</div>
+			</label>
+			<label class="flex items-start gap-2 rounded-md border border-gray-200 bg-white p-3 text-sm">
+				<input
+					type="radio"
+					name="refund-policy"
+					value="NEVER"
+					bind:group={refundPolicyWindow}
+					class="mt-0.5 h-4 w-4"
+				/>
+				<div>
+					<p class="font-medium">Never</p>
+					<p class="text-xs text-gray-500">No refunds at all (no surprise refunds either).</p>
+				</div>
+			</label>
+		</div>
+		<p class="mt-2 text-xs italic text-gray-500">{refundPolicyPreview}</p>
+
+		<h2 class="mt-8 mb-2 text-lg font-semibold sm:text-xl">Vendor escrow window</h2>
+		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm lg:max-w-[70%]">
+			After a vendor invoice is paid, funds are held for this many days before automatic release. Use the window to
+			raise a dispute if the vendor doesn't deliver. Allowed: 1–14 days.
+		</p>
+		<div class="flex items-center gap-2">
+			<input
+				type="number"
+				min="1"
+				max="14"
+				bind:value={vendorEscrowDays}
+				class="w-24 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none"
+			/>
+			<span class="text-xs text-gray-500">days</span>
+		</div>
+
+		<!-- FE-P3-08 (NEW-10.3) — Ticket transfer / resale guardrails. -->
+		<h2 class="mt-8 mb-2 text-lg font-semibold sm:text-xl">Ticket transfer &amp; resale</h2>
+		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm lg:max-w-[70%]">
+			Allow attendees to transfer or resell tickets ahead of the event. The platform takes a fee on every resale; you
+			can also block transfers in the final hours so day-of attendance stays predictable.
+		</p>
+
+		<label class="mb-3 flex items-center gap-3 text-sm">
+			<button
+				type="button"
+				on:click={() => (allowResale = !allowResale)}
+				aria-pressed={allowResale}
+				class="relative h-6 w-11 rounded-full transition-colors {allowResale ? 'bg-pink-600' : 'bg-gray-300'}"
+			>
+				<span
+					class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {allowResale
+						? 'translate-x-5'
+						: ''}"
+				></span>
+			</button>
+			Allow attendees to resell tickets
+		</label>
+
+		{#if allowResale}
+			<div class="mb-3">
+				<label class="mb-1 block text-xs font-medium text-gray-700" for="resale-fee">Platform fee on resales</label>
+				<div class="flex items-center gap-2">
+					<input
+						id="resale-fee"
+						type="number"
+						min="0"
+						max="50"
+						step="0.5"
+						value={(resalePlatformFeePercent / 100).toFixed(2)}
+						on:input={(e) => {
+							const v = parseFloat((e.currentTarget as HTMLInputElement).value);
+							if (Number.isFinite(v)) resalePlatformFeePercent = Math.round(v * 100);
+						}}
+						class="w-24 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none"
+					/>
+					<span class="text-xs text-gray-500">% of resale price (default 10%)</span>
+				</div>
+			</div>
+		{/if}
+
+		<div class="mb-2">
+			<label class="mb-1 block text-xs font-medium text-gray-700" for="transfer-cutoff">Transfer cutoff</label>
+			<div class="flex items-center gap-2">
+				<input
+					id="transfer-cutoff"
+					type="number"
+					min="0"
+					max="168"
+					bind:value={transferCutoffHoursBeforeStart}
+					class="w-24 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none"
+				/>
+				<span class="text-xs text-gray-500">hours before event start (transfers blocked after this)</span>
+			</div>
+		</div>
+
+		{#if policyError}
+			<p class="mt-3 rounded-md bg-red-50 p-2 text-xs text-red-600">{policyError}</p>
+		{/if}
+		{#if policySaved}
+			<p class="mt-3 rounded-md bg-green-50 p-2 text-xs text-green-700">{policySaved}</p>
+		{/if}
+
+		<button
+			on:click={savePolicies}
+			disabled={policySaving}
+			class="mt-4 flex w-fit items-center justify-center gap-2 rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50 sm:py-2"
+		>
+			{policySaving ? 'Saving…' : 'Save policies'}
 		</button>
 	</div>
 

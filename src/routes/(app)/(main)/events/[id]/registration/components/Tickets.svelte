@@ -402,6 +402,17 @@
 									<span class="rounded-full bg-[#F3F0FF] px-2 py-0.5 text-xs font-medium text-[#7C3AED]">
 										{ticket.quantityAvailable ? `${ticket.quantityAvailable} Total` : 'Unlimited'}
 									</span>
+									{#if ticket.quantityAvailable}
+										<!-- FE-P3-02 (NEW-1.1, NEW-4.1) — live inventory: sold + reserved against the cap. -->
+										<span class="rounded-full bg-[#E0F2FE] px-2 py-0.5 text-xs font-medium text-[#0369A1]" title="Sold tickets">
+											{ticket.soldCount ?? 0} sold
+										</span>
+										{#if (ticket.reservedCount ?? 0) > 0}
+											<span class="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-xs font-medium text-[#B45309]" title="Held during checkout">
+												{ticket.reservedCount} reserved
+											</span>
+										{/if}
+									{/if}
 								</div>
 								<div class="flex items-center gap-1.5">
 									<div class="flex -space-x-1.5">
@@ -430,6 +441,16 @@
 										<span class="rounded-full bg-[#F3F0FF] px-2 py-0.5 text-xs font-medium text-[#7C3AED]">
 											{ticket.quantityAvailable ? `${ticket.quantityAvailable} Total` : 'Unlimited'}
 										</span>
+										{#if ticket.quantityAvailable}
+											<span class="rounded-full bg-[#E0F2FE] px-2 py-0.5 text-xs font-medium text-[#0369A1]" title="Sold tickets">
+												{ticket.soldCount ?? 0} sold
+											</span>
+											{#if (ticket.reservedCount ?? 0) > 0}
+												<span class="rounded-full bg-[#FEF3C7] px-2 py-0.5 text-xs font-medium text-[#B45309]" title="Held during checkout">
+													{ticket.reservedCount} reserved
+												</span>
+											{/if}
+										{/if}
 										{#if ticket.requiresApproval}
 											<span class="rounded-[11px] bg-[#F8EFDD] px-2 py-0.5 text-xs font-medium text-[#D69814]">Require Approval</span>
 										{/if}

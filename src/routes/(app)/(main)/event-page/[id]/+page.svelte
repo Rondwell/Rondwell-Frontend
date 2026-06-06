@@ -10,6 +10,8 @@
 	import { toast } from '$lib/stores/toast.store';
 	import type { Color } from '$lib/utils/colors';
 	import { colors } from '$lib/utils/colors';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
+	import { clearPaymentCallbackFromUrl, parsePaymentCallback } from '$lib/utils/paymentCallback';
 	import { onMount } from 'svelte';
 	import RegistrationModal from '../components/modal/RegistrationModal.svelte';
 	import OrganiserList from '../components/OrganiserList.svelte';
@@ -99,26 +101,28 @@
 			loading = false;
 		}
 
-		// Handle payment callback
-		const params = new URLSearchParams(window.location.search);
-		const paymentStatus = params.get('payment');
-		const regId = params.get('reg');
-		if (paymentStatus === 'success' && regId) {
-			// Finalize the registration after successful payment
+		// FE-P0-05: parse the gateway-callback URL params through a single
+		// helper. The webhook is the canonical settlement path
+		// (services/payment/src/services/WebhookService.ts) — webhooks are
+		// fully idempotent end-to-end via `WebhookEvent`, so we DO NOT call
+		// `verify-and-settle` here. The only thing left to do client-side is
+		// finalize the registration (which itself is idempotent). The success
+		// banner is purely cosmetic.
+		const callback = parsePaymentCallback(window.location.search);
+		if (callback.status === 'success' && callback.registrationId) {
 			const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
 			try {
-				await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${regId}`, {
+				await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${callback.registrationId}`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 				});
 			} catch { /* finalization may already be handled by webhook */ }
 			paymentSuccess = true;
-			paymentRegId = regId;
-			// Clean URL
-			window.history.replaceState({}, '', window.location.pathname);
-		} else if (paymentStatus === 'failed') {
+			paymentRegId = callback.registrationId;
+			clearPaymentCallbackFromUrl();
+		} else if (callback.status === 'failed') {
 			paymentFailed = true;
-			window.history.replaceState({}, '', window.location.pathname);
+			clearPaymentCallbackFromUrl();
 		}
 	});
 
@@ -183,13 +187,41 @@
 		if (event?.endDateTime && new Date(event.endDateTime) < now) return false;
 		if (ticket.salesEndDate && new Date(ticket.salesEndDate) < now) return false;
 		if (ticket.salesStartDate && new Date(ticket.salesStartDate) > now) return false;
+		// FE-P3-02 (NEW-1.1, NEW-4.1) — atomic inventory. The backend exposes
+		// `soldCount` / `reservedCount` on TicketType. When the cap is hit
+		// we hide the ticket from the client to avoid a `SOLD_OUT` 409 round
+		// trip.
+		const cap = Number(ticket.quantityAvailable ?? 0);
+		if (cap > 0) {
+			const consumed = Number(ticket.soldCount ?? 0) + Number(ticket.reservedCount ?? 0);
+			if (consumed >= cap) return false;
+		}
 		return true;
 	}
 
+	/**
+	 * FE-P3-02 — "Only N left" hint. Returns the remaining seats when the
+	 * cap is set AND inventory is below 10. Returns `null` when the ticket
+	 * is unlimited (cap = 0) or above the threshold.
+	 */
+	function getTicketRemaining(ticket: any): number | null {
+		const cap = Number(ticket?.quantityAvailable ?? 0);
+		if (!cap) return null;
+		const sold = Number(ticket?.soldCount ?? 0);
+		const reserved = Number(ticket?.reservedCount ?? 0);
+		const remaining = Math.max(0, cap - sold - reserved);
+		return remaining < 10 ? remaining : null;
+	}
+
 	function formatTicketPrice(ticket: any): string {
+		// FE-P0-01 / FE-P1-16: drive every ticket-price string from
+		// `formatMoney(amountKobo, currency)` so USD / GBP / EUR / ETH render
+		// with their proper symbol instead of `₦`. Until the backend serves
+		// `priceKobo` directly we convert the legacy major-unit `ticket.price`
+		// at the boundary exactly once via `majorToKobo`.
 		if (ticket.isFree || !ticket.price || ticket.price === 0) return 'Free';
 		const currency = ticket.currency ?? 'NGN';
-		return new Intl.NumberFormat('en-NG', { style: 'currency', currency, minimumFractionDigits: 0 }).format(ticket.price);
+		return formatMoney(majorToKobo(ticket.price, currency), currency, { minimumFractionDigits: 0 });
 	}
 
 	function getTicketSalesEndLabel(ticket: any): string {
@@ -214,9 +246,11 @@
 		const qty = ticketQuantity[selectedTicket] ?? 1;
 		if (ticket.requiresApproval) return qty > 1 ? `Request ${qty} Tickets` : 'Request to Get In';
 		if (ticket.isFree || !ticket.price) return qty > 1 ? `Register ${qty} Tickets` : 'Register';
-		const totalPrice = ticket.price * qty;
+		// FE-P0-01: render the total via `formatMoney` so non-NGN currencies
+		// don't get a hardcoded `₦` symbol.
 		const currency = ticket.currency ?? 'NGN';
-		const formatted = new Intl.NumberFormat('en-NG', { style: 'currency', currency, minimumFractionDigits: 0 }).format(totalPrice);
+		const totalKobo = majorToKobo(ticket.price, currency) * qty;
+		const formatted = formatMoney(totalKobo, currency, { minimumFractionDigits: 0 });
 		return qty > 1 ? `Register ${qty} Tickets — ${formatted}` : `Register — ${formatted}`;
 	}
 
@@ -723,6 +757,7 @@
 					{#each ticketTypes as ticket (ticket._id)}
 					{@const available = isTicketAvailable(ticket)}
 					{@const salesEnded = getTicketSalesEndLabel(ticket)}
+					{@const remaining = getTicketRemaining(ticket)}
 					<button
 						class="relative block w-full text-left rounded-lg border-2 p-4 transition-colors {available ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}"
 						style="background-color: {themeColor.bg}; border-color: {selectedTicket === ticket._id ? themeColor.button : themeColor.toggle};"
@@ -748,6 +783,16 @@
 									{tag}
 								</span>
 								{/each}
+								{/if}
+								{#if remaining !== null && remaining > 0 && available}
+								<!-- FE-P3-02: "Only N left" inventory hint. -->
+								<span class="min-w-fit rounded-full px-2 py-0.5 text-xs font-medium" style="background-color: #FEF3C7; color: #B45309;">
+									Only {remaining} left
+								</span>
+								{:else if remaining === 0}
+								<span class="min-w-fit rounded-full px-2 py-0.5 text-xs font-medium" style="background-color: #FEE2E2; color: #B91C1C;">
+									Sold out
+								</span>
 								{/if}
 							</div>
 							<span class="text-sm font-medium" style="color: {themeColor.lightText};">{formatTicketPrice(ticket)}</span>
@@ -1147,5 +1192,54 @@
 	:global(.event-description a) {
 		color: #7c3aed;
 		text-decoration: underline;
+	}
+	:global(.event-description img) {
+		max-width: 100%;
+		height: auto;
+		border-radius: 0.75rem;
+		margin: 0.75rem 0;
+		display: block;
+	}
+	:global(.event-description h4) {
+		font-size: 0.95rem;
+		font-weight: 600;
+		margin-bottom: 0.35rem;
+	}
+	:global(.event-description blockquote) {
+		border-left: 3px solid currentColor;
+		padding-left: 0.875rem;
+		margin: 0.5rem 0;
+		opacity: 0.85;
+		font-style: italic;
+	}
+	:global(.event-description pre) {
+		background: rgba(0, 0, 0, 0.06);
+		padding: 0.75rem 1rem;
+		border-radius: 0.5rem;
+		overflow-x: auto;
+		margin-bottom: 0.5rem;
+		font-size: 0.85em;
+	}
+	:global(.event-description code) {
+		background: rgba(0, 0, 0, 0.06);
+		padding: 0.1rem 0.35rem;
+		border-radius: 0.25rem;
+		font-size: 0.9em;
+	}
+	:global(.event-description pre code) {
+		background: transparent;
+		padding: 0;
+	}
+	:global(.event-description hr) {
+		border: 0;
+		border-top: 1px solid currentColor;
+		opacity: 0.25;
+		margin: 1rem 0;
+	}
+	:global(.event-description blockquote p:last-child),
+	:global(.event-description p:last-child),
+	:global(.event-description ul:last-child),
+	:global(.event-description ol:last-child) {
+		margin-bottom: 0;
 	}
 </style>

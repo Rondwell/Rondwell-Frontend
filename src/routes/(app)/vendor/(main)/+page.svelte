@@ -9,6 +9,7 @@
 		updateVendorVisibility
 	} from '$lib/services/vendor.services';
 	import { authState } from '$lib/stores/auth.store';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -26,7 +27,7 @@
 	let activeListings = 0;
 	let pendingOrders = 0;
 	let acceptedOrders = 0;
-	let totalRevenue = '₦0.00';
+	let totalRevenue = formatMoney(0, 'NGN');
 	let profileViews = '0';
 	let conversionRate = '0%';
 
@@ -37,9 +38,17 @@
 	let hasActivity = false;
 
 	// ─── Helpers ──────────────────────────────────────────────────────────────
+	/**
+	 * FE-P1-01 / FE-P1-16 — currency-aware vendor money formatter.
+	 *
+	 * Replaces a per-file `formatCurrency` that hardcoded `₦` and assumed
+	 * NGN. Now drives the canonical helper, converting major-unit inputs
+	 * to kobo at the boundary so the legacy `analytics.totalRevenue`
+	 * (major) and the kobo paths look identical at the call site.
+	 */
 	const formatCurrency = (amount: number, currency = 'NGN') => {
-		const symbol = currency === 'NGN' ? '₦' : currency === 'USD' ? '$' : currency;
-		return `${symbol}${amount.toLocaleString()}`;
+		const ccy = currency || 'NGN';
+		return formatMoney(majorToKobo(amount ?? 0, ccy), ccy);
 	};
 
 	const timeAgo = (dateStr: string) => {

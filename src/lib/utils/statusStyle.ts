@@ -20,6 +20,14 @@ export const statusStyles = {
 	'Order Pending': { bg: '#FFFBD4', text: '#FFE500' },
 	'Order Confirmed': { bg: '#C7FFFF', text: '#008080' },
 
+	// FE-P1-06 (FA-1.4) — withdrawal state machine. The backend cron flips
+	// stuck PROCESSING rows to FAILED/REVERSED; the FE renders these in
+	// `Wallet.svelte` against the same palette.
+	Processing: { bg: '#FFFBD4', text: '#B58900' },
+	Completed: { bg: '#E3F4E1', text: '#3CBD2C' },
+	Failed: { bg: '#FFECEC', text: '#FF0004' },
+	Reversed: { bg: '#DBE4FF', text: '#003BFF' },
+
 	Default: { bg: '#EBECED', text: '#000000' }
 } as const;
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { getPublicVendorProduct } from '$lib/services/vendor.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -124,7 +125,7 @@
 					<!-- Price -->
 					{#if product.price}
 						<p class="mt-4 text-2xl font-bold text-[#513BE2]">
-							{product.currency || '$'}{Number(product.price?.$numberDecimal || product.price).toFixed(2)}
+							{formatMoney(majorToKobo(Number(product.price?.$numberDecimal || product.price), product.currency || 'USD'), product.currency || 'USD')}
 							{#if product.pricingType && product.pricingType !== 'FIXED'}
 								<span class="text-sm font-normal text-gray-400">/ {product.pricingType.toLowerCase()}</span>
 							{/if}
@@ -149,7 +150,7 @@
 										<div class="flex items-center justify-between">
 											<p class="text-sm font-semibold text-gray-900">{pkg.packageName}</p>
 											<p class="text-sm font-bold text-[#513BE2]">
-												{pkg.packageCurrency || '$'}{Number(pkg.packagePrice?.$numberDecimal || pkg.packagePrice).toFixed(2)}
+												{formatMoney(majorToKobo(Number(pkg.packagePrice?.$numberDecimal || pkg.packagePrice), pkg.packageCurrency || 'USD'), pkg.packageCurrency || 'USD')}
 											</p>
 										</div>
 										{#if pkg.packageInclusions}
@@ -168,7 +169,7 @@
 							<div class="mt-2 flex flex-wrap gap-2">
 								{#each product.addOns as addon}
 									<span class="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-700">
-										{addon.name} — {addon.currency || '$'}{Number(addon.price?.$numberDecimal || addon.price).toFixed(2)}
+										{addon.name} — {formatMoney(majorToKobo(Number(addon.price?.$numberDecimal || addon.price), addon.currency || 'USD'), addon.currency || 'USD')}
 									</span>
 								{/each}
 							</div>

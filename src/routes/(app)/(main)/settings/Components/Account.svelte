@@ -13,6 +13,7 @@
 		invalidateSession,
 		listPasskeys,
 		removePasskey,
+		regenerateBackupCodes,
 		requestPasswordSetup,
 		updatePersonalInfo,
 		updatePhoneNumber,
@@ -51,15 +52,19 @@
 	let updatingPhone = false;
 	let requestingPassword = false;
 	let twoFALoading = false;
-	let twoFAStep: 'idle' | 'qr' | 'disable' = 'idle';
+	let twoFAStep: 'idle' | 'qr' | 'disable' | 'backup' = 'idle';
 	let twoFAQr = '';
 	let twoFACode = '';
 	let twoFABackupCodes: string[] = [];
+	let backupCodesContext: 'setup' | 'regenerate' = 'setup';
+	let regeneratingCodes = false;
 	let disableCode = '';
 
 	let toast = '';
 	let toastType: 'success' | 'error' = 'success';
 	let showDeleteModal = false;
+	// FE-P3-10 — pending soft-delete state. Banner / button copy adapt when set.
+	let deletionScheduledFor: string | null = null;
 
 	// Passkey state
 	let passkeys: Array<{ id: string; name: string; createdIndex: number; createdAt: string }> = [];
@@ -80,6 +85,45 @@
 		toast = msg;
 		toastType = type;
 		setTimeout(() => (toast = ''), 3500);
+	}
+
+	// ── 2FA backup code helpers ─────────────────────────────────────────────────
+	async function copyBackupCodes() {
+		try {
+			await navigator.clipboard.writeText(twoFABackupCodes.join('\n'));
+			showToast('Backup codes copied to clipboard');
+		} catch {
+			showToast('Could not copy. Please copy them manually.', 'error');
+		}
+	}
+
+	function downloadBackupCodes() {
+		const content =
+			`Rondwell two-factor backup codes\n` +
+			`Generated: ${new Date().toLocaleString()}\n\n` +
+			`Each code can be used once. Store them somewhere safe.\n\n` +
+			twoFABackupCodes.join('\n') + '\n';
+		const blob = new Blob([content], { type: 'text/plain' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'rondwell-backup-codes.txt';
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	async function handleRegenerateBackupCodes() {
+		regeneratingCodes = true;
+		try {
+			const result = await regenerateBackupCodes();
+			twoFABackupCodes = result.backupCodes;
+			backupCodesContext = 'regenerate';
+			twoFAStep = 'backup';
+		} catch (e: any) {
+			showToast(e.message, 'error');
+		} finally {
+			regeneratingCodes = false;
+		}
 	}
 
 	onMount(async () => {
@@ -115,6 +159,13 @@
 			setActiveProfile(ap);
 			// Load passkeys
 			try { passkeys = await listPasskeys(); } catch { /* no passkeys */ }
+			// FE-P3-10 — load any pending soft-delete request so the banner
+			// surfaces immediately on mount.
+			try {
+				const { getAccountDeletionStatus } = await import('$lib/services/wallet.services');
+				const s = await getAccountDeletionStatus();
+				deletionScheduledFor = s?.scheduledFor ?? null;
+			} catch { /* no pending request */ }
 		} catch (e) {
 			console.error('Failed to load settings', e);
 			showToast('Failed to load settings data', 'error');
@@ -330,9 +381,14 @@
 					{twoFALoading ? '...' : 'Enable 2FA'}
 				</button>
 			{:else}
-				<button on:click={() => (twoFAStep = 'disable')} class="rounded bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700">
-					Disable 2FA
-				</button>
+				<div class="flex gap-2">
+					<button on:click={handleRegenerateBackupCodes} disabled={regeneratingCodes} class="rounded border border-gray-300 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50">
+						{regeneratingCodes ? '...' : 'Backup Codes'}
+					</button>
+					<button on:click={() => (twoFAStep = 'disable')} class="rounded bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700">
+						Disable 2FA
+					</button>
+				</div>
 			{/if}
 		</div>
 
@@ -348,20 +404,38 @@
 							const result = await confirm2FASetup(twoFACode);
 							twoFABackupCodes = result.backupCodes;
 							twoFactorEnabled = true;
-							twoFAStep = 'idle';
+							twoFACode = '';
+							backupCodesContext = 'setup';
+							twoFAStep = 'backup';
 							showToast('2FA enabled successfully');
 						} catch (e: any) { showToast(e.message, 'error'); } finally { twoFALoading = false; }
 					}} disabled={twoFALoading} class="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50">
 						{twoFALoading ? '...' : 'Verify'}
 					</button>
-					<button on:click={() => (twoFAStep = 'idle')} class="rounded bg-gray-200 px-4 py-2 text-sm">Cancel</button>
+					<button on:click={() => { twoFAStep = 'idle'; twoFACode = ''; }} class="rounded bg-gray-200 px-4 py-2 text-sm">Cancel</button>
 				</div>
-				{#if twoFABackupCodes.length > 0}
-					<div class="mt-3 rounded bg-yellow-50 p-3 text-xs">
-						<p class="mb-1 font-semibold">Save these backup codes:</p>
-						{#each twoFABackupCodes as code}<p class="font-mono">{code}</p>{/each}
+			</div>
+		{/if}
+
+		{#if twoFAStep === 'backup'}
+			<div class="mt-4 border-t pt-4">
+				<p class="text-sm font-medium text-gray-800">
+					{backupCodesContext === 'setup' ? 'Two-factor authentication is on.' : 'New backup codes generated.'}
+				</p>
+				<p class="mt-1 mb-3 text-xs text-gray-500">
+					Save these backup codes somewhere safe. Each code can be used once to sign in if you lose access to your authenticator app.
+					{#if backupCodesContext === 'regenerate'}Your previous backup codes are no longer valid.{/if}
+				</p>
+				<div class="rounded bg-yellow-50 p-3">
+					<div class="grid grid-cols-2 gap-x-6 gap-y-1 font-mono text-sm text-gray-800">
+						{#each twoFABackupCodes as code}<span>{code}</span>{/each}
 					</div>
-				{/if}
+				</div>
+				<div class="mt-3 flex flex-wrap gap-2">
+					<button on:click={copyBackupCodes} class="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100">Copy</button>
+					<button on:click={downloadBackupCodes} class="rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100">Download</button>
+					<button on:click={() => { twoFAStep = 'idle'; twoFABackupCodes = []; }} class="rounded bg-black px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800">I've saved them</button>
+				</div>
 			</div>
 		{/if}
 
@@ -545,12 +619,45 @@
 	<!-- Delete Account -->
 	<div>
 		<h2 class="mb-1 text-lg font-semibold">Delete Account</h2>
-		<p class="mb-4 text-sm text-[#8C8F93]">If you no longer wish to use Rondwell, you can permanently delete your account.</p>
+		<!--
+			FE-P3-10 (NEW-9.2): Self-service deletion with a 30-day grace
+			window. The modal handles the request / cancel / status flow;
+			the banner below is a quick-glance state hint when a deletion
+			is already pending.
+		-->
+		<p class="mb-4 text-sm text-[#8C8F93]">
+			Account deletion is a 30-day grace flow. Your personal data is anonymised after the window;
+			financial records are retained for 7 years to meet regulatory requirements.
+		</p>
+
+		{#if deletionScheduledFor}
+			<div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+				<p class="font-medium">
+					Your account is scheduled for deletion on
+					{new Date(deletionScheduledFor).toLocaleDateString(undefined, {
+						month: 'long',
+						day: 'numeric',
+						year: 'numeric',
+					})}.
+				</p>
+				<button
+					type="button"
+					on:click={() => (showDeleteModal = true)}
+					class="mt-1 text-xs font-medium text-amber-900 underline"
+				>
+					Manage request →
+				</button>
+			</div>
+		{/if}
+
 		<button on:click={() => (showDeleteModal = true)} class="flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700">
 			<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6.75V10.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.99958 16.0584H4.45458C1.85208 16.0584 0.764583 14.1984 2.02458 11.9259L4.36458 7.71094L6.56958 3.75094C7.90458 1.34344 10.0946 1.34344 11.4296 3.75094L13.6346 7.71844L15.9746 11.9334C17.2346 14.2059 16.1396 16.0659 13.5446 16.0659H8.99958V16.0584Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.99609 12.75H9.00283" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-			Delete Account
+			{deletionScheduledFor ? 'Manage deletion request' : 'Delete Account'}
 		</button>
 	</div>
 </div>
 
-<DeleteAccountModal bind:open={showDeleteModal} />
+<DeleteAccountModal
+	bind:open={showDeleteModal}
+	on:statusChange={(e) => (deletionScheduledFor = e.detail.scheduledFor)}
+/>

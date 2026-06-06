@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getActiveProfile } from '$lib/services/profile.services';
 	import { deleteProduct, duplicateProduct, getProducts, type ProductFilters } from '$lib/services/vendor.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import AddProductModal from '../../component/AddProductModal.svelte';
@@ -152,11 +153,29 @@
 	}
 
 	function formatPrice(product: any) {
+		// FE-P1-01 / FE-P1-16 — every monetary string routes through the
+		// canonical helper. Server still ships the legacy major-unit `price`,
+		// so we convert at the boundary exactly once via majorToKobo.
 		if (!product.price && product.pricingType === 'CUSTOM_QUOTE') return 'Custom Quote';
 		const amount = parseFloat(product.price?.$numberDecimal || product.price || 0);
 		if (amount === 0) return 'Free';
-		const sym = product.currency === 'NGN' ? '₦' : product.currency === 'USD' ? '$' : (product.currency || '₦');
-		return `${sym}${amount.toLocaleString()}`;
+		const ccy = product.currency || 'NGN';
+		return formatMoney(majorToKobo(amount, ccy), ccy);
+	}
+
+	/**
+	 * FE-P3-03 (NEW-1.1 vendor variant) — Stock badge for the vendor's own
+	 * product listing. Mirrors the marketplace's `stockLabel` so vendors see
+	 * the same numbers their customers see, with a red "Out of stock" state
+	 * when atomic stock decrement on the backend has zeroed the counter.
+	 */
+	function stockBadge(product: any): { label: string; tone: 'ok' | 'warn' | 'out' } | null {
+		if (product?.unlimited) return { label: 'Unlimited', tone: 'ok' };
+		const qty = Number(product?.stockQuantity ?? 0);
+		if (Number.isNaN(qty)) return null;
+		if (qty === 0) return { label: 'Out of stock', tone: 'out' };
+		if (qty < 10) return { label: `${qty} left`, tone: 'warn' };
+		return { label: `${qty} in stock`, tone: 'ok' };
 	}
 
 	function timeAgo(dateStr: string) {
@@ -340,6 +359,12 @@
 							{#if product.createdAt}
 								<span class="text-[10px] text-gray-400">{timeAgo(product.createdAt)}</span>
 							{/if}
+							{#if stockBadge(product)}
+								{@const sb = stockBadge(product)}
+								<span class="ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium {sb.tone === 'out' ? 'bg-red-100 text-red-700' : sb.tone === 'warn' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}">
+									{sb.label}
+								</span>
+							{/if}
 						</div>
 
 						<!-- Actions -->
@@ -407,6 +432,12 @@
 								</span>
 								{#if product.createdAt}
 									<span class="text-[10px] text-gray-400">{timeAgo(product.createdAt)}</span>
+								{/if}
+								{#if stockBadge(product)}
+									{@const sb = stockBadge(product)}
+									<span class="rounded-full px-2 py-0.5 text-[10px] font-medium {sb.tone === 'out' ? 'bg-red-100 text-red-700' : sb.tone === 'warn' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}">
+										{sb.label}
+									</span>
 								{/if}
 							</div>
 						</div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { searchProfiles } from '$lib/services/profile.services';
 	import { deleteCollaboration, discoverEvents, getCollaboration, getProducts, resendCollaborationEmail, sendOutboundCollaboration, withdrawCollaboration } from '$lib/services/vendor.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import DatePickerModal from '../../../../create-event/components/DatePickerModal.svelte';
 
@@ -398,7 +399,7 @@
 												{:else}
 													<div class="flex h-6 w-6 items-center justify-center rounded bg-gray-100"><Icon icon="mdi:package-variant-closed" class="h-3 w-3 text-gray-400" /></div>
 												{/if}
-												<div class="min-w-0"><p class="truncate text-xs font-medium text-gray-900">{prod.productName}</p><p class="truncate text-[10px] text-gray-400">{prod.pricingType}{prod.price ? ` · ₦${parseFloat(prod.price?.$numberDecimal || prod.price || 0).toLocaleString()}` : ''}</p></div>
+												<div class="min-w-0"><p class="truncate text-xs font-medium text-gray-900">{prod.productName}</p><p class="truncate text-[10px] text-gray-400">{prod.pricingType}{prod.price ? ` · ${formatMoney(majorToKobo(parseFloat(prod.price?.$numberDecimal || prod.price || 0), prod.currency || 'NGN'), prod.currency || 'NGN')}` : ''}</p></div>
 											</button>
 										{/each}
 									</div>
@@ -550,7 +551,7 @@
 								<div class="flex items-start gap-2"><Icon icon="mdi:package-variant-closed" class="mt-0.5 h-4 w-4 shrink-0 text-purple-500" /><div><p class="text-[10px] text-gray-400">Proposed Service</p><p class="text-xs font-medium text-gray-800">{collab.description}</p></div></div>
 							{/if}
 							{#if collab.budget}
-								<div class="flex items-start gap-2"><Icon icon="mdi:cash" class="mt-0.5 h-4 w-4 shrink-0 text-green-600" /><div><p class="text-[10px] text-gray-400">Proposed Price</p><p class="text-xs font-bold text-gray-900">₦{collab.budget.toLocaleString()}</p></div></div>
+								<div class="flex items-start gap-2"><Icon icon="mdi:cash" class="mt-0.5 h-4 w-4 shrink-0 text-green-600" /><div><p class="text-[10px] text-gray-400">Proposed Price</p><p class="text-xs font-bold text-gray-900">{formatMoney(majorToKobo(Number(collab.budget), collab.currency || collab.budgetCurrency || 'NGN'), collab.currency || collab.budgetCurrency || 'NGN')}</p></div></div>
 							{/if}
 							{#if collab.deadline}
 								<div class="flex items-start gap-2"><Icon icon="mdi:calendar" class="mt-0.5 h-4 w-4 shrink-0 text-blue-500" /><div><p class="text-[10px] text-gray-400">Proposed Date</p><p class="text-xs font-medium text-gray-800">{formatDateShort(collab.deadline)}</p></div></div>

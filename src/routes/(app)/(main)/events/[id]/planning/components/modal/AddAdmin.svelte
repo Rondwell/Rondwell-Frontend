@@ -2,6 +2,8 @@
 	import { EVENT_ADMIN_ROLES } from '$lib/constants/event-admin-roles';
 	import { inviteEventAdmin } from '$lib/services/event.services';
 	import { getUserSubscriptionInfo } from '$lib/services/wallet.services';
+	import { isPlanLimitError, mapPlanLimit, type PlanLimitCopy } from '$lib/utils/planLimitErrors';
+	import PlanLimitBanner from '$lib/components/PlanLimitBanner.svelte';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
 
@@ -89,11 +91,19 @@
 			dispatch('saved');
 			open = false;
 		} catch (e: any) {
-			error = e.message || 'Failed to send invite';
+			// FE-P3-01 — surface PLAN_LIMIT_EXCEEDED with the upgrade banner
+			// instead of a generic toast.
+			if (isPlanLimitError(e)) {
+				planLimit = mapPlanLimit(e);
+			} else {
+				error = e.message || 'Failed to send invite';
+			}
 		} finally {
 			saving = false;
 		}
 	}
+
+	let planLimit: PlanLimitCopy | null = null;
 </script>
 
 {#if open}
@@ -127,6 +137,12 @@
 						Add a co-organizer to help manage this event. They'll receive an email invitation
 						with the role you assign.
 					</p>
+
+					{#if planLimit}
+						<div class="mt-3">
+							<PlanLimitBanner copy={planLimit} on:dismiss={() => (planLimit = null)} />
+						</div>
+					{/if}
 
 					{#if error}
 						<p class="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>
@@ -186,6 +202,12 @@
 							<p class="text-sm font-medium">{selectedEmail}</p>
 						</div>
 					</div>
+
+					{#if planLimit}
+						<div class="mt-3">
+							<PlanLimitBanner copy={planLimit} on:dismiss={() => (planLimit = null)} />
+						</div>
+					{/if}
 
 					{#if error}
 						<p class="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>

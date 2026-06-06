@@ -1,15 +1,26 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { authState } from '$lib/stores/auth.store';
 	import { onMount } from 'svelte';
 	import Nav from '../../components/Nav.svelte';
 	import Account from './Components/Account.svelte';
+	import CallbackDomains from './Components/CallbackDomains.svelte';
 	import PaymentMethods from './Components/PaymentMethods.svelte';
 	import Preferences from './Components/Preferences.svelte';
+	import Subscription from './Components/Subscription.svelte';
 	import Wallet from './Components/Wallet.svelte';
 
 	let activeTab = 'account';
 
-	const validTabs = ['account', 'preferences', 'wallet', 'payments'];
+	$: isOrganizer = $authState.activeProfile?.role === 'ORGANIZER';
+	$: validTabs = [
+		'account',
+		'preferences',
+		'wallet',
+		'payments',
+		'subscription',
+		...(isOrganizer ? ['domains'] : []),
+	];
 
 	onMount(() => {
 		const tabParam = $page.url.searchParams.get('tab');
@@ -26,7 +37,7 @@
 		}
 	}
 
-	const tabs = [
+	const baseTabs = [
 		{
 			id: 'account',
 			label: 'Account',
@@ -109,8 +120,29 @@
 			id: 'payments',
 			label: 'Payment Methods',
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.66699 7.08333H18.3337" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13.75H6.66667" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.75 13.75H12.0833" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.36699 2.91667H14.6253C17.592 2.91667 18.3337 3.65 18.3337 6.58333V13.4167C18.3337 16.35 17.592 17.0833 14.6337 17.0833H5.36699C2.40866 17.0833 1.66699 16.35 1.66699 13.4167V6.58333C1.66699 3.65 2.40866 2.91667 5.36699 2.91667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-		}
+		},
+		{
+			id: 'subscription',
+			label: 'Subscription',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 1.66667L12.575 6.88333L18.3333 7.725L14.1667 11.7833L15.15 17.5167L10 14.8083L4.85 17.5167L5.83333 11.7833L1.66667 7.725L7.425 6.88333L10 1.66667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+		},
+		// FE-P1-15: organizer-only callback-domains tab. Hidden for users
+		// without an organizer profile because they have no events that
+		// could redirect through a custom domain.
 	];
+
+	// `baseTabs` is the static set; `tabs` reactively appends the
+	// organizer-only Custom Domains tab when the user has the role.
+	$: tabs = isOrganizer
+		? [
+				...baseTabs,
+				{
+					id: 'domains',
+					label: 'Custom Domains',
+					icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 18.3333C14.6024 18.3333 18.3333 14.6024 18.3333 10C18.3333 5.39763 14.6024 1.66667 10 1.66667C5.39763 1.66667 1.66667 5.39763 1.66667 10C1.66667 14.6024 5.39763 18.3333 10 18.3333Z" stroke="currentColor" stroke-width="1.5"/><path d="M1.66667 10H18.3333" stroke="currentColor" stroke-width="1.5"/><path d="M10 1.66667C12.0844 3.94843 13.2691 6.91036 13.3333 10C13.2691 13.0896 12.0844 16.0516 10 18.3333C7.91556 16.0516 6.73086 13.0896 6.66667 10C6.73086 6.91036 7.91556 3.94843 10 1.66667Z" stroke="currentColor" stroke-width="1.5"/></svg>`
+				}
+			]
+		: baseTabs;
 </script>
 
 <div class="w-full max-w-4xl">
@@ -129,5 +161,9 @@
 		<Wallet />
 	{:else if activeTab === 'payments'}
 		<PaymentMethods />
+	{:else if activeTab === 'subscription'}
+		<Subscription />
+	{:else if activeTab === 'domains' && isOrganizer}
+		<CallbackDomains />
 	{/if}
 </div>

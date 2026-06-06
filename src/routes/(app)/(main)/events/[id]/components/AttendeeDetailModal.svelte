@@ -12,6 +12,7 @@
 	import EditStatus from './EditStatus.svelte';
 	import ReportAttendeeModal from './ReportAttendeeModal.svelte';
 	import ResendEmailModal from './ResendEmailModal.svelte';
+	import RefundModal from '../participants/components/RefundModal.svelte';
 
 	export let open = false;
 	export let attendeeId = '';
@@ -22,6 +23,7 @@
 	let showReportModal = false;
 	let showCreateTagModal = false;
 	let showResendEmailModal = false;
+	let showRefundModal = false;
 	let showViewEmail: any = null;
 	let showDeleteConfirm = false;
 	let deleting = false;
@@ -316,6 +318,22 @@
 				</div>
 				{/if}
 
+				<!-- FE-P2-01-A: Issue refund (when this is a paid registration that hasn't been refunded) -->
+				{#if !detailLoading && registration?.ticket_payment_id && ticketPrice > 0 && registration?.refund_status !== 'COMPLETED'}
+				<div class="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm">
+					<p class="text-orange-800">
+						<Icon icon="mdi:cash-refund" class="mr-1 inline" />
+						Refund this attendee's payment? The QR is voided and they're notified.
+					</p>
+					<button
+						on:click={() => (showRefundModal = true)}
+						class="rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100"
+					>
+						Issue refund
+					</button>
+				</div>
+				{/if}
+
 				<!-- Seat Info -->
 				{#if seatInfo && !detailLoading}
 				<div class="mt-5 flex items-center gap-3 rounded-lg border border-gray-200 p-3">
@@ -482,6 +500,19 @@
 <ReportAttendeeModal bind:open={showReportModal} {eventId} {attendeeId} />
 <CreateTagModal bind:open={showCreateTagModal} {eventId} on:tagAssigned={handleTagAssigned} />
 <ResendEmailModal bind:open={showResendEmailModal} email={attendee?.email || ''} />
+
+<!-- FE-P2-01-A: Refund modal — wired off the registration's ticket_payment_id. -->
+{#if registration?.ticket_payment_id}
+<RefundModal
+	bind:open={showRefundModal}
+	ticketPaymentId={registration.ticket_payment_id}
+	originalAmountKobo={Math.round((ticketPrice || 0) * (ticketCurrency === 'ETH' ? 1_000_000 : 100))}
+	currency={ticketCurrency}
+	attendeeName={`${attendee?.firstName ?? ''} ${attendee?.lastName ?? ''}`.trim() || attendee?.email}
+	ticketTypeName={ticketTypeName}
+	on:refunded={handleStatusUpdated}
+/>
+{/if}
 
 {#if showDeleteConfirm}
 <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm" on:click={() => showDeleteConfirm = false} on:keydown={(e) => e.key === 'Escape' && (showDeleteConfirm = false)} role="dialog" aria-modal="true" tabindex="-1">

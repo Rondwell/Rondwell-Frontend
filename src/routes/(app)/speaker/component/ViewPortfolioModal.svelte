@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 
 	export let open = false;
@@ -7,14 +8,25 @@
 
 	$: statusColor = portfolio?.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : portfolio?.status === 'DRAFT' ? 'bg-purple-100 text-purple-700' : 'bg-pink-100 text-pink-700';
 	$: feeLabel = getFeeLabel(portfolio);
-	$: currencySymbol = portfolio?.feeCurrency === 'NGN' ? '₦' : portfolio?.feeCurrency === 'USD' ? '$' : portfolio?.feeCurrency === 'GBP' ? '£' : portfolio?.feeCurrency || '$';
+	// FE-P1-01: drive symbols off the canonical money helper. We strip
+	// digits/spaces from a `0` render so we still get the bare currency
+	// symbol for use elsewhere if needed (legacy callers).
+	$: currencySymbol = formatMoney(0, portfolio?.feeCurrency ?? 'USD', {
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 0,
+	}).replace(/[\d,.\s]/g, '');
 
 	function getFeeLabel(p: any): string {
 		if (!p?.feeType) return 'Not specified';
 		if (p.feeType === 'PRO_BONO') return 'Pro Bono / Negotiable';
 		if (p.feeType === 'NOT_APPLICABLE') return 'Not Applicable';
-		if (p.feeType === 'VARIABLE') return p.feeAmount ? `${currencySymbol}${p.feeAmount.toLocaleString()} (Variable)` : 'Custom Quote';
-		if (p.feeType === 'FIXED') return p.feeAmount ? `${currencySymbol}${p.feeAmount.toLocaleString()}` : 'Free';
+		const ccy = p.feeCurrency ?? 'USD';
+		if (p.feeType === 'VARIABLE')
+			return p.feeAmount
+				? `${formatMoney(majorToKobo(Number(p.feeAmount), ccy), ccy)} (Variable)`
+				: 'Custom Quote';
+		if (p.feeType === 'FIXED')
+			return p.feeAmount ? formatMoney(majorToKobo(Number(p.feeAmount), ccy), ccy) : 'Free';
 		return 'Not specified';
 	}
 

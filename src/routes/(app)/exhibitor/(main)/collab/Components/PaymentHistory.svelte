@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getExhibitorCollaborations, type ExhibitorCollaborationFilters } from '$lib/services/exhibitor.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -66,7 +67,10 @@
 		return c.invoice?.invoiceStatus || 'Pending';
 	}
 	function getAmount(c: any) {
-		if (c.invoice?.amount) return `₦${Number(c.invoice.amount).toLocaleString()}`;
+		if (c.invoice?.amount) {
+			const ccy = c.invoice.currency || 'NGN';
+			return formatMoney(majorToKobo(Number(c.invoice.amount), ccy), ccy);
+		}
 		return '—';
 	}
 </script>

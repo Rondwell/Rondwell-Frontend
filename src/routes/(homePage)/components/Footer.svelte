@@ -60,6 +60,39 @@
 						>Help Center</a
 					>
 				</div>
+				<!-- FE-P4-10 — Compliance documentation links. -->
+				<div class="flex flex-wrap gap-x-5 gap-y-1">
+					<a
+						href="/legal/refund-policy"
+						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
+						>Refund Policy</a
+					>
+					<a
+						href="/legal/aml-policy"
+						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
+						>AML</a
+					>
+					<a
+						href="/legal/kyc-policy"
+						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
+						>KYC</a
+					>
+					<a
+						href="/legal/data-retention"
+						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
+						>Data Retention</a
+					>
+					<a
+						href="/legal/vendor-payout-policy"
+						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
+						>Vendor Payouts</a
+					>
+					<a
+						href="/legal/pci-scope"
+						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
+						>PCI</a
+					>
+				</div>
 			</div>
 			<div class="flex w-full flex-col gap-2 md:w-auto md:items-end md:gap-1">
 				<div class="flex w-full flex-row gap-5 md:w-auto">

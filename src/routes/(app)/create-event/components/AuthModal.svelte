@@ -3,6 +3,7 @@
 	import { smartRequestOTP, smartVerifyOTP, googleSignIn, beginPasskeyAuth, completePasskeyAuth } from '$lib/services/auth.services';
 	import { authState, setUser, setVerified } from '$lib/stores/auth.store';
 	import { toast } from '$lib/stores/toast.store';
+	import { isValidEmail, isValidPhone } from '$lib/utils/validation';
 	import { createEventDispatcher, onMount } from 'svelte';
 
 	export let open = false;
@@ -201,6 +202,15 @@
 	// Email/Phone OTP flow
 	async function sendOTP() {
 		if (!contact.trim()) { error = 'Please enter your email or phone'; return; }
+		// Reject malformed input before requesting an OTP.
+		const value = contact.trim();
+		const looksLikeEmail = value.includes('@');
+		if (looksLikeEmail ? !isValidEmail(value) : !isValidPhone(value)) {
+			error = looksLikeEmail
+				? 'Please enter a valid email address (e.g. you@example.com)'
+				: 'Please enter a valid email or phone number';
+			return;
+		}
 		loading = true; error = '';
 		try {
 			const result = await smartRequestOTP(contact.trim());

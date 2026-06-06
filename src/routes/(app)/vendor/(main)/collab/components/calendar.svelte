@@ -1,10 +1,13 @@
 <script lang="ts">
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
+
 	interface Booking {
 		id: string;
 		name: string;
 		rating: string;
 		type: 'Sale' | 'Booking';
 		amount: number;
+		currency?: string;
 		timeAgo: string;
 		status: 'Success' | 'Pending' | 'Failed';
 	}
@@ -57,8 +60,11 @@
 		}
 	];
 
-	function formatAmount(amount: number): string {
-		return amount.toLocaleString();
+	function formatAmount(amount: number, currency: string = 'NGN'): string {
+		// FE-P1-01 / FE-P1-16 — render through the canonical helper instead
+		// of `₦{toLocaleString()}` so non-NGN bookings render correctly when
+		// the upstream service starts attaching `currency`.
+		return formatMoney(majorToKobo(amount ?? 0, currency), currency);
 	}
 </script>
 
@@ -101,7 +107,7 @@
 
 							<!-- Amount -->
 							<td class="px-6 py-4 text-gray-900 dark:text-white font-semibold">
-								₦{formatAmount(booking.amount)}
+								{formatAmount(booking.amount, booking.currency ?? 'NGN')}
 							</td>
 
 							<!-- Time -->

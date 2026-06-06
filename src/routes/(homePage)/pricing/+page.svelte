@@ -1,9 +1,14 @@
-<script>
+<script lang="ts">
+	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
+	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { onMount } from 'svelte';
 	import Header from './components/Header.svelte';
 
 	let isAnnual = false;
 	let plansLoaded = false;
+	// FE-P2-05: currency toggle on the pricing page.
+	let currency: 'NGN' | 'USD' = 'NGN';
 
 	let freePlan = {
 		name: 'Rondwell',
@@ -45,6 +50,26 @@
 
 	$: plusMonthlyUSD = '$59';
 	$: plusAnnualUSD = '$49';
+
+	// FE-P2-05: pull NGN / USD prices from the backend's `pricing.byCurrency`
+	// envelope when present. Falls back to the legacy single `pricing` shape.
+	$: plusByCurrency = (plusPlan as any).pricing?.byCurrency ?? null;
+	$: plusMonthlyKoboNGN =
+		plusByCurrency?.NGN?.monthly ?? (plusPlan as any).pricing?.monthly ?? 500_000;
+	$: plusYearlyKoboNGN =
+		plusByCurrency?.NGN?.yearly ?? (plusPlan as any).pricing?.yearly ?? 5_000_000;
+	$: plusMonthlyKoboUSD = plusByCurrency?.USD?.monthly ?? 5_900; // $59 default fallback
+	$: plusYearlyKoboUSD = plusByCurrency?.USD?.yearly ?? 4_900 * 12;
+
+	function fmtMoneyMajor(kobo: number, ccy: 'NGN' | 'USD'): string {
+		const major = (kobo ?? 0) / 100;
+		const sym = ccy === 'NGN' ? '₦' : '$';
+		return `${sym}${major.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+	}
+
+	$: plusDisplayPrice = isAnnual
+		? fmtMoneyMajor(currency === 'NGN' ? Math.round(plusYearlyKoboNGN / 12) : Math.round(plusYearlyKoboUSD / 12), currency)
+		: fmtMoneyMajor(currency === 'NGN' ? plusMonthlyKoboNGN : plusMonthlyKoboUSD, currency);
 
 	$: freeFeatures = [
 		{ text: 'Unlimited free event creation' },
@@ -97,6 +122,28 @@
 		{ guests: 100_000, price: '$151' },
 		{ guests: 150_000, price: '$191' }
 	];
+
+	/**
+	 * Auth-aware CTA handler. If logged in, go to /subscription.
+	 * If not, store the intended destination and redirect to /auth.
+	 */
+	function handleGetStarted() {
+		if ($isAuthenticated) {
+			goto('/overview');
+		} else {
+			if (browser) localStorage.setItem('post_auth_redirect', '/overview');
+			goto('/auth');
+		}
+	}
+
+	function handleGetPlus() {
+		if ($isAuthenticated) {
+			goto('/subscription');
+		} else {
+			if (browser) localStorage.setItem('post_auth_redirect', '/subscription');
+			goto('/auth');
+		}
+	}
 </script>
 
 <svelte:head>
@@ -128,6 +175,11 @@
 					<button class={`rounded-full px-4 py-2 transition ${!isAnnual ? 'bg-white text-black shadow-sm' : 'text-gray-600'}`} on:click={() => (isAnnual = false)}>Monthly</button>
 					<button class={`rounded-full px-4 py-2 transition ${isAnnual ? 'bg-white text-black shadow-sm' : 'text-gray-600'}`} on:click={() => (isAnnual = true)}>Annual</button>
 				</div>
+				<!-- FE-P2-05: currency toggle (NGN / USD). Server picks the gateway from the chosen currency. -->
+				<div class="mx-auto flex w-fit justify-center gap-1 rounded-full bg-[#F0EFF1] p-1 text-xs">
+					<button class={`rounded-full px-3 py-1 transition ${currency === 'NGN' ? 'bg-white text-black shadow-sm' : 'text-gray-500'}`} on:click={() => (currency = 'NGN')}>NGN</button>
+					<button class={`rounded-full px-3 py-1 transition ${currency === 'USD' ? 'bg-white text-black shadow-sm' : 'text-gray-500'}`} on:click={() => (currency = 'USD')}>USD</button>
+				</div>
 			</div>
 
 			<div class="mb-8 grid grid-cols-1 gap-8 md:grid-cols-2">
@@ -141,7 +193,7 @@
 						</div>
 						<span class="text-gray-500">Free forever</span>
 					</div>
-					<a href="/auth" class="block w-full rounded-md bg-gray-800 py-2 text-center text-white transition hover:bg-gray-700">Get Started</a>
+					<button on:click={handleGetStarted} class="block w-full rounded-md bg-gray-800 py-2 text-center text-white transition hover:bg-gray-700">Get Started</button>
 					<p class="mt-3 text-sm text-gray-300">Use Rondwell for free with:</p>
 					<ul class="mt-2 space-y-3">
 						{#each freeFeatures as feature}
@@ -166,12 +218,14 @@
 					<div class="mb-3">
 						<h3 class="mb-2 text-sm font-bold text-[#F31A7C]">Rondwell Plus</h3>
 						<div class="mb-2 flex items-center gap-2">
-							<span class="text-2xl font-bold">{isAnnual ? plusAnnualUSD : plusMonthlyUSD}</span>
+							<span class="text-2xl font-bold">{plusDisplayPrice}</span>
 							<span class="rounded-md bg-[#FDE0EE] px-2 py-1 text-xs text-[#F31A7C]">Save 14%</span>
 						</div>
-						<span class="text-gray-500">Per month, billed annually</span>
+						<span class="text-gray-500">
+							Per month{isAnnual ? ', billed annually' : ''} · {currency}
+						</span>
 					</div>
-					<a href="/auth" class="block w-full rounded-md bg-pink-600 py-2 text-center text-white transition hover:bg-pink-700">Get Rondwell Plus</a>
+					<button on:click={handleGetPlus} class="block w-full rounded-md bg-pink-600 py-2 text-center text-white transition hover:bg-pink-700">Get Rondwell Plus</button>
 					<p class="mt-3 text-sm text-gray-300">Per month, billed annually</p>
 					<ul class="mt-6 space-y-3">
 						{#each plusFeatures as feature}

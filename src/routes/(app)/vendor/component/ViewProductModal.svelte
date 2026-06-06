@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 
 	export let open = false;
@@ -8,8 +9,12 @@
 	$: pricingType = product?.pricingType || 'FIXED';
 	$: priceVal = parseFloat(product?.price?.$numberDecimal || product?.price || 0);
 	$: currency = product?.currency || 'NGN';
-	$: currencySymbol = currency === 'NGN' ? '₦' : currency === 'USD' ? '$' : currency === 'GBP' ? '£' : currency;
-	$: formattedPrice = priceVal > 0 ? `${currencySymbol}${priceVal.toLocaleString()}` : 'Free';
+	// FE-P1-01: kept the symbol-only literal because two display rows below
+	// show "Symbol (CCY)" — e.g. "₦ (NGN)". `formatMoney` on its own can't
+	// produce that pattern, so we render the symbol via the canonical helper
+	// using a 0-amount call and strip the "0.00" off.
+	$: currencySymbol = formatMoney(0, currency, { minimumFractionDigits: 0, maximumFractionDigits: 0 }).replace(/[\d,.\s]/g, '');
+	$: formattedPrice = priceVal > 0 ? formatMoney(majorToKobo(priceVal, currency), currency) : 'Free';
 	$: isCustomQuote = pricingType === 'CUSTOM_QUOTE';
 	$: isHourly = pricingType === 'HOURLY' || pricingType === 'DAILY';
 	$: statusColor = product?.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : product?.status === 'DRAFT' ? 'bg-purple-100 text-purple-700' : 'bg-pink-100 text-pink-700';

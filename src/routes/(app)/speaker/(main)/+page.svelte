@@ -2,6 +2,7 @@
 	import DashboardSkeleton from '$lib/components/DashboardSkeleton.svelte';
 	import { getActiveProfile, type UserProfileData } from '$lib/services/profile.services';
 	import { getSpeakerCollaborations, getSpeakerCollaborationStats } from '$lib/services/speaker.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -21,9 +22,12 @@
 	let recentTransactions: any[] = [];
 
 	// ─── Helpers ──────────────────────────────────────────────────────────────
+	// FE-P1-01 / FE-P1-16 — replaces hardcoded `₦` formatter with the
+	// canonical money helper. Major-unit input → kobo at the boundary so the
+	// existing call sites compile unchanged.
 	const formatCurrency = (amount: number, currency = 'NGN') => {
-		const symbol = currency === 'NGN' ? '₦' : currency === 'USD' ? '$' : currency;
-		return `${symbol}${amount.toLocaleString()}`;
+		const ccy = currency || 'NGN';
+		return formatMoney(majorToKobo(amount ?? 0, ccy), ccy);
 	};
 
 	const timeAgo = (dateStr: string) => {
@@ -97,7 +101,7 @@
 	$: bottomStats = [
 		{
 			title: 'Total Earnings',
-			value: '₦0.00',
+			value: formatCurrency(0, 'NGN'),
 			icon: '/brand5.svg',
 			bg: 'bg-pink-50',
 			type: 'revenue',

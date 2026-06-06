@@ -38,6 +38,29 @@ export interface CreateEventPayload {
   groupRegistrationEnabled?: boolean;
   maxGroupSize?: number;
   isMultiDay?: boolean;
+  /**
+   * FE-P2-01 (P2-01) — per-event refund policy. The server enforces:
+   *   { window: 'BEFORE_START', hoursAfter: 0 }            — refunds blocked once the event starts
+   *   { window: 'WITHIN_X_HOURS_AFTER', hoursAfter: 24 }   — default; allows up to N hours after start
+   *   { window: 'NEVER', hoursAfter: 0 }                    — no refunds at all
+   */
+  refundPolicy?: {
+    window: 'BEFORE_START' | 'WITHIN_X_HOURS_AFTER' | 'NEVER';
+    hoursAfter?: number;
+  };
+  /**
+   * FE-P2-03 (P2-03) — vendor escrow window in days (1..14). After invoice
+   * payment success the funds are held for this many days before the
+   * release cron pays out the vendor; the organizer can dispute within
+   * the window.
+   */
+  vendorEscrowDays?: number;
+  /**
+   * FE-P3-08 (P3-08 / NEW-10.3) — ticket transfer / resale rails.
+   */
+  allowResale?: boolean;
+  resalePlatformFeePercent?: number; // basis points, e.g. 1000 = 10%
+  transferCutoffHoursBeforeStart?: number;
 }
 
 export interface CreateEventResponse {
@@ -322,6 +345,11 @@ export async function createTicketType(eventId: string, payload: {
   quantityAvailable?: number;
   isFree?: boolean;
   tags?: string[];
+  /** FE-P2-11 (NEW-4.3) — early-bird discount auto-applied within window. */
+  isEarlyBird?: boolean;
+  /** Percentage 1..100. Discount applied when `now <= salesEndDate − EARLY_BIRD_WINDOW_DAYS`. */
+  earlyBirdDiscountPercentage?: number;
+  allowedEventDayIds?: string[];
 }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/tickets`, {
     method: 'POST',
@@ -344,6 +372,10 @@ export async function updateTicketType(eventId: string, ticketTypeId: string, pa
   quantityAvailable?: number;
   isFree?: boolean;
   tags?: string[];
+  /** FE-P2-11 (NEW-4.3) — early-bird editor fields. */
+  isEarlyBird?: boolean;
+  earlyBirdDiscountPercentage?: number;
+  allowedEventDayIds?: string[];
 }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/tickets/${ticketTypeId}`, {
     method: 'PUT',
@@ -1755,6 +1787,34 @@ export async function uploadBlastImage(eventId: string, file: File): Promise<str
   return data.url;
 }
 
+/**
+ * Upload an inline image for the event description rich-text editor.
+ *
+ * - When `eventId` is provided (edit flow), the image is stored under
+ *   `events/{eventId}/description/`.
+ * - When `eventId` is omitted (create flow — the event doesn't exist yet),
+ *   it's uploaded to a draft prefix scoped to the authenticated organizer.
+ *
+ * Returns the public S3 URL to embed in the description HTML.
+ */
+export async function uploadEventDescriptionImage(
+  file: File,
+  eventId?: string
+): Promise<string> {
+  const formData = new FormData();
+  formData.append('image', file);
+  const url = eventId
+    ? `${EVENT_URL}/api/v1/events/${eventId}/description-image`
+    : `${EVENT_URL}/api/v1/events/description-image`;
+  const res = await authFetch(url, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to upload image');
+  const data = await res.json();
+  return data.url;
+}
+
 // ==================== COLLECTION BLAST APIs ====================
 
 export async function createCollectionBlast(collectionId: string, payload: {
@@ -1928,4 +1988,34 @@ export async function bulkReplaceEventDays(eventId: string, days: EventDayPayloa
   if (!res.ok) await throwApiError(res, 'Failed to replace event days');
   const data = await res.json();
   return data.days ?? [];
+}
+
+
+// ==================== FE-P3-05 — GROUP REGISTRATION MEMBERS ====================
+
+/**
+ * FE-P3-05 (FA-3.1, NEW-1.2, NEW-10.2) — Fetch the per-member registrations
+ * for a group purchase.
+ *
+ * Backend pre-creates N placeholder registrations on group registration
+ * and finalizes each on payment success, generating a per-member QR /
+ * passcode. The confirmation modal needs all of them so it can render the
+ * lead's QR plus N member QRs.
+ *
+ * Returns an empty array if the endpoint isn't yet enabled in production.
+ */
+export async function getGroupRegistrationMembers(
+	eventId: string,
+	groupId: string
+): Promise<any[]> {
+	try {
+		const res = await fetch(
+			`${EVENT_URL}/api/v1/events/${eventId}/registrations/group/${groupId}/members`
+		);
+		if (!res.ok) return [];
+		const data = await res.json();
+		return data?.data ?? data?.members ?? data ?? [];
+	} catch {
+		return [];
+	}
 }

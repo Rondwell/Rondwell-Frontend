@@ -10,6 +10,19 @@ export default defineConfig({
 		SvelteKitPWA({
 			registerType: 'autoUpdate',
 			includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+			workbox: {
+				// Large hero/marketing images don't need to live in the precache
+				// (they'd bloat the service worker and be re-fetched on every SW
+				// update). Exclude them so they're served at runtime instead.
+				globIgnores: [
+					'**/present.svg',
+					'**/jennifer.svg',
+					'**/hero-event-1.png'
+				],
+				// Safety net so a single near-limit asset can't fail the build.
+				// (Default is 2 MiB.)
+				maximumFileSizeToCacheInBytes: 4 * 1024 * 1024
+			},
 			manifest: {
 				name: 'Rondwell - Smart Event Management Platform',
 				short_name: 'Rondwell',

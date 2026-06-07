@@ -6,10 +6,14 @@
 		removeBankAccount,
 		resolveBankAccount,
 	} from '$lib/services/wallet.services';
+	import { authState } from '$lib/stores/auth.store';
 	import { financialErrorMessage } from '$lib/utils/financialErrorCopy';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
+	import SettingsLinkCard from './SettingsLinkCard.svelte';
+
+	$: isOrganizer = $authState.activeProfile?.role === 'ORGANIZER';
 
 	// Bank accounts
 	let bankAccounts: { id: string; bankName: string; accountNumber: string; accountName: string }[] = [];
@@ -182,6 +186,52 @@
 		<div class="flex h-32 flex-col items-center justify-center rounded-lg border bg-white">
 			<Icon icon="mdi:credit-card-outline" class="mb-1 text-2xl text-gray-300" />
 			<p class="text-sm text-gray-400">Card management coming soon.</p>
+		</div>
+	</div>
+
+	<!-- Transactions, refunds & disputes -->
+	<div class="border-t pt-8">
+		<div class="mb-4">
+			<h2 class="text-lg font-semibold">Transactions & Disputes</h2>
+			<p class="text-sm text-[#8C8F93]">
+				Manage escrows, refunds, chargebacks, and tax records tied to your payments.
+			</p>
+		</div>
+		<div class="space-y-3">
+			<SettingsLinkCard
+				icon="mdi:safe-square-outline"
+				title="Escrows"
+				description="Vendor invoice payments held in escrow before release."
+				href="/account/escrows?from=payments"
+				iconBg="bg-amber-50"
+				iconColor="text-amber-600"
+			/>
+			<SettingsLinkCard
+				icon="mdi:cash-refund"
+				title="Refunds"
+				description="Refunds issued to you for events and bookings."
+				href="/account/refunds?from=payments"
+				iconBg="bg-orange-50"
+				iconColor="text-orange-600"
+			/>
+			<SettingsLinkCard
+				icon="mdi:scale-balance"
+				title="Disputes"
+				description="Chargebacks raised against your transactions."
+				href="/account/disputes?from=payments"
+				iconBg="bg-purple-50"
+				iconColor="text-purple-600"
+			/>
+			{#if isOrganizer}
+				<SettingsLinkCard
+					icon="mdi:receipt-text-outline"
+					title="Tax & VAT"
+					description="Manage your TIN and download quarterly VAT reports."
+					href="/account/tax?from=payments"
+					iconBg="bg-blue-50"
+					iconColor="text-blue-600"
+				/>
+			{/if}
 		</div>
 	</div>
 </div>

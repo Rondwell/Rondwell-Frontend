@@ -22,6 +22,7 @@
 	} from '$lib/services/tax.services';
 	import { financialErrorMessage } from '$lib/utils/financialErrorCopy';
 	import { formatMoney } from '$lib/utils/money';
+	import SettingsBackButton from '$lib/components/SettingsBackButton.svelte';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 

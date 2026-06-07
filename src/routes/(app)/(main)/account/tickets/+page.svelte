@@ -10,6 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { getMyTickets, type MyTicket } from '$lib/services/ticket.services';
 	import { formatMoney } from '$lib/utils/money';
+	import SettingsBackButton from '$lib/components/SettingsBackButton.svelte';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -60,7 +61,8 @@
 	<title>My Tickets · Rondwell</title>
 </svelte:head>
 
-<div class="mx-auto max-w-4xl p-4 sm:p-6">
+<div class="max-w-4xl">
+	<SettingsBackButton fallbackTab="orders" />
 	<div class="mb-6">
 		<h1 class="text-2xl font-bold sm:text-3xl">My Tickets</h1>
 		<p class="mt-1 text-sm text-gray-500">Manage your tickets, request transfers, or resell when allowed.</p>

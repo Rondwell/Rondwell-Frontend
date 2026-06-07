@@ -5,6 +5,10 @@
 		begin2FASetup,
 		beginPasskeyRegistration,
 		changePrimaryEmail,
+		verifyPrimaryEmailChange,
+		addAdditionalEmail,
+		verifyAdditionalEmail,
+		removeAdditionalEmail,
 		completePasskeyRegistration,
 		confirm2FASetup,
 		disable2FA,
@@ -38,6 +42,7 @@
 	let userEmail = '';
 	let userPhone = '';
 	let phoneInput = '';
+	let additionalEmails: string[] = [];
 	let hasPassword = false;
 	let twoFactorEnabled = false;
 	let sessions: any[] = [];
@@ -46,9 +51,23 @@
 	// UI state
 	let saving = false;
 	let savingLinks = false;
+	// ── Primary email change (2-step: request OTP → verify) ──────────────────────
 	let showChangeEmailInput = false;
 	let newEmailInput = '';
 	let changingEmail = false;
+	let emailStep: 'enter' | 'verify' = 'enter';
+	let emailOtpInput = '';
+	let verifyingEmail = false;
+	let pendingEmail = '';
+	// ── Secondary email add (2-step: request OTP → verify) ───────────────────────
+	let showAddEmailInput = false;
+	let newSecondaryEmail = '';
+	let addingSecondary = false;
+	let secondaryStep: 'enter' | 'verify' = 'enter';
+	let secondaryOtpInput = '';
+	let verifyingSecondary = false;
+	let pendingSecondaryEmail = '';
+	let removingEmail = '';
 	let updatingPhone = false;
 	let requestingPassword = false;
 	let twoFALoading = false;
@@ -126,6 +145,97 @@
 		}
 	}
 
+	// ── Primary email change handlers ────────────────────────────────────────────
+	function resetEmailChange() {
+		showChangeEmailInput = false;
+		emailStep = 'enter';
+		newEmailInput = '';
+		emailOtpInput = '';
+		pendingEmail = '';
+	}
+
+	async function handleRequestEmailChange() {
+		if (!newEmailInput) return;
+		changingEmail = true;
+		try {
+			await changePrimaryEmail(newEmailInput);
+			pendingEmail = newEmailInput;
+			emailStep = 'verify';
+			showToast('Verification code sent to your new email');
+		} catch (e: any) {
+			showToast(e.message, 'error');
+		} finally {
+			changingEmail = false;
+		}
+	}
+
+	async function handleVerifyEmailChange() {
+		if (!emailOtpInput) return;
+		verifyingEmail = true;
+		try {
+			const res = await verifyPrimaryEmailChange(emailOtpInput);
+			userEmail = res?.data?.email ?? pendingEmail;
+			showToast('Your primary email has been updated');
+			resetEmailChange();
+		} catch (e: any) {
+			showToast(e.message, 'error');
+		} finally {
+			verifyingEmail = false;
+		}
+	}
+
+	// ── Secondary email handlers ─────────────────────────────────────────────────
+	function resetAddEmail() {
+		showAddEmailInput = false;
+		secondaryStep = 'enter';
+		newSecondaryEmail = '';
+		secondaryOtpInput = '';
+		pendingSecondaryEmail = '';
+	}
+
+	async function handleRequestAddEmail() {
+		if (!newSecondaryEmail) return;
+		addingSecondary = true;
+		try {
+			await addAdditionalEmail(newSecondaryEmail);
+			pendingSecondaryEmail = newSecondaryEmail;
+			secondaryStep = 'verify';
+			showToast('Verification code sent to that email');
+		} catch (e: any) {
+			showToast(e.message, 'error');
+		} finally {
+			addingSecondary = false;
+		}
+	}
+
+	async function handleVerifyAddEmail() {
+		if (!secondaryOtpInput) return;
+		verifyingSecondary = true;
+		try {
+			const data = await verifyAdditionalEmail(secondaryOtpInput);
+			additionalEmails = data?.additionalEmails ?? [...additionalEmails, pendingSecondaryEmail];
+			showToast('Email added successfully');
+			resetAddEmail();
+		} catch (e: any) {
+			showToast(e.message, 'error');
+		} finally {
+			verifyingSecondary = false;
+		}
+	}
+
+	async function handleRemoveEmail(email: string) {
+		removingEmail = email;
+		try {
+			const data = await removeAdditionalEmail(email);
+			additionalEmails = data?.additionalEmails ?? additionalEmails.filter((e) => e !== email);
+			showToast('Email removed');
+		} catch (e: any) {
+			showToast(e.message, 'error');
+		} finally {
+			removingEmail = '';
+		}
+	}
+
 	onMount(async () => {
 		const currentToken = get(authState).token ?? '';
 		if (!currentToken) return;
@@ -139,6 +249,20 @@
 			userEmail = user.email ?? '';
 			userPhone = user.phoneNumber ?? '';
 			phoneInput = userPhone;
+			additionalEmails = user.additionalEmails ?? [];
+			// If a primary-email change is awaiting verification, resume at the OTP step.
+			if (user.pendingEmail) {
+				pendingEmail = user.pendingEmail;
+				newEmailInput = user.pendingEmail;
+				emailStep = 'verify';
+				showChangeEmailInput = true;
+			}
+			if (user.pendingAdditionalEmail) {
+				pendingSecondaryEmail = user.pendingAdditionalEmail;
+				newSecondaryEmail = user.pendingAdditionalEmail;
+				secondaryStep = 'verify';
+				showAddEmailInput = true;
+			}
 			hasPassword = user.hasPassword;
 			twoFactorEnabled = user.twoFactorEnabled;
 			sessions = sess ?? [];
@@ -183,7 +307,7 @@
 <!-- Your Profile Section -->
 <div class="mb-12">
 	<h2 class="mb-1 text-2xl font-medium">Your Profile</h2>
-	<p class="mb-4 text-sm text-[#8C8F93]">Choose how you are displayed as a host or guest.</p>
+	<p class="mb-4 text-sm text-[#8C8F93]">Choose how you are displayed as an organizer or attendee.</p>
 
 	<div class="flex w-full flex-col-reverse gap-6 md:flex-row md:gap-12">
 		<div class="w-full max-w-[350px] space-y-4 text-[#84857A]">
@@ -273,11 +397,17 @@
 				<h2 class="mb-1 text-lg font-semibold">Emails</h2>
 				<p class="mb-4 text-sm text-[#8C8F93]">Add additional emails to receive event invites sent to those addresses.</p>
 			</span>
-			<button on:click={() => (showChangeEmailInput = !showChangeEmailInput)} class="flex items-center gap-1 rounded-md bg-[#EBECED] px-3 py-1 text-sm font-medium text-[#616265] hover:bg-gray-200">
-				<Icon icon="mdi:plus" class="text-xl" /> {showChangeEmailInput ? 'Cancel' : 'Change Email'}
-			</button>
+			<div class="flex items-center gap-2">
+				<button on:click={() => { if (showChangeEmailInput) { resetEmailChange(); } else { showChangeEmailInput = true; } }} class="flex items-center gap-1 rounded-md bg-[#EBECED] px-3 py-1 text-sm font-medium text-[#616265] hover:bg-gray-200">
+					<Icon icon="mdi:pencil-outline" class="text-lg" /> {showChangeEmailInput ? 'Cancel' : 'Change Email'}
+				</button>
+				<button on:click={() => { if (showAddEmailInput) { resetAddEmail(); } else { showAddEmailInput = true; } }} class="flex items-center gap-1 rounded-md bg-[#EBECED] px-3 py-1 text-sm font-medium text-[#616265] hover:bg-gray-200">
+					<Icon icon="mdi:plus" class="text-xl" /> {showAddEmailInput ? 'Cancel' : 'Add Email'}
+				</button>
+			</div>
 		</div>
 
+		<!-- Primary email -->
 		<div class="relative mb-2 rounded-md bg-[#FDFDFD] p-3 shadow-sm">
 			<div class="flex items-center justify-between">
 				<div>
@@ -290,20 +420,70 @@
 			</div>
 		</div>
 
+		<!-- Additional emails -->
+		{#each additionalEmails as email}
+			<div class="relative mb-2 rounded-md bg-[#FDFDFD] p-3 shadow-sm">
+				<div class="flex items-center justify-between">
+					<span class="flex items-center gap-2 text-sm font-medium">
+						{email}
+						<span class="w-fit rounded-md bg-[#EBECED] px-2 py-1 text-xs text-[#616265]">Additional</span>
+					</span>
+					<button on:click={() => handleRemoveEmail(email)} disabled={removingEmail === email} class="text-xs text-red-500 hover:underline disabled:opacity-50">
+						{removingEmail === email ? 'Removing...' : 'Remove'}
+					</button>
+				</div>
+			</div>
+		{/each}
+
+		<!-- Change primary email flow -->
 		{#if showChangeEmailInput}
-			<div class="mt-3 flex gap-2">
-				<input type="email" bind:value={newEmailInput} placeholder="New email address" class="h-[42px] flex-1 rounded-[7.5px] bg-white px-3 shadow-sm focus:outline-none" />
-				<button on:click={async () => {
-					if (!newEmailInput) return;
-					changingEmail = true;
-					try {
-						await changePrimaryEmail(newEmailInput);
-						showToast('Verification sent to new email');
-						showChangeEmailInput = false; newEmailInput = '';
-					} catch (e: any) { showToast(e.message, 'error'); } finally { changingEmail = false; }
-				}} disabled={changingEmail} class="rounded-md bg-black px-4 py-2 text-sm text-white disabled:opacity-50">
-					{changingEmail ? 'Sending...' : 'Send Verification'}
-				</button>
+			<div class="mt-3 rounded-md bg-[#FDFDFD] p-3 shadow-sm">
+				{#if emailStep === 'enter'}
+					<div class="flex gap-2">
+						<input type="email" bind:value={newEmailInput} placeholder="New primary email address" class="h-[42px] flex-1 rounded-[7.5px] bg-white px-3 shadow-sm focus:outline-none" />
+						<button on:click={handleRequestEmailChange} disabled={changingEmail} class="rounded-md bg-black px-4 py-2 text-sm text-white disabled:opacity-50">
+							{changingEmail ? 'Sending...' : 'Send Code'}
+						</button>
+					</div>
+					<p class="mt-2 text-xs text-[#8C8F93]">We'll send a verification code to the new address. Your email only changes once you confirm the code.</p>
+				{:else}
+					<p class="mb-2 text-sm text-gray-600">Enter the 6-digit code we sent to <strong>{pendingEmail}</strong>.</p>
+					<div class="flex gap-2">
+						<input type="text" inputmode="numeric" maxlength={6} bind:value={emailOtpInput} placeholder="6-digit code" class="h-[42px] w-40 rounded-[7.5px] bg-white px-3 shadow-sm focus:outline-none" />
+						<button on:click={handleVerifyEmailChange} disabled={verifyingEmail} class="rounded-md bg-black px-4 py-2 text-sm text-white disabled:opacity-50">
+							{verifyingEmail ? 'Verifying...' : 'Verify & Update'}
+						</button>
+						<button on:click={handleRequestEmailChange} disabled={changingEmail} class="rounded-md bg-gray-200 px-3 py-2 text-sm">
+							{changingEmail ? '...' : 'Resend'}
+						</button>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		<!-- Add additional email flow -->
+		{#if showAddEmailInput}
+			<div class="mt-3 rounded-md bg-[#FDFDFD] p-3 shadow-sm">
+				{#if secondaryStep === 'enter'}
+					<div class="flex gap-2">
+						<input type="email" bind:value={newSecondaryEmail} placeholder="Additional email address" class="h-[42px] flex-1 rounded-[7.5px] bg-white px-3 shadow-sm focus:outline-none" />
+						<button on:click={handleRequestAddEmail} disabled={addingSecondary} class="rounded-md bg-black px-4 py-2 text-sm text-white disabled:opacity-50">
+							{addingSecondary ? 'Sending...' : 'Send Code'}
+						</button>
+					</div>
+					<p class="mt-2 text-xs text-[#8C8F93]">We'll send a verification code to confirm you own this address.</p>
+				{:else}
+					<p class="mb-2 text-sm text-gray-600">Enter the 6-digit code we sent to <strong>{pendingSecondaryEmail}</strong>.</p>
+					<div class="flex gap-2">
+						<input type="text" inputmode="numeric" maxlength={6} bind:value={secondaryOtpInput} placeholder="6-digit code" class="h-[42px] w-40 rounded-[7.5px] bg-white px-3 shadow-sm focus:outline-none" />
+						<button on:click={handleVerifyAddEmail} disabled={verifyingSecondary} class="rounded-md bg-black px-4 py-2 text-sm text-white disabled:opacity-50">
+							{verifyingSecondary ? 'Verifying...' : 'Verify & Add'}
+						</button>
+						<button on:click={handleRequestAddEmail} disabled={addingSecondary} class="rounded-md bg-gray-200 px-3 py-2 text-sm">
+							{addingSecondary ? '...' : 'Resend'}
+						</button>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>

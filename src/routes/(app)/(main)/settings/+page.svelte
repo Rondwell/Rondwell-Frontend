@@ -5,6 +5,8 @@
 	import Nav from '../../components/Nav.svelte';
 	import Account from './Components/Account.svelte';
 	import CallbackDomains from './Components/CallbackDomains.svelte';
+	import NotificationPreferences from './Components/NotificationPreferences.svelte';
+	import Orders from './Components/Orders.svelte';
 	import PaymentMethods from './Components/PaymentMethods.svelte';
 	import Preferences from './Components/Preferences.svelte';
 	import Subscription from './Components/Subscription.svelte';
@@ -13,14 +15,7 @@
 	let activeTab = 'account';
 
 	$: isOrganizer = $authState.activeProfile?.role === 'ORGANIZER';
-	$: validTabs = [
-		'account',
-		'preferences',
-		'wallet',
-		'payments',
-		'subscription',
-		...(isOrganizer ? ['domains'] : []),
-	];
+	$: validTabs = ['account', 'wallet', 'payments', 'subscription', 'orders'];
 
 	onMount(() => {
 		const tabParam = $page.url.searchParams.get('tab');
@@ -37,7 +32,11 @@
 		}
 	}
 
-	const baseTabs = [
+	// Static tab set. Preferences and Custom Domains are no longer top-level
+	// tabs — they live as sections inside the Account tab. Tax / escrows /
+	// refunds / disputes are reachable as entry cards inside Payments, and
+	// purchases / tickets inside Orders.
+	const tabs = [
 		{
 			id: 'account',
 			label: 'Account',
@@ -64,61 +63,13 @@
 				</svg>`
 		},
 		{
-			id: 'preferences',
-			label: 'Preferences',
-			icon: `<svg
-					width="20"
-					height="20"
-					viewBox="0 0 20 20"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path
-						d="M15.832 18.9557C15.4904 18.9557 15.207 18.6724 15.207 18.3307V9.16406C15.207 8.8224 15.4904 8.53906 15.832 8.53906C16.1737 8.53906 16.457 8.8224 16.457 9.16406V18.3307C16.457 18.6724 16.1737 18.9557 15.832 18.9557Z"
-						fill="currentColor"
-					/>
-					<path
-						d="M15.832 6.45573C15.4904 6.45573 15.207 6.1724 15.207 5.83073V1.66406C15.207 1.3224 15.4904 1.03906 15.832 1.03906C16.1737 1.03906 16.457 1.3224 16.457 1.66406V5.83073C16.457 6.1724 16.1737 6.45573 15.832 6.45573Z"
-						fill="currentColor"
-					/>
-					<path
-						d="M10 18.9557C9.65833 18.9557 9.375 18.6724 9.375 18.3307V14.1641C9.375 13.8224 9.65833 13.5391 10 13.5391C10.3417 13.5391 10.625 13.8224 10.625 14.1641V18.3307C10.625 18.6724 10.3417 18.9557 10 18.9557Z"
-						fill="currentColor"
-					/>
-					<path
-						d="M10 11.4557C9.65833 11.4557 9.375 11.1724 9.375 10.8307V1.66406C9.375 1.3224 9.65833 1.03906 10 1.03906C10.3417 1.03906 10.625 1.3224 10.625 1.66406V10.8307C10.625 11.1724 10.3417 11.4557 10 11.4557Z"
-						fill="currentColor"
-					/>
-					<path
-						d="M4.16797 18.9557C3.8263 18.9557 3.54297 18.6724 3.54297 18.3307V9.16406C3.54297 8.8224 3.8263 8.53906 4.16797 8.53906C4.50964 8.53906 4.79297 8.8224 4.79297 9.16406V18.3307C4.79297 18.6724 4.50964 18.9557 4.16797 18.9557Z"
-						fill="currentColor"
-					/>
-					<path
-						d="M4.16797 6.45573C3.8263 6.45573 3.54297 6.1724 3.54297 5.83073V1.66406C3.54297 1.3224 3.8263 1.03906 4.16797 1.03906C4.50964 1.03906 4.79297 1.3224 4.79297 1.66406V5.83073C4.79297 6.1724 4.50964 6.45573 4.16797 6.45573Z"
-						fill="currentColor"
-					/>
-					<path
-						d="M5.83333 9.78906H2.5C2.15833 9.78906 1.875 9.50573 1.875 9.16406C1.875 8.8224 2.15833 8.53906 2.5 8.53906H5.83333C6.175 8.53906 6.45833 8.8224 6.45833 9.16406C6.45833 9.50573 6.175 9.78906 5.83333 9.78906Z"
-						fill="currentColor"
-					/>
-					<path
-						d="M17.5013 9.78906H14.168C13.8263 9.78906 13.543 9.50573 13.543 9.16406C13.543 8.8224 13.8263 8.53906 14.168 8.53906H17.5013C17.843 8.53906 18.1263 8.8224 18.1263 9.16406C18.1263 9.50573 17.843 9.78906 17.5013 9.78906Z"
-						fill="currentColor"
-					/>
-					<path
-						d="M11.6654 11.4609H8.33203C7.99036 11.4609 7.70703 11.1776 7.70703 10.8359C7.70703 10.4943 7.99036 10.2109 8.33203 10.2109H11.6654C12.007 10.2109 12.2904 10.4943 12.2904 10.8359C12.2904 11.1776 12.007 11.4609 11.6654 11.4609Z"
-						fill="currentColor"
-					/>
-				</svg>`
-		},
-		{
 			id: 'wallet',
 			label: 'Wallet',
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.8327 9.29167H5.83268" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.66602 9.29232V5.45065C1.66602 3.72482 3.06602 2.32482 4.79185 2.32482H9.37435C11.1002 2.32482 12.5002 3.39982 12.5002 5.12565" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.5672 10.1172C14.1505 10.5089 13.9255 11.0922 13.9922 11.7089C14.0922 12.6839 14.9838 13.3922 15.9672 13.3922H17.5005V14.5422C17.5005 16.3339 16.0422 17.7922 14.2505 17.7922H4.58382C2.79215 17.7922 1.33382 16.3339 1.33382 14.5422V8.62552C1.33382 6.83385 2.79215 5.37552 4.58382 5.37552H14.2505C16.0338 5.37552 17.5005 6.84219 17.5005 8.62552V10.1089H15.8588C15.3505 10.1089 14.8838 10.3089 14.5672 10.1172Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.3338 10.8161V12.6828C18.3338 13.0745 18.0172 13.3911 17.6172 13.3911H15.9338C15.1672 13.3911 14.4672 12.8161 14.4005 12.0495C14.3588 11.5995 14.5255 11.1745 14.8172 10.8745C15.0755 10.6078 15.4338 10.4578 15.8255 10.4578H17.6172C18.0172 10.4578 18.3338 10.7745 18.3338 11.1661V10.8161Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 		},
 		{
 			id: 'payments',
-			label: 'Payment Methods',
+			label: 'Payments',
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.66699 7.08333H18.3337" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13.75H6.66667" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.75 13.75H12.0833" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.36699 2.91667H14.6253C17.592 2.91667 18.3337 3.65 18.3337 6.58333V13.4167C18.3337 16.35 17.592 17.0833 14.6337 17.0833H5.36699C2.40866 17.0833 1.66699 16.35 1.66699 13.4167V6.58333C1.66699 3.65 2.40866 2.91667 5.36699 2.91667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 		},
 		{
@@ -126,23 +77,12 @@
 			label: 'Subscription',
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 1.66667L12.575 6.88333L18.3333 7.725L14.1667 11.7833L15.15 17.5167L10 14.8083L4.85 17.5167L5.83333 11.7833L1.66667 7.725L7.425 6.88333L10 1.66667Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 		},
-		// FE-P1-15: organizer-only callback-domains tab. Hidden for users
-		// without an organizer profile because they have no events that
-		// could redirect through a custom domain.
+		{
+			id: 'orders',
+			label: 'Orders',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 2.5H3.83333L5.5 12.5H15.5L17.5 5.83333H4.83333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.66667 17.5C7.35702 17.5 7.91667 16.9404 7.91667 16.25C7.91667 15.5596 7.35702 15 6.66667 15C5.97631 15 5.41667 15.5596 5.41667 16.25C5.41667 16.9404 5.97631 17.5 6.66667 17.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.1667 17.5C14.857 17.5 15.4167 16.9404 15.4167 16.25C15.4167 15.5596 14.857 15 14.1667 15C13.4763 15 12.9167 15.5596 12.9167 16.25C12.9167 16.9404 13.4763 17.5 14.1667 17.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+		}
 	];
-
-	// `baseTabs` is the static set; `tabs` reactively appends the
-	// organizer-only Custom Domains tab when the user has the role.
-	$: tabs = isOrganizer
-		? [
-				...baseTabs,
-				{
-					id: 'domains',
-					label: 'Custom Domains',
-					icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 18.3333C14.6024 18.3333 18.3333 14.6024 18.3333 10C18.3333 5.39763 14.6024 1.66667 10 1.66667C5.39763 1.66667 1.66667 5.39763 1.66667 10C1.66667 14.6024 5.39763 18.3333 10 18.3333Z" stroke="currentColor" stroke-width="1.5"/><path d="M1.66667 10H18.3333" stroke="currentColor" stroke-width="1.5"/><path d="M10 1.66667C12.0844 3.94843 13.2691 6.91036 13.3333 10C13.2691 13.0896 12.0844 16.0516 10 18.3333C7.91556 16.0516 6.73086 13.0896 6.66667 10C6.73086 6.91036 7.91556 3.94843 10 1.66667Z" stroke="currentColor" stroke-width="1.5"/></svg>`
-				}
-			]
-		: baseTabs;
 </script>
 
 <div class="w-full max-w-4xl">
@@ -155,15 +95,18 @@
 	<!-- Content Area -->
 	{#if activeTab === 'account'}
 		<Account />
-	{:else if activeTab === 'preferences'}
 		<Preferences />
+		<NotificationPreferences />
+		{#if isOrganizer}
+			<CallbackDomains />
+		{/if}
 	{:else if activeTab === 'wallet'}
 		<Wallet />
 	{:else if activeTab === 'payments'}
 		<PaymentMethods />
 	{:else if activeTab === 'subscription'}
 		<Subscription />
-	{:else if activeTab === 'domains' && isOrganizer}
-		<CallbackDomains />
+	{:else if activeTab === 'orders'}
+		<Orders />
 	{/if}
 </div>

@@ -12,6 +12,7 @@
 	} from '$lib/services/marketplace.services';
 	import { financialErrorMessage } from '$lib/utils/financialErrorCopy';
 	import { formatMoney } from '$lib/utils/money';
+	import SettingsBackButton from '$lib/components/SettingsBackButton.svelte';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -46,6 +47,7 @@
 <svelte:head><title>My purchases — Rondwell</title></svelte:head>
 
 <div class="max-w-4xl">
+	<SettingsBackButton fallbackTab="orders" />
 	<div class="mb-6">
 		<h1 class="text-2xl font-bold sm:text-3xl">My purchases</h1>
 		<p class="mt-1 text-sm text-[#8C8F93]">

@@ -12,6 +12,9 @@ export async function getMe() {
   return data.data as {
     id: string;
     email: string;
+    additionalEmails?: string[];
+    pendingEmail?: string | null;
+    pendingAdditionalEmail?: string | null;
     phoneNumber?: string;
     isEmailVerified: boolean;
     isPhoneVerified: boolean;
@@ -68,6 +71,49 @@ export async function changePrimaryEmail(newEmail: string) {
   const json = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Failed to change email');
   return json;
+}
+
+export async function verifyPrimaryEmailChange(otp: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/email/primary/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ otp }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to verify email');
+  return json;
+}
+
+export async function addAdditionalEmail(email: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/email/add`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to add email');
+  return json;
+}
+
+export async function verifyAdditionalEmail(otp: string) {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/email/add/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ otp }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to verify email');
+  return json.data as { additionalEmails: string[] };
+}
+
+export async function removeAdditionalEmail(email: string) {
+  const res = await authFetch(
+    `${BASE_URL}/api/v1/profile/email/${encodeURIComponent(email)}`,
+    { method: 'DELETE' },
+  );
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to remove email');
+  return json.data as { additionalEmails: string[] };
 }
 
 export async function updatePhoneNumber(phoneNumber: string) {

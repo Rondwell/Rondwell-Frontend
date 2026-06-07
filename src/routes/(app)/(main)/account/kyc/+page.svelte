@@ -8,6 +8,7 @@
 	import { goto } from '$app/navigation';
 	import { kycStore, loadKyc } from '$lib/stores/kyc.store';
 	import { formatMoney } from '$lib/utils/money';
+	import SettingsBackButton from '$lib/components/SettingsBackButton.svelte';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -26,6 +27,7 @@
 <svelte:head><title>Identity verification — Rondwell</title></svelte:head>
 
 <div class="max-w-3xl">
+	<SettingsBackButton fallbackTab="wallet" />
 	<div class="mb-6">
 		<h1 class="text-2xl font-bold sm:text-3xl">Identity verification</h1>
 		<p class="mt-1 text-sm text-[#8C8F93]">

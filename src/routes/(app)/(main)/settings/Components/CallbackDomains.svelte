@@ -120,7 +120,7 @@
 	}
 </script>
 
-<div class="mb-12">
+<div class="mb-12 border-t pt-12">
 	<div class="mb-6">
 		<h2 class="text-lg font-semibold">Custom callback domains</h2>
 		<p class="text-sm text-[#8C8F93]">

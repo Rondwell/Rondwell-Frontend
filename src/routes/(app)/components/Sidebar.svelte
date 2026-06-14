@@ -7,14 +7,17 @@
 	import { clickOutside } from '$lib/utils/constant';
 	import { onMount } from 'svelte';
 	import ProfileMenu from './ProfileMenu.svelte';
+	import NotificationMenu from './NotificationMenu.svelte';
 
 	import ProfileSwitchOverlay from '$lib/components/ProfileSwitchOverlay.svelte';
 	import { getAllProfiles, switchProfile } from '$lib/services/profile.services';
 	import { authState, isAuthenticated, setActiveProfile } from '$lib/stores/auth.store';
+	import { unreadCount, startUnreadPolling, stopUnreadPolling } from '$lib/stores/notifications.store';
 
 	export let background_color = '';
 	export let show = true;
 	let showMenu = false;
+	let showNotifications = false;
 	let activeItem = '';
 	let showSignInModal = false;
 	let switchingToOrganizer = false;
@@ -142,8 +145,19 @@
 	onMount(() => {
 		checkScreenSize();
 		window.addEventListener('resize', checkScreenSize);
-		return () => window.removeEventListener('resize', checkScreenSize);
+		if ($isAuthenticated) startUnreadPolling();
+		return () => {
+			window.removeEventListener('resize', checkScreenSize);
+			stopUnreadPolling();
+		};
 	});
+
+	// Start/stop polling as auth state changes.
+	$: if ($isAuthenticated) {
+		startUnreadPolling();
+	} else {
+		stopUnreadPolling();
+	}
 
 	$: if ($page && $page.url) {
 		let path = $page.url.pathname; // e.g., '/discover'
@@ -191,7 +205,23 @@
 			<button on:click={goHome}>
 				<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
 			</button>
-			<img src="/notification.svg" alt="" />
+			<div class="relative" use:clickOutside={() => (showNotifications = false)}>
+				<button
+					on:click={() => (showNotifications = !showNotifications)}
+					class="relative"
+					aria-label="Notifications"
+				>
+					<img src="/notification.svg" alt="Notifications" />
+					{#if $unreadCount > 0}
+						<span
+							class="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#DB3EC6] px-1 text-[10px] font-semibold text-white"
+						>
+							{$unreadCount > 99 ? '99+' : $unreadCount}
+						</span>
+					{/if}
+				</button>
+				<NotificationMenu bind:showMenu={showNotifications} className="absolute top-12 right-0 z-50" />
+			</div>
 		</div>
 		<!-- Mobile Bottom Navigation -->
 		<nav
@@ -320,7 +350,23 @@
 
 		<!-- Bottom utility icons -->
 		<div class="mt-auto flex w-full flex-col items-center justify-center space-y-4">
-			<img src="/notification.svg" alt="" class="cursor-pointer" />
+			<div class="relative" use:clickOutside={() => (showNotifications = false)}>
+				<button
+					on:click={() => (showNotifications = !showNotifications)}
+					class="relative cursor-pointer"
+					aria-label="Notifications"
+				>
+					<img src="/notification.svg" alt="Notifications" />
+					{#if $unreadCount > 0}
+						<span
+							class="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#DB3EC6] px-1 text-[10px] font-semibold text-white"
+						>
+							{$unreadCount > 99 ? '99+' : $unreadCount}
+						</span>
+					{/if}
+				</button>
+				<NotificationMenu bind:showMenu={showNotifications} />
+			</div>
 			<div use:clickOutside={() => (showMenu = false)}>
 				<button
 					on:click={() => {

@@ -8,7 +8,6 @@
 	import NotificationPreferences from './Components/NotificationPreferences.svelte';
 	import Orders from './Components/Orders.svelte';
 	import PaymentMethods from './Components/PaymentMethods.svelte';
-	import Preferences from './Components/Preferences.svelte';
 	import Subscription from './Components/Subscription.svelte';
 	import Wallet from './Components/Wallet.svelte';
 
@@ -95,7 +94,6 @@
 	<!-- Content Area -->
 	{#if activeTab === 'account'}
 		<Account />
-		<Preferences />
 		<NotificationPreferences />
 		{#if isOrganizer}
 			<CallbackDomains />

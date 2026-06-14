@@ -3,6 +3,28 @@ import { authFetch } from '$lib/services/api.client';
 import { throwApiError } from '$lib/utils/errorMessage';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
+// ─── Client-side validation helpers ───────────────────────────────────────────
+// Mirror the server-side rules (user-service ValidatorUtil) so invalid input is
+// rejected immediately with a clear message instead of round-tripping and, in
+// the case of emails, falsely showing "verification sent".
+const NAME_RE = /^[\p{L}\p{M}][\p{L}\p{M} .'-]{0,99}$/u;
+const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/;
+const EMAIL_RE =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+
+export function isValidName(name: string): boolean {
+  return NAME_RE.test(name.trim());
+}
+export function isValidUsername(username: string): boolean {
+  return USERNAME_RE.test(username.trim());
+}
+export function isValidEmail(email: string): boolean {
+  const v = email.trim();
+  return v.length > 0 && v.length <= 254 && EMAIL_RE.test(v);
+}
+
 // ─── User (account-level) ─────────────────────────────────────────────────────
 
 export async function getMe() {
@@ -27,6 +49,17 @@ export async function getMe() {
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
 export async function updatePersonalInfo(profileId: string, data: { name?: string; username?: string; bio?: string }) {
+  // Validate before hitting the API so users get instant, specific feedback.
+  if (data.name !== undefined && data.name.trim() !== '' && !isValidName(data.name)) {
+    throw new Error(
+      'Name may only contain letters, spaces, hyphens, apostrophes and periods (no special characters such as @ or digits).'
+    );
+  }
+  if (data.username !== undefined && data.username.trim() !== '' && !isValidUsername(data.username)) {
+    throw new Error(
+      'Username must be 3–30 characters and may only contain letters, numbers and underscores (no spaces or special characters such as @).'
+    );
+  }
   const res = await authFetch(`${BASE_URL}/api/v1/profile/${profileId}/personal`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -49,6 +82,14 @@ export async function updateSocialLinks(profileId: string, links: Record<string,
 }
 
 export async function uploadProfilePicture(profileId: string, file: File) {
+  // Enforce type + size client-side to avoid a wasted upload round-trip.
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error('Unsupported image type. Please use JPEG, PNG, WEBP or GIF.');
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    const mb = (file.size / (1024 * 1024)).toFixed(1);
+    throw new Error(`Image is too large (${mb} MB). Maximum allowed size is 5 MB.`);
+  }
   const form = new FormData();
   form.append('file', file);
   const res = await authFetch(`${BASE_URL}/api/v1/profile/${profileId}/profile-picture`, {
@@ -63,6 +104,9 @@ export async function uploadProfilePicture(profileId: string, file: File) {
 // ─── Email / Phone ────────────────────────────────────────────────────────────
 
 export async function changePrimaryEmail(newEmail: string) {
+  if (!isValidEmail(newEmail)) {
+    throw new Error('Please enter a valid email address (e.g. name@example.com).');
+  }
   const res = await authFetch(`${BASE_URL}/api/v1/profile/email/primary`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -85,6 +129,9 @@ export async function verifyPrimaryEmailChange(otp: string) {
 }
 
 export async function addAdditionalEmail(email: string) {
+  if (!isValidEmail(email)) {
+    throw new Error('Please enter a valid email address (e.g. name@example.com).');
+  }
   const res = await authFetch(`${BASE_URL}/api/v1/profile/email/add`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -328,8 +328,8 @@
 		<h2 class="mb-2 text-lg font-semibold sm:mb-3 sm:text-xl">Transfer Event</h2>
 		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm lg:max-w-[70%]">
 			This event is managed by <span class="font-medium text-pink-600">{eventData.collection}</span>, with
-			the admins of the calendar having manage access to the event. You can move it to a different
-			calendar if you want.
+			the admins of the collection having manage access to the event. You can move it to a different
+			collection if you want.
 		</p>
 		<button
 			on:click={transferEvent}

@@ -220,6 +220,18 @@ $: eventLink = eventData?.customLinkSlug
 ? `rondwell.com/e/${eventData.customLinkSlug}`
 : `rondwell.com/event-page/${eventId}`;
 
+let linkCopied = false;
+async function copyEventLink() {
+	try {
+		await navigator.clipboard.writeText(`https://${eventLink}`);
+		linkCopied = true;
+		toast.success('Event link copied!');
+		setTimeout(() => (linkCopied = false), 2000);
+	} catch {
+		toast.error('Could not copy the link. Please copy it manually.');
+	}
+}
+
 async function handleVisibilityChange(newVisibility: string) {
 	visibilityUpdating = true;
 	showVisibilityDropdown = false;
@@ -457,8 +469,11 @@ async function handleVisibilityChange(newVisibility: string) {
 							class="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 rounded-full bg-black/60 px-4 py-2 backdrop-blur-sm"
 						>
 							<span class="truncate text-xs text-white/80">{eventLink}</span>
-							<button class="flex-shrink-0 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-white/30">
-								Copy
+							<button
+								class="flex-shrink-0 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-white/30"
+								on:click={copyEventLink}
+							>
+								{linkCopied ? 'Copied!' : 'Copy'}
 							</button>
 						</div>
 					</div>

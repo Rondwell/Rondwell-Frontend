@@ -44,6 +44,8 @@ export interface AttendeePaymentInitiateBody {
 	ticketDetails: {
 		ticketTypeId: string;
 		quantity: number;
+		/** Optional discount/coupon code. The server validates and applies it; the price stays server-resolved. */
+		couponCode?: string;
 	};
 	paymentMethodDetails: {
 		payment_gateway: 'PAYSTACK';

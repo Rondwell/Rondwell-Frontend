@@ -27,8 +27,16 @@
 
 	const areaOptions: any = {
 		title: 'Subscriber Growth',
-		axes: { left: { mapsTo: 'value', scaleType: 'linear' }, bottom: { mapsTo: 'date', scaleType: 'labels' } },
+		axes: {
+			left: { mapsTo: 'value', scaleType: 'linear', includeZero: true },
+			bottom: {
+				mapsTo: 'date',
+				scaleType: 'time',
+				ticks: { number: 6 }
+			}
+		},
 		curve: 'curveMonotoneX',
+		points: { enabled: false },
 		legend: { enabled: true, position: 'bottom' },
 		height: '330px',
 		color: { scale: { 'Subscribers': '#3b82f6', 'Events': '#8b5cf6' } }
@@ -41,7 +49,13 @@
 
 		if (analytics) {
 			const days = analytics.subscribers?.subscribersByDay || [];
-			subscriberChart = days.map((d: any) => ({ group: 'Subscribers', date: d.date, value: d.count || 0 }));
+			// Carbon's time scale spaces ticks automatically (no squashed/overlapping
+			// labels). Pass real Date objects so the axis renders cleanly.
+			subscriberChart = days.map((d: any) => ({
+				group: 'Subscribers',
+				date: new Date(d.date),
+				value: d.count || 0
+			}));
 
 			const src = analytics.subscribers?.bySource || {};
 			subscriberDonut = [
@@ -68,7 +82,14 @@
 	}
 
 	function fmt(n: number | undefined): string { if (!n) return '0'; return n >= 1000 ? (n / 1000).toFixed(1) + 'K' : n.toLocaleString(); }
-	function fmtCurrency(n: number | undefined): string { if (!n) return '$0'; return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(n); }
+	function fmtCurrency(n: number | undefined, currency?: string): string {
+		const code = (currency || 'NGN').toUpperCase();
+		try {
+			return new Intl.NumberFormat('en-US', { style: 'currency', currency: code, minimumFractionDigits: 0 }).format(n || 0);
+		} catch {
+			return `${code} ${(n || 0).toLocaleString()}`;
+		}
+	}
 	function fmtPercent(n: number | undefined): string { return (n || 0).toFixed(1) + '%'; }
 </script>
 
@@ -115,8 +136,8 @@
 		</div>
 		<div class="rounded-xl bg-white p-4 shadow-sm">
 			<p class="text-xs uppercase text-gray-500">Total Revenue</p>
-			<p class="mt-1 text-2xl font-bold text-blue-600">{fmtCurrency(analytics.events?.totalRevenue)}</p>
-			<p class="mt-1 text-xs text-gray-400">Avg per event: {fmtCurrency(analytics.events?.averageRevenue)}</p>
+			<p class="mt-1 text-2xl font-bold text-blue-600">{fmtCurrency(analytics.events?.totalRevenue, analytics.events?.currency)}</p>
+			<p class="mt-1 text-xs text-gray-400">Avg per event: {fmtCurrency(analytics.events?.averageRevenue, analytics.events?.currency)}</p>
 		</div>
 	</div>
 

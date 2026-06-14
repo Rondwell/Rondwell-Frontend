@@ -1,310 +1,375 @@
 <script lang="ts">
-	import SubscriberDetailModal from '../../people/SubscriberDetailModal.svelte';
+	import { page } from '$app/stores';
+	import { toast } from '$lib/stores/toast.store';
+	import {
+		createEventTag,
+		createMemberTag,
+		deleteEventTag,
+		deleteMemberTag,
+		getEventTags,
+		getMemberTags,
+		updateEventTag,
+		updateMemberTag,
+		type CollectionTag
+	} from '$lib/services/collectionTag.services';
+	import { clickOutside } from '$lib/utils/constant';
+	import Icon from '@iconify/svelte';
+	import { onMount } from 'svelte';
 
-	// Mock data
+	$: collectionId = $page.params.id ?? '';
 
-	let subscribers = [
-		{
-			id: '1',
-			name: 'John Odoemene',
-			payment: '$48.00',
-			events: [
-				{
-					title: 'Megaexe Party',
-					date: 'Jan 25',
-					status: 'Attending'
-				}
-			],
-
-			email: 'johnmedoc23@gmail.com',
-			joinedAt: formatDate(new Date())
-		},
-		{
-			id: '2',
-			name: 'Joe Ken',
-			payment: '',
-			events: [
-				{
-					title: 'Multiflex Party',
-					date: 'September 25',
-					status: 'Not attending'
-				}
-			],
-			email: 'smartme783@gmail.com',
-			joinedAt: formatDate(new Date())
-		},
-		{
-			id: '3',
-			name: '',
-			payment: '$128.00',
-			events: [
-				{
-					title: 'Pool Party',
-					date: 'Dec 26',
-					status: 'Attending'
-				}
-			],
-			email: 'johnmedoce23@gmail.com',
-			joinedAt: formatDate(new Date())
-		}
+	const PALETTE = [
+		'#DB3EC6',
+		'#513BE2',
+		'#EAAB26',
+		'#EA2630',
+		'#3CBD2C',
+		'#2C9BBD',
+		'#9B59B6',
+		'#E67E22',
+		'#1ABC9C',
+		'#34495E'
 	];
-	let searchQuery = '';
 
-	function formatDate(date: Date) {
-		return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+	let eventTags: CollectionTag[] = [];
+	let memberTags: CollectionTag[] = [];
+	let loadingEvent = true;
+	let loadingMember = true;
+
+	// Editor state (shared modal for create + edit of either tag type)
+	let editorOpen = false;
+	let editorKind: 'EVENT' | 'MEMBER' = 'EVENT';
+	let editorTag: CollectionTag | null = null;
+	let editorName = '';
+	let editorColor = PALETTE[0];
+	let editorSaving = false;
+	let editorError = '';
+
+	// Kebab menu state
+	let openMenuId = '';
+
+	async function loadEventTags() {
+		loadingEvent = true;
+		try {
+			eventTags = await getEventTags(collectionId);
+		} catch (e) {
+			console.error('Failed to load event tags', e);
+			eventTags = [];
+		} finally {
+			loadingEvent = false;
+		}
 	}
 
-	// Derived state
-	$: subscriberCount = subscribers?.length;
-
-	// Modal state
-	let selectedSubscriber: any = null;
-	let isSubscriberModalOpen = false;
-
-	function openSubscriber(subscriber: any) {
-		selectedSubscriber = {
-			...subscriber,
-			events: subscriber.events ?? [],
-			eventsCount: subscriber.events?.length ?? 0,
-			checkIns: 0,
-			revenue: 0,
-			tags: []
-		};
-
-		isSubscriberModalOpen = true;
+	async function loadMemberTags() {
+		loadingMember = true;
+		try {
+			memberTags = await getMemberTags(collectionId);
+		} catch (e) {
+			console.error('Failed to load member tags', e);
+			memberTags = [];
+		} finally {
+			loadingMember = false;
+		}
 	}
 
-	function closeSubscriberModal() {
-		selectedSubscriber = null;
-		isSubscriberModalOpen = false;
+	onMount(() => {
+		if (collectionId) {
+			loadEventTags();
+			loadMemberTags();
+		}
+	});
+
+	function openCreate(kind: 'EVENT' | 'MEMBER') {
+		editorKind = kind;
+		editorTag = null;
+		editorName = '';
+		editorColor = PALETTE[Math.floor(Math.random() * PALETTE.length)];
+		editorError = '';
+		editorOpen = true;
+	}
+
+	function openEdit(kind: 'EVENT' | 'MEMBER', tag: CollectionTag) {
+		editorKind = kind;
+		editorTag = tag;
+		editorName = tag.name;
+		editorColor = tag.color || PALETTE[0];
+		editorError = '';
+		editorOpen = true;
+		openMenuId = '';
+	}
+
+	async function saveEditor() {
+		const name = editorName.trim();
+		if (!name) {
+			editorError = 'Tag name is required';
+			return;
+		}
+		editorSaving = true;
+		editorError = '';
+		try {
+			if (editorKind === 'EVENT') {
+				if (editorTag) {
+					await updateEventTag(collectionId, editorTag.id, { name, color: editorColor });
+				} else {
+					await createEventTag(collectionId, name, editorColor);
+				}
+				await loadEventTags();
+			} else {
+				if (editorTag) {
+					await updateMemberTag(collectionId, editorTag.id, { name, color: editorColor });
+				} else {
+					await createMemberTag(collectionId, name, editorColor);
+				}
+				await loadMemberTags();
+			}
+			editorOpen = false;
+			toast.success(editorTag ? 'Tag updated.' : 'Tag created.');
+		} catch (e: any) {
+			editorError = e?.message ?? 'Failed to save tag';
+		} finally {
+			editorSaving = false;
+		}
+	}
+
+	async function removeTag(kind: 'EVENT' | 'MEMBER', tag: CollectionTag) {
+		openMenuId = '';
+		const noun = kind === 'EVENT' ? 'event tag' : 'member tag';
+		if (!confirm(`Delete the "${tag.name}" ${noun}? This removes it from all associated ${kind === 'EVENT' ? 'events' : 'members'}.`)) return;
+		try {
+			if (kind === 'EVENT') {
+				await deleteEventTag(collectionId, tag.id);
+				await loadEventTags();
+			} else {
+				await deleteMemberTag(collectionId, tag.id);
+				await loadMemberTags();
+			}
+			toast.success('Tag deleted.');
+		} catch (e: any) {
+			toast.error(e?.message ?? 'Failed to delete tag');
+		}
 	}
 </script>
 
-<section class="p-4">
-	<!-- Header -->
-
-	<div class="mb-4 flex items-center justify-between">
-		<h2 class="align-center flex justify-center gap-2 text-lg font-semibold">
-			<span> Event Tags </span>
-			<div class="relative inline-flex items-center justify-center">
-				<img src="/circle.svg" alt="" class="h-6 w-6" />
-				<span class="absolute text-xs">{subscriberCount}</span>
-			</div>
+<section class="px-1 py-4 sm:p-4">
+	<!-- ── Event Tags ─────────────────────────────────────────────── -->
+	<div class="mb-3 flex items-center justify-between">
+		<h2 class="flex items-center gap-2 text-lg font-semibold">
+			<span>Event Tags</span>
+			<span
+				class="flex h-6 w-6 items-center justify-center rounded-full border border-black bg-[#EBECED] text-xs"
+				>{eventTags.length}</span
+			>
 		</h2>
 	</div>
-
-	<!-- Description -->
 	<p class="mb-4 text-sm text-[#737577]">
 		Allow visitors to filter events by categories on the collection page.
 	</p>
 
-	<div class="mb-4 gap-3">
-		<div class="relative w-full">
-			<div
-				class="mb-2 h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pl-10 pr-4 text-[#C5C6C6]"
-			></div>
-			<div class="absolute left-3 top-2.5 flex items-center justify-between gap-4">
-				<span class=" text-gray-400">
-					<svg
-						width="11"
-						height="10"
-						viewBox="0 0 11 10"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<ellipse cx="5.5" cy="5" rx="5.5" ry="5" fill="#EAAB26" />
-					</svg>
-				</span>
-				<span>Plan</span>
+	<div class="mb-3 flex flex-col rounded-md bg-[#FDFDFD]">
+		{#if loadingEvent}
+			{#each [1, 2] as _}
+				<div class="flex animate-pulse items-center justify-between border-b px-3 py-3 last:border-b-0">
+					<div class="h-4 w-32 rounded bg-gray-200"></div>
+					<div class="h-4 w-16 rounded bg-gray-200"></div>
+				</div>
+			{/each}
+		{:else if eventTags.length === 0}
+			<div class="flex flex-col items-center justify-center gap-1 px-3 py-8 text-center">
+				<Icon icon="mdi:tag-multiple-outline" class="text-3xl text-gray-300" />
+				<p class="text-sm text-gray-400">No event tags yet.</p>
 			</div>
-
-			<div class="absolute right-0 top-2.5 flex items-center justify-between gap-10">
-				<span class="text-[#A9AAAA]"> 0 Events</span>
-
-				<span class="border-l px-4 py-1.5 text-gray-400">
-					<svg
-						width="20"
-						height="3"
-						viewBox="0 0 20 3"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M1.90176 3C1.39476 3 0.955369 2.86747 0.583573 2.60241C0.211776 2.33133 0.017428 1.99699 0.000528107 1.5994C-0.0079217 1.30422 0.0850274 1.03614 0.279375 0.795181C0.482173 0.554217 0.744121 0.361446 1.06522 0.216867C1.38631 0.0722891 1.72431 0 2.07921 0C2.69605 0 3.16502 0.138554 3.48612 0.415663C3.80722 0.692771 3.97199 1.01807 3.98044 1.39157C3.99734 1.69277 3.90862 1.96687 3.71427 2.21386C3.51992 2.45482 3.2622 2.64759 2.9411 2.79217C2.62 2.93072 2.27356 3 1.90176 3Z"
-							fill="#A9AAAA"
-						/>
-						<path
-							d="M9.45222 3C8.94523 3 8.50583 2.86747 8.13404 2.60241C7.76224 2.33133 7.56789 1.99699 7.55099 1.5994C7.54254 1.30422 7.63549 1.03614 7.82984 0.795181C8.03264 0.554217 8.29458 0.361446 8.61568 0.216867C8.93678 0.0722891 9.27477 0 9.62967 0C10.2465 0 10.7155 0.138554 11.0366 0.415663C11.3577 0.692771 11.5225 1.01807 11.5309 1.39157C11.5478 1.69277 11.4591 1.96687 11.2647 2.21386C11.0704 2.45482 10.8127 2.64759 10.4916 2.79217C10.1705 2.93072 9.82402 3 9.45222 3Z"
-							fill="#A9AAAA"
-						/>
-						<path
-							d="M17.0027 3C16.4957 3 16.0563 2.86747 15.6845 2.60241C15.3127 2.33133 15.1184 1.99699 15.1015 1.5994C15.093 1.30422 15.186 1.03614 15.3803 0.795181C15.5831 0.554217 15.845 0.361446 16.1661 0.216867C16.4872 0.0722891 16.8252 0 17.1801 0C17.797 0 18.2659 0.138554 18.587 0.415663C18.9081 0.692771 19.0729 1.01807 19.0814 1.39157C19.0983 1.69277 19.0095 1.96687 18.8152 2.21386C18.6208 2.45482 18.3631 2.64759 18.042 2.79217C17.7209 2.93072 17.3745 3 17.0027 3Z"
-							fill="#A9AAAA"
-						/>
-					</svg>
-				</span>
-			</div>
-		</div>
-		<div class="mb-3 flex items-center justify-between">
-			<button
-				class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#333537] px-3 py-2 text-xs text-[#FFFFFF] md:text-sm"
-			>
-				<svg
-					width="14"
-					height="14"
-					viewBox="0 0 14 14"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<rect x="6" width="1.5" height="13.5" rx="0.75" fill="white" />
-					<rect
-						y="7.5"
-						width="1.5"
-						height="13.5"
-						rx="0.75"
-						transform="rotate(-90 0 7.5)"
-						fill="white"
-					/>
-				</svg>
-
-				Create Tag
-			</button>
-		</div>
+		{:else}
+			{#each eventTags as tag}
+				<div class="flex items-center justify-between border-b px-3 py-3 last:border-b-0">
+					<div class="flex items-center gap-2">
+						<span class="h-3 w-3 rounded-full" style="background-color: {tag.color}"></span>
+						<span class="text-sm font-medium text-[#131517]">{tag.name}</span>
+					</div>
+					<div class="flex items-center gap-4">
+						<span class="text-sm text-[#A9AAAA]">{tag.eventCount ?? 0} Events</span>
+						<div use:clickOutside={() => openMenuId === `e-${tag.id}` && (openMenuId = '')} class="relative">
+							<button
+								class="border-l px-3 text-gray-400 hover:text-gray-600"
+								aria-label="Tag options"
+								on:click={() => (openMenuId = openMenuId === `e-${tag.id}` ? '' : `e-${tag.id}`)}
+							>
+								<Icon icon="mdi:dots-horizontal" class="text-lg" />
+							</button>
+							{#if openMenuId === `e-${tag.id}`}
+								<div class="absolute right-0 z-50 mt-1 w-36 rounded-lg bg-white p-1 text-sm shadow-lg">
+									<button
+										class="flex w-full items-center gap-2 rounded-md p-2 text-[#616265] hover:bg-[#EBECED]"
+										on:click={() => openEdit('EVENT', tag)}
+									>
+										<Icon icon="mdi:pencil-outline" /> Edit
+									</button>
+									<button
+										class="flex w-full items-center gap-2 rounded-md p-2 text-red-500 hover:bg-red-50"
+										on:click={() => removeTag('EVENT', tag)}
+									>
+										<Icon icon="mdi:trash-can-outline" /> Delete
+									</button>
+								</div>
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/each}
+		{/if}
 	</div>
 
-	<div class="mb-4 flex items-center justify-between">
-		<h2 class="align-center flex justify-center gap-2 text-lg font-semibold">
-			<span> Member Tag </span>
-			<div class="relative inline-flex items-center justify-center">
-				<img src="/circle.svg" alt="" class="h-6 w-6" />
-				<span class="absolute text-xs">{subscriberCount}</span>
-			</div>
+	<button
+		on:click={() => openCreate('EVENT')}
+		class="mb-8 flex items-center gap-2 rounded-md bg-[#333537] px-3 py-2 text-sm text-white hover:bg-black"
+	>
+		<Icon icon="mdi:plus" /> Create Tag
+	</button>
+
+	<!-- ── Member Tags ────────────────────────────────────────────── -->
+	<div class="mb-3 flex items-center justify-between">
+		<h2 class="flex items-center gap-2 text-lg font-semibold">
+			<span>Member Tags</span>
+			<span
+				class="flex h-6 w-6 items-center justify-center rounded-full border border-black bg-[#EBECED] text-xs"
+				>{memberTags.length}</span
+			>
 		</h2>
 	</div>
 	<p class="mb-4 text-sm text-[#737577]">
 		Organize your audience with member tags. These tags are only visible to admins.
 	</p>
 
-	<div class=" gap-3">
-		<div class="relative w-full">
-			<div
-				class="mb-2 h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pl-10 pr-4 text-[#C5C6C6]"
-			></div>
-			<div class="absolute left-3 top-2.5 flex items-center justify-between gap-4">
-				<span class=" text-gray-400">
-					<svg
-						width="11"
-						height="10"
-						viewBox="0 0 11 10"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<ellipse cx="5.5" cy="5" rx="5.5" ry="5" fill="#EAAB26" />
-					</svg>
-				</span>
-				<span>Crypto</span>
+	<div class="mb-3 flex flex-col rounded-md bg-[#FDFDFD]">
+		{#if loadingMember}
+			{#each [1, 2] as _}
+				<div class="flex animate-pulse items-center justify-between border-b px-3 py-3 last:border-b-0">
+					<div class="h-4 w-32 rounded bg-gray-200"></div>
+					<div class="h-4 w-16 rounded bg-gray-200"></div>
+				</div>
+			{/each}
+		{:else if memberTags.length === 0}
+			<div class="flex flex-col items-center justify-center gap-1 px-3 py-8 text-center">
+				<Icon icon="mdi:account-multiple-outline" class="text-3xl text-gray-300" />
+				<p class="text-sm text-gray-400">No member tags yet.</p>
 			</div>
-
-			<div class="absolute right-0 top-2.5 flex items-center justify-between gap-10">
-				<span class="text-[#A9AAAA]"> 0 Events</span>
-
-				<span class="border-l px-4 py-1.5 text-gray-400">
-					<svg
-						width="20"
-						height="3"
-						viewBox="0 0 20 3"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M1.90176 3C1.39476 3 0.955369 2.86747 0.583573 2.60241C0.211776 2.33133 0.017428 1.99699 0.000528107 1.5994C-0.0079217 1.30422 0.0850274 1.03614 0.279375 0.795181C0.482173 0.554217 0.744121 0.361446 1.06522 0.216867C1.38631 0.0722891 1.72431 0 2.07921 0C2.69605 0 3.16502 0.138554 3.48612 0.415663C3.80722 0.692771 3.97199 1.01807 3.98044 1.39157C3.99734 1.69277 3.90862 1.96687 3.71427 2.21386C3.51992 2.45482 3.2622 2.64759 2.9411 2.79217C2.62 2.93072 2.27356 3 1.90176 3Z"
-							fill="#A9AAAA"
-						/>
-						<path
-							d="M9.45222 3C8.94523 3 8.50583 2.86747 8.13404 2.60241C7.76224 2.33133 7.56789 1.99699 7.55099 1.5994C7.54254 1.30422 7.63549 1.03614 7.82984 0.795181C8.03264 0.554217 8.29458 0.361446 8.61568 0.216867C8.93678 0.0722891 9.27477 0 9.62967 0C10.2465 0 10.7155 0.138554 11.0366 0.415663C11.3577 0.692771 11.5225 1.01807 11.5309 1.39157C11.5478 1.69277 11.4591 1.96687 11.2647 2.21386C11.0704 2.45482 10.8127 2.64759 10.4916 2.79217C10.1705 2.93072 9.82402 3 9.45222 3Z"
-							fill="#A9AAAA"
-						/>
-						<path
-							d="M17.0027 3C16.4957 3 16.0563 2.86747 15.6845 2.60241C15.3127 2.33133 15.1184 1.99699 15.1015 1.5994C15.093 1.30422 15.186 1.03614 15.3803 0.795181C15.5831 0.554217 15.845 0.361446 16.1661 0.216867C16.4872 0.0722891 16.8252 0 17.1801 0C17.797 0 18.2659 0.138554 18.587 0.415663C18.9081 0.692771 19.0729 1.01807 19.0814 1.39157C19.0983 1.69277 19.0095 1.96687 18.8152 2.21386C18.6208 2.45482 18.3631 2.64759 18.042 2.79217C17.7209 2.93072 17.3745 3 17.0027 3Z"
-							fill="#A9AAAA"
-						/>
-					</svg>
-				</span>
-			</div>
-		</div>
+		{:else}
+			{#each memberTags as tag}
+				<div class="flex items-center justify-between border-b px-3 py-3 last:border-b-0">
+					<div class="flex items-center gap-2">
+						<span class="h-3 w-3 rounded-full" style="background-color: {tag.color}"></span>
+						<span class="text-sm font-medium text-[#131517]">{tag.name}</span>
+					</div>
+					<div class="flex items-center gap-4">
+						<span class="text-sm text-[#A9AAAA]">{tag.memberCount ?? 0} Members</span>
+						<div use:clickOutside={() => openMenuId === `m-${tag.id}` && (openMenuId = '')} class="relative">
+							<button
+								class="border-l px-3 text-gray-400 hover:text-gray-600"
+								aria-label="Tag options"
+								on:click={() => (openMenuId = openMenuId === `m-${tag.id}` ? '' : `m-${tag.id}`)}
+							>
+								<Icon icon="mdi:dots-horizontal" class="text-lg" />
+							</button>
+							{#if openMenuId === `m-${tag.id}`}
+								<div class="absolute right-0 z-50 mt-1 w-36 rounded-lg bg-white p-1 text-sm shadow-lg">
+									<button
+										class="flex w-full items-center gap-2 rounded-md p-2 text-[#616265] hover:bg-[#EBECED]"
+										on:click={() => openEdit('MEMBER', tag)}
+									>
+										<Icon icon="mdi:pencil-outline" /> Edit
+									</button>
+									<button
+										class="flex w-full items-center gap-2 rounded-md p-2 text-red-500 hover:bg-red-50"
+										on:click={() => removeTag('MEMBER', tag)}
+									>
+										<Icon icon="mdi:trash-can-outline" /> Delete
+									</button>
+								</div>
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/each}
+		{/if}
 	</div>
 
-	<div class="mb-4 gap-3">
-		<div class="relative w-full">
-			<div
-				class="mb-2 h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pl-10 pr-4 text-[#C5C6C6]"
-			></div>
-			<div class="absolute left-3 top-2.5 flex items-center justify-between gap-4">
-				<span class=" text-gray-400">
-					<svg
-						width="10"
-						height="10"
-						viewBox="0 0 10 10"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<circle cx="4.875" cy="4.875" r="4.875" fill="#EA2630" />
-					</svg>
-				</span>
-				<span>New Group</span>
-			</div>
-
-			<div class="absolute right-0 top-2.5 flex items-center justify-between gap-10">
-				<span class="text-[#A9AAAA]"> 0 Events</span>
-
-				<span class="border-l px-4 py-1.5 text-gray-400">
-					<svg
-						width="20"
-						height="3"
-						viewBox="0 0 20 3"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M1.90176 3C1.39476 3 0.955369 2.86747 0.583573 2.60241C0.211776 2.33133 0.017428 1.99699 0.000528107 1.5994C-0.0079217 1.30422 0.0850274 1.03614 0.279375 0.795181C0.482173 0.554217 0.744121 0.361446 1.06522 0.216867C1.38631 0.0722891 1.72431 0 2.07921 0C2.69605 0 3.16502 0.138554 3.48612 0.415663C3.80722 0.692771 3.97199 1.01807 3.98044 1.39157C3.99734 1.69277 3.90862 1.96687 3.71427 2.21386C3.51992 2.45482 3.2622 2.64759 2.9411 2.79217C2.62 2.93072 2.27356 3 1.90176 3Z"
-							fill="#A9AAAA"
-						/>
-						<path
-							d="M9.45222 3C8.94523 3 8.50583 2.86747 8.13404 2.60241C7.76224 2.33133 7.56789 1.99699 7.55099 1.5994C7.54254 1.30422 7.63549 1.03614 7.82984 0.795181C8.03264 0.554217 8.29458 0.361446 8.61568 0.216867C8.93678 0.0722891 9.27477 0 9.62967 0C10.2465 0 10.7155 0.138554 11.0366 0.415663C11.3577 0.692771 11.5225 1.01807 11.5309 1.39157C11.5478 1.69277 11.4591 1.96687 11.2647 2.21386C11.0704 2.45482 10.8127 2.64759 10.4916 2.79217C10.1705 2.93072 9.82402 3 9.45222 3Z"
-							fill="#A9AAAA"
-						/>
-						<path
-							d="M17.0027 3C16.4957 3 16.0563 2.86747 15.6845 2.60241C15.3127 2.33133 15.1184 1.99699 15.1015 1.5994C15.093 1.30422 15.186 1.03614 15.3803 0.795181C15.5831 0.554217 15.845 0.361446 16.1661 0.216867C16.4872 0.0722891 16.8252 0 17.1801 0C17.797 0 18.2659 0.138554 18.587 0.415663C18.9081 0.692771 19.0729 1.01807 19.0814 1.39157C19.0983 1.69277 19.0095 1.96687 18.8152 2.21386C18.6208 2.45482 18.3631 2.64759 18.042 2.79217C17.7209 2.93072 17.3745 3 17.0027 3Z"
-							fill="#A9AAAA"
-						/>
-					</svg>
-				</span>
-			</div>
-		</div>
-		<div class="mb-3 flex items-center justify-between">
-			<button
-				class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#333537] px-3 py-2 text-xs text-[#FFFFFF] md:text-sm"
-			>
-				<svg
-					width="14"
-					height="14"
-					viewBox="0 0 14 14"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<rect x="6" width="1.5" height="13.5" rx="0.75" fill="white" />
-					<rect
-						y="7.5"
-						width="1.5"
-						height="13.5"
-						rx="0.75"
-						transform="rotate(-90 0 7.5)"
-						fill="white"
-					/>
-				</svg>
-
-				Create Tag
-			</button>
-		</div>
-	</div>
+	<button
+		on:click={() => openCreate('MEMBER')}
+		class="flex items-center gap-2 rounded-md bg-[#333537] px-3 py-2 text-sm text-white hover:bg-black"
+	>
+		<Icon icon="mdi:plus" /> Create Tag
+	</button>
 </section>
+
+<!-- ── Create / Edit modal ─────────────────────────────────────────── -->
+{#if editorOpen}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3"
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
+		on:click={() => (editorOpen = false)}
+		on:keydown={(e) => e.key === 'Escape' && (editorOpen = false)}
+	>
+		<div
+			class="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+			role="document"
+			on:click|stopPropagation
+			on:keydown|stopPropagation
+		>
+			<div class="mb-4 flex items-center justify-between">
+				<h3 class="text-lg font-semibold">
+					{editorTag ? 'Edit' : 'Create'}
+					{editorKind === 'EVENT' ? 'Event Tag' : 'Member Tag'}
+				</h3>
+				<button on:click={() => (editorOpen = false)} aria-label="Close">
+					<Icon icon="mdi:close" class="text-xl text-gray-400" />
+				</button>
+			</div>
+
+			{#if editorError}
+				<p class="mb-3 rounded-md bg-red-50 p-3 text-sm text-red-600">{editorError}</p>
+			{/if}
+
+			<label class="mb-1 block text-sm font-medium text-gray-900">Tag name</label>
+			<input
+				type="text"
+				bind:value={editorName}
+				maxlength="60"
+				placeholder="e.g. Conferences"
+				on:keydown={(e) => e.key === 'Enter' && saveEditor()}
+				class="mb-4 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none"
+			/>
+
+			<label class="mb-2 block text-sm font-medium text-gray-900">Color</label>
+			<div class="mb-5 flex flex-wrap gap-2">
+				{#each PALETTE as c}
+					<button
+						type="button"
+						aria-label="Choose color"
+						class="h-7 w-7 rounded-full ring-offset-2 transition {editorColor === c
+							? 'ring-2 ring-gray-800'
+							: ''}"
+						style="background-color: {c}"
+						on:click={() => (editorColor = c)}
+					></button>
+				{/each}
+			</div>
+
+			<div class="flex justify-end gap-3">
+				<button
+					on:click={() => (editorOpen = false)}
+					class="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+				>
+					Cancel
+				</button>
+				<button
+					on:click={saveEditor}
+					disabled={editorSaving}
+					class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+				>
+					{editorSaving ? 'Saving…' : editorTag ? 'Save changes' : 'Create tag'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}

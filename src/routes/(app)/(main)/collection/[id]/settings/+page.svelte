@@ -5,8 +5,6 @@
 	import Embed from './components/Embed.svelte';
 	import Options from './components/Options.svelte';
 	import Payment from './components/Payment.svelte';
-	import RondwellPlus from './components/RondwellPlus.svelte';
-	import SendLimit from './components/SendLimit.svelte';
 	import Tags from './components/Tags.svelte';
 
 	let activeTab = 'display';
@@ -41,16 +39,6 @@
 			id: 'embed',
 			label: 'Embed',
 			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`
-		},
-		{
-			id: 'send-limit',
-			label: 'Send Limit',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`
-		},
-		{
-			id: 'rondwell-plus',
-			label: 'Rondwell Plus',
-			icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
 		}
 	];
 </script>
@@ -75,10 +63,6 @@
 			<Admins />
 		{:else if activeTab === 'tags'}
 			<Tags />
-		{:else if activeTab === 'send-limit'}
-			<SendLimit />
-		{:else if activeTab === 'rondwell-plus'}
-			<RondwellPlus />
 		{/if}
 	</div>
 </div>

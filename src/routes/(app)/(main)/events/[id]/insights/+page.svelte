@@ -110,9 +110,13 @@
 		return n.toLocaleString();
 	}
 
-	function fmtCurrency(n: number | undefined, currency = 'USD'): string {
-		if (!n) return '$0';
-		return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 0 }).format(n);
+	function fmtCurrency(n: number | undefined, currency?: string): string {
+		const code = (currency || analytics?.tickets?.currency || 'NGN').toUpperCase();
+		try {
+			return new Intl.NumberFormat('en-US', { style: 'currency', currency: code, minimumFractionDigits: 0 }).format(n || 0);
+		} catch {
+			return `${code} ${(n || 0).toLocaleString()}`;
+		}
 	}
 
 	function fmtPercent(n: number | undefined): string {

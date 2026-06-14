@@ -26,6 +26,8 @@
 	let activeTab: 'overview' | 'community' = 'overview';
 	let dateFilter: 'all' | 'upcoming' | 'past' = 'all';
 	let typeFilter = '';
+	let tagFilter = '';
+	let eventTags: any[] = [];
 	let searchQuery = '';
 	let showTypeDropdown = false;
 	let showFullDescription = false;
@@ -48,6 +50,7 @@
 			const data = await getPublicCollectionBySlug(slug);
 			collection = data.collection;
 			events = data.events;
+			eventTags = data.eventTags ?? [];
 			themeColor = resolveCollectionThemeColor(collection.themeColor);
 		} catch { notFound = true; }
 		finally { loading = false; }
@@ -59,6 +62,7 @@
 		if (dateFilter === 'upcoming' && end < now) return false;
 		if (dateFilter === 'past' && end >= now) return false;
 		if (typeFilter && e.eventType !== typeFilter) return false;
+		if (tagFilter && !((e.collectionTagIds ?? []) as string[]).includes(tagFilter)) return false;
 		if (searchQuery) {
 			const q = searchQuery.toLowerCase();
 			const title = (e.title ?? '').toLowerCase();
@@ -373,6 +377,29 @@
 						/>
 					</div>
 				</div>
+
+				{#if eventTags.length > 0}
+					<!-- Event tag (category) filter -->
+					<div class="mt-4 flex flex-wrap items-center gap-2">
+						<button
+							on:click={() => (tagFilter = '')}
+							class="rounded-full px-3 py-1.5 text-xs font-medium transition"
+							style="background-color: {tagFilter === '' ? themeColor.button : themeColor.cover}; color: {tagFilter === '' ? themeColor.bg : themeColor.text}; border: 1px solid {themeColor.toggle}"
+						>
+							All Categories
+						</button>
+						{#each eventTags as tag}
+							<button
+								on:click={() => (tagFilter = tagFilter === tag.id ? '' : tag.id)}
+								class="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition"
+								style="background-color: {tagFilter === tag.id ? themeColor.button : themeColor.cover}; color: {tagFilter === tag.id ? themeColor.bg : themeColor.text}; border: 1px solid {themeColor.toggle}"
+							>
+								<span class="h-2 w-2 rounded-full" style="background-color: {tag.color}"></span>
+								{tag.name}
+							</button>
+						{/each}
+					</div>
+				{/if}
 
 				<!-- Events list -->
 				<div class="mt-6 pb-16">

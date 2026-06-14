@@ -349,6 +349,8 @@ export async function createTicketType(eventId: string, payload: {
   isEarlyBird?: boolean;
   /** Percentage 1..100. Discount applied when `now <= salesEndDate − EARLY_BIRD_WINDOW_DAYS`. */
   earlyBirdDiscountPercentage?: number;
+  /** Organizer-chosen early-bird cutoff (ISO). Overrides the window-days fallback. */
+  earlyBirdEndDate?: string;
   allowedEventDayIds?: string[];
 }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/tickets`, {
@@ -375,6 +377,7 @@ export async function updateTicketType(eventId: string, ticketTypeId: string, pa
   /** FE-P2-11 (NEW-4.3) — early-bird editor fields. */
   isEarlyBird?: boolean;
   earlyBirdDiscountPercentage?: number;
+  earlyBirdEndDate?: string;
   allowedEventDayIds?: string[];
 }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/tickets/${ticketTypeId}`, {
@@ -1562,6 +1565,25 @@ export async function updateCollection(collectionId: string, payload: Record<str
   if (!res.ok) await throwApiError(res, 'Failed to update collection');
   const data = await res.json();
   return data.collection ?? data;
+}
+
+/**
+ * Delete a collection. The backend rejects deletion (409) while the collection
+ * still has events or is the default collection; the thrown error carries
+ * `status` and (when relevant) `code = 'COLLECTION_HAS_EVENTS'` + `eventCount`.
+ */
+export async function deleteCollection(collectionId: string): Promise<void> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const err: any = new Error(body?.message ?? 'Failed to delete collection');
+    err.status = res.status;
+    err.code = body?.code;
+    err.eventCount = body?.eventCount;
+    throw err;
+  }
 }
 
 export async function getCollectionById(collectionId: string): Promise<any> {

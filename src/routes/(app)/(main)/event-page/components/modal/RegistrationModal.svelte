@@ -6,6 +6,7 @@
 		attendeePaymentInitiate,
 		verifyAndSettleTicketPayment,
 	} from '$lib/services/payment.services';
+	import { applyCouponPreview, type CouponPreview } from '$lib/services/coupon.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { getEventTheme } from '$lib/stores/eventTheme';
 	import type { Color } from '$lib/utils/colors';
@@ -47,6 +48,51 @@
 	let submitting = false;
 	let submitError = '';
 	let selectedGateway: 'PAYSTACK' = 'PAYSTACK';
+
+	// ── Coupon / discount code ─────────────────────────────────────────────
+	let couponInput = '';
+	let appliedCouponCode = '';
+	let couponPreview: CouponPreview | null = null;
+	let couponError = '';
+	let couponLoading = false;
+
+	async function applyCoupon() {
+		couponError = '';
+		const codeStr = couponInput.trim().toUpperCase();
+		if (!codeStr) {
+			couponError = 'Enter a code first.';
+			return;
+		}
+		const qty = isGroupRegistration ? ticketQuantity : 1;
+		const currency = selectedTicket?.currency ?? 'NGN';
+		const unitKobo = selectedTicket?.price ? majorToKobo(selectedTicket.price, currency) : 0;
+		couponLoading = true;
+		try {
+			const preview = await applyCouponPreview({
+				quantity: qty,
+				originalPrice: unitKobo,
+				couponCode: codeStr,
+				eventId,
+				ticketTypeId: selectedTicketId,
+				currency
+			});
+			couponPreview = preview;
+			appliedCouponCode = codeStr;
+		} catch (e: any) {
+			couponPreview = null;
+			appliedCouponCode = '';
+			couponError = e?.message ?? 'This code could not be applied.';
+		} finally {
+			couponLoading = false;
+		}
+	}
+
+	function clearCoupon() {
+		couponInput = '';
+		appliedCouponCode = '';
+		couponPreview = null;
+		couponError = '';
+	}
 
 	// Terms expand/collapse state per field
 	let termsExpanded: Record<string, boolean> = {};
@@ -541,6 +587,9 @@
 				ticketDetails: {
 					ticketTypeId: selectedTicketId,
 					quantity: qty,
+					// Optional discount/coupon code. Server validates + applies it;
+					// the price itself stays server-resolved (FE-P0-01).
+					couponCode: appliedCouponCode || undefined,
 					// P1-16 (NEW-2.2 / FA-3.3): unitPrice / price / amount /
 					// discountAmount are server-side only. The server resolves the
 					// canonical price from event-service.
@@ -1167,6 +1216,50 @@
 								{formatTicketTotalForQty(selectedTicket, isGroupRegistration ? ticketQuantity : 1)}
 							</span>
 						</div>
+
+						<!-- Coupon / discount code -->
+						<div class="mt-3 border-t pt-3" style="border-color: {themeColor.toggle};">
+							{#if couponPreview && appliedCouponCode}
+								<div class="flex items-center justify-between">
+									<span class="text-sm" style="color: {themeColor.lightText};">
+										Discount ({appliedCouponCode})
+									</span>
+									<span class="text-sm font-medium text-green-600">
+										− {formatMoney(couponPreview.discountAmount, selectedTicket?.currency ?? 'NGN', { minimumFractionDigits: 0 })}
+									</span>
+								</div>
+								<div class="mt-2 flex items-center justify-between">
+									<span class="text-sm font-semibold" style="color: {themeColor.text};">New total</span>
+									<span class="text-lg font-bold" style="color: {themeColor.text};">
+										{formatMoney(couponPreview.finalPrice, selectedTicket?.currency ?? 'NGN', { minimumFractionDigits: 0 })}
+									</span>
+								</div>
+								<button class="mt-2 text-xs underline" style="color: {themeColor.lightText};" on:click={clearCoupon}>
+									Remove code
+								</button>
+							{:else}
+								<div class="flex items-stretch gap-2">
+									<input
+										bind:value={couponInput}
+										placeholder="Discount code"
+										class="flex-1 rounded-lg border px-3 py-2 text-sm uppercase focus:outline-none"
+										style="border-color: {themeColor.toggle}; background-color: {themeColor.cover}; color: {themeColor.text};"
+										on:keydown={(e) => e.key === 'Enter' && applyCoupon()}
+									/>
+									<button
+										class="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
+										style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+										disabled={couponLoading}
+										on:click={applyCoupon}
+									>
+										{couponLoading ? '…' : 'Apply'}
+									</button>
+								</div>
+								{#if couponError}
+									<p class="mt-1 text-xs text-red-500">{couponError}</p>
+								{/if}
+							{/if}
+						</div>
 						<!-- FE-P1-13 (FA-3.5) — FX preview. Until the dedicated
 						     `/payment/fx/preview` endpoint ships we render the
 						     locked rate from `paymentData.fxLockedRate` AFTER
@@ -1198,7 +1291,7 @@
 								Processing...
 							</span>
 						{:else}
-							Pay {fxPreview?.formattedTarget ?? formatTicketTotalForQty(selectedTicket, isGroupRegistration ? ticketQuantity : 1)}
+							Pay {fxPreview?.formattedTarget ?? (couponPreview ? formatMoney(couponPreview.finalPrice, selectedTicket?.currency ?? 'NGN', { minimumFractionDigits: 0 }) : formatTicketTotalForQty(selectedTicket, isGroupRegistration ? ticketQuantity : 1))}
 						{/if}
 					</button>
 

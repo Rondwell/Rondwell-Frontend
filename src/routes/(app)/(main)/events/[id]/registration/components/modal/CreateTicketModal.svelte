@@ -46,6 +46,11 @@
 	// FE-P2-11-B (NEW-4.3): Early-bird editor.
 	let isEarlyBird = false;
 	let earlyBirdDiscountPercentage: number | string = '';
+	// Organizer-chosen early-bird cutoff (date + time).
+	let earlyBirdEndDate: Date = new Date(Date.now() + 23 * 24 * 60 * 60 * 1000);
+	let earlyBirdEndTime = '11:59 PM';
+	let openEarlyBirdDatePicker = false;
+	let openEarlyBirdTimePicker = false;
 
 	// Date/time picker toggles
 	let openSalesStartDatePicker = false;
@@ -116,6 +121,11 @@
 			allowedEventDayIds = ticket.allowedEventDayIds ?? [];
 			isEarlyBird = !!ticket.isEarlyBird;
 			earlyBirdDiscountPercentage = ticket.earlyBirdDiscountPercentage ?? '';
+			if (ticket.earlyBirdEndDate) {
+				const eb = new Date(ticket.earlyBirdEndDate);
+				earlyBirdEndDate = eb;
+				earlyBirdEndTime = eb.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+			}
 		} else {
 			name = '';
 			description = '';
@@ -134,6 +144,8 @@
 			allowedEventDayIds = [];
 			isEarlyBird = false;
 			earlyBirdDiscountPercentage = '';
+			earlyBirdEndDate = new Date(Date.now() + 23 * 24 * 60 * 60 * 1000);
+			earlyBirdEndTime = '11:59 PM';
 			// Re-init editor empty
 			if (typeof window !== 'undefined') initEditor('');
 		}
@@ -183,6 +195,28 @@
 
 		if (!isFree && (!price || Number(price) <= 0)) { errorMsg = 'Price is required for paid tickets'; toast.error('Price is required for paid tickets'); return; }
 
+		// Early-bird validation (paid-only, percentage + cutoff bounds).
+		let earlyBirdEndDt: Date | null = null;
+		if (!isFree && isEarlyBird) {
+			const pct = Number(earlyBirdDiscountPercentage);
+			if (!pct || pct <= 0 || pct > 100) {
+				errorMsg = 'Early-bird discount percentage must be between 1 and 100';
+				toast.error(errorMsg);
+				return;
+			}
+			earlyBirdEndDt = buildDateTime(earlyBirdEndDate, earlyBirdEndTime);
+			if (earlyBirdEndDt <= startDt) {
+				errorMsg = 'Early-bird end must be after the sales start';
+				toast.error(errorMsg);
+				return;
+			}
+			if (earlyBirdEndDt > endDt) {
+				errorMsg = 'Early-bird end cannot be after the sales end';
+				toast.error(errorMsg);
+				return;
+			}
+		}
+
 		// Frontend capacity validation
 		if (eventCapacity > 0 && totalTickets && !waitlistEnabled) {
 			const otherTicketsTotal = existingTickets
@@ -217,6 +251,8 @@
 					!isFree && isEarlyBird && earlyBirdDiscountPercentage
 						? Number(earlyBirdDiscountPercentage)
 						: undefined,
+				earlyBirdEndDate:
+					!isFree && isEarlyBird && earlyBirdEndDt ? earlyBirdEndDt.toISOString() : undefined,
 			};
 
 			if (isEditing) {
@@ -399,7 +435,7 @@
 								<div>
 									<p class="text-sm font-medium text-gray-700">Early-bird discount</p>
 									<p class="text-xs text-gray-400">
-										Auto-applied when checkout is more than 7 days before sales end.
+										Auto-applied (select the end date and discont % ).
 									</p>
 								</div>
 								<button
@@ -429,12 +465,33 @@
 										placeholder="e.g. 20"
 										class="h-[40px] w-full rounded-md border border-gray-200 bg-[#F8F8F9] px-3 text-sm focus:outline-none"
 									/>
+								</div>
+								<div class="mt-3">
+									<label class="mb-1 block text-xs font-medium text-[#666769]">
+										Early-bird ends
+									</label>
+									<div class="flex gap-2">
+										<div class="relative flex-1" use:clickOutside={() => (openEarlyBirdDatePicker = false)}>
+											<button type="button"
+												on:click={() => (openEarlyBirdDatePicker = !openEarlyBirdDatePicker)}
+												class="w-full rounded-md border border-gray-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-gray-700"
+											>
+												{formatDate(earlyBirdEndDate)}
+											</button>
+											<DatePickerModal open={openEarlyBirdDatePicker} bind:selectedDate={earlyBirdEndDate} startDate={salesStartDate} minDate={salesStartDate} maxDate={salesEndDate} />
+										</div>
+										<div class="relative w-[120px]" use:clickOutside={() => (openEarlyBirdTimePicker = false)}>
+											<button type="button"
+												on:click={() => (openEarlyBirdTimePicker = !openEarlyBirdTimePicker)}
+												class="w-full rounded-md border border-gray-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-gray-700"
+											>
+												{earlyBirdEndTime}
+											</button>
+											<TimeModal open={openEarlyBirdTimePicker} bind:selectedTime={earlyBirdEndTime} />
+										</div>
+									</div>
 									<p class="mt-1 text-[11px] text-gray-400">
-										Active until {salesEndDate
-											? new Date(
-													salesEndDate.getTime() - 7 * 24 * 60 * 60 * 1000
-												).toLocaleDateString()
-											: '—'} (sales end − 7 days).
+										The discount auto-applies to checkouts before this date, then stops.
 									</p>
 								</div>
 							{/if}

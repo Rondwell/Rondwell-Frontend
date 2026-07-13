@@ -89,7 +89,10 @@
 		try {
 			const wallet = await getWalletBalance();
 			const agg = wallet?.aggregatedBalance;
-			walletBalance = agg?.totalEarnings ?? (wallet?.balance?.NGN ?? 0);
+			// Canonical NET wallet balance in naira. `aggregatedBalance.totalEarnings`
+			// is now the net wallet balance (major units); fall back to converting
+			// the raw kobo balance if the aggregate is unavailable.
+			walletBalance = agg?.totalEarnings ?? ((Number(wallet?.balance?.NGN ?? 0)) / 100);
 		} catch (e) {
 			console.error('Failed to load wallet balance', e);
 		}

@@ -3,7 +3,7 @@
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { getEventAttendees, updateEvent, uploadEventPhoto } from '$lib/services/event.services';
-import { getEventEarnings } from '$lib/services/wallet.services';
+import { getEventSalesSummary } from '$lib/services/wallet.services';
 import { getEventCache, invalidateEventCache } from '$lib/stores/eventCache.store';
 import { toast } from '$lib/stores/toast.store';
 import { clickOutside } from '$lib/utils/constant';
@@ -38,11 +38,11 @@ $: if (eventId) {
 async function fetchEarnings(eid: string) {
 	earningsLoading = true;
 	try {
-		const result = await getEventEarnings(eid, { limit: 100 });
-		const items = result?.data ?? [];
-		earningsTotal = items
-			.filter((item: any) => item.status === 'COMPLETED')
-			.reduce((sum: number, item: any) => sum + (item.totalAmount ?? 0) / 100, 0);
+		// Show NET earnings (after platform fee) — what actually lands in the
+		// wallet — not gross ticket sales. The sales summary returns integer
+		// kobo; convert to naira for the pill.
+		const summary = await getEventSalesSummary(eid);
+		earningsTotal = (summary?.net ?? 0) / 100;
 	} catch {
 		earningsTotal = 0;
 	} finally {

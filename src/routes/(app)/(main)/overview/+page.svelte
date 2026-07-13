@@ -46,18 +46,22 @@
 		try {
 			const wallet = await getWalletBalance();
 			const agg = wallet?.aggregatedBalance;
+			// Canonical NET wallet balance (naira). `aggregatedBalance` is now
+			// derived from the wallet's real balance, not gross ticket totals.
 			if (agg) {
-				walletBalance = agg.withdrawable ?? agg.totalEarnings ?? 0;
+				walletBalance = agg.totalEarnings ?? agg.withdrawable ?? 0;
 			} else {
-				const ngnBalance = wallet?.balance?.NGN ?? 0;
-				walletBalance = ngnBalance > 100000 ? ngnBalance / 100 : ngnBalance;
+				// Fallback: raw balance is kobo — convert to naira.
+				walletBalance = (Number(wallet?.balance?.NGN ?? 0)) / 100;
 			}
 		} catch { /* non-critical */ }
 
 		try {
 			const earnings = await getEarningsSummary();
 			const items = Array.isArray(earnings) ? earnings : [];
-			totalRevenue = items.reduce((sum: number, e: any) => sum + (e.completedAmount ?? 0), 0);
+			// Total Revenue = NET earnings (after platform fee), not gross.
+			// getEarningsSummary returns integer kobo; convert to naira for display.
+			totalRevenue = items.reduce((sum: number, e: any) => sum + (e.netAmount ?? 0), 0) / 100;
 		} catch { /* non-critical */ }
 	}
 

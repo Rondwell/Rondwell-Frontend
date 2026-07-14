@@ -32,16 +32,6 @@
 <section class="relative max-w-6xl">
 	<div class="mb-4 flex items-center justify-between">
 		<h1 class="text-xl font-bold">Speakers</h1>
-		<div class="relative w-64">
-			<input
-				type="text"
-				placeholder="Search speakers..."
-				bind:value={searchQuery}
-				on:input={() => { currentPage = 1; loadSpeakers(); }}
-				class="w-full rounded-lg border border-gray-200 bg-white py-2 pr-4 pl-9 text-xs focus:outline-none focus:ring-1 focus:ring-[#513BE2]"
-			/>
-			<img class="absolute top-2.5 left-3 h-4 w-4" alt="search" src="/search.svg" />
-		</div>
 	</div>
 
 	{#if loading}

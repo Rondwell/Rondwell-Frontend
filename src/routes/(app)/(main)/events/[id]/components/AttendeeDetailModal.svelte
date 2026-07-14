@@ -42,6 +42,20 @@
 	let seatInfo: any = null;
 	let timeline: any[] = [];
 
+	// A registration is only "confirmed" once payment settled / it was approved
+	// (attendee_status flips to ATTENDING). Until then the passcode/QR are not
+	// valid check-in credentials and no money has actually been collected.
+	$: isConfirmed = registration?.attendee_status === 'ATTENDING' || registration?.attendee_status === 'CHECKED_IN';
+	$: isFreeTicket = !ticketPrice || ticketPrice <= 0;
+	$: amountPaidLabel = (() => {
+		if (isFreeTicket) return 'Free';
+		const fmt = (n: number) =>
+			new Intl.NumberFormat('en-NG', { style: 'currency', currency: ticketCurrency, minimumFractionDigits: 0 }).format(n);
+		if (registration?.payment_status === 'COMPLETED') return fmt(ticketPrice);
+		if (registration?.payment_status === 'REFUNDED') return `${fmt(ticketPrice)} (Refunded)`;
+		return `${fmt(0)} (Unpaid)`;
+	})();
+
 	// Cache to avoid re-fetching
 	const detailCache = new Map<string, any>();
 	const timelineCache = new Map<string, any[]>();
@@ -252,11 +266,7 @@
 						</div>
 						<div class="border-r border-gray-200 pr-6">
 							<p class="text-xs text-[#C1C2C2]">Amount Paid</p>
-							<p class="text-sm font-semibold text-black">
-								{ticketPrice > 0
-									? new Intl.NumberFormat('en-NG', { style: 'currency', currency: ticketCurrency, minimumFractionDigits: 0 }).format(ticketPrice)
-									: 'Free'}
-							</p>
+							<p class="text-sm font-semibold text-black">{amountPaidLabel}</p>
 						</div>
 						{#if ticketTypeName}
 							<div class="border-r border-gray-200 pr-6">
@@ -270,7 +280,7 @@
 								<p class="text-sm font-semibold text-black">{formatTime(registration.checked_in_at)}</p>
 							</div>
 						{/if}
-						{#if registration?.event_passcode}
+						{#if registration?.event_passcode && isConfirmed}
 							<div>
 								<p class="text-xs text-[#C1C2C2]">Event Passcode</p>
 								<p class="text-sm font-semibold font-mono text-black">{registration.event_passcode}</p>

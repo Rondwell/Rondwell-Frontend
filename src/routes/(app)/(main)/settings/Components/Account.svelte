@@ -18,7 +18,6 @@
 		listPasskeys,
 		removePasskey,
 		regenerateBackupCodes,
-		requestPasswordSetup,
 		updatePersonalInfo,
 		updatePhoneNumber,
 		updateSocialLinks,
@@ -69,7 +68,6 @@
 	let pendingSecondaryEmail = '';
 	let removingEmail = '';
 	let updatingPhone = false;
-	let requestingPassword = false;
 	let twoFALoading = false;
 	let twoFAStep: 'idle' | 'qr' | 'disable' | 'backup' = 'idle';
 	let twoFAQr = '';
@@ -521,18 +519,19 @@
 				<div>
 					<h3 class="font-medium">Account Password</h3>
 					<p class="mt-1 text-xs text-gray-500">
-						{hasPassword ? 'Your account has a password set.' : 'No password set. Click to receive a setup link via email.'}
+						Password sign-in is coming soon. For now, sign in with your email OTP{hasPassword ? '' : ' or a passkey'}.
 					</p>
 				</div>
 			</div>
-			<button on:click={async () => {
-				requestingPassword = true;
-				try {
-					await requestPasswordSetup();
-					showToast('Password setup link sent to your email');
-				} catch (e: any) { showToast(e.message, 'error'); } finally { requestingPassword = false; }
-			}} disabled={requestingPassword} class="rounded bg-black px-3 py-1 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
-				{requestingPassword ? 'Sending...' : hasPassword ? 'Change Password' : 'Set Password'}
+			<!-- Password setup is deferred — the backend send flow isn't wired on the
+			     profile route yet, so the button is disabled to avoid a no-op click. -->
+			<button
+				type="button"
+				disabled
+				title="Coming soon"
+				class="cursor-not-allowed rounded bg-gray-200 px-3 py-1 text-sm font-medium text-gray-400"
+			>
+				Coming soon
 			</button>
 		</div>
 	</div>

@@ -4,6 +4,7 @@
 
 <svelte:head>
 	<title>FAQ | Rondwell</title>
+	<meta name="theme-color" content="#F4F5F6" />
 	<meta name="description" content="Frequently asked questions about Rondwell. Find answers about event creation, ticketing, payments, and more." />
 	<meta property="og:title" content="FAQ | Rondwell" />
 	<meta property="og:description" content="Frequently asked questions about Rondwell. Find answers about event creation, ticketing, payments, and more." />

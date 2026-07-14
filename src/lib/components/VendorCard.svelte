@@ -15,7 +15,7 @@
 </script>
 
 <a
-	href="/vendor-page/{vendor.slug}"
+	href="/v/{vendor.slug}"
 	class="flex cursor-pointer gap-3 rounded-xl bg-[#FDFDFD] p-3 no-underline transition-shadow hover:shadow-md sm:gap-4 sm:p-4 md:p-5"
 >
 	<!-- Left content -->

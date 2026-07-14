@@ -114,6 +114,57 @@ export async function requestWithdrawalOtp(amount: number): Promise<void> {
 }
 
 /**
+ * Whether the current user has already set a wallet PIN. Drives the withdraw
+ * modal's "Set PIN" vs "Enter PIN" UX.
+ */
+export async function getWalletPinStatus(): Promise<{ hasPin: boolean }> {
+	const res = await authFetch(`${BASE_URL}/api/v1/payment/pin/status`);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch PIN status');
+	const data = await res.json();
+	return { hasPin: !!(data?.data?.hasPin ?? data?.hasPin) };
+}
+
+/**
+ * Create the user's 4-digit wallet PIN. The backend resolves the user's single
+ * wallet server-side, so no walletId is required from the client.
+ */
+export async function createWalletPin(pin: string): Promise<any> {
+	const res = await authFetch(`${BASE_URL}/api/v1/payment/pin`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ pin })
+	});
+	if (!res.ok) await throwApiError(res, 'Failed to set PIN');
+	return await res.json();
+}
+
+/**
+ * Forgot-PIN flow, step 1: email an OTP that authorises a PIN reset.
+ */
+export async function requestPinResetOtp(): Promise<any> {
+	const res = await authFetch(`${BASE_URL}/api/v1/payment/pin/reset/request-otp`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({})
+	});
+	if (!res.ok) await throwApiError(res, 'Failed to send reset code');
+	return await res.json();
+}
+
+/**
+ * Forgot-PIN flow, step 2: verify the emailed OTP and set a new 4-digit PIN.
+ */
+export async function resetWalletPin(otp: string, newPin: string): Promise<any> {
+	const res = await authFetch(`${BASE_URL}/api/v1/payment/pin/reset`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ otp, newPin })
+	});
+	if (!res.ok) await throwApiError(res, 'Failed to reset PIN');
+	return await res.json();
+}
+
+/**
  * FE-P1-07 / FE-P1-08 — Verify withdrawal OTP and process the withdrawal.
  *
  * The backend (P1-07 step 4) rejects any verify-otp call without a `userPin`

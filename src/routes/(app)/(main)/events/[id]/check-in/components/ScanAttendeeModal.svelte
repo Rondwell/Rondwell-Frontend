@@ -83,8 +83,17 @@
 			let token = rawValue;
 			try {
 				const parsed = JSON.parse(rawValue);
-				// Encode as base64 for the backend decodeCheckinToken
-				token = btoa(JSON.stringify({ attendeeId: parsed.attendeeId, eventId: parsed.eventId }));
+				// Encode as base64 for the backend decodeCheckinToken. Forward
+				// registrationId (present on every QR — single uses registration_id,
+				// group lead/members use registrationId) so group tickets, which
+				// carry no attendeeId, can still be resolved server-side.
+				token = btoa(
+					JSON.stringify({
+						attendeeId: parsed.attendeeId,
+						registrationId: parsed.registrationId ?? parsed.registration_id,
+						eventId: parsed.eventId
+					})
+				);
 			} catch {
 				// If it's not JSON, try using raw value as token directly
 			}

@@ -138,6 +138,7 @@
 	 */
 	let groupMemberRegistrations: any[] = [];
 	let loadingGroupMembers = false;
+	let groupMembersFetchAttempted = false;
 	let groupQrIndex = 0;
 
 	// Group members state
@@ -186,6 +187,7 @@
 		fxPreview = null;
 		groupMemberRegistrations = [];
 		loadingGroupMembers = false;
+		groupMembersFetchAttempted = false;
 		groupQrIndex = 0;
 	}
 
@@ -214,13 +216,14 @@
 			registrationResult.registration_id;
 		if (!groupId) return;
 		loadingGroupMembers = true;
+		groupMembersFetchAttempted = true;
 		try {
 			const members = await getGroupRegistrationMembers(eventId, groupId);
 			if (Array.isArray(members) && members.length > 0) {
 				groupMemberRegistrations = members;
 			}
 		} catch {
-			// Best-effort.
+			// Best-effort — don't retry on failure to avoid infinite loop.
 		} finally {
 			loadingGroupMembers = false;
 		}
@@ -300,6 +303,12 @@
 		const allEmails = [email.toLowerCase(), ...groupMembers.map(m => m.email.toLowerCase())];
 		return new Set(allEmails).size === allEmails.length;
 	}
+
+	// Reactive validity flag: Svelte can't track the internal dependencies of
+	// validateGroupMembers() when it's called directly in markup, so the
+	// Continue button never re-enabled after members were filled in. Referencing
+	// groupMembers and email here forces re-evaluation whenever they change.
+	$: groupMembersValid = (groupMembers, email, validateGroupMembers());
 
 	function validateMemberForm(): boolean {
 		memberErrors = {};
@@ -442,9 +451,23 @@
 				const leadRegData = await leadRegRes.json();
 				registrationResult = leadRegData || { registration_id: 'group-pending', attendeeId };
 
+				// P1-15: attach the registrationToken so the payment step can
+				// forward it to the payment service. The token was issued at
+				// attendee-create time and binds (eventId, attendeeId, ticketTypeId).
+				if (registrationToken) {
+					registrationResult.registrationToken = registrationToken;
+				}
+
 				if (isPaid) {
 					step = 'payment';
 				} else {
+					// Free group: finalize the LEAD so they're confirmed (ATTENDING),
+					// get their ticket, and the organizer notification fires. Members
+					// confirm their own details via the invitation email link.
+					await fetch(
+						`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`,
+						{ method: 'POST', headers: { 'Content-Type': 'application/json' } }
+					).catch(() => {});
 					registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
 					step = 'confirmation';
 				}
@@ -600,7 +623,7 @@
 					currency: selectedTicket?.currency ?? 'NGN',
 				},
 				isGroupPurchase: isGroupRegistration,
-				groupMembersEmails: isGroupRegistration ? groupMembers.map(m => m.email) : undefined,
+				groupMembersEmails: isGroupRegistration ? [email.trim().toLowerCase(), ...groupMembers.map(m => m.email)] : undefined,
 				successCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=success&reg=${registrationResult.registration_id}`,
 				failureCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=failed&reg=${registrationResult.registration_id}`,
 				returnWalletPaymentLink: false,
@@ -657,12 +680,26 @@
 							// route is fully idempotent — calling it once per
 							// reference is safe even if the webhook beats us to it.
 							verifyAndSettleTicketPayment(paymentData.reference, verificationToken)
-								.then(() =>
-									// Step 2: Finalize registration on event service
-									fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`, {
-										method: 'POST', headers: { 'Content-Type': 'application/json' }
-									})
-								).then(() => {
+								.then(() => {
+									if (isGroupRegistration && registrationResult.group_id) {
+										// Step 2 (Group): call handlePaymentSuccess which
+										// finalizes the lead AND all member registrations
+										return fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/payment/success`, {
+											method: 'POST',
+											headers: { 'Content-Type': 'application/json' },
+											body: JSON.stringify({
+												groupId: registrationResult.group_id,
+												eventId,
+												paymentReference: paymentData.reference,
+											}),
+										});
+									} else {
+										// Step 2 (Single): Finalize registration on event service
+										return fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`, {
+											method: 'POST', headers: { 'Content-Type': 'application/json' }
+										});
+									}
+								}).then(() => {
 									registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
 									step = 'confirmation';
 									submitting = false;
@@ -707,7 +744,7 @@
 
 	// FE-P3-05 — fetch the per-member registrations whenever the modal
 	// reaches the confirmation step for a group purchase.
-	$: if (step === 'confirmation' && isGroupRegistration && registrationResult && groupMemberRegistrations.length === 0 && !loadingGroupMembers) {
+	$: if (step === 'confirmation' && isGroupRegistration && registrationResult && groupMemberRegistrations.length === 0 && !loadingGroupMembers && !groupMembersFetchAttempted) {
 		loadGroupMemberRegistrations();
 	}
 </script>
@@ -1088,7 +1125,7 @@
 					<button
 						class="w-full rounded-lg py-3 text-base font-medium transition-all disabled:opacity-60"
 						style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
-						disabled={!validateGroupMembers() || submitting}
+						disabled={!groupMembersValid || submitting}
 						on:click={() => {
 							if (hasSeatLayout) { step = 'seats'; }
 							else { proceedToRegistration(); }

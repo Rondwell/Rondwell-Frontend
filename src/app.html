@@ -38,13 +38,17 @@
 				// Set initial theme-color based on the current path so the status bar
 				// is tinted correctly even before Svelte hydrates
 				var path = window.location.pathname;
-				var color = '#d1e8f5'; // default
-				if (path.startsWith('/vendor')) color = '#d1e8f5';
+				var color = '#ffffff'; // default
+				if (path === '/' || path === '') color = '#FBDBE7'; // homepage pink hero
+				else if (path.startsWith('/discover')) color = '#e6e6fa'; // discover lavender hero
+				else if (path.startsWith('/pricing') || path.startsWith('/help-center')) color = '#f5efec'; // warm beige marketing
+				else if (path.startsWith('/faq') || path.startsWith('/terms') || path.startsWith('/privacy')) color = '#F4F5F6'; // light gray marketing
+				else if (path.startsWith('/vendor') || path.startsWith('/v/')) color = '#d1e8f5';
 				else if (path.startsWith('/exhibitor')) color = '#DBD4F1';
 				else if (path.startsWith('/speaker')) color = '#d1e8f5';
 				else if (path.startsWith('/events/') && path.indexOf('/registration') !== -1) color = '#DDD1E1';
-				else if (path.startsWith('/events/')) color = '#DBD4F1';
-				else if (path.startsWith('/collections/')) color = '#F4E1D2';
+				else if (path.startsWith('/events/') || path.startsWith('/event-page/') || path.startsWith('/e/')) color = '#DBD4F1';
+				else if (path.startsWith('/collections/') || path.startsWith('/c/')) color = '#F4E1D2';
 				else if (path.startsWith('/auth')) color = '#ffffff';
 
 				var meta = document.getElementById('theme-color-meta');

@@ -322,7 +322,14 @@
 						? 'rounded-2xl border border-purple-700 text-purple-700'
 						: 'bg-[#eeeff0] text-gray-700'
 				}`}
-				on:click={() => (activeItem = item.name)}
+				on:click={() => {
+					activeItem = item.name;
+					if (typeof window !== 'undefined') {
+						const url = new URL(window.location.href);
+						url.searchParams.set('tab', item.name.toLowerCase());
+						window.history.replaceState({}, '', url.toString());
+					}
+				}}
 			>
 				<span>{@html activeItem === item.name ? item.selectedIcon : item.icon}</span>
 				{item.name}

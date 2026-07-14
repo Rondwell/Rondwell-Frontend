@@ -8,6 +8,7 @@
 
 <svelte:head>
 	<title>Rondwell — Create, Manage & Grow Unforgettable Events</title>
+	<meta name="theme-color" content="#FBDBE7" />
 	<meta name="description" content="Rondwell is the all-in-one event platform for organizers. Create events, sell tickets, manage check-ins, engage attendees with community chat, and track everything with real-time analytics. Free to start." />
 
 	<!-- Open Graph -->

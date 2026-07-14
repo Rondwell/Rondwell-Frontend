@@ -240,6 +240,14 @@
 		return e.metaData?.ticketTypeName || 'Ticket';
 	}
 
+	function isGroupPurchase(e: any): boolean {
+		return !!(e.isGroupPurchase || e.metaData?.isGroupPurchase);
+	}
+
+	function getGroupCount(e: any): number {
+		return Number(e.groupMembersCount ?? e.metaData?.groupMembersCount ?? 0);
+	}
+
 	function downloadCSV() {
 		if (filteredEarnings.length === 0) return;
 		const headers = ['Name', 'Email', 'Time', 'Date', 'Ticket Type', 'Amount (₦)', `Fee (${feePercent}%)`, 'Net (₦)', 'Status'];
@@ -294,7 +302,10 @@
 	<!-- Summary Cards -->
 	{#if salesSummary && !loadingSummary}
 		<!-- FE-P3-12 — unified sales-summary KPIs. -->
-		<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+		<!-- Gateway fee is intentionally omitted: it is borne by the attendee at
+		     checkout (pass-on model) and is not deducted from the organizer's
+		     net, so surfacing it here only confused organizers. -->
+		<div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
 			<div class="rounded-xl border bg-white p-4">
 				<p class="text-xs text-gray-500">Gross</p>
 				<p class="mt-1 text-xl font-semibold">{formatMoney(salesSummary.gross, salesSummary.currency)}</p>
@@ -302,10 +313,6 @@
 			<div class="rounded-xl border bg-white p-4">
 				<p class="text-xs text-gray-500">Platform fee</p>
 				<p class="mt-1 text-xl font-semibold text-red-500">-{formatMoney(salesSummary.platformFee, salesSummary.currency)}</p>
-			</div>
-			<div class="rounded-xl border bg-white p-4">
-				<p class="text-xs text-gray-500">Gateway fee</p>
-				<p class="mt-1 text-xl font-semibold text-red-500">-{formatMoney(salesSummary.gatewayFee, salesSummary.currency)}</p>
 			</div>
 			<div class="rounded-xl border bg-white p-4">
 				<p class="text-xs text-gray-500">Net</p>
@@ -524,8 +531,13 @@
 					<!-- Date -->
 					<div class="text-sm text-gray-500 lg:w-[12%]">{formatDate(e.paidAt || e.createdAt)}</div>
 					<!-- Ticket Type -->
-					<div class="lg:w-[12%]">
+					<div class="flex flex-wrap items-center gap-1 lg:w-[12%]">
 						<span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">{getTicketType(e)}</span>
+						{#if isGroupPurchase(e)}
+							<span class="rounded-full bg-[#EDE9FE] px-2 py-1 text-xs font-medium text-[#513BE2]" title="Group registration">
+								👥 Group{getGroupCount(e) > 0 ? ` ×${getGroupCount(e)}` : ''}
+							</span>
+						{/if}
 					</div>
 					<!-- Amount -->
 					<div class="text-sm font-medium lg:w-[12%] lg:text-right">{formatCurrency(gross, rowCcy)}</div>

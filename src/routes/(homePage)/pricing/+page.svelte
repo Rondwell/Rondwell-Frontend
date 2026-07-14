@@ -148,6 +148,7 @@
 
 <svelte:head>
 	<title>Pricing | Rondwell</title>
+	<meta name="theme-color" content="#f5efec" />
 	<meta name="description" content="Explore Rondwell pricing plans. From free to enterprise, find the right plan for your event management needs." />
 	<meta property="og:title" content="Pricing | Rondwell" />
 	<meta property="og:description" content="Explore Rondwell pricing plans. From free to enterprise, find the right plan for your event management needs." />

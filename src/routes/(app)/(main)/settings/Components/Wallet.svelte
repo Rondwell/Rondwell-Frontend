@@ -24,6 +24,10 @@
 		getEarningsSummary,
 		getMyWalletTransactions,
 		getUserTransactions,
+		getWalletPinStatus,
+		createWalletPin,
+		requestPinResetOtp,
+		resetWalletPin,
 		getWalletBalance,
 		requestWithdrawalOtp,
 		verifyWithdrawalOtp,
@@ -65,6 +69,26 @@
 	let withdrawing = false;
 	let mappedError: MappedWithdrawalError | null = null;
 	let withdrawSuccess = '';
+
+	// PIN setup state — the withdraw modal must know whether the user has a PIN
+	// so it shows "Set PIN" (create) rather than "Enter PIN".
+	let hasPin: boolean | null = null; // null = still checking
+	let checkingPin = false;
+	let newPin = '';
+	let confirmPin = '';
+	let settingPin = false;
+	let pinSetupError = '';
+
+	// Forgot / reset PIN state (OTP-verified).
+	let pinResetMode = false;
+	let resetOtpSent = false;
+	let sendingResetOtp = false;
+	let resetOtp = '';
+	let resetNewPin = '';
+	let resetConfirmPin = '';
+	let resettingPin = false;
+	let pinResetError = '';
+	let pinResetSuccess = '';
 
 	// Earnings table
 	let showDateFilter = false;
@@ -320,6 +344,106 @@
 		}
 	}
 
+	function clearPinResetState() {
+		pinResetMode = false;
+		resetOtpSent = false;
+		sendingResetOtp = false;
+		resetOtp = '';
+		resetNewPin = '';
+		resetConfirmPin = '';
+		resettingPin = false;
+		pinResetError = '';
+		pinResetSuccess = '';
+	}
+
+	async function startPinReset() {
+		clearPinResetState();
+		pinResetMode = true;
+		sendingResetOtp = true;
+		try {
+			await requestPinResetOtp();
+			resetOtpSent = true;
+		} catch (e: any) {
+			pinResetError = e?.message || 'Failed to send reset code.';
+		} finally {
+			sendingResetOtp = false;
+		}
+	}
+
+	async function handleResetPin() {
+		pinResetError = '';
+		if (!resetOtp || resetOtp.length !== 6) {
+			pinResetError = 'Enter the 6-digit code sent to your email.';
+			return;
+		}
+		if (!/^\d{4}$/.test(resetNewPin)) {
+			pinResetError = 'PIN must be exactly 4 digits.';
+			return;
+		}
+		if (resetNewPin !== resetConfirmPin) {
+			pinResetError = 'PINs do not match.';
+			return;
+		}
+		resettingPin = true;
+		try {
+			await resetWalletPin(resetOtp, resetNewPin);
+			// Success: drop back into the enter-PIN flow with the new PIN filled.
+			hasPin = true;
+			withdrawPin = resetNewPin;
+			clearPinResetState();
+			pinResetSuccess = 'PIN reset successfully. You can now continue.';
+		} catch (e: any) {
+			pinResetError = e?.message || 'Failed to reset PIN. Please try again.';
+		} finally {
+			resettingPin = false;
+		}
+	}
+
+	async function openWithdrawModal() {
+		clearWithdrawalState();
+		clearPinResetState();
+		newPin = '';
+		confirmPin = '';
+		pinSetupError = '';
+		hasPin = null;
+		showWithdrawModal = true;
+		checkingPin = true;
+		try {
+			const status = await getWalletPinStatus();
+			hasPin = status.hasPin;
+		} catch {
+			// If the status check fails, assume a PIN exists and fall back to the
+			// enter-PIN flow (the withdrawal itself still enforces PIN server-side).
+			hasPin = true;
+		} finally {
+			checkingPin = false;
+		}
+	}
+
+	async function handleSetPin() {
+		pinSetupError = '';
+		if (!/^\d{4}$/.test(newPin)) {
+			pinSetupError = 'PIN must be exactly 4 digits.';
+			return;
+		}
+		if (newPin !== confirmPin) {
+			pinSetupError = 'PINs do not match.';
+			return;
+		}
+		settingPin = true;
+		try {
+			await createWalletPin(newPin);
+			hasPin = true;
+			withdrawPin = newPin;
+			newPin = '';
+			confirmPin = '';
+		} catch (e: any) {
+			pinSetupError = e?.message || 'Failed to set PIN. Please try again.';
+		} finally {
+			settingPin = false;
+		}
+	}
+
 	async function handleRequestOtp() {
 		const major = parseFloat(withdrawAmount);
 		mappedError = null;
@@ -523,7 +647,7 @@
 					</span>
 				{:else}
 					<button
-						on:click={() => { clearWithdrawalState(); showWithdrawModal = true; }}
+						on:click={openWithdrawModal}
 						disabled={withdrawableByCurrency[activeCurrency] === 0 || walletFrozen}
 						class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
 					>
@@ -729,7 +853,14 @@
 						<div class="flex flex-col gap-2 border-b px-4 py-3 last:border-none lg:flex-row lg:items-center lg:gap-0">
 							<div class="text-sm text-gray-500 lg:w-1/4">{row.createdAt ? formatDate(row.createdAt) : '—'}</div>
 							<div class="text-sm text-gray-700 lg:w-1/4">
-								<p class="capitalize">{(row.type ?? row.transactionType ?? '—').toString().toLowerCase().replace(/_/g, ' ')}</p>
+								<div class="flex flex-wrap items-center gap-1.5">
+									<p class="capitalize">{(row.type ?? row.transactionType ?? '—').toString().toLowerCase().replace(/_/g, ' ')}</p>
+									{#if row.isGroupPurchase}
+										<span class="rounded-full bg-[#EDE9FE] px-2 py-0.5 text-xs font-medium text-[#513BE2]" title="Group registration">
+											👥 Group{row.groupMembersCount > 0 ? ` ×${row.groupMembersCount}` : ''}
+										</span>
+									{/if}
+								</div>
 								{#if row.description}<p class="truncate text-xs text-gray-400">{row.description}</p>{/if}
 							</div>
 							<div class="lg:w-1/5">
@@ -853,6 +984,82 @@
 			</div>
 		{/if}
 
+		{#if checkingPin}
+			<div class="mb-4 flex items-center gap-2 text-sm text-gray-500">
+				<span class="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700"></span>
+				Checking your wallet PIN…
+			</div>
+		{:else if hasPin === false}
+			<!-- First-time PIN setup. The wallet has no PIN yet, so we let the user
+			     create one before continuing to the OTP step. -->
+			<div class="mb-4 rounded-lg border border-[#EDE9FE] bg-[#F7F5FF] p-3">
+				<p class="mb-3 text-sm font-medium text-gray-700">Set your withdrawal PIN</p>
+				<p class="mb-3 text-xs text-gray-500">You'll use this 4-digit PIN to authorise withdrawals. Keep it private.</p>
+				<div class="mb-3">
+					<label for="new-pin" class="mb-1 block text-xs font-medium text-gray-600">New PIN</label>
+					<input id="new-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4"
+						bind:value={newPin} placeholder="4-digit PIN"
+						class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none" />
+				</div>
+				<div class="mb-3">
+					<label for="confirm-pin" class="mb-1 block text-xs font-medium text-gray-600">Confirm PIN</label>
+					<input id="confirm-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4"
+						bind:value={confirmPin} placeholder="Re-enter PIN"
+						class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none" />
+				</div>
+				{#if pinSetupError}<p class="mb-2 text-xs text-red-500">{pinSetupError}</p>{/if}
+				<button on:click={handleSetPin} disabled={settingPin || !newPin || !confirmPin}
+					class="w-full rounded-lg bg-gray-900 py-2.5 text-center text-sm font-medium text-white disabled:opacity-50">
+					{settingPin ? 'Setting PIN…' : 'Set PIN'}
+				</button>
+			</div>
+		{:else if pinResetMode}
+			<!-- Forgot-PIN / reset flow. An OTP is emailed, then the user sets a
+			     new PIN. Requires OTP because the user no longer knows the PIN. -->
+			<div class="mb-4 rounded-lg border border-[#EDE9FE] bg-[#F7F5FF] p-3">
+				<div class="mb-3 flex items-center justify-between">
+					<p class="text-sm font-medium text-gray-700">Reset your PIN</p>
+					<button type="button" on:click={clearPinResetState} class="text-xs font-medium text-gray-500 hover:underline">Cancel</button>
+				</div>
+				{#if sendingResetOtp && !resetOtpSent}
+					<div class="flex items-center gap-2 text-sm text-gray-500">
+						<span class="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700"></span>
+						Sending reset code to your email…
+					</div>
+				{:else}
+					<p class="mb-3 text-xs text-gray-500">Enter the 6-digit code sent to your email and choose a new 4-digit PIN.</p>
+					<div class="mb-3">
+						<label for="reset-otp" class="mb-1 block text-xs font-medium text-gray-600">Reset code (OTP)</label>
+						<input id="reset-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+							bind:value={resetOtp} placeholder="6-digit code"
+							class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-center font-mono tracking-widest text-sm focus:outline-none" />
+					</div>
+					<div class="mb-3">
+						<label for="reset-new-pin" class="mb-1 block text-xs font-medium text-gray-600">New PIN</label>
+						<input id="reset-new-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4"
+							bind:value={resetNewPin} placeholder="4-digit PIN"
+							class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none" />
+					</div>
+					<div class="mb-3">
+						<label for="reset-confirm-pin" class="mb-1 block text-xs font-medium text-gray-600">Confirm new PIN</label>
+						<input id="reset-confirm-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4"
+							bind:value={resetConfirmPin} placeholder="Re-enter PIN"
+							class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none" />
+					</div>
+					{#if pinResetError}<p class="mb-2 text-xs text-red-500">{pinResetError}</p>{/if}
+					<div class="flex gap-2">
+						<button type="button" on:click={startPinReset} disabled={sendingResetOtp}
+							class="flex-1 rounded-lg border border-gray-200 py-2.5 text-center text-sm font-medium text-gray-600 disabled:opacity-50">
+							{sendingResetOtp ? 'Resending…' : 'Resend code'}
+						</button>
+						<button type="button" on:click={handleResetPin} disabled={resettingPin || !resetOtp || !resetNewPin || !resetConfirmPin}
+							class="flex-1 rounded-lg bg-gray-900 py-2.5 text-center text-sm font-medium text-white disabled:opacity-50">
+							{resettingPin ? 'Resetting…' : 'Reset PIN'}
+						</button>
+					</div>
+				{/if}
+			</div>
+		{:else}
 		<!-- FE-P1-07/08 — PIN field FIRST. Backend rejects OTP-only verifies
 		     with PIN_REQUIRED, and the PIN can lock independently of the OTP
 		     (PIN_LOCKED → 423). Surfacing it before OTP keeps round-trips
@@ -864,14 +1071,15 @@
 				type="password"
 				inputmode="numeric"
 				autocomplete="off"
-				maxlength="6"
+				maxlength="4"
 				bind:value={withdrawPin}
-				placeholder="Enter your 4–6 digit PIN"
+				placeholder="Enter your 4-digit PIN"
 				class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none"
 			/>
 			<p class="mt-1 text-[11px] text-gray-400">
-				<a href="/settings?tab=security" class="font-medium text-pink-600 hover:underline">Forgot PIN?</a>
+				<button type="button" on:click={startPinReset} class="font-medium text-pink-600 hover:underline">Forgot PIN?</button>
 			</p>
+			{#if pinResetSuccess}<p class="mt-1 text-[11px] text-green-600">{pinResetSuccess}</p>{/if}
 		</div>
 
 		{#if !otpSent}
@@ -910,6 +1118,7 @@
 					{withdrawing ? 'Processing...' : 'Confirm Withdrawal'}
 				</button>
 			</div>
+		{/if}
 		{/if}
 	</div>
 </div>

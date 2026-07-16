@@ -29,11 +29,7 @@
 		loading = true;
 		error = '';
 		try {
-			rows = await getTopEvents({
-				from: `${from}T00:00:00Z`,
-				to: `${to}T23:59:59Z`,
-				limit: 50,
-			});
+			rows = await getTopEvents({ from, to, limit: 50 });
 		} catch (e) {
 			error = financialErrorMessage(e);
 		} finally {
@@ -44,10 +40,7 @@
 	async function handleExport() {
 		exporting = true;
 		try {
-			const blob = await exportFinanceCsv('events', {
-				from: `${from}T00:00:00Z`,
-				to: `${to}T23:59:59Z`,
-			});
+			const blob = await exportFinanceCsv('events', { from, to });
 			downloadBlob(blob, `top-events-${from}_to_${to}.csv`);
 		} catch (e) {
 			error = financialErrorMessage(e);

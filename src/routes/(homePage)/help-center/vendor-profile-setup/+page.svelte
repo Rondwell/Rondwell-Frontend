@@ -36,6 +36,13 @@
 		</p>
 	</article>
 
+	<article class="my-8 flex flex-col gap-5">
+		<h2 class="text-2xl font-bold">Vendors, Exhibitors & Speakers</h2>
+		<p class="leading-relaxed text-gray-700">
+			Rondwell profiles aren't limited to vendors. You can also set up an <strong>Exhibitor</strong> profile (with a bookable booth) or a <strong>Speaker</strong> profile, each with its own public page — <code class="rounded bg-gray-100 px-1 text-sm">rondwell.com/v/…</code>, <code class="rounded bg-gray-100 px-1 text-sm">/exhibitor/…</code>, or <code class="rounded bg-gray-100 px-1 text-sm">/speaker/…</code>. Switch between your profiles from the account menu; each keeps its own listings, bookings, and analytics.
+		</p>
+	</article>
+
 	<div class="mt-8">
 		<a href="/help-center" class="text-sm font-medium text-purple-600 hover:underline">← Back to Help Center</a>
 	</div>

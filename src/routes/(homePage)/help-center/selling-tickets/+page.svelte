@@ -33,6 +33,20 @@
 	</article>
 
 	<article class="my-8 flex flex-col gap-5">
+		<h2 class="text-2xl font-bold">Reserved Seating & Seat Maps</h2>
+		<p class="leading-relaxed text-gray-700">
+			For seated venues, Rondwell supports <strong>reserved seating</strong>. Design a seat map for your venue, assign ticket types to sections, and attendees pick their exact seats at checkout. Seats are briefly <strong>held</strong> while a buyer completes payment, then released automatically if the payment isn't finished — so you never double-sell a seat.
+		</p>
+	</article>
+
+	<article class="my-8 flex flex-col gap-5">
+		<h2 class="text-2xl font-bold">Refunds & Payment Settlement</h2>
+		<p class="leading-relaxed text-gray-700">
+			Paid ticket revenue is confirmed through Rondwell's payment webhooks and held in escrow before settling to your wallet — this protects both you and your attendees. If you need to refund a registration, do it from the <strong>Attendees</strong> tab; the refund is processed back to the attendee's original payment method, and your wallet balance is adjusted accordingly.
+		</p>
+	</article>
+
+	<article class="my-8 flex flex-col gap-5">
 		<h2 class="text-2xl font-bold">Managing Attendees & Check-In</h2>
 		<p class="leading-relaxed text-gray-700">
 			View all registered attendees from your event's <strong>Attendees</strong> tab. Each registration shows ticket type, payment status, and check-in state. Use the built-in QR scanner on the Rondwell mobile app or web dashboard to check attendees in at the door.

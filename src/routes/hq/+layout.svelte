@@ -36,21 +36,10 @@
 		{ label: 'Users', path: '/hq/users', icon: 'users' },
 		{ label: 'Events', path: '/hq/events', icon: 'events' },
 		{ label: 'Collections', path: '/hq/collections', icon: 'collections' },
-		// FE-P2-07 / FE-P2-08 / FE-P2-09 — compliance review queues.
+		// FE-P2-07 — KYC review queue.
 		{ label: 'KYC', path: '/hq/kyc', icon: 'compliance' },
-		{ label: 'Beneficiaries', path: '/hq/beneficiaries', icon: 'compliance' },
-		{ label: 'AML', path: '/hq/aml', icon: 'compliance' },
-		// FE-P3-09 (NEW-9.1) — hash-chained wallet audit log lookup.
-		{ label: 'Wallet Audit', path: '/hq/wallet-audit', icon: 'compliance' },
-		// FE-P4-02 — Platform revenue + finance sub-pages.
+		// Finance module (includes Analytics, Beneficiaries, AML, Wallet Audit)
 		{ label: 'Finance', path: '/hq/finance', icon: 'finance' },
-		// FE-P4-01 — Daily reconciliation runs & frozen wallets.
-		{ label: 'Reconciliation', path: '/hq/reconciliation', icon: 'compliance' },
-		// FE-P4-06 — SLO dashboard + alerts feed.
-		{ label: 'SLOs', path: '/hq/slo', icon: 'finance' },
-		{ label: 'Alerts', path: '/hq/alerts', icon: 'compliance' },
-		// FE-P4-07 — Recon backfill sign-off (rare ops use).
-		{ label: 'Recon Backfill', path: '/hq/recon-backfill', icon: 'compliance' },
 		{ label: 'Settings', path: '/hq/settings', icon: 'settings' },
 	];
 
@@ -103,15 +92,15 @@
 		<!-- ─── DESKTOP: Fixed sidebar with space reserved ─── -->
 		{#if !isMobile}
 			<div class="relative hidden md:block md:min-w-[250px]">
-				<aside class="fixed left-0 top-0 z-10 hidden h-screen w-[250px] flex-col items-start justify-start gap-6 border-r border-gray-200/60 px-6 py-8 md:flex">
+				<aside class="fixed left-0 top-0 z-10 hidden h-screen w-[250px] flex-col items-start justify-start gap-6 border-r border-gray-200/60 px-6 py-8 md:flex overflow-hidden">
 					<!-- Logo -->
-					<a href="/hq" class="flex items-center gap-2">
+					<a href="/hq" class="flex items-center gap-2 flex-shrink-0">
 						<img src="/logo.svg" alt="Rondwell" class="h-7 w-auto" />
 						<span class="rounded bg-[#513BE2]/10 px-2 py-0.5 text-[10px] font-semibold text-[#513BE2]">HQ</span>
 					</a>
 
 					<!-- Nav Items -->
-					<nav class="w-full flex-1 space-y-1">
+					<nav class="w-full flex-1 space-y-1 overflow-y-auto min-h-0">
 						{#each menuItems as item}
 							<a
 								href={item.path}
@@ -141,7 +130,7 @@
 					</nav>
 
 					<!-- Admin Profile + Logout -->
-					<div class="w-full border-t border-gray-200/60 pt-4">
+					<div class="w-full border-t border-gray-200/60 pt-4 flex-shrink-0">
 						<div class="mb-3 flex items-center gap-3 px-1">
 							<div class="flex h-9 w-9 items-center justify-center rounded-full bg-[#513BE2]/10 text-sm font-semibold text-[#513BE2]">
 								{adminUser?.name?.charAt(0) || 'A'}

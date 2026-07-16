@@ -40,6 +40,23 @@
 	</article>
 
 	<article class="my-8 flex flex-col gap-5">
+		<h2 class="text-2xl font-bold">Multi-Day Events & Agenda</h2>
+		<p class="leading-relaxed text-gray-700">
+			If your event spans several days — like a conference or festival — toggle <strong>Multi-Day</strong> when setting the dates. Rondwell then lets you build a per-day <strong>Agenda</strong>: add sessions with their own titles, times, speakers, and rooms. Attendees see the agenda as a tabbed timeline on your public event page, and it stays in sync with the timezone you selected.
+		</p>
+	</article>
+
+	<article class="my-8 flex flex-col gap-5">
+		<h2 class="text-2xl font-bold">Event Themes & Branding</h2>
+		<p class="leading-relaxed text-gray-700">
+			Every event page can carry its own colour theme. Pick a palette from the event's <strong>Settings → Display</strong> tab and Rondwell applies it consistently across the cover, tabs, buttons — and even the mobile browser bar (the notification/status area tints to match), so your page feels like a branded, native app rather than a generic web page.
+		</p>
+		<p class="leading-relaxed text-gray-700">
+			You can also set a custom link slug and a cover banner here to make your shareable link and social previews look polished.
+		</p>
+	</article>
+
+	<article class="my-8 flex flex-col gap-5">
 		<h2 class="text-2xl font-bold">Publishing Your Event</h2>
 		<p class="leading-relaxed text-gray-700">
 			Once you're happy with your event setup, click <strong>"Publish"</strong>. Your event gets a shareable link (e.g., <code class="rounded bg-gray-100 px-1 text-sm">rondwell.com/e/your-event-slug</code>) and appears on the Discover page for attendees to find.

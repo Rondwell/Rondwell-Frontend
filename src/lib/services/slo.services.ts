@@ -12,7 +12,7 @@
  *   - POST /api/v1/payment/admin/alerts/:id/ack    (acknowledge)
  */
 
-import { authFetch } from '$lib/services/api.client';
+import { adminFetch } from '$lib/services/admin.fetch';
 import { throwApiError } from '$lib/utils/errorMessage';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -44,7 +44,7 @@ export interface OpsAlert {
 }
 
 export async function getSloDashboard(): Promise<SloMetric[]> {
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/admin/slo`);
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/admin/slo`);
 	if (!res.ok) await throwApiError(res, 'Failed to load SLO dashboard');
 	const data = await res.json();
 	const d = data?.data ?? data ?? [];
@@ -62,7 +62,7 @@ export async function listOpsAlerts(opts?: {
 	if (opts?.severity) params.set('severity', opts.severity);
 	if (opts?.resolved != null) params.set('resolved', String(opts.resolved));
 	if (opts?.limit) params.set('limit', String(opts.limit));
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/admin/alerts?${params.toString()}`);
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/admin/alerts?${params.toString()}`);
 	if (!res.ok) await throwApiError(res, 'Failed to load alerts');
 	const data = await res.json();
 	const d = data?.data ?? data ?? {};
@@ -70,7 +70,7 @@ export async function listOpsAlerts(opts?: {
 }
 
 export async function acknowledgeAlert(alertId: string, note?: string): Promise<void> {
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/admin/alerts/${alertId}/ack`, {
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/admin/alerts/${alertId}/ack`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ note: note ?? '' }),

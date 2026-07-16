@@ -37,6 +37,20 @@
 		</p>
 	</article>
 
+	<article class="my-8 flex flex-col gap-5">
+		<h2 class="text-2xl font-bold">Exhibitor, Vendor & Speaker Insights</h2>
+		<p class="leading-relaxed text-gray-700">
+			Beyond the organizer view, Rondwell surfaces role-specific analytics. Exhibitors and vendors can see booth engagement — profile views, leads, and booking activity — while speakers can track session interest. These insights are computed continuously, so numbers reflect activity in near real-time rather than an overnight batch.
+		</p>
+	</article>
+
+	<article class="my-8 flex flex-col gap-5">
+		<h2 class="text-2xl font-bold">How Fresh Is the Data?</h2>
+		<p class="leading-relaxed text-gray-700">
+			Analytics update as events happen — a ticket sale, a page view, or a check-in flows through in near real-time. Revenue figures reconcile against settled payments, so what you see in analytics stays consistent with what lands in your wallet.
+		</p>
+	</article>
+
 	<div class="mt-8">
 		<a href="/help-center" class="text-sm font-medium text-purple-600 hover:underline">← Back to Help Center</a>
 	</div>

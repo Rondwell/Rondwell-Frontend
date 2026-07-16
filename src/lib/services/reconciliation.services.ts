@@ -14,7 +14,7 @@
  *   - POST   /api/v1/payment/admin/recon/backfill/:runId/approve    (P4-07 — sign-off)
  */
 
-import { authFetch } from '$lib/services/api.client';
+import { adminFetch } from '$lib/services/admin.fetch';
 import { throwApiError } from '$lib/utils/errorMessage';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -97,7 +97,7 @@ export async function listReconRuns(opts?: {
 	if (opts?.status) params.set('status', opts.status);
 	if (opts?.cursor) params.set('cursor', opts.cursor);
 	if (opts?.limit) params.set('limit', String(opts.limit));
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/admin/recon/runs?${params.toString()}`);
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/admin/recon/runs?${params.toString()}`);
 	if (!res.ok) await throwApiError(res, 'Failed to load recon runs');
 	const data = await res.json();
 	const d = data?.data ?? data ?? {};
@@ -105,7 +105,7 @@ export async function listReconRuns(opts?: {
 }
 
 export async function getReconRun(runId: string): Promise<ReconRunDetail> {
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/admin/recon/runs/${runId}`);
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/admin/recon/runs/${runId}`);
 	if (!res.ok) await throwApiError(res, 'Failed to load run');
 	const data = await res.json();
 	const d = data?.data ?? data ?? {};
@@ -118,7 +118,7 @@ export async function getReconRun(runId: string): Promise<ReconRunDetail> {
 // ─── Wallet detail / freeze controls ─────────────────────────────────────
 
 export async function getReconWallet(walletId: string): Promise<ReconWalletDetail> {
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/admin/recon/wallets/${walletId}`);
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/admin/recon/wallets/${walletId}`);
 	if (!res.ok) await throwApiError(res, 'Failed to load wallet');
 	const data = await res.json();
 	const d = data?.data ?? data ?? {};
@@ -141,7 +141,7 @@ export async function getReconWallet(walletId: string): Promise<ReconWalletDetai
 }
 
 export async function unfreezeWallet(walletId: string, note?: string): Promise<void> {
-	const res = await authFetch(
+	const res = await adminFetch(
 		`${BASE_URL}/api/v1/payment/admin/recon/wallets/${walletId}/unfreeze`,
 		{
 			method: 'POST',
@@ -161,7 +161,7 @@ export async function listReconBackfills(opts?: {
 	const params = new URLSearchParams();
 	if (opts?.cursor) params.set('cursor', opts.cursor);
 	if (opts?.limit) params.set('limit', String(opts.limit));
-	const res = await authFetch(
+	const res = await adminFetch(
 		`${BASE_URL}/api/v1/payment/admin/recon/backfill?${params.toString()}`
 	);
 	if (!res.ok) await throwApiError(res, 'Failed to load backfill runs');
@@ -171,14 +171,14 @@ export async function listReconBackfills(opts?: {
 }
 
 export async function getBackfillRun(runId: string): Promise<ReconBackfillRun & { rawOutput?: any }> {
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/admin/recon/backfill/${runId}`);
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/admin/recon/backfill/${runId}`);
 	if (!res.ok) await throwApiError(res, 'Failed to load backfill run');
 	const data = await res.json();
 	return data?.data ?? data;
 }
 
 export async function approveBackfillRun(runId: string, note?: string): Promise<void> {
-	const res = await authFetch(
+	const res = await adminFetch(
 		`${BASE_URL}/api/v1/payment/admin/recon/backfill/${runId}/approve`,
 		{
 			method: 'POST',
@@ -190,7 +190,7 @@ export async function approveBackfillRun(runId: string, note?: string): Promise<
 }
 
 export async function rejectBackfillRun(runId: string, reason: string): Promise<void> {
-	const res = await authFetch(
+	const res = await adminFetch(
 		`${BASE_URL}/api/v1/payment/admin/recon/backfill/${runId}/reject`,
 		{
 			method: 'POST',

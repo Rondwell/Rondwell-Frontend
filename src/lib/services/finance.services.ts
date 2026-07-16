@@ -14,7 +14,7 @@
  *   - GET /api/v1/payment/admin/finance/export?type=overview|events|vendors|organizers
  */
 
-import { authFetch } from '$lib/services/api.client';
+import { adminFetch } from '$lib/services/admin.fetch';
 import { throwApiError } from '$lib/utils/errorMessage';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -62,27 +62,29 @@ export async function getRevenueOverview(opts?: {
 	includePreviousYear?: boolean;
 }): Promise<RevenueOverview> {
 	const params = new URLSearchParams();
-	if (opts?.from) params.set('from', opts.from);
-	if (opts?.to) params.set('to', opts.to);
+	if (opts?.from) params.set('from', opts.from.slice(0, 10));
+	if (opts?.to) params.set('to', opts.to.slice(0, 10));
 	if (opts?.currency) params.set('currency', opts.currency);
 	if (opts?.includePreviousYear) params.set('includePreviousYear', 'true');
-	const res = await authFetch(
-		`${BASE_URL}/api/v1/payment/admin/finance/overview?${params.toString()}`
+	const res = await adminFetch(
+		`${BASE_URL}/api/v1/payment/admin/finance/summary?${params.toString()}`
 	);
 	if (!res.ok) await throwApiError(res, 'Failed to load revenue');
 	const data = await res.json();
 	const d = data?.data ?? data ?? {};
+	// Backend returns { period, currency, totals: {...}, rates, rollupCoverage }
+	const totals = d.totals ?? d;
 	return {
 		currency: d.currency ?? 'NGN',
-		from: d.from ?? opts?.from ?? '',
-		to: d.to ?? opts?.to ?? '',
-		ticketCommissionKobo: Number(d.ticketCommissionKobo ?? 0),
-		vendorCommissionKobo: Number(d.vendorCommissionKobo ?? 0),
-		fxRevenueKobo: Number(d.fxRevenueKobo ?? 0),
-		subscriptionRevenueKobo: Number(d.subscriptionRevenueKobo ?? 0),
-		gatewayFeesPaidKobo: Number(d.gatewayFeesPaidKobo ?? 0),
-		refundReturnsKobo: Number(d.refundReturnsKobo ?? 0),
-		netKobo: Number(d.netKobo ?? 0),
+		from: d.period?.from ?? d.from ?? opts?.from ?? '',
+		to: d.period?.to ?? d.to ?? opts?.to ?? '',
+		ticketCommissionKobo: Number(totals.ticketCommissionKobo ?? 0),
+		vendorCommissionKobo: Number(totals.vendorCommissionKobo ?? 0),
+		fxRevenueKobo: Number(totals.fxRevenueKobo ?? 0),
+		subscriptionRevenueKobo: Number(totals.subscriptionRevenueKobo ?? 0),
+		gatewayFeesPaidKobo: Number(totals.gatewayFeesPaidKobo ?? 0),
+		refundReturnsKobo: Number(totals.refundReturnsKobo ?? 0),
+		netKobo: Number(totals.netKobo ?? 0),
 		previousYear: d.previousYear ?? null,
 	};
 }
@@ -95,16 +97,27 @@ export async function getRevenueTimeseries(opts: {
 }): Promise<RevenueTimeseriesPoint[]> {
 	const params = new URLSearchParams();
 	params.set('bucket', opts.bucket ?? 'day');
-	if (opts.from) params.set('from', opts.from);
-	if (opts.to) params.set('to', opts.to);
+	if (opts.from) params.set('from', opts.from.slice(0, 10));
+	if (opts.to) params.set('to', opts.to.slice(0, 10));
 	if (opts.currency) params.set('currency', opts.currency);
-	const res = await authFetch(
+	const res = await adminFetch(
 		`${BASE_URL}/api/v1/payment/admin/finance/timeseries?${params.toString()}`
 	);
 	if (!res.ok) await throwApiError(res, 'Failed to load timeseries');
 	const data = await res.json();
 	const d = data?.data ?? data ?? [];
-	return Array.isArray(d) ? d : Array.isArray(d.items) ? d.items : [];
+	const raw = Array.isArray(d) ? d : Array.isArray(d.items) ? d.items : [];
+	// Backend returns PlatformRevenue docs with `date` field; FE expects `bucket`
+	return raw.map((r: any) => ({
+		bucket: r.bucket ?? r.date ?? r._id ?? '',
+		ticketCommissionKobo: Number(r.ticketCommissionKobo ?? 0),
+		vendorCommissionKobo: Number(r.vendorCommissionKobo ?? 0),
+		fxRevenueKobo: Number(r.fxRevenueKobo ?? 0),
+		subscriptionRevenueKobo: Number(r.subscriptionRevenueKobo ?? 0),
+		gatewayFeesPaidKobo: Number(r.gatewayFeesPaidKobo ?? 0),
+		refundReturnsKobo: Number(r.refundReturnsKobo ?? 0),
+		netKobo: Number(r.netKobo ?? 0),
+	}));
 }
 
 export interface TopRow {
@@ -132,10 +145,10 @@ async function fetchTop(
 	opts?: { from?: string; to?: string; limit?: number }
 ): Promise<TopRow[]> {
 	const params = new URLSearchParams();
-	if (opts?.from) params.set('from', opts.from);
-	if (opts?.to) params.set('to', opts.to);
+	if (opts?.from) params.set('from', opts.from.slice(0, 10));
+	if (opts?.to) params.set('to', opts.to.slice(0, 10));
 	if (opts?.limit) params.set('limit', String(opts.limit));
-	const res = await authFetch(
+	const res = await adminFetch(
 		`${BASE_URL}/api/v1/payment/admin/finance/top/${scope}?${params.toString()}`
 	);
 	if (!res.ok) await throwApiError(res, `Failed to load top ${scope}`);
@@ -152,11 +165,11 @@ export async function exportFinanceCsv(
 ): Promise<Blob> {
 	const params = new URLSearchParams();
 	params.set('type', scope);
-	if (opts?.from) params.set('from', opts.from);
-	if (opts?.to) params.set('to', opts.to);
+	if (opts?.from) params.set('from', opts.from.slice(0, 10));
+	if (opts?.to) params.set('to', opts.to.slice(0, 10));
 	if (opts?.currency) params.set('currency', opts.currency);
-	const res = await authFetch(
-		`${BASE_URL}/api/v1/payment/admin/finance/export?${params.toString()}`
+	const res = await adminFetch(
+		`${BASE_URL}/api/v1/payment/admin/finance/export.csv?${params.toString()}`
 	);
 	if (!res.ok) await throwApiError(res, 'Failed to export CSV');
 	return await res.blob();

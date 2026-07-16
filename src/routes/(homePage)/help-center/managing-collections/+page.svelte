@@ -33,6 +33,13 @@
 		</p>
 	</article>
 
+	<article class="my-8 flex flex-col gap-5">
+		<h2 class="text-2xl font-bold">Customizing Your Collection Theme</h2>
+		<p class="leading-relaxed text-gray-700">
+			Give your collection its own identity from <strong>Settings → Display</strong>. Choose a colour palette, and Rondwell applies it across the collection's cover, cards, and buttons — and tints the mobile browser bar to match, so the page reads as a cohesive, branded destination. Add a profile picture, cover banner, and social links to complete the look.
+		</p>
+	</article>
+
 	<div class="mt-8">
 		<a href="/help-center" class="text-sm font-medium text-purple-600 hover:underline">← Back to Help Center</a>
 	</div>

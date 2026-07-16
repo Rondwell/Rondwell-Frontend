@@ -12,6 +12,7 @@
  *   - POST /api/v1/payment/admin/finance/disputes/:id/resolve   (admin resolve)
  */
 
+import { adminFetch } from '$lib/services/admin.fetch';
 import { authFetch } from '$lib/services/api.client';
 import { throwApiError } from '$lib/utils/errorMessage';
 
@@ -122,7 +123,7 @@ export async function listAllDisputes(opts?: {
 	if (opts?.cursor) params.set('cursor', opts.cursor);
 	if (opts?.status) params.set('status', opts.status);
 	if (opts?.limit) params.set('limit', String(opts.limit));
-	const res = await authFetch(
+	const res = await adminFetch(
 		`${BASE_URL}/api/v1/payment/admin/finance/disputes?${params.toString()}`
 	);
 	if (!res.ok) await throwApiError(res, 'Failed to load disputes');
@@ -136,7 +137,7 @@ export async function resolveDispute(
 	resolution: 'WON' | 'LOST',
 	note?: string
 ): Promise<Dispute> {
-	const res = await authFetch(
+	const res = await adminFetch(
 		`${BASE_URL}/api/v1/payment/admin/finance/disputes/${disputeId}/resolve`,
 		{
 			method: 'POST',

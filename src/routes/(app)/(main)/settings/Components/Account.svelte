@@ -80,8 +80,6 @@
 	let toast = '';
 	let toastType: 'success' | 'error' = 'success';
 	let showDeleteModal = false;
-	// FE-P3-10 — pending soft-delete state. Banner / button copy adapt when set.
-	let deletionScheduledFor: string | null = null;
 
 	// Passkey state
 	let passkeys: Array<{ id: string; name: string; createdIndex: number; createdAt: string }> = [];
@@ -281,13 +279,6 @@
 			setActiveProfile(ap);
 			// Load passkeys
 			try { passkeys = await listPasskeys(); } catch { /* no passkeys */ }
-			// FE-P3-10 — load any pending soft-delete request so the banner
-			// surfaces immediately on mount.
-			try {
-				const { getAccountDeletionStatus } = await import('$lib/services/wallet.services');
-				const s = await getAccountDeletionStatus();
-				deletionScheduledFor = s?.scheduledFor ?? null;
-			} catch { /* no pending request */ }
 		} catch (e) {
 			console.error('Failed to load settings', e);
 			showToast('Failed to load settings data', 'error');
@@ -799,44 +790,21 @@
 	<div>
 		<h2 class="mb-1 text-lg font-semibold">Delete Account</h2>
 		<!--
-			FE-P3-10 (NEW-9.2): Self-service deletion with a 30-day grace
-			window. The modal handles the request / cancel / status flow;
-			the banner below is a quick-glance state hint when a deletion
-			is already pending.
+			Self-service deletion is OTP-confirmed and immediate: the modal
+			emails a code, and once confirmed the account is closed and the
+			user is signed out everywhere.
 		-->
 		<p class="mb-4 text-sm text-[#8C8F93]">
-			Account deletion is a 30-day grace flow. Your personal data is anonymised after the window;
-			financial records are retained for 7 years to meet regulatory requirements.
+			We'll email you a confirmation code. Once you confirm, your account is closed immediately and
+			you're signed out on all devices. Your personal data is anonymised; financial records are
+			retained for 7 years to meet regulatory requirements.
 		</p>
-
-		{#if deletionScheduledFor}
-			<div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-				<p class="font-medium">
-					Your account is scheduled for deletion on
-					{new Date(deletionScheduledFor).toLocaleDateString(undefined, {
-						month: 'long',
-						day: 'numeric',
-						year: 'numeric',
-					})}.
-				</p>
-				<button
-					type="button"
-					on:click={() => (showDeleteModal = true)}
-					class="mt-1 text-xs font-medium text-amber-900 underline"
-				>
-					Manage request →
-				</button>
-			</div>
-		{/if}
 
 		<button on:click={() => (showDeleteModal = true)} class="flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700">
 			<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6.75V10.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.99958 16.0584H4.45458C1.85208 16.0584 0.764583 14.1984 2.02458 11.9259L4.36458 7.71094L6.56958 3.75094C7.90458 1.34344 10.0946 1.34344 11.4296 3.75094L13.6346 7.71844L15.9746 11.9334C17.2346 14.2059 16.1396 16.0659 13.5446 16.0659H8.99958V16.0584Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.99609 12.75H9.00283" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-			{deletionScheduledFor ? 'Manage deletion request' : 'Delete Account'}
+			Delete Account
 		</button>
 	</div>
 </div>
 
-<DeleteAccountModal
-	bind:open={showDeleteModal}
-	on:statusChange={(e) => (deletionScheduledFor = e.detail.scheduledFor)}
-/>
+<DeleteAccountModal bind:open={showDeleteModal} />

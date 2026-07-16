@@ -10,7 +10,7 @@
  *   - GET  /api/v1/payment/aml/admin/ctr-str/:month   (CSV download)
  */
 
-import { authFetch } from '$lib/services/api.client';
+import { adminFetch } from '$lib/services/admin.fetch';
 import { throwApiError } from '$lib/utils/errorMessage';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -47,7 +47,7 @@ export async function listPendingReviews(opts: { cursor?: string; limit?: number
 	const params = new URLSearchParams();
 	if (opts.cursor) params.set('cursor', opts.cursor);
 	if (opts.limit) params.set('limit', String(opts.limit));
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/aml/admin/reviews/pending?${params.toString()}`);
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/aml/admin/reviews/pending?${params.toString()}`);
 	if (!res.ok) await throwApiError(res, 'Failed to load AML reviews');
 	const data = await res.json();
 	const p = data.data ?? data;
@@ -61,7 +61,7 @@ export async function listOpenAlerts(opts: { cursor?: string; limit?: number } =
 	const params = new URLSearchParams();
 	if (opts.cursor) params.set('cursor', opts.cursor);
 	if (opts.limit) params.set('limit', String(opts.limit));
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/aml/admin/alerts/open?${params.toString()}`);
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/aml/admin/alerts/open?${params.toString()}`);
 	if (!res.ok) await throwApiError(res, 'Failed to load AML alerts');
 	const data = await res.json();
 	const p = data.data ?? data;
@@ -69,7 +69,7 @@ export async function listOpenAlerts(opts: { cursor?: string; limit?: number } =
 }
 
 export async function approveAmlReview(reviewId: string, note?: string): Promise<AmlReview> {
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/aml/admin/${reviewId}/approve`, {
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/aml/admin/${reviewId}/approve`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ note }),
@@ -80,7 +80,7 @@ export async function approveAmlReview(reviewId: string, note?: string): Promise
 }
 
 export async function rejectAmlReview(reviewId: string, reason: string): Promise<AmlReview> {
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/aml/admin/${reviewId}/reject`, {
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/aml/admin/${reviewId}/reject`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ reason }),
@@ -91,7 +91,7 @@ export async function rejectAmlReview(reviewId: string, reason: string): Promise
 }
 
 export async function clearAlert(alertId: string, note?: string): Promise<AmlAlert> {
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/aml/admin/${alertId}/clear`, {
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/aml/admin/${alertId}/clear`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ note }),
@@ -106,7 +106,7 @@ export async function clearAlert(alertId: string, note?: string): Promise<AmlAle
  * Blob so the caller can wire it to a download link.
  */
 export async function downloadCtrStrReport(monthYYYYMM: string): Promise<Blob> {
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/aml/admin/ctr-str/${monthYYYYMM}`);
+	const res = await adminFetch(`${BASE_URL}/api/v1/payment/aml/admin/ctr-str/${monthYYYYMM}`);
 	if (!res.ok) await throwApiError(res, 'Failed to download report');
 	return await res.blob();
 }

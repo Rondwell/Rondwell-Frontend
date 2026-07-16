@@ -39,6 +39,20 @@
 		</p>
 	</article>
 
+	<article class="my-8 flex flex-col gap-5">
+		<h2 class="text-2xl font-bold">Escrow & When Funds Become Available</h2>
+		<p class="leading-relaxed text-gray-700">
+			Ticket revenue doesn't hit your withdrawable balance instantly. Funds sit in a <strong>pending</strong> (escrow) state and become <strong>available</strong> once the payment is confirmed and the settlement window passes — typically after the event, or sooner depending on your account standing. Your wallet page always shows the split between pending and available balances so you know exactly what you can withdraw right now.
+		</p>
+	</article>
+
+	<article class="my-8 flex flex-col gap-5">
+		<h2 class="text-2xl font-bold">Verification & Withdrawal Requirements</h2>
+		<p class="leading-relaxed text-gray-700">
+			Because withdrawals move real money, you'll need a completed <strong>KYC verification</strong> and a <strong>transaction PIN</strong> before your first payout. First-time or unusually large withdrawals may trigger an additional review as part of Rondwell's fraud and compliance checks — this keeps your earnings and your attendees' payments safe.
+		</p>
+	</article>
+
 	<div class="mt-8">
 		<a href="/help-center" class="text-sm font-medium text-purple-600 hover:underline">← Back to Help Center</a>
 	</div>

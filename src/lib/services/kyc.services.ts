@@ -189,6 +189,35 @@ export async function listPendingKyc(opts: { cursor?: string; limit?: number } =
 	return { items, nextCursor: payload.nextCursor ?? null };
 }
 
+export async function listApprovedKyc(opts: { cursor?: string; limit?: number } = {}): Promise<{
+	items: KycReviewItem[];
+	nextCursor?: string | null;
+}> {
+	const params = new URLSearchParams();
+	if (opts.cursor) params.set('cursor', opts.cursor);
+	if (opts.limit) params.set('limit', String(opts.limit));
+	const res = await fetch(`${BASE_URL}/api/v1/profile/kyc/admin/approved?${params.toString()}`, {
+		headers: getAdminHeaders(),
+	});
+	if (!res.ok) await throwApiError(res, 'Failed to load approved KYC list');
+	const data = await res.json();
+	const payload = data.data ?? data;
+	const rawItems = Array.isArray(payload) ? payload : (payload.items ?? []);
+	const items: KycReviewItem[] = rawItems.map((r: any) => ({
+		...r,
+		id: r.id || r._id,
+		address: r.address ?? {
+			street: r.addressLine1,
+			formatted: [r.addressLine1, r.city, r.state, r.country].filter(Boolean).join(', '),
+			city: r.city,
+			state: r.state,
+			country: r.country,
+			postalCode: r.postalCode,
+		},
+	}));
+	return { items, nextCursor: payload.nextCursor ?? null };
+}
+
 export async function approveKyc(submissionId: string, note?: string): Promise<KycReviewItem> {
 	const res = await fetch(`${BASE_URL}/api/v1/profile/kyc/admin/${submissionId}/approve`, {
 		method: 'POST',

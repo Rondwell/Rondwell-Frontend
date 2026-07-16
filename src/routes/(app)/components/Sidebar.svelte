@@ -224,9 +224,12 @@
 			</div>
 		</div>
 		<!-- Mobile Bottom Navigation -->
+		<!-- background_color is driven by the active page theme so the bar matches
+		     the notification/URL-bar tint. The safe-area padding extends that same
+		     colour into the phone's gesture/navigation strip for a premium fill. -->
 		<nav
 			class="fixed right-0 bottom-0 left-0 z-50 flex h-[106px] items-end justify-around border-t py-2 md:hidden"
-			style="background-color: {background_color};"
+			style="background-color: {background_color || 'var(--theme-chrome, #f4f5f6)'}; padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));"
 		>
 			<div class="flex h-full w-full items-end justify-around">
 				{#each mobileMenuItems as item}

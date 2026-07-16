@@ -1,5 +1,5 @@
 import { authFetch } from '$lib/services/api.client';
-
+import { adminFetch } from '$lib/services/admin.fetch';
 import { throwApiError } from '$lib/utils/errorMessage';
 import { getBrowserTz } from '$lib/utils/tz';
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -476,7 +476,7 @@ export async function getWalletAudit(
 	params.set('tz', opts?.tz ?? getBrowserTz());
 	if (opts?.cursor) params.set('cursor', opts.cursor);
 	if (opts?.limit) params.set('limit', String(opts.limit));
-	const res = await authFetch(
+	const res = await adminFetch(
 		`${BASE_URL}/api/v1/payment/admin/wallet/${walletId}/audit?${params.toString()}`
 	);
 	if (!res.ok) await throwApiError(res, 'Failed to fetch audit log');
@@ -495,7 +495,7 @@ export async function verifyWalletAuditChain(
 	fromGenesis = true
 ): Promise<{ status: 'VERIFIED' | 'TAMPERED'; tamperedAt?: string | null; entriesChecked: number }> {
 	const url = `${BASE_URL}/api/v1/payment/admin/wallet/${walletId}/audit/verify?fromGenesis=${fromGenesis}`;
-	const res = await authFetch(url, {
+	const res = await adminFetch(url, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({}),
@@ -513,53 +513,35 @@ export async function verifyWalletAuditChain(
 // ==================== FE-P3-10 — SOFT-DELETE / ANONYMISE ====================
 
 /**
- * FE-P3-10 (NEW-9.2) — Self-service account deletion request.
+ * Self-service account deletion — OTP-confirmed, immediate.
  *
- * Schedules a soft-delete on a 30-day grace window. The user keeps access
- * during the grace window and can cancel. After 30 days the backend cron
- * runs the anonymise job (PII scrubbed; financial history retained 7y).
+ * Step 1: `requestAccountDeletion` asks the backend to email a 6-digit
+ * confirmation code. Returns the masked email the code was sent to.
  *
- * The endpoint is mounted under user-service when present; the FE talks to
- * it through the api gateway. The `cancel` and `status` endpoints share
- * the same surface.
+ * Step 2: `confirmAccountDeletion` submits the code. On success the account
+ * is closed immediately (sessions revoked, PII anonymised, email freed for
+ * reuse; financial records retained 7y). The caller must then clear local
+ * auth state and redirect to the auth screen.
  */
-export async function requestAccountDeletion(reason?: string): Promise<{ scheduledFor: string }> {
+export async function requestAccountDeletion(reason?: string): Promise<{ email: string }> {
 	const res = await authFetch(`${BASE_URL}/api/v1/profile/me/deletion/request`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ reason: reason ?? '' }),
 	});
-	if (!res.ok) await throwApiError(res, 'Failed to schedule account deletion');
+	if (!res.ok) await throwApiError(res, 'Failed to start account deletion');
 	const data = await res.json();
 	const d = data?.data ?? data ?? {};
-	return { scheduledFor: d.scheduledFor ?? '' };
+	return { email: d.email ?? '' };
 }
 
-export async function cancelAccountDeletion(): Promise<void> {
-	const res = await authFetch(`${BASE_URL}/api/v1/profile/me/deletion/cancel`, {
+export async function confirmAccountDeletion(otp: string): Promise<void> {
+	const res = await authFetch(`${BASE_URL}/api/v1/profile/me/deletion/confirm`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({}),
+		body: JSON.stringify({ otp }),
 	});
-	if (!res.ok) await throwApiError(res, 'Failed to cancel deletion request');
-}
-
-export async function getAccountDeletionStatus(): Promise<{
-	scheduledFor: string | null;
-	canCancel: boolean;
-} | null> {
-	try {
-		const res = await authFetch(`${BASE_URL}/api/v1/profile/me/deletion/status`);
-		if (!res.ok) return null;
-		const data = await res.json();
-		const d = data?.data ?? data ?? {};
-		return {
-			scheduledFor: d.scheduledFor ?? null,
-			canCancel: Boolean(d.canCancel),
-		};
-	} catch {
-		return null;
-	}
+	if (!res.ok) await throwApiError(res, 'Failed to confirm account deletion');
 }
 
 /** Super-admin: anonymise a user's PII immediately (P3-10). */

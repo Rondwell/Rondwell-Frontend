@@ -5,10 +5,11 @@
 	import { getPublicCollectionBySlug } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { resolveCollectionThemeColor } from '$lib/stores/collectionTheme';
+	import { applyThemeColor, resetThemeColor } from '$lib/stores/themeColor';
 	import { toast } from '$lib/stores/toast.store';
 	import { colors, type Color } from '$lib/utils/colors';
 	import Icon from '@iconify/svelte';
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 
 	export let data: any;
 	$: seo = data?.seo;
@@ -52,8 +53,16 @@
 			events = data.events;
 			eventTags = data.eventTags ?? [];
 			themeColor = resolveCollectionThemeColor(collection.themeColor);
+			// Tint the browser chrome (status bar / URL bar / notification pane)
+			// to the collection's actual theme so it fills the phone premium-style.
+			applyThemeColor(themeColor);
 		} catch { notFound = true; }
 		finally { loading = false; }
+	});
+
+	// Restore the default chrome colour when navigating away from the collection.
+	onDestroy(() => {
+		resetThemeColor();
 	});
 
 	$: filteredEvents = events.filter((e: any) => {

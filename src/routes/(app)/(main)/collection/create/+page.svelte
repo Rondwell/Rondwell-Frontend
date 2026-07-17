@@ -15,7 +15,6 @@
 
 	let name = '';
 	let descriptionHtml = '';
-	let slug = '';
 	let selectedColor: Color = colors[0];
 	let submitting = false;
 	let submitError = '';
@@ -25,7 +24,6 @@
 	let profileFile: File | null = null;
 	let profilePreview = '';
 	let descEditor: Readable<Editor>;
-	let slugManuallyEdited = false;
 
 	onMount(() => {
 		descEditor = createEditor({
@@ -45,14 +43,6 @@
 	}
 
 	$: descPreview = stripHtml(descriptionHtml) || 'Add a description';
-
-	function generateSlug(text: string): string {
-		return text.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
-	}
-
-	$: if (name && !slugManuallyEdited) { slug = generateSlug(name); }
-
-	function handleSlugInput() { slugManuallyEdited = true; }
 
 	function handleCoverSelect(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
@@ -90,7 +80,8 @@
 				name: name.trim(),
 				description: descriptionHtml.trim() || undefined,
 				themeColor: selectedColor.name,
-				slug: slug || undefined,
+				// Slug is generated automatically by the backend on creation
+				// (a unique shareable link), so we intentionally don't send one.
 				socialLinks: Object.fromEntries(Object.entries(socialLinks).filter(([, v]) => v.trim())),
 			});
 			const id = collection._id ?? collection.id;
@@ -226,11 +217,11 @@
 				<label class="mb-2 block text-sm font-medium text-gray-700">Public URL (Slug)</label>
 				<div class="flex max-w-xl items-center">
 					<span class="flex h-[42px] items-center rounded-l-md bg-[#F4F4F4] px-3 text-sm text-gray-500">rondwell.com/c/</span>
-					<input type="text" placeholder="my-collection" bind:value={slug}
-						on:input={handleSlugInput}
-						class="h-[42px] flex-1 rounded-r-md border border-gray-300 bg-white px-3 text-sm focus:ring-0 focus:outline-none" />
+					<span class="flex h-[42px] flex-1 items-center rounded-r-md border border-gray-200 bg-[#FAFAFA] px-3 text-sm text-gray-400 italic">
+						generated automatically
+					</span>
 				</div>
-				<p class="mt-1 text-xs text-gray-400">This will be the shareable link for your collection page.</p>
+				<p class="mt-1 text-xs text-gray-400">A unique shareable link is created for you when you create this collection.</p>
 			</div>
 		</div>
 

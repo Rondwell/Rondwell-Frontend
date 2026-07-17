@@ -1541,7 +1541,8 @@ export async function createCollection(payload: {
   name: string;
   description?: string;
   themeColor?: string;
-  slug?: string;
+  // Note: `slug` is intentionally omitted — the backend always generates a
+  // unique shareable slug on creation (like vendor/exhibitor/speaker pages).
   location?: string;
   socialLinks?: Record<string, string>;
   visibility?: string;

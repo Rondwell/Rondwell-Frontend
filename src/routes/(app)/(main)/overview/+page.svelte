@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import CollectionCard from '$lib/components/CollectionCard.svelte';
 	import EventCard from '$lib/components/EventCard.svelte';
+	import OnboardingBanner from '$lib/components/OnboardingBanner.svelte';
 	import { getMyEvents, getMySubscribedCollections } from '$lib/services/event.services';
 	import { getEarningsSummary, getWalletBalance } from '$lib/services/wallet.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
@@ -344,41 +345,27 @@
 			{/if}
 
 			<!-- Welcome Card -->
-			<div
-				class="flex h-full min-h-[181.5px] flex-col items-start gap-4 rounded-lg bg-[#FDFDFD] p-3 md:flex-row md:p-6"
-			>
-				<div
-					class="flex w-full items-center justify-center rounded bg-[#F4F5F6] p-5 md:h-[144px] md:max-w-[195.09px]"
-				>
-					<img src="/folder-icon.png" alt="folder icon" class="w-full" />
-				</div>
-
-				<div
-					class="flex h-full min-h-[144px] flex-1 flex-col justify-between text-center md:text-left"
-				>
-					<span>
-						<h2 class="font-mediun mb-1 text-xl">Welcome to Rondwell</h2>
-						<p class="mb-3 max-w-[724px] text-sm text-[#B9BABA]">
-							Rondwell lets you easily share and manage your events. Every event on Rondwell is part
-							of a Collection. You can manage all events in a colltion at once. Head over to events or colleions on the sidebar to get started. 
-						</p>
-					</span>
-
-					<div class="flex flex-col items-center justify-between gap-4 md:flex-row">
-						<div class="mt-4 flex items-center gap-1">
-							<span class="h-1 w-8 rounded bg-black"></span>
-							<span class="h-1 w-8 rounded-full bg-gray-400"></span>
-							<span class="h-1 w-8 rounded-full bg-gray-400"></span>
-							<span class="h-1 w-8 rounded-full bg-gray-400"></span>
-						</div>
-						<button
-							class="h-[38px] w-full rounded bg-black px-3 py-1 text-sm font-medium text-white md:w-fit"
-						>
-							Close
-						</button>
-					</div>
-				</div>
-			</div>
+			<OnboardingBanner
+				storageKey="onboarding_overview_dismissed"
+				slides={[
+					{
+						title: 'Welcome to Rondwell',
+						body: 'Rondwell lets you easily share and manage your events. Every event on Rondwell is part of a Collection, so you can manage them all in one place.'
+					},
+					{
+						title: 'Create & manage events',
+						body: 'Head to Events on the sidebar to create an event, publish it, sell tickets, and track registrations and attendees in real time.'
+					},
+					{
+						title: 'Track revenue & payouts',
+						body: 'Your dashboard shows total revenue, attendees and wallet balance at a glance. Withdraw earnings to your bank straight from your wallet.'
+					},
+					{
+						title: 'Grow with Collections & Plus',
+						body: 'Group related events into Collections and let people subscribe. Upgrade your plan anytime to lower platform fees and unlock more features.'
+					}
+				]}
+			/>
 		</div>
 
 		<!-- Latest Event Section -->

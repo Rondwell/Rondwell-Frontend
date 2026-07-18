@@ -5,6 +5,7 @@
 	import AcceptedCollaborations from './Components/AcceptedCollaborations.svelte';
 	import InboundInvitations from './Components/InboundInvitations.svelte';
 	import SentRequests from './Components/SentRequests.svelte';
+	import { getPersistedTab, persistTab } from '$lib/utils/tabPersistence';
 
 	let speakerName = 'Speaker';
 	let photoUrl = '';
@@ -17,6 +18,9 @@
 		{ id: 'sent', label: 'Sent Collaboration Requests', icon: 'mdi:send-outline' },
 		{ id: 'accepted', label: 'Accepted Collaborations', icon: 'mdi:check-decagram-outline' },
 	];
+
+	// Restore the active tab from the URL so it survives a refresh.
+	activeTab = getPersistedTab(tabs.map((t) => t.id), activeTab);
 
 	onMount(async () => {
 		try {
@@ -51,7 +55,7 @@
 		<nav class="custom-scrollbar -mx-4 flex overflow-x-auto border-b border-gray-200 px-4 sm:mx-0 sm:px-0">
 			{#each tabs as tab}
 				<button
-					on:click={() => (activeTab = tab.id)}
+					on:click={() => { activeTab = tab.id; persistTab(tab.id); }}
 					class="flex flex-shrink-0 items-center gap-2 border-b-2 px-4 pb-3 pt-1 text-sm font-medium whitespace-nowrap transition-colors
 						{activeTab === tab.id
 						? 'border-[#DB3EC6] text-[#DB3EC6]'

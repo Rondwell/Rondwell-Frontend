@@ -10,6 +10,7 @@
 	} from '$lib/services/analytics.services';
 	import InsightsSkeleton from '$lib/components/analytics/InsightsSkeleton.svelte';
 	import { browser } from '$app/environment';
+	import { getPersistedTab, persistTab } from '$lib/utils/tabPersistence';
 
 	let loading = true;
 	let analytics: any = null;
@@ -19,7 +20,7 @@
 	let chatQuestion = '';
 	let chatAnswer = '';
 	let chatLoading = false;
-	let activeTab = 'analytics';
+	let activeTab = getPersistedTab(['analytics', 'ai'], 'analytics');
 
 	let eventChart: any[] = [];
 	let participationDonut: any[] = [];
@@ -83,7 +84,7 @@
 		<p class="text-sm text-gray-500">Track your event participation, booth performance, leads, and ROI.</p>
 		<div class="mt-4 flex gap-1 rounded-lg bg-gray-100 p-1">
 			{#each ['analytics', 'ai'] as tab}
-				<button on:click={() => activeTab = tab}
+				<button on:click={() => { activeTab = tab; persistTab(tab); }}
 					class="rounded-md px-4 py-2 text-sm font-medium transition-colors {activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}">
 					{tab === 'analytics' ? 'Analytics' : 'AI Insights'}
 				</button>

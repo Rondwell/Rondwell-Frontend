@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
 	import { authState } from '$lib/stores/auth.store';
-	import { onMount } from 'svelte';
 	import Nav from '../../components/Nav.svelte';
 	import Account from './Components/Account.svelte';
 	import CallbackDomains from './Components/CallbackDomains.svelte';
@@ -14,22 +12,9 @@
 	let activeTab = 'account';
 
 	$: isOrganizer = $authState.activeProfile?.role === 'ORGANIZER';
-	$: validTabs = ['account', 'wallet', 'payments', 'subscription', 'orders'];
 
-	onMount(() => {
-		const tabParam = $page.url.searchParams.get('tab');
-		if (tabParam && validTabs.includes(tabParam)) {
-			activeTab = tabParam;
-		}
-	});
-
-	// Also react to URL changes while on the page
-	$: {
-		const tabParam = $page.url.searchParams.get('tab');
-		if (tabParam && validTabs.includes(tabParam)) {
-			activeTab = tabParam;
-		}
-	}
+	// Tab persistence (read on load + write on change) is handled by the shared
+	// Nav component via the `tab` query param.
 
 	// Static tab set. Preferences and Custom Domains are no longer top-level
 	// tabs — they live as sections inside the Account tab. Tax / escrows /

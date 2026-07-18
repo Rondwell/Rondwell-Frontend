@@ -8,10 +8,11 @@
 	import CreatedEventModal from '../components/CreatedEventModal.svelte';
 	import ExternalEventModal from '../components/ExternalEventModal.svelte';
 	import AddEventCollectionModal from './AddEventCollectionModal.svelte';
+	import { getPersistedTab, persistTab } from '$lib/utils/tabPersistence';
 
 	$: collectionId = $page.params.id ?? '';
 
-	let activeTab: 'Upcoming' | 'Past' = 'Upcoming';
+	let activeTab: 'Upcoming' | 'Past' = getPersistedTab(['Upcoming', 'Past'], 'Upcoming') as 'Upcoming' | 'Past';
 	type ActiveModal = 'none' | 'collection' | 'created' | 'external';
 	let activeModal: ActiveModal = 'none';
 	let events: any[] = [];
@@ -107,9 +108,9 @@
 
 		<div class="h-10 w-fit shrink-0 rounded bg-[#EBECED] p-1 text-[#A1A2A2]">
 			<button class={`h-full cursor-pointer rounded px-3 py-1 text-sm ${activeTab === 'Upcoming' ? 'bg-white text-black shadow-sm' : ''}`}
-				on:click={() => (activeTab = 'Upcoming')}>Upcoming</button>
+				on:click={() => { activeTab = 'Upcoming'; persistTab('Upcoming'); }}>Upcoming</button>
 			<button class={`h-full cursor-pointer rounded px-3 py-1 text-sm ${activeTab === 'Past' ? 'bg-white text-black shadow-sm' : ''}`}
-				on:click={() => (activeTab = 'Past')}>Past</button>
+				on:click={() => { activeTab = 'Past'; persistTab('Past'); }}>Past</button>
 		</div>
 	</div>
 

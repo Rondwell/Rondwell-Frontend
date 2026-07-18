@@ -5,6 +5,7 @@
 	import Business from './Components/business.svelte';
 	import Notifications from './Components/Notifications.svelte';
 	import Payment from './Components/Payment.svelte';
+	import { getPersistedTab, persistTab } from '$lib/utils/tabPersistence';
 
 	let activeTab = 'business';
 	let exhibitorName = '';
@@ -17,6 +18,9 @@
 		{ id: 'payment', label: 'Payment & Price', icon: 'mdi:credit-card-outline' },
 		{ id: 'notifications', label: 'Notifications', icon: 'mdi:bell-outline' },
 	];
+
+	// Restore the active tab from the URL so it survives a refresh.
+	activeTab = getPersistedTab(tabs.map((t) => t.id), activeTab);
 
 	onMount(async () => {
 		try {
@@ -54,7 +58,7 @@
 		<nav class="custom-scrollbar -mx-4 flex overflow-x-auto border-b border-gray-200 px-4 sm:mx-0 sm:px-0">
 			{#each tabs as tab}
 				<button
-					on:click={() => (activeTab = tab.id)}
+					on:click={() => { activeTab = tab.id; persistTab(tab.id); }}
 					class="flex flex-shrink-0 items-center gap-2 border-b-2 px-4 pb-3 pt-1 text-sm font-medium whitespace-nowrap transition-colors
 						{activeTab === tab.id
 						? 'border-[#DB3EC6] text-[#DB3EC6]'

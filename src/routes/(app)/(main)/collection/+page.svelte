@@ -3,6 +3,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import CollectionCard from '$lib/components/CollectionCard.svelte';
+	import OnboardingBanner from '$lib/components/OnboardingBanner.svelte';
 	import { getMyCollections, getMySubscribedCollections } from '$lib/services/event.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { onMount } from 'svelte';
@@ -85,41 +86,27 @@
 	<div class="mb-8">
 		<h1 class="mb-4 text-3xl font-medium">Collection</h1>
 
-		<div
-			class="flex h-full min-h-[181.5px] flex-col items-start gap-4 rounded-lg bg-[#FDFDFD] p-3 md:flex-row md:p-6"
-		>
-			<div
-				class="flex w-full items-center justify-center rounded bg-[#F4F5F6] p-5 md:h-[144px] md:max-w-[195.09px]"
-			>
-				<img src="/folder-icon.png" alt="folder icon" class="w-full" />
-			</div>
-
-			<div
-				class="flex h-full min-h-[144px] flex-1 flex-col justify-between text-center md:text-left"
-			>
-				<span>
-					<h2 class="font-mediun mb-1 text-xl">Welcome to Rondwell Collection</h2>
-					<p class="mb-3 max-w-[724px] text-sm text-[#B9BABA]">
-						Rondwell Collection lets you easily share and manage your events. Every event on
-						Rondwell is part of a collection. Users can subscribe to your collections. 
-					</p>
-				</span>
-
-				<div class="flex flex-col items-center justify-between gap-4 md:flex-row">
-					<div class="mt-4 flex items-center gap-1">
-						<span class="h-1 w-8 rounded bg-black"></span>
-						<span class="h-1 w-8 rounded-full bg-gray-400"></span>
-						<span class="h-1 w-8 rounded-full bg-gray-400"></span>
-						<span class="h-1 w-8 rounded-full bg-gray-400"></span>
-					</div>
-					<button
-						class="h-[38px] w-full rounded bg-black px-3 py-1 text-sm font-medium text-white md:w-fit"
-					>
-						Next
-					</button>
-				</div>
-			</div>
-		</div>
+		<OnboardingBanner
+			storageKey="onboarding_collection_dismissed"
+			slides={[
+				{
+					title: 'Welcome to Rondwell Collection',
+					body: 'Collections let you group and manage related events together. Every event on Rondwell belongs to a collection, and people can subscribe to yours.'
+				},
+				{
+					title: 'Organize events in one place',
+					body: 'Bundle multiple events into a single collection — like a festival, a tour, or a season — and manage them all at once instead of one by one.'
+				},
+				{
+					title: 'Build a subscriber base',
+					body: 'Subscribers to your collection get notified whenever you add or update an event, helping you keep your audience coming back.'
+				},
+				{
+					title: 'Create your first collection',
+					body: 'Use the "+ create" button to start a new collection, add events to it, and share it with your audience.'
+				}
+			]}
+		/>
 	</div>
 
 	<!-- My Collection -->

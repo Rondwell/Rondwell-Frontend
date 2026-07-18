@@ -10,6 +10,7 @@
 		chatWithAnalytics
 	} from '$lib/services/analytics.services';
 	import InsightsSkeleton from '$lib/components/analytics/InsightsSkeleton.svelte';
+	import { getPersistedTab, persistTab } from '$lib/utils/tabPersistence';
 
 	$: collectionId = $page.params.id ?? '';
 
@@ -20,7 +21,7 @@
 	let chatQuestion = '';
 	let chatAnswer = '';
 	let chatLoading = false;
-	let activeTab = 'analytics';
+	let activeTab = getPersistedTab(['analytics', 'ai'], 'analytics');
 
 	let subscriberChart: any[] = [];
 	let subscriberDonut: any[] = [];
@@ -99,7 +100,7 @@
 		<p class="text-sm text-gray-500">Track subscribers, events, audience retention, and growth.</p>
 		<div class="mt-4 flex gap-1 rounded-lg bg-gray-100 p-1">
 			{#each ['analytics', 'ai'] as tab}
-				<button on:click={() => activeTab = tab}
+				<button on:click={() => { activeTab = tab; persistTab(tab); }}
 					class="rounded-md px-4 py-2 text-sm font-medium transition-colors {activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}">
 					{tab === 'analytics' ? 'Analytics' : 'AI Insights'}
 				</button>

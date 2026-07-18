@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
 	interface TabItem {
 		id: string;
 		label: string;
@@ -7,8 +9,34 @@
 
 	export let tabs: TabItem[] = [];
 	export let activeTab: string = tabs[0]?.id || '';
+	// Query param key used to persist the active tab across refreshes.
+	export let paramKey: string = 'tab';
 
-	const setTab = (tab: string) => (activeTab = tab);
+	// Sync the active tab to the URL so it persists across page refreshes.
+	const syncUrl = (tab: string) => {
+		if (typeof window === 'undefined') return;
+		const url = new URL(window.location.href);
+		url.searchParams.set(paramKey, tab);
+		window.history.replaceState(window.history.state, '', url.toString());
+	};
+
+	const setTab = (tab: string) => {
+		activeTab = tab;
+		syncUrl(tab);
+	};
+
+	onMount(() => {
+		if (typeof window === 'undefined') return;
+		const params = new URLSearchParams(window.location.search);
+		const tabParam = params.get(paramKey);
+		if (tabParam && tabs.some((t) => t.id === tabParam)) {
+			// Restore the persisted tab on load.
+			activeTab = tabParam;
+		} else {
+			// Ensure the URL reflects the current default tab.
+			syncUrl(activeTab);
+		}
+	});
 </script>
 
 <!-- Navigation Tabs -->

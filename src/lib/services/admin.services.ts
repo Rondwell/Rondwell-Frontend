@@ -101,6 +101,28 @@ export async function updateUserStatus(id: string, status: string) {
   return data;
 }
 
+/** Fetch a user's subscription plan (effective tier + subscription row + plan catalog). */
+export async function getUserSubscription(id: string) {
+  const data = await adminFetch(`/users/${id}/subscription`);
+  return data.data;
+}
+
+/**
+ * Change a user's plan. `tier` is 'PLUS' or 'FREE'.
+ * For PLUS you may pass billingCycle ('MONTHLY'|'YEARLY') and currency ('NGN'|'USD').
+ */
+export async function updateUserPlan(
+  id: string,
+  tier: 'PLUS' | 'FREE',
+  opts: { billingCycle?: 'MONTHLY' | 'YEARLY'; currency?: 'NGN' | 'USD'; durationMonths?: number; reason?: string } = {},
+) {
+  const data = await adminFetch(`/users/${id}/plan`, {
+    method: 'PATCH',
+    body: JSON.stringify({ tier, ...opts }),
+  });
+  return data;
+}
+
 // ─── Events ───────────────────────────────────────────────────────────────
 export async function getAdminEvents(params: Record<string, any> = {}) {
   const query = new URLSearchParams(params).toString();

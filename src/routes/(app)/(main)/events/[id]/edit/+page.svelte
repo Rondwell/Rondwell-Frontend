@@ -871,10 +871,15 @@
 						type="text"
 						placeholder="some-event-slug"
 						bind:value={publicUrl}
-						disabled
-						title="Upgrade to Rondwell Plus to customize your event URL"
-						class="h-[42px] w-full rounded-md border border-gray-300 bg-[#F4F4F4] px-3 text-xs text-gray-500 focus:ring-0 focus:outline-none sm:text-sm"
+						autocomplete="off"
+						autocapitalize="off"
+						spellcheck="false"
+						class="h-[42px] w-full rounded-md border border-gray-300 bg-white px-3 text-xs text-gray-700 focus:border-pink-500 focus:ring-0 focus:outline-none sm:text-sm"
 					/>
+					<p class="mt-1 text-xs text-gray-400">
+						Lowercase letters, numbers and hyphens only. Changing it keeps old links working — they
+						redirect automatically.
+					</p>
 				</div>
 			</div>
 		</div>

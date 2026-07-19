@@ -3,6 +3,7 @@
 	import { DonutChart, StackedAreaChart } from '@carbon/charts-svelte';
 	import '@carbon/charts-svelte/styles.css';
 	import Icon from '@iconify/svelte';
+	import { renderMarkdown } from '$lib/utils/markdown';
 	import {
 		getExhibitorAnalyticsOverview,
 		generateAnalyticsSummary,
@@ -214,7 +215,7 @@
 					{:else}<Icon icon="mdi:auto-fix" class="h-4 w-4" /> Generate Summary{/if}
 				</button>
 			</div>
-			{#if aiSummary}<div class="prose prose-sm max-w-none rounded-lg bg-gray-50 p-4">{@html aiSummary.replace(/\n/g, '<br>')}</div>
+			{#if aiSummary}<div class="prose prose-sm max-w-none rounded-lg bg-gray-50 p-4">{@html renderMarkdown(aiSummary)}</div>
 			{:else}<p class="text-sm text-gray-400">Click "Generate Summary" for an AI analysis of your exhibitor performance.</p>{/if}
 		</div>
 		<div class="rounded-xl bg-white p-6 shadow-sm">
@@ -226,7 +227,7 @@
 				<button on:click={askQuestion} disabled={chatLoading || !chatQuestion.trim()}
 					class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50">{chatLoading ? '...' : 'Ask'}</button>
 			</div>
-			{#if chatAnswer}<div class="mt-4 rounded-lg bg-gray-50 p-4 text-sm">{@html chatAnswer.replace(/\n/g, '<br>')}</div>{/if}
+			{#if chatAnswer}<div class="prose prose-sm mt-4 max-w-none rounded-lg bg-gray-50 p-4">{@html renderMarkdown(chatAnswer)}</div>{/if}
 		</div>
 	</div>
 	{/if}

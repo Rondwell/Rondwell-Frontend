@@ -3,7 +3,9 @@
 	import { page } from '$app/stores';
 	import { bulkReplaceEventDays, createEvent, getMyCollections, uploadEventPhoto, type EventDayPayload } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
+	import { stockImageToFile, triggerStockImageDownload } from '$lib/services/stockImages.services';
 	import { setEventTheme } from '$lib/stores/eventTheme';
+	import { toast } from '$lib/stores/toast.store';
 	import { colors, type Color } from '$lib/utils/colors';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
@@ -32,6 +34,10 @@
 	// The actual file the organizer picked for the event image (if any). Preset
 	// gallery selections are plain string paths and are not uploaded.
 	let selectedImageFile: File | null = null;
+	// When the organizer picks an Unsplash photo we remember its download-tracking
+	// URL. The download endpoint is pinged only once the event is actually created
+	// (Unsplash "on use" guideline + rate-limit friendly).
+	let pendingStockDownloadLocation: string | null = null;
 	let showThemeModal = false;
 	let showSettingsModal = false;
 	let showAIModalMobile = false;
@@ -85,7 +91,8 @@
 	let publicGuestListEnabled = false;
 	let postEventFeedbackEnabled = false;
 	let donationsEnabled = false;
-	let customLinkSlug = '';
+	// The custom event link is set after creation from the event's Settings page
+	// (see events/[id]/settings). New events get an auto-generated slug.
 	let approvalRequired = false;
 
 	// Submission state
@@ -99,7 +106,47 @@
 	import type { AIGeneratedEvent } from '$lib/services/ai.services';
 
 	function parseISODate(iso: string): Date {
-		try { return new Date(iso); } catch { return new Date(); }
+		// Guard against malformed values from the model — `new Date('nonsense')`
+		// yields an Invalid Date (not a throw), which would silently corrupt the
+		// form and produce "NaN" times. Fall back to a sensible default instead.
+		const d = new Date(iso);
+		if (isNaN(d.getTime())) {
+			const fallback = new Date();
+			fallback.setDate(fallback.getDate() + 14);
+			fallback.setHours(9, 0, 0, 0);
+			return fallback;
+		}
+		return d;
+	}
+
+	// The AI service and the category picker use different vocabularies. Map the
+	// AI's category onto the closest picker option so the selection stays
+	// consistent (and highlights correctly when the organizer opens the picker).
+	function normalizeAICategory(raw: string): string {
+		const c = raw.toLowerCase();
+		const rules: Array<[RegExp, string]> = [
+			[/tech|software|ai|developer|startup/, '💡 Technology'],
+			[/business|corporate|finance|entrepreneur/, '💼 Business'],
+			[/health|wellness|fitness|yoga|medical/, '🌿 Wellness'],
+			[/sport|game|match|tournament|athletic|esport/, '🏅 Sports'],
+			[/gaming|gamer/, '🎮 Gaming'],
+			[/education|training|learning|academic|workshop/, '🎓 Education'],
+			[/music|concert|festival|dj|band/, '🎵 Concert'],
+			[/art|culture|exhibition|gallery/, '🎨 Art'],
+			[/network|mixer|meetup/, '🤝 Networking'],
+			[/charity|cause|fundrais|nonprofit/, '🎗 Charity'],
+			[/community|social/, '🤝 Community'],
+			[/film|media|screening|movie|cinema/, '🎬 Film'],
+			[/science|research/, '🔬 Science'],
+			[/travel|outdoor|adventure|tour/, '🧳 Travel'],
+			[/religion|spiritual|faith|worship/, '🛐 Religion'],
+			[/family|kids|children/, '👨‍👩‍👧‍👦 Family'],
+			[/party|celebration|gala/, '🎊 Party']
+		];
+		for (const [re, label] of rules) {
+			if (re.test(c)) return label;
+		}
+		return raw;
 	}
 
 	function formatTimeFromISO(iso: string): string {
@@ -128,7 +175,7 @@
 
 		// Category
 		if (data.category) {
-			eventCategories = [data.category];
+			eventCategories = [normalizeAICategory(data.category)];
 		}
 
 		// Event type
@@ -158,6 +205,18 @@
 		if (data.endDateTime) {
 			endDate = parseISODate(data.endDateTime);
 			endTime = formatTimeFromISO(data.endDateTime);
+		}
+
+		// Sanity: never let the AI hand us an end that precedes the start. If it
+		// does, default the end to 2 hours after the start on the same day.
+		if (data.startDateTime && data.endDateTime) {
+			const start = new Date(data.startDateTime);
+			const end = new Date(data.endDateTime);
+			if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end <= start) {
+				const fixed = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+				endDate = fixed;
+				endTime = formatTimeFromISO(fixed.toISOString());
+			}
 		}
 
 		// Timezone
@@ -201,6 +260,21 @@
 	function handleAIGenerate(e: CustomEvent<AIGeneratedEvent>) {
 		prefillFromAI(e.detail);
 		aiError = '';
+	}
+
+	// AI event generation requires an account (the request is authenticated and
+	// counts against the user's plan). Tell the user up front instead of letting
+	// them type a prompt only to hit an auth error on submit.
+	async function openAIAssistant(which: 'desktop' | 'mobile') {
+		if (!$isAuthenticated) {
+			toast.info('Sign in or create a free account to generate events with AI.');
+			showAuthModal = true;
+			return;
+		}
+		if (which === 'desktop') showAIModal = !showAIModal;
+		else showAIModalMobile = !showAIModalMobile;
+		await tick();
+		scrollToId('aiModal');
 	}
 
 	function handleAILoading(e: CustomEvent<boolean>) {
@@ -310,12 +384,27 @@
 		}
 	});
 
-	function handleImageSelect(e: CustomEvent<File | string>) {
+	type StockSelection = { stock: true; url: string; downloadLocation: string | null; author: string; authorUrl: string };
+
+	async function handleImageSelect(e: CustomEvent<File | string | StockSelection>) {
 		const val = e.detail;
+
+		// Reset any previous stock selection metadata.
+		pendingStockDownloadLocation = null;
+
 		if (val instanceof File) {
+			// Organizer uploaded their own file.
 			selectedImageFile = val;
 			eventImageUrl = URL.createObjectURL(val);
+		} else if (typeof val === 'object' && val?.stock) {
+			// Unsplash stock photo — import the bytes into our own S3 bucket so we
+			// never hotlink at serve time. Remember the download-tracking URL; the
+			// download endpoint is pinged after the event is created.
+			eventImageUrl = val.url; // instant preview while we fetch the bytes
+			pendingStockDownloadLocation = val.downloadLocation;
+			selectedImageFile = await stockImageToFile(val.url, 'event-cover');
 		} else if (typeof val === 'string') {
+			// Local preset path (e.g. "/events.png") — shown as-is, not uploaded.
 			selectedImageFile = null;
 			eventImageUrl = val;
 		}
@@ -397,7 +486,6 @@
 				donationsEnabled,
 				publicGuestListEnabled,
 				postEventFeedbackEnabled,
-				customLinkSlug: customLinkSlug || undefined,
 				collectionId: selectedCollectionId || undefined,
 				isMultiDay,
 			};
@@ -410,6 +498,12 @@
 			if (selectedImageFile) {
 				try {
 					await uploadEventPhoto(eventId, selectedImageFile, 'DISPLAY');
+					// The photo is now genuinely "used", so this is the correct moment
+					// to notify Unsplash (guideline compliance). Fires at most once per
+					// created event — never while the organizer browses thumbnails.
+					if (pendingStockDownloadLocation) {
+						triggerStockImageDownload(pendingStockDownloadLocation);
+					}
 				} catch (e) {
 					console.warn('Failed to upload event image:', e);
 					// Non-critical — event was still created; image can be added later.
@@ -492,8 +586,26 @@
 		<div class="hidden w-full max-w-[450px] space-y-6 lg:block">
 			<!-- Image -->
 			<div class="relative w-full overflow-hidden rounded-xl">
-				<button class="w-full" on:click={() => (showImageSelectorModal = !showImageSelectorModal)}>
-					<img src={eventImageUrl} alt="" class="w-full cursor-pointer" />
+				<button
+					class="group relative block w-full cursor-pointer"
+					on:click={() => (showImageSelectorModal = !showImageSelectorModal)}
+					aria-label="Change event cover image"
+				>
+					<img src={eventImageUrl} alt="" class="w-full" />
+					<!-- Always-visible affordance so organizers know the cover is editable -->
+					<span
+						class="pointer-events-none absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm"
+					>
+						<Icon icon="mdi:image-edit-outline" class="text-sm" />
+						Change image
+					</span>
+					<!-- Richer hint on hover -->
+					<span
+						class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-white opacity-0 transition-all duration-200 group-hover:bg-black/35 group-hover:opacity-100"
+					>
+						<Icon icon="mdi:tray-arrow-up" class="text-3xl" />
+						<span class="text-sm font-medium">Upload or choose a cover</span>
+					</span>
 				</button>
 				<ImageSelectorModal bind:open={showImageSelectorModal} on:select={handleImageSelect} />
 			</div>
@@ -624,11 +736,7 @@
 					<button
 						class="flex w-full items-center gap-2 rounded-[9px] px-4 py-3 text-left"
 						style="background-color: {selectedColor.cover};"
-						on:click={async () => {
-							showAIModal = !showAIModal;
-							await tick();
-							scrollToId('aiModal');
-						}}
+						on:click={() => openAIAssistant('desktop')}
 					>
 						<div
 							class="flex h-[34.75px] w-[54px] items-center justify-center rounded-[3.75px]"
@@ -694,7 +802,6 @@
 						bind:postEventFeedbackEnabled
 						bind:waitlistEnabled
 						bind:donationsEnabled
-						bind:customLinkSlug
 					/>
 				</div>
 			</div>
@@ -765,8 +872,26 @@
 			{/if}
 
 			<div class="relative h-[360px] w-full overflow-hidden rounded-xl lg:hidden">
-				<button class="w-full" on:click={() => (showImageSelectorModal = !showImageSelectorModal)}>
-					<img src={eventImageUrl} alt="" class="w-full cursor-pointer" />
+				<button
+					class="group relative block h-full w-full cursor-pointer"
+					on:click={() => (showImageSelectorModal = !showImageSelectorModal)}
+					aria-label="Change event cover image"
+				>
+					<img src={eventImageUrl} alt="" class="h-full w-full object-cover" />
+					<!-- Always-visible affordance so organizers know the cover is editable -->
+					<span
+						class="pointer-events-none absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm"
+					>
+						<Icon icon="mdi:image-edit-outline" class="text-sm" />
+						Change image
+					</span>
+					<!-- Richer hint on hover/tap -->
+					<span
+						class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-white opacity-0 transition-all duration-200 group-hover:bg-black/35 group-hover:opacity-100"
+					>
+						<Icon icon="mdi:tray-arrow-up" class="text-3xl" />
+						<span class="text-sm font-medium">Upload or choose a cover</span>
+					</span>
 				</button>
 				<ImageSelectorModal bind:open={showImageSelectorModal} on:select={handleImageSelect} />
 			</div>
@@ -1512,11 +1637,7 @@
 					<button
 						class="flex w-full items-center gap-2 rounded-[9px] px-4 py-3 text-left"
 						style="background-color: {selectedColor.cover};"
-						on:click={async () => {
-							showAIModalMobile = !showAIModalMobile;
-							await tick();
-							scrollToId('aiModal');
-						}}
+						on:click={() => openAIAssistant('mobile')}
 					>
 						<div
 							class="flex h-[34.75px] w-[54px] items-center justify-center rounded-[3.75px]"
@@ -1582,7 +1703,6 @@
 						bind:postEventFeedbackEnabled
 						bind:waitlistEnabled
 						bind:donationsEnabled
-						bind:customLinkSlug
 					/>
 				</div>
 			</div>

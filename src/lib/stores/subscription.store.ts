@@ -42,13 +42,15 @@ export interface SubscriptionSnapshot {
 	cancelAtPeriodEnd: boolean;
 	trialEndsAt: string | null;
 	firstActivatedAt: string | null;
+	/** True when PLUS is a complimentary admin grant (not a paid subscription). */
+	isComp: boolean;
 	loaded: boolean;
 }
 
 export const SUBSCRIPTION_DEFAULTS: SubscriptionSnapshot = {
 	tier: 'FREE',
-	feeRate: 0.06,
-	feePercent: 6,
+	feeRate: 0.04,
+	feePercent: 4,
 	withdrawalFeeRate: 0.03,
 	withdrawalFeeCap: 500,
 	subscriptionStatus: null,
@@ -59,6 +61,7 @@ export const SUBSCRIPTION_DEFAULTS: SubscriptionSnapshot = {
 	cancelAtPeriodEnd: false,
 	trialEndsAt: null,
 	firstActivatedAt: null,
+	isComp: false,
 	loaded: false,
 };
 
@@ -68,9 +71,16 @@ export const subscriptionStore = writable<SubscriptionSnapshot>({ ...SUBSCRIPTIO
 export const isPlusUser = derived(subscriptionStore, ($s) => $s.tier === 'PLUS');
 export const isPastDue = derived(subscriptionStore, ($s) => $s.subscriptionStatus === 'PAST_DUE');
 export const isTrialing = derived(subscriptionStore, ($s) => $s.subscriptionStatus === 'TRIALING');
+/** Complimentary admin grant — free PLUS the user can't cancel/resume themselves. */
+export const isComp = derived(subscriptionStore, ($s) => $s.isComp === true);
+/**
+ * A user-scheduled cancellation (cancel-at-period-end). Deliberately EXCLUDES
+ * comps: a comp also carries `cancelAtPeriodEnd`, but the user didn't cancel it
+ * and there's nothing to "resume", so it must not trigger the resume CTA.
+ */
 export const isCanceledScheduled = derived(
 	subscriptionStore,
-	($s) => $s.cancelAtPeriodEnd && $s.subscriptionStatus === 'ACTIVE'
+	($s) => $s.cancelAtPeriodEnd && $s.subscriptionStatus === 'ACTIVE' && !$s.isComp
 );
 
 /** Days until `currentPeriodEnd`. Returns `null` for FREE / never-activated users. */

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getUser, getUsers, updateUserStatus } from '$lib/services/admin.services';
+	import { getUser, getUsers, updateUserStatus, getUserSubscription, updateUserPlan } from '$lib/services/admin.services';
+	import PlanSelect from '$lib/components/hq/PlanSelect.svelte';
 	import { onMount } from 'svelte';
 
 	let users: any[] = [];
@@ -23,6 +24,35 @@
 	let selectedUser: any = null;
 	let modalLoading = false;
 	let statusUpdating = false;
+
+	// Subscription plan (view + change)
+	let userPlan: any = null;
+	let planLoading = false;
+	let planUpdating = false;
+	let planError = '';
+	let planCycle: 'MONTHLY' | 'YEARLY' = 'MONTHLY';
+	let planCurrency: 'NGN' | 'USD' = 'NGN';
+	let planDuration = 'DEFAULT'; // 'DEFAULT' = follow billing cycle, else months as string
+
+	// Confirmation modal
+	let showPlanConfirm = false;
+	let planConfirmTier: 'PLUS' | 'FREE' = 'PLUS';
+
+	const cycleOptions = [
+		{ label: 'Monthly', value: 'MONTHLY' },
+		{ label: 'Yearly', value: 'YEARLY' },
+	];
+	const currencyOptions = [
+		{ label: 'NGN (₦)', value: 'NGN' },
+		{ label: 'USD ($)', value: 'USD' },
+	];
+	const durationOptions = [
+		{ label: 'Default (follow billing cycle)', value: 'DEFAULT' },
+		{ label: '1 month', value: '1' },
+		{ label: '3 months', value: '3' },
+		{ label: '6 months', value: '6' },
+		{ label: '12 months', value: '12' },
+	];
 
 	const statusOptions = [
 		{ label: 'All Users', value: 'ALL' },
@@ -96,11 +126,92 @@
 		selectedUser = user;
 		showModal = true;
 		modalLoading = true;
+		// Reset plan state for the newly opened user.
+		userPlan = null;
+		planError = '';
+		planCycle = 'MONTHLY';
+		planCurrency = 'NGN';
+		planDuration = 'DEFAULT';
+		showPlanConfirm = false;
 		try {
 			const detail = await getUser(user._id);
 			selectedUser = detail;
 		} catch { /* use basic data */ }
 		finally { modalLoading = false; }
+		loadUserPlan(user._id);
+	}
+
+	async function loadUserPlan(userId: string) {
+		planLoading = true;
+		planError = '';
+		try {
+			userPlan = await getUserSubscription(userId);
+			// Pre-select the change controls to the user's current billing prefs.
+			if (userPlan?.subscription?.billingCycle) planCycle = userPlan.subscription.billingCycle;
+			if (userPlan?.subscription?.currency) planCurrency = userPlan.subscription.currency;
+		} catch (e: any) {
+			planError = e?.message ?? 'Failed to load plan';
+		} finally {
+			planLoading = false;
+		}
+	}
+
+	function openPlanConfirm(tier: 'PLUS' | 'FREE') {
+		if (!selectedUser?._id || planUpdating) return;
+		planConfirmTier = tier;
+		planError = '';
+		showPlanConfirm = true;
+	}
+
+	/** Preview the exact date the grant will expire (mirrors backend math). */
+	function computePlanExpiry(): Date {
+		const now = new Date();
+		const d = new Date(now);
+		if (planDuration !== 'DEFAULT') {
+			d.setMonth(d.getMonth() + parseInt(planDuration, 10));
+		} else if (planCycle === 'YEARLY') {
+			d.setFullYear(d.getFullYear() + 1);
+		} else {
+			d.setMonth(d.getMonth() + 1);
+		}
+		return d;
+	}
+
+	async function confirmPlanChange() {
+		if (!selectedUser?._id || planUpdating) return;
+		const tier = planConfirmTier;
+		planUpdating = true;
+		planError = '';
+		try {
+			await updateUserPlan(
+				selectedUser._id,
+				tier,
+				tier === 'PLUS'
+					? {
+							billingCycle: planCycle,
+							currency: planCurrency,
+							...(planDuration !== 'DEFAULT' ? { durationMonths: parseInt(planDuration, 10) } : {}),
+						}
+					: {},
+			);
+			showPlanConfirm = false;
+			await loadUserPlan(selectedUser._id);
+		} catch (e: any) {
+			planError = e?.message ?? 'Failed to update plan';
+		} finally {
+			planUpdating = false;
+		}
+	}
+
+	function planBadgeClass(tier: string): string {
+		return tier === 'PLUS'
+			? 'bg-[#FDE0EE] text-[#F31A7C]'
+			: 'bg-[#EBECED] text-[#616265]';
+	}
+
+	function fmtDate(d: string | null | undefined): string {
+		if (!d) return '—';
+		return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 	}
 
 	async function handleStatusChange(userId: string, newStatus: string) {
@@ -329,6 +440,70 @@
 						{/if}
 					</div>
 
+					<!-- Subscription Plan -->
+					<div class="mt-6 border-t border-gray-200 pt-6">
+						<h3 class="mb-3 text-sm font-semibold text-gray-700">Subscription Plan</h3>
+
+						{#if planLoading}
+							<div class="animate-pulse space-y-3">
+								<div class="h-6 w-24 rounded-full bg-gray-200"></div>
+								<div class="h-10 w-full rounded bg-gray-200"></div>
+							</div>
+						{:else if planError}
+							<div class="rounded-lg bg-[#FDEAEA] px-3 py-2 text-xs text-[#E53935]">
+								{planError}
+								<button on:click={() => selectedUser && loadUserPlan(selectedUser._id)} class="ml-2 font-medium underline">Retry</button>
+							</div>
+						{:else if userPlan}
+							<!-- Current plan -->
+							<div class="flex items-center gap-3">
+								<span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {planBadgeClass(userPlan.effectiveTier)}">
+									{userPlan.effectiveTier === 'PLUS' ? 'Rondwell PLUS' : 'Rondwell (Free)'}
+								</span>
+								{#if userPlan.subscription?.status && userPlan.subscription.status !== 'ACTIVE'}
+									<span class="text-xs text-[#EAAB26]">({userPlan.subscription.status})</span>
+								{/if}
+							</div>
+
+							<!-- Subscription details -->
+							{#if userPlan.subscription}
+								<div class="mt-3 grid grid-cols-2 gap-3">
+									<div><p class="text-xs text-[#C1C2C2]">Billing Cycle</p><p class="text-sm font-medium text-gray-800">{userPlan.subscription.billingCycle ?? '—'}</p></div>
+									<div><p class="text-xs text-[#C1C2C2]">Currency</p><p class="text-sm font-medium text-gray-800">{userPlan.subscription.currency ?? '—'}</p></div>
+									<div><p class="text-xs text-[#C1C2C2]">Renews / Ends</p><p class="text-sm font-medium text-gray-800">{fmtDate(userPlan.subscription.currentPeriodEnd)}</p></div>
+									<div><p class="text-xs text-[#C1C2C2]">First Activated</p><p class="text-sm font-medium text-gray-800">{fmtDate(userPlan.subscription.firstActivatedAt)}</p></div>
+									{#if userPlan.subscription.cancelAtPeriodEnd}
+										<div class="col-span-2"><span class="text-xs font-medium text-[#EAAB26]">Set to cancel at period end</span></div>
+									{/if}
+								</div>
+							{/if}
+
+							<!-- Change plan controls -->
+							<div class="mt-5 rounded-xl border border-gray-200 bg-white p-4">
+								{#if userPlan.effectiveTier !== 'PLUS'}
+									<p class="mb-3 text-xs font-medium text-gray-600">Grant Rondwell PLUS (admin comp — no charge)</p>
+									<div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+										<PlanSelect label="Billing Cycle" bind:value={planCycle} options={cycleOptions} disabled={planUpdating} />
+										<PlanSelect label="Currency" bind:value={planCurrency} options={currencyOptions} disabled={planUpdating} />
+										<PlanSelect label="Duration" bind:value={planDuration} options={durationOptions} disabled={planUpdating} />
+									</div>
+									<button on:click={() => openPlanConfirm('PLUS')} disabled={planUpdating}
+										class="rounded-lg bg-[#F31A7C] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#d1176b] disabled:opacity-50">
+										Grant Rondwell PLUS
+									</button>
+								{:else}
+									<p class="mb-3 text-xs font-medium text-gray-600">This user is on Rondwell PLUS.</p>
+									<button on:click={() => openPlanConfirm('FREE')} disabled={planUpdating}
+										class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">
+										Revert to Free
+									</button>
+								{/if}
+							</div>
+						{:else}
+							<p class="text-sm text-gray-400">No subscription data.</p>
+						{/if}
+					</div>
+
 					<!-- Actions -->
 					<div class="mt-6 border-t border-gray-200 pt-6">
 						<h3 class="mb-3 text-sm font-semibold text-gray-700">Actions</h3>
@@ -354,6 +529,47 @@
 						</div>
 					</div>
 				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Plan Change Confirmation Modal -->
+{#if showPlanConfirm && selectedUser}
+	<div on:click={() => !planUpdating && (showPlanConfirm = false)} on:keydown={(e) => e.key === 'Escape' && !planUpdating && (showPlanConfirm = false)}
+		class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" tabindex="-1">
+		<div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" role="document" on:click|stopPropagation on:keydown|stopPropagation>
+			{#if planConfirmTier === 'PLUS'}
+				<h3 class="text-lg font-semibold text-gray-900">Grant Rondwell PLUS?</h3>
+				<p class="mt-1 text-sm text-gray-500">
+					This grants <span class="font-medium text-gray-800">{selectedUser.name || selectedUser.email}</span> a complimentary PLUS plan. No charge is made.
+				</p>
+				<div class="mt-4 space-y-2 rounded-xl bg-[#F9F5FF] p-4 text-sm">
+					<div class="flex justify-between"><span class="text-gray-500">Plan</span><span class="font-medium text-[#F31A7C]">Rondwell PLUS</span></div>
+					<div class="flex justify-between"><span class="text-gray-500">Billing Cycle</span><span class="font-medium text-gray-800">{planCycle === 'YEARLY' ? 'Yearly' : 'Monthly'}</span></div>
+					<div class="flex justify-between"><span class="text-gray-500">Currency</span><span class="font-medium text-gray-800">{planCurrency}</span></div>
+					<div class="flex justify-between"><span class="text-gray-500">Duration</span><span class="font-medium text-gray-800">{planDuration === 'DEFAULT' ? (planCycle === 'YEARLY' ? '1 year' : '1 month') : `${planDuration} month${planDuration === '1' ? '' : 's'}`}</span></div>
+					<div class="flex justify-between border-t border-[#EADDFB] pt-2"><span class="text-gray-500">Expires</span><span class="font-semibold text-gray-900">{fmtDate(computePlanExpiry().toISOString())}</span></div>
+				</div>
+				<p class="mt-3 text-xs text-gray-400">After this date the plan reverts to Free automatically — no auto-charge, since this is a comp.</p>
+			{:else}
+				<h3 class="text-lg font-semibold text-gray-900">Revert to Free?</h3>
+				<p class="mt-1 text-sm text-gray-500">
+					This immediately downgrades <span class="font-medium text-gray-800">{selectedUser.name || selectedUser.email}</span> to the Free plan. PLUS limits and fee discounts stop right away.
+				</p>
+			{/if}
+
+			{#if planError}
+				<div class="mt-3 rounded-lg bg-[#FDEAEA] px-3 py-2 text-xs text-[#E53935]">{planError}</div>
+			{/if}
+
+			<div class="mt-6 flex justify-end gap-2">
+				<button on:click={() => (showPlanConfirm = false)} disabled={planUpdating}
+					class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+				<button on:click={confirmPlanChange} disabled={planUpdating}
+					class="rounded-lg px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50 {planConfirmTier === 'PLUS' ? 'bg-[#F31A7C] hover:bg-[#d1176b]' : 'bg-red-600 hover:bg-red-700'}">
+					{planUpdating ? 'Working…' : planConfirmTier === 'PLUS' ? 'Confirm Grant' : 'Confirm Revert'}
+				</button>
 			</div>
 		</div>
 	</div>

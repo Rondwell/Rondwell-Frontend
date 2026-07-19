@@ -1,3 +1,4 @@
+import { redirect, isRedirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
 const API_BASE = 'https://api.rondwell.com';
@@ -12,6 +13,13 @@ export const load: PageServerLoad = async ({ params }) => {
 		const slugRes = await globalThis.fetch(`${API_BASE}/api/v1/events/by-slug/${encodeURIComponent(slug)}`);
 		if (!slugRes.ok) return { eventId: null, seo: null };
 		const slugData = await slugRes.json();
+
+		// Retired slug → 301 to the current canonical slug so old links, emails
+		// and QR codes keep working and SEO equity consolidates on the new URL.
+		if (slugData.redirect && slugData.canonicalSlug && slugData.canonicalSlug !== slug) {
+			throw redirect(301, `/e/${slugData.canonicalSlug}`);
+		}
+
 		const eventId = slugData.event?._id || slugData.event?.id || slugData.eventId;
 		if (!eventId) return { eventId: null, seo: null };
 
@@ -90,6 +98,8 @@ export const load: PageServerLoad = async ({ params }) => {
 			seo: { title: `${title} | Rondwell`, description: socialDescription, image, url, organizer, startDate, endDate, dateLabel, timeLabel, eventType, registrationType, location: locationLabel, attendeeCount: eventData.attendeeCount ?? 0, jsonLd }
 		};
 	} catch (err) {
+		// Never swallow the 301 redirect thrown for retired slugs.
+		if (isRedirect(err)) throw err;
 		console.error('[SEO] e/[slug] load failed:', err);
 		return { eventId: null, seo: null };
 	}

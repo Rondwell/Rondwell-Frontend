@@ -31,7 +31,7 @@
 			title: rawEvent.title ?? 'Untitled Event',
 			collection: collectionName,
 			collectionId: rawEvent.collectionId ?? '',
-			publicUrl: rawEvent.customLinkSlug ?? 'applikhek',
+			publicUrl: rawEvent.customLinkSlug ?? '',
 			embedCode: `\n<a\n  href="https://rondwell.com/event/${eid}"\n  class="rondwell-checkout--button"\n  data-rondwell-action="checkout"\n  data-rondwell-event-id="${eid}"\n>\n  Register for Event\n</a>\n\n<script id="rondwell-checkout" src="https://embed.rondwell.com/checkout-button.js"><\/script>\n`
 		};
 	})() : null;
@@ -98,18 +98,93 @@
 			});
 	};
 
+	// ── Custom event link (slug) editor ──────────────────────────────────
 	let urlUpdating = false;
+	let slugInput = '';
+	let slugLoaded = false;
+	let slugStatus: 'idle' | 'current' | 'checking' | 'available' | 'taken' | 'invalid' = 'idle';
+	let slugMessage = '';
+	let slugCheckTimer: ReturnType<typeof setTimeout>;
+
+	// Seed the input once the event has loaded.
+	$: if (rawEvent && !slugLoaded) {
+		slugInput = rawEvent.customLinkSlug ?? '';
+		slugLoaded = true;
+	}
+
+	// Client-side mirror of the server normalizer (lowercase, [a-z0-9-] only).
+	function normalizeSlugClient(raw: string): string {
+		let s = (raw || '').trim().toLowerCase().replace(/^https?:\/\//, '');
+		if (s.includes('/')) s = s.split('/').filter(Boolean).pop() ?? '';
+		return s
+			.replace(/[\s_]+/g, '-')
+			.replace(/[^a-z0-9-]/g, '')
+			.replace(/-+/g, '-')
+			.replace(/^-+|-+$/g, '');
+	}
+
+	$: currentSlug = rawEvent?.customLinkSlug ?? '';
+	$: normalizedSlug = normalizeSlugClient(slugInput);
+	$: canUpdateSlug =
+		!urlUpdating &&
+		slugStatus === 'available' &&
+		normalizedSlug.length >= 3 &&
+		normalizedSlug !== currentSlug;
+
+	async function runSlugCheck(value: string) {
+		const normalized = normalizeSlugClient(value);
+		if (normalized === currentSlug) {
+			slugStatus = 'current';
+			slugMessage = 'This is your current link.';
+			return;
+		}
+		if (normalized.length < 3) {
+			slugStatus = 'invalid';
+			slugMessage = 'Link must be at least 3 characters.';
+			return;
+		}
+		slugStatus = 'checking';
+		slugMessage = 'Checking availability…';
+		const { checkEventSlugAvailability } = await import('$lib/services/event.services');
+		const r = await checkEventSlugAvailability(normalized, eventId!);
+		// Ignore stale responses if the user kept typing.
+		if (normalizeSlugClient(slugInput) !== normalized) return;
+		if (!r.valid) {
+			slugStatus = 'invalid';
+			slugMessage = r.error || 'That link isn’t valid.';
+		} else if (r.available) {
+			slugStatus = 'available';
+			slugMessage = 'Available.';
+		} else {
+			slugStatus = 'taken';
+			slugMessage = r.error || 'That link is already taken.';
+		}
+	}
+
+	function onSlugInput() {
+		clearTimeout(slugCheckTimer);
+		slugCheckTimer = setTimeout(() => runSlugCheck(slugInput), 400);
+	}
+
+	const copyPublicUrl = () => {
+		const s = normalizedSlug || currentSlug;
+		if (!s) return;
+		navigator.clipboard.writeText(`https://rondwell.com/e/${s}`);
+		toast.success('Event URL copied!');
+	};
 
 	const updatePublicUrl = async () => {
-		if (!eventData) return;
+		if (!rawEvent || !canUpdateSlug) return;
 		urlUpdating = true;
 		try {
 			const { updateEvent } = await import('$lib/services/event.services');
-			const slug = eventData.publicUrl.replace('rondwell.com/', '');
-			await updateEvent(eventId!, { customLinkSlug: slug } as any);
-			toast.success('URL updated successfully.');
+			const updated = await updateEvent(eventId!, { customLinkSlug: normalizedSlug } as any);
+			slugInput = updated?.customLinkSlug ?? normalizedSlug;
+			slugStatus = 'current';
+			slugMessage = 'This is your current link.';
+			toast.success('Event link updated. Old links redirect here automatically.');
 		} catch (e: any) {
-			toast.error(cleanErrorMessage(e.message || 'Failed to update URL'));
+			toast.error(cleanErrorMessage(e.message || 'Failed to update link'));
 		} finally {
 			urlUpdating = false;
 		}
@@ -281,45 +356,68 @@
 
 	<!-- Event Page URL Section -->
 	<div class="mt-6 mb-6 border-t pt-6 sm:mt-8 sm:mb-8 sm:pt-8">
-		<h2 class="mb-2 text-lg font-semibold sm:text-xl">Event Page</h2>
-		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">
-			When you choose a new URL, the current one will no longer work. Do not change your URL if you
-			have already shared the event.
-		</p>
-		<div class="mt-3 mb-4 rounded-lg bg-[#DADCDD] px-3 py-2.5 sm:px-4 sm:py-3">
-			<div class="mb-2 flex flex-col justify-between gap-2 sm:mb-0 sm:flex-row sm:items-center">
-				<div class="text-xs text-[#7A7C7E] sm:text-sm">
-					Upgrade to Rondwell Plus to set a custom URL for this event.
-				</div>
-				<button class="flex w-fit items-center justify-center gap-1 rounded-md bg-[#E3E4E5] px-3 py-2 text-xs font-medium text-[#7A7C7E] transition-colors hover:bg-gray-200 sm:justify-start sm:text-sm">
-					Learn More
-					<img src="/send-icon.png" alt="icon" class="h-3 w-3" />
-				</button>
-			</div>
+		<div class="mb-2 flex items-center justify-between">
+			<h2 class="text-lg font-semibold sm:text-xl">Event Page Link</h2>
+			<button
+				type="button"
+				on:click={copyPublicUrl}
+				class="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-gray-100"
+			>
+				<svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+				Copy URL
+			</button>
 		</div>
-		<div class="w-full sm:max-w-96">
+		<p class="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">
+			Set a custom link for your event. When you change it, your old links, emails and QR codes keep
+			working — they redirect to the new one automatically.
+		</p>
+		<div class="w-full sm:max-w-md">
 			<label for="url" class="mb-2 block text-xs font-medium text-gray-700 sm:text-sm">Public URL</label>
-			<div class="flex items-center overflow-hidden rounded-md">
-				<span class="shrink-0 bg-[#EBECED] px-3 py-2.5 text-xs sm:text-sm">rondwell.com/</span>
+			<div class="flex items-center overflow-hidden rounded-md border border-gray-300 focus-within:border-pink-500">
+				<span class="shrink-0 bg-[#EBECED] px-3 py-2.5 text-xs text-gray-600 sm:text-sm">rondwell.com/e/</span>
 				<input
+					id="url"
 					type="text"
-					value={eventData.publicUrl}
-					on:input={(e) => {
-						const target = e.target as HTMLInputElement | null;
-						if (target) eventData.publicUrl = target.value;
-					}}
-					class="min-w-0 flex-1 border border-gray-300 bg-[#F4F5F6] px-3 py-2 text-xs focus:ring-0 focus:outline-none sm:text-sm"
+					placeholder="my-event"
+					bind:value={slugInput}
+					on:input={onSlugInput}
+					autocomplete="off"
+					autocapitalize="off"
+					spellcheck="false"
+					class="min-w-0 flex-1 bg-[#F4F5F6] px-3 py-2 text-xs focus:ring-0 focus:outline-none sm:text-sm"
 				/>
 				<button
 					on:click={updatePublicUrl}
-					disabled={true}
-					title="Upgrade to Rondwell Plus to customize your event URL"
-					class="ml-1 w-fit cursor-not-allowed rounded-md bg-[#939596] px-3 py-2 text-xs font-medium text-white opacity-50 sm:w-auto sm:text-sm"
+					disabled={!canUpdateSlug}
+					class="ml-1 w-fit rounded-md px-3 py-2 text-xs font-medium text-white transition-colors sm:w-auto sm:text-sm {canUpdateSlug
+						? 'bg-gray-900 hover:bg-gray-800'
+						: 'cursor-not-allowed bg-[#939596] opacity-50'}"
 				>
-					Update
+					{urlUpdating ? 'Saving…' : 'Update'}
 				</button>
 			</div>
-			<p class="mt-1 text-xs text-gray-400">Upgrade to Rondwell Plus to customize your event URL</p>
+			{#if slugMessage}
+				<p
+					class="mt-1.5 flex items-center gap-1 text-xs {slugStatus === 'available'
+						? 'text-green-600'
+						: slugStatus === 'taken' || slugStatus === 'invalid'
+							? 'text-red-600'
+							: 'text-gray-500'}"
+				>
+					{#if slugStatus === 'checking'}
+						<Icon icon="mdi:loading" class="animate-spin text-sm" />
+					{:else if slugStatus === 'available'}
+						<Icon icon="mdi:check-circle-outline" class="text-sm" />
+					{:else if slugStatus === 'taken' || slugStatus === 'invalid'}
+						<Icon icon="mdi:alert-circle-outline" class="text-sm" />
+					{:else}
+						<Icon icon="mdi:information-outline" class="text-sm" />
+					{/if}
+					{slugMessage}
+				</p>
+			{:else}
+				<p class="mt-1 text-xs text-gray-400">Lowercase letters, numbers and hyphens only.</p>
+			{/if}
 		</div>
 	</div>
 

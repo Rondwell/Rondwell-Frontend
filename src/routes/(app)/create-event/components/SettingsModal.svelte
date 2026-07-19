@@ -7,7 +7,6 @@
 	export let postEventFeedbackEnabled = false;
 	export let waitlistEnabled = false;
 	export let donationsEnabled = false;
-	export let customLinkSlug = '';
 
 	function closeModal() {
 		open = false;
@@ -72,29 +71,9 @@
 		transition:fly={{ y: 300, duration: 300 }}
 	>
 		<div
-			class="custom-scrollbar relative flex h-full w-full flex-col items-start justify-between gap-6 overflow-y-auto text-gray-500 lg:flex-row lg:items-stretch"
+			class="custom-scrollbar relative flex h-full w-full flex-col items-start justify-between gap-6 overflow-y-auto text-gray-500"
 		>
-			<!-- Left Side: Input Section -->
-			<div
-				class="flex h-auto w-full max-w-[300px] flex-col items-start justify-between gap-4 lg:w-[35%]"
-			>
-				<h2 class="gradient-text text-lg font-semibold text-gray-800">Custom Event Link</h2>
-
-				<div class="w-full">
-					<label for="link" class="mb-1 block text-sm text-gray-400">Enter Custom Event Link</label>
-					<div class="flex w-full items-center overflow-hidden rounded-lg border border-gray-300">
-						<span class="bg-gray-200 px-3 py-2 text-gray-600 select-none">Rondwell.com/</span>
-						<input
-							type="text"
-							placeholder="Custom Link"
-							bind:value={customLinkSlug}
-							class="flex-grow bg-white px-3 py-2 text-gray-500 focus:outline-none"
-						/>
-					</div>
-				</div>
-			</div>
-
-			<!-- Right Side: Toggle Cards -->
+			<!-- Toggle Cards -->
 			<div class="grid h-full max-h-[60vh] w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				{#each toggleCards as card}
 					<div class="card-bg flex min-h-[160px] flex-col justify-between rounded-lg p-6">

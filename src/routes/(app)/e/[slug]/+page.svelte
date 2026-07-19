@@ -26,8 +26,11 @@
 				const d = await res.json();
 				const eventId = d.event?._id || d.event?.id || d.eventId;
 				if (eventId) {
+					// Show the canonical slug in the address bar (a retired slug
+					// still resolves, but we display the current one).
+					const displaySlug = d.canonicalSlug || slug;
 					await goto(`/event-page/${eventId}`, { replaceState: true });
-					window.history.replaceState(window.history.state, '', `/e/${slug}`);
+					window.history.replaceState(window.history.state, '', `/e/${displaySlug}`);
 					return;
 				}
 			}

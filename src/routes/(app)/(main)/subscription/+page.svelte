@@ -33,6 +33,7 @@
 	import {
 		daysUntilRenewal,
 		isCanceledScheduled,
+		isComp,
 		isPastDue,
 		isPlusUser,
 		isTrialing,
@@ -68,10 +69,10 @@
 	let switchError = '';
 
 	// Plans data (for showing pricing on upgrade card)
-	let plusMonthlyNGN = 500_000; // kobo fallback
-	let plusYearlyNGN = 5_000_000;
-	let plusMonthlyUSD = 5_900; // cents fallback
-	let plusYearlyUSD = 58_800;
+	let plusMonthlyNGN = 1_200_000; // kobo fallback (₦12,000)
+	let plusYearlyNGN = 12_000_000; // ₦120,000
+	let plusMonthlyUSD = 800; // cents fallback ($8)
+	let plusYearlyUSD = 8_000; // $80
 	let plansLoaded = false;
 
 	onMount(async () => {
@@ -86,10 +87,10 @@
 			for (const p of plans) {
 				if (p.planId === 'PLUS') {
 					const byCurrency = p.pricing?.byCurrency;
-					plusMonthlyNGN = byCurrency?.NGN?.monthly ?? p.pricing?.monthly ?? 500_000;
-					plusYearlyNGN = byCurrency?.NGN?.yearly ?? p.pricing?.yearly ?? 5_000_000;
-					plusMonthlyUSD = byCurrency?.USD?.monthly ?? 5_900;
-					plusYearlyUSD = byCurrency?.USD?.yearly ?? 58_800;
+					plusMonthlyNGN = byCurrency?.NGN?.monthly ?? p.pricing?.monthly ?? 1_200_000;
+					plusYearlyNGN = byCurrency?.NGN?.yearly ?? p.pricing?.yearly ?? 12_000_000;
+					plusMonthlyUSD = byCurrency?.USD?.monthly ?? 800;
+					plusYearlyUSD = byCurrency?.USD?.yearly ?? 8_000;
 				}
 			}
 		} catch { /* use defaults */ }
@@ -330,7 +331,17 @@
 		</div>
 
 		<!-- Lifecycle Banners -->
-		{#if status === 'ACTIVE' && $isCanceledScheduled}
+		{#if status === 'ACTIVE' && $isComp}
+			<div class="mb-4 flex items-start gap-3 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm">
+				<Icon icon="mdi:gift-outline" class="mt-0.5 shrink-0 text-lg text-purple-600" />
+				<div>
+					<p class="font-medium text-purple-900">Complimentary Rondwell PLUS</p>
+					<p class="mt-0.5 text-purple-800">
+						Granted by the Rondwell team — no charge. You keep PLUS benefits until {formatDate($subscriptionStore.currentPeriodEnd)}, then your account moves to FREE.
+					</p>
+				</div>
+			</div>
+		{:else if status === 'ACTIVE' && $isCanceledScheduled}
 			<div class="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
 				<Icon icon="mdi:clock-alert-outline" class="mt-0.5 shrink-0 text-lg text-amber-600" />
 				<div>
@@ -435,12 +446,12 @@
 					</span>
 					<span class="text-sm text-gray-500">/month{upgradeCycle === 'YEARLY' ? ', billed annually' : ''}</span>
 					{#if upgradeCycle === 'YEARLY'}
-						<span class="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">Save 14%</span>
+						<span class="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">Save 17%</span>
 					{/if}
 				</div>
 
 				<ul class="mb-5 space-y-2 text-sm text-gray-700">
-					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> 3% platform fee (vs 6%)</li>
+					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> 1% platform fee (vs 4%)</li>
 					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> Unlimited active paid events</li>
 					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> Unlimited participants per event</li>
 					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> 50 AI prompts/month</li>
@@ -463,8 +474,8 @@
 			</div>
 		{/if}
 
-		<!-- Manage Subscription (shown for PLUS users) -->
-		{#if $isPlusUser && status === 'ACTIVE' && !$isCanceledScheduled}
+		<!-- Manage Subscription (shown for paid PLUS users — not comps) -->
+		{#if $isPlusUser && status === 'ACTIVE' && !$isCanceledScheduled && !$isComp}
 			<div class="mb-6 rounded-xl border border-gray-200 bg-white p-6">
 				<h3 class="mb-4 text-lg font-semibold text-gray-900">Manage Subscription</h3>
 				<div class="flex flex-wrap gap-3">

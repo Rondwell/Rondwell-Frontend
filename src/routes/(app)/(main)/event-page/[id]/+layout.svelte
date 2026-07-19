@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 	import { afterNavigate } from '$app/navigation';
 	import { activeEventPageTheme, getEventTheme, setEventTheme } from '$lib/stores/eventTheme';
-	import { eventSlugMap } from '$lib/stores/eventSlug';
+	import { eventSlugMap, setEventSlug } from '$lib/stores/eventSlug';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 	import type { Color } from '$lib/utils/colors';
@@ -83,13 +83,21 @@
 		return match ? match[1] : '1';
 	})();
 
-	// Rewrite URL to use slug after navigation to sub-pages
+	// Seed the slug map from server data so URL rewriting works on a cold
+	// refresh of any sub-tab (previously only the overview page set this,
+	// which is why refreshing e.g. the Community tab produced a broken URL).
+	$: if (eventId && data?.slug) setEventSlug(eventId, data.slug);
+
+	// Rewrite URL to use the pretty slug after navigation to sub-pages.
+	// The canonical public route is `/e/{slug}` (see routes/(app)/e/[slug]),
+	// so sub-tabs MUST keep the `/e/` prefix — otherwise a refresh lands on a
+	// path with no matching route and the app 404s.
 	$: slug = $eventSlugMap[eventId] || '';
 	afterNavigate(() => {
 		if (slug && typeof window !== 'undefined') {
 			const path = $page.url.pathname;
 			const subPath = path.replace(`/event-page/${eventId}`, '');
-			const newUrl = `/${slug}${subPath}`;
+			const newUrl = `/e/${slug}${subPath}`;
 			if (window.location.pathname !== newUrl) {
 				window.history.replaceState(window.history.state, '', newUrl);
 			}

@@ -4,6 +4,7 @@
 	import { DonutChart, StackedAreaChart } from '@carbon/charts-svelte';
 	import '@carbon/charts-svelte/styles.css';
 	import Icon from '@iconify/svelte';
+	import { renderMarkdown } from '$lib/utils/markdown';
 	import Nav from '../../../../components/Nav.svelte';
 	import {
 		getEventAnalyticsOverview,
@@ -352,7 +353,7 @@
 				</button>
 			</div>
 			{#if aiSummary}
-				<div class="prose prose-sm max-w-none rounded-lg bg-gray-50 p-4">{@html aiSummary.replace(/\n/g, '<br>')}</div>
+				<div class="prose prose-sm max-w-none rounded-lg bg-gray-50 p-4">{@html renderMarkdown(aiSummary)}</div>
 			{:else}
 				<p class="text-sm text-gray-400">Click "Generate Summary" to get an AI-powered analysis of your event performance.</p>
 			{/if}
@@ -370,7 +371,7 @@
 				</button>
 			</div>
 			{#if chatAnswer}
-				<div class="mt-4 rounded-lg bg-gray-50 p-4 text-sm">{@html chatAnswer.replace(/\n/g, '<br>')}</div>
+				<div class="prose prose-sm mt-4 max-w-none rounded-lg bg-gray-50 p-4">{@html renderMarkdown(chatAnswer)}</div>
 			{/if}
 		</div>
 	</div>

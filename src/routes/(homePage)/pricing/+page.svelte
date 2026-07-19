@@ -13,16 +13,16 @@
 	let freePlan = {
 		name: 'Rondwell',
 		features: [],
-		limits: { emails: 250, aiPrompts: 10, activePaidEvents: 3, maxParticipantsPerEvent: 3, seatingLayoutEvents: 5 },
-		commissionStructure: { ticketFees: { NGN: 0.06, USD: 0.06 }, vendorBookingFee: 0.06, withdrawalFee: 0.03, usdSettlementFee: 0.01 }
+		limits: { emails: 250, aiPrompts: 10, activePaidEvents: 10, maxParticipantsPerEvent: 3, seatingLayoutEvents: 5 },
+		commissionStructure: { ticketFees: { NGN: 0.04, USD: 0.04 }, vendorBookingFee: 0.04, withdrawalFee: 0.03, usdSettlementFee: 0.01 }
 	};
 
 	let plusPlan = {
 		name: 'Rondwell Plus',
-		pricing: { monthly: 500000, yearly: 5000000, currency: 'NGN' },
+		pricing: { monthly: 1200000, yearly: 12000000, currency: 'NGN' },
 		features: [],
 		limits: { emails: 10000, aiPrompts: 50, activePaidEvents: 999999, maxParticipantsPerEvent: 999999, seatingLayoutEvents: -1 },
-		commissionStructure: { ticketFees: { NGN: 0.03, USD: 0.03 }, vendorBookingFee: 0.03, withdrawalFee: 0.03, usdSettlementFee: 0 }
+		commissionStructure: { ticketFees: { NGN: 0.01, USD: 0.01 }, vendorBookingFee: 0.01, withdrawalFee: 0.03, usdSettlementFee: 0 }
 	};
 
 	onMount(async () => {
@@ -48,18 +48,18 @@
 	$: freeWithdrawal = Math.round(freePlan.commissionStructure.withdrawalFee * 100);
 	$: plusWithdrawal = Math.round(plusPlan.commissionStructure.withdrawalFee * 100);
 
-	$: plusMonthlyUSD = '$59';
-	$: plusAnnualUSD = '$49';
+	$: plusMonthlyUSD = '$8';
+	$: plusAnnualUSD = '$80';
 
 	// FE-P2-05: pull NGN / USD prices from the backend's `pricing.byCurrency`
 	// envelope when present. Falls back to the legacy single `pricing` shape.
 	$: plusByCurrency = (plusPlan as any).pricing?.byCurrency ?? null;
 	$: plusMonthlyKoboNGN =
-		plusByCurrency?.NGN?.monthly ?? (plusPlan as any).pricing?.monthly ?? 500_000;
+		plusByCurrency?.NGN?.monthly ?? (plusPlan as any).pricing?.monthly ?? 1_200_000;
 	$: plusYearlyKoboNGN =
-		plusByCurrency?.NGN?.yearly ?? (plusPlan as any).pricing?.yearly ?? 5_000_000;
-	$: plusMonthlyKoboUSD = plusByCurrency?.USD?.monthly ?? 5_900; // $59 default fallback
-	$: plusYearlyKoboUSD = plusByCurrency?.USD?.yearly ?? 4_900 * 12;
+		plusByCurrency?.NGN?.yearly ?? (plusPlan as any).pricing?.yearly ?? 12_000_000;
+	$: plusMonthlyKoboUSD = plusByCurrency?.USD?.monthly ?? 800; // $8 default fallback
+	$: plusYearlyKoboUSD = plusByCurrency?.USD?.yearly ?? 8_000; // $80 default fallback
 
 	function fmtMoneyMajor(kobo: number, ccy: 'NGN' | 'USD'): string {
 		const major = (kobo ?? 0) / 100;
@@ -214,20 +214,20 @@
 				<!-- Plus Plan -->
 				<div class="relative rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
 					{#if isAnnual}
-						<div class="absolute top-4 right-4 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Save 14%</div>
+						<div class="absolute top-4 right-4 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700">Save 17%</div>
 					{/if}
 					<div class="mb-3">
 						<h3 class="mb-2 text-sm font-bold text-[#F31A7C]">Rondwell Plus</h3>
 						<div class="mb-2 flex items-center gap-2">
 							<span class="text-2xl font-bold">{plusDisplayPrice}</span>
-							<span class="rounded-md bg-[#FDE0EE] px-2 py-1 text-xs text-[#F31A7C]">Save 14%</span>
+							{#if isAnnual}<span class="rounded-md bg-[#FDE0EE] px-2 py-1 text-xs text-[#F31A7C]">Save 17%</span>{/if}
 						</div>
 						<span class="text-gray-500">
 							Per month{isAnnual ? ', billed annually' : ''} · {currency}
 						</span>
 					</div>
 					<button on:click={handleGetPlus} class="block w-full rounded-md bg-pink-600 py-2 text-center text-white transition hover:bg-pink-700">Get Rondwell Plus</button>
-					<p class="mt-3 text-sm text-gray-300">Per month, billed annually</p>
+					<p class="mt-3 text-sm text-gray-300">{isAnnual ? 'Per month, billed annually' : 'Billed monthly'}</p>
 					<ul class="mt-6 space-y-3">
 						{#each plusFeatures as feature}
 							<li class="flex items-center gap-2 text-sm {feature.separator ? 'border-b border-gray-300 pb-3' : ''} {feature.highlight ? 'text-[#F31A7C]' : ''}">
@@ -245,7 +245,7 @@
 			</div>
 
 			<div class="text-sm text-[#B9BABA]">
-				<p>Stripe, Flutterwave and Paystack, our payment processor, charges a credit card fee (typically 2% - 5% plus caps). The platform fee is on top of the gateway fee. Prices for Rondwell Plus Subscription are in USD.</p>
+				<p>Stripe, Flutterwave and Paystack, our payment processor, charges a credit card fee (typically 2% - 5% plus caps). The platform fee is on top of the gateway fee. Rondwell Plus can be paid in NGN or USD — the naira price is set at parity with the dollar price.</p>
 			</div>
 
 			<!-- Add-Ons -->

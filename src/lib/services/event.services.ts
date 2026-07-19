@@ -186,6 +186,27 @@ export async function getPublicSeats(eventId: string, ticketTypeId?: string): Pr
   return data;
 }
 
+/**
+ * Check whether a custom event link (slug) is valid and available before saving.
+ * Availability is enforced across every event's live + retired slugs server-side.
+ */
+export async function checkEventSlugAvailability(
+  slug: string,
+  eventId?: string
+): Promise<{ available: boolean; valid: boolean; normalized?: string; error?: string }> {
+  try {
+    const params = new URLSearchParams();
+    if (eventId) params.set('eventId', eventId);
+    const res = await authFetch(
+      `${EVENT_URL}/api/v1/events/slug-available/${encodeURIComponent(slug)}?${params.toString()}`
+    );
+    if (!res.ok) return { available: false, valid: false, error: 'Could not check availability.' };
+    return await res.json();
+  } catch {
+    return { available: false, valid: false, error: 'Could not check availability.' };
+  }
+}
+
 export async function updateEvent(eventId: string, payload: Partial<CreateEventPayload>): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}`, {
     method: 'PUT',

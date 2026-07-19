@@ -18,7 +18,8 @@
 		'Workshop / Training',
 		'Webinar / Virtual Meetup',
 		'Festival / Exhibition',
-		'Networking / Mixer'
+		'Networking / Mixer',
+		'Sports / Games'
 	];
 	let selectedType = 'Conference / Summit';
 	let promptText = '';

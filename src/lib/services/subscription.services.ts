@@ -33,6 +33,7 @@ export interface MyTierResponse {
 	cancelAtPeriodEnd: boolean;
 	trialEndsAt: string | null;
 	firstActivatedAt: string | null;
+	isComp: boolean;
 }
 
 export async function getMyTier(): Promise<MyTierResponse> {
@@ -42,8 +43,8 @@ export async function getMyTier(): Promise<MyTierResponse> {
 	const d = data?.data ?? {};
 	return {
 		tier: d.tier ?? 'FREE',
-		feeRate: d.feeRate ?? 0.06,
-		feePercent: d.feePercent ?? 6,
+		feeRate: d.feeRate ?? 0.04,
+		feePercent: d.feePercent ?? 4,
 		withdrawalFeeRate: d.withdrawalFeeRate ?? 0.03,
 		withdrawalFeeCap: d.withdrawalFeeCap ?? 500,
 		subscriptionStatus: d.subscriptionStatus ?? null,
@@ -54,6 +55,7 @@ export async function getMyTier(): Promise<MyTierResponse> {
 		cancelAtPeriodEnd: !!d.cancelAtPeriodEnd,
 		trialEndsAt: d.trialEndsAt ?? null,
 		firstActivatedAt: d.firstActivatedAt ?? null,
+		isComp: !!d.isComp,
 	};
 }
 

@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import SubscribeModal from '$lib/components/SubscribeModal.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import { publicSubscribeToCollection } from '$lib/services/collection.services';
 	import { getEventDays, getPublicEventPage } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
@@ -299,54 +300,7 @@
 </script>
 
 <!-- SEO Meta Tags (server-rendered) -->
-<svelte:head>
-	{#if seo}
-		<title>{seo.title}</title>
-		<meta name="description" content={seo.description} />
-
-		<!-- Open Graph (Facebook, WhatsApp, Telegram, LinkedIn, iMessage) -->
-		<meta property="og:title" content={seo.title} />
-		<meta property="og:description" content={seo.description} />
-		<meta property="og:image" content={seo.image} />
-		<meta property="og:image:secure_url" content={seo.image} />
-		<meta property="og:image:width" content="1200" />
-		<meta property="og:image:height" content="630" />
-		<meta property="og:image:type" content="image/jpeg" />
-		<meta property="og:image:alt" content={seo.title} />
-		<meta property="og:url" content={seo.url} />
-		<meta property="og:type" content="website" />
-		<meta property="og:site_name" content="Rondwell" />
-		<meta property="og:locale" content="en_US" />
-
-		<!-- Twitter / X -->
-		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:title" content={seo.title} />
-		<meta name="twitter:description" content={seo.description} />
-		<meta name="twitter:image" content={seo.image} />
-		<meta name="twitter:site" content="@rondwellhq" />
-
-		<!-- Rich event info for crawlers -->
-		{#if seo.startDate}
-			<meta name="event:start_date" content={seo.startDate} />
-			<meta name="event:end_date" content={seo.endDate} />
-		{/if}
-		{#if seo.location}
-			<meta name="event:location" content={seo.location} />
-		{/if}
-
-		<link rel="canonical" href={seo.url} />
-
-		<!-- JSON-LD Structured Data -->
-		{#if seo.jsonLd}
-			{@html `<script type="application/ld+json">${JSON.stringify(seo.jsonLd)}</script>`}
-		{/if}
-	{:else if event}
-		<title>{event.title} | Rondwell</title>
-		<meta name="description" content={event.description?.replace(/<[^>]*>/g, '').slice(0, 160) || `Join ${event.title} on Rondwell`} />
-	{:else}
-		<title>Event | Rondwell</title>
-	{/if}
-</svelte:head>
+<Seo {seo} />
 
 <!-- Payment Success Banner -->
 {#if paymentSuccess}

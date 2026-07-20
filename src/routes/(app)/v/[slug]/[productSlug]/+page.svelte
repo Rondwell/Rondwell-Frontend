@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { getPublicVendorProduct } from '$lib/services/vendor.services';
 	import { formatMoney, majorToKobo } from '$lib/utils/money';
+	import Seo from '$lib/components/Seo.svelte';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -30,26 +31,7 @@
 	$: selectedMedia = mediaItems[selectedMediaIndex] || null;
 </script>
 
-<svelte:head>
-	{#if seo}
-		<title>{seo.title}</title>
-		<meta name="description" content={seo.description} />
-		<meta property="og:title" content={seo.title} />
-		<meta property="og:description" content={seo.description} />
-		<meta property="og:image" content={seo.image} />
-		<meta property="og:url" content={seo.url} />
-		<meta property="og:type" content="product" />
-		<meta property="og:site_name" content="Rondwell" />
-		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:title" content={seo.title} />
-		<meta name="twitter:description" content={seo.description} />
-		<meta name="twitter:image" content={seo.image} />
-		<link rel="canonical" href={seo.url} />
-		{#if seo.jsonLd}
-			{@html `<script type="application/ld+json">${JSON.stringify(seo.jsonLd)}</script>`}
-		{/if}
-	{/if}
-</svelte:head>
+<Seo {seo} />
 
 {#if loading}
 	<div class="flex min-h-screen items-center justify-center bg-[#F4F5F6]">

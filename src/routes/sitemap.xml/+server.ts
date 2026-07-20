@@ -44,6 +44,9 @@ function urlNode(loc: string, lastmod: string | null, changefreq: string, priori
 export const GET: RequestHandler = async () => {
 	let events: SitemapEntry[] = [];
 	let collections: SitemapEntry[] = [];
+	let vendors: SitemapEntry[] = [];
+	let speakers: SitemapEntry[] = [];
+	let exhibitors: SitemapEntry[] = [];
 
 	try {
 		const res = await globalThis.fetch(`${API}/api/v1/events/sitemap`);
@@ -51,6 +54,11 @@ export const GET: RequestHandler = async () => {
 			const data = await res.json();
 			events = Array.isArray(data.events) ? data.events : [];
 			collections = Array.isArray(data.collections) ? data.collections : [];
+			// These may not be served yet — include them defensively so the
+			// sitemap grows automatically as the backend starts returning them.
+			vendors = Array.isArray(data.vendors) ? data.vendors : [];
+			speakers = Array.isArray(data.speakers) ? data.speakers : [];
+			exhibitors = Array.isArray(data.exhibitors) ? data.exhibitors : [];
 		}
 	} catch {
 		// On API failure still return a valid sitemap with the static pages.
@@ -68,6 +76,18 @@ export const GET: RequestHandler = async () => {
 	for (const c of collections) {
 		if (!c.slug) continue;
 		nodes.push(urlNode(`${SITE}/c/${c.slug}`, toLastmod(c.updatedAt), 'weekly', '0.7'));
+	}
+	for (const v of vendors) {
+		if (!v.slug) continue;
+		nodes.push(urlNode(`${SITE}/v/${v.slug}`, toLastmod(v.updatedAt), 'weekly', '0.6'));
+	}
+	for (const sp of speakers) {
+		if (!sp.slug) continue;
+		nodes.push(urlNode(`${SITE}/s/${sp.slug}`, toLastmod(sp.updatedAt), 'weekly', '0.6'));
+	}
+	for (const x of exhibitors) {
+		if (!x.slug) continue;
+		nodes.push(urlNode(`${SITE}/x/${x.slug}`, toLastmod(x.updatedAt), 'weekly', '0.6'));
 	}
 
 	const xml =

@@ -114,12 +114,19 @@
 
 	$: currentPath = $page.url.pathname;
 
-	function isActive(link: string): boolean {
-		if (link === `/event-page/${eventId}`) {
-			return currentPath === link;
-		}
-		return currentPath.startsWith(link);
-	}
+	// Derive the active state reactively. This MUST reference `currentPath`
+	// (and `eventId`) directly so Svelte tracks them as dependencies and
+	// recomputes when navigating between tabs. Previously the template called
+	// an `isActive()` helper whose `currentPath` read was invisible to the
+	// compiler, so the outline stayed on whichever tab was active on first
+	// load and never moved when switching tabs.
+	$: tabsWithActive = tabs.map((tab) => ({
+		...tab,
+		active:
+			tab.link === `/event-page/${eventId}`
+				? currentPath === tab.link
+				: currentPath.startsWith(tab.link)
+	}));
 
 	// Check if current page is a sub-page (not overview)
 	$: isSubPage = currentPath !== `/event-page/${eventId}` && currentPath.startsWith(`/event-page/${eventId}/`);
@@ -131,17 +138,17 @@
 	class="custom-scrollbar mb-6 flex gap-2 overflow-x-auto whitespace-nowrap pb-1"
 	aria-label="Event sections"
 >
-	{#each tabs as tab}
+	{#each tabsWithActive as tab}
 		<a
 			href={tab.link}
 			class="flex flex-shrink-0 items-center gap-2 rounded-[12px] px-3 py-2 text-sm font-medium transition-all duration-200"
-			style={isActive(tab.link)
+			style={tab.active
 				? `background-color: ${themeColor.cover}; color: ${themeColor.text}; border: 1.5px solid ${themeColor.toggle};`
 				: `background-color: ${themeColor.smallCover}; color: ${themeColor.lightText}; border: 1.5px solid transparent;`}
 		>
 			<span
 				class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px]"
-				style="background-color: {isActive(tab.link) ? themeColor.toggle : themeColor.cover}; color: {themeColor.text};"
+				style="background-color: {tab.active ? themeColor.toggle : themeColor.cover}; color: {themeColor.text};"
 			>
 				{@html tab.icon}
 			</span>

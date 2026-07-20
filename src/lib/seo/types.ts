@@ -10,8 +10,10 @@ export interface SeoMeta {
 	title: string;
 	/** Clean, emoji-free meta description / og:description. */
 	description: string;
-	/** WhatsApp/OG-safe absolute image URL (1200x630 JPEG). */
+	/** Absolute https share-image URL (passed through from the source). */
 	image: string;
+	/** True MIME type of the image (e.g. "image/png"). Omitted when unknown. */
+	imageType?: string;
 	/** Absolute canonical URL of the page. */
 	url: string;
 	/** og:type — "website", "article", "profile", etc. Defaults to "website". */

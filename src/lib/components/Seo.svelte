@@ -9,7 +9,7 @@
 	 * All tags render inside <svelte:head>, so with SSR enabled they are present
 	 * in the initial HTML that crawlers (which do not run JavaScript) receive.
 	 */
-	import { SITE, OG_IMAGE, type SeoMeta } from '$lib/seo';
+	import { SITE, type SeoMeta } from '$lib/seo';
 
 	export let seo: SeoMeta | null | undefined = null;
 
@@ -37,9 +37,9 @@
 		<meta property="og:locale" content={SITE.locale} />
 		<meta property="og:image" content={seo.image} />
 		<meta property="og:image:secure_url" content={seo.image} />
-		<meta property="og:image:type" content={OG_IMAGE.type} />
-		<meta property="og:image:width" content={String(OG_IMAGE.width)} />
-		<meta property="og:image:height" content={String(OG_IMAGE.height)} />
+		{#if seo.imageType}
+			<meta property="og:image:type" content={seo.imageType} />
+		{/if}
 		<meta property="og:image:alt" content={alt} />
 
 		<!-- Twitter / X -->

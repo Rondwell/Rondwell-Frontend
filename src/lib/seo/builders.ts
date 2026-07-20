@@ -9,9 +9,17 @@
 
 import { SITE } from './config';
 import type { SeoMeta } from './types';
-import { buildDescription, canonical, optimizeOgImage, stripHtml, truncate } from './utils';
+import { buildDescription, canonical, ogImageType, resolveOgImage, stripHtml, truncate } from './utils';
 
 const titleOf = (name: string) => `${name} | ${SITE.name}`;
+
+/** Resolve a share image and its true MIME type from the first non-empty source. */
+function pickImage(...candidates: Array<string | null | undefined>): { image: string; imageType: string } {
+	const source = candidates.find((c) => c && String(c).trim());
+	const image = resolveOgImage(source);
+	const imageType = ogImageType(image) || SITE.defaultImageType;
+	return { image, imageType };
+}
 
 /* ───────────────────────────── Event ───────────────────────────── */
 
@@ -19,7 +27,7 @@ export function buildEventSeo(event: any, canonicalPath: string, _attendeeCount 
 	const title = event.title || 'Event';
 	const rawDesc = stripHtml(event.description);
 	const url = canonical(canonicalPath);
-	const image = optimizeOgImage(event.coverPictureUrl || event.displayPictureUrl);
+	const { image, imageType } = pickImage(event.coverPictureUrl, event.displayPictureUrl);
 
 	const eventType = event.eventType || 'PHYSICAL';
 	const registrationType = event.registrationType || 'FREE';
@@ -113,6 +121,7 @@ export function buildEventSeo(event: any, canonicalPath: string, _attendeeCount 
 		title: titleOf(title),
 		description,
 		image,
+		imageType,
 		url,
 		ogType: 'article',
 		imageAlt: title,
@@ -127,7 +136,7 @@ export function buildCollectionSeo(collection: any, events: any[], slug: string)
 	const name = collection.name || 'Collection';
 	const rawDesc = stripHtml(collection.description);
 	const url = canonical(`/c/${slug}`);
-	const image = optimizeOgImage(collection.coverBannerUrl || collection.profilePictureUrl);
+	const { image, imageType } = pickImage(collection.coverBannerUrl, collection.profilePictureUrl);
 
 	const eventCount = events.length;
 	const subscriberCount = collection.subscriberCount ?? 0;
@@ -171,7 +180,7 @@ export function buildCollectionSeo(collection: any, events: any[], slug: string)
 		}
 	};
 
-	return { title: titleOf(name), description, image, url, ogType: 'website', imageAlt: name, jsonLd };
+	return { title: titleOf(name), description, image, imageType, url, ogType: 'website', imageAlt: name, jsonLd };
 }
 
 /* ───────────────────────────── Vendor ───────────────────────────── */
@@ -180,7 +189,7 @@ export function buildVendorSeo(vendor: any, products: any[], slug: string): SeoM
 	const name = vendor.businessName || vendor.name || 'Vendor';
 	const rawDesc = stripHtml(vendor.businessDescription || vendor.bio);
 	const url = canonical(`/v/${slug}`);
-	const image = optimizeOgImage(vendor.coverImageUrl || vendor.logoUrl || vendor.profilePictureUrl);
+	const { image, imageType } = pickImage(vendor.coverImageUrl, vendor.logoUrl, vendor.profilePictureUrl);
 	const productCount = products.length;
 
 	const description = buildDescription(
@@ -226,7 +235,7 @@ export function buildVendorSeo(vendor: any, products: any[], slug: string): SeoM
 			: {})
 	};
 
-	return { title: titleOf(name), description, image, url, ogType: 'website', imageAlt: name, jsonLd };
+	return { title: titleOf(name), description, image, imageType, url, ogType: 'website', imageAlt: name, jsonLd };
 }
 
 /* ───────────────────────────── Speaker ───────────────────────────── */
@@ -235,7 +244,7 @@ export function buildSpeakerSeo(speaker: any, portfolios: any[], slug: string): 
 	const name = speaker.fullName || speaker.name || 'Speaker';
 	const rawDesc = stripHtml(speaker.speakerBio || speaker.bio);
 	const url = canonical(`/s/${slug}`);
-	const image = optimizeOgImage(speaker.profilePhotoUrl || speaker.profilePictureUrl);
+	const { image, imageType } = pickImage(speaker.profilePhotoUrl, speaker.profilePictureUrl);
 	const portfolioCount = portfolios.length;
 
 	const description = buildDescription(
@@ -262,7 +271,7 @@ export function buildSpeakerSeo(speaker: any, portfolios: any[], slug: string): 
 		...(speaker.expertise ? { knowsAbout: speaker.expertise } : {})
 	};
 
-	return { title: titleOf(name), description, image, url, ogType: 'profile', imageAlt: name, jsonLd };
+	return { title: titleOf(name), description, image, imageType, url, ogType: 'profile', imageAlt: name, jsonLd };
 }
 
 /* ──────────────────────────── Exhibitor ──────────────────────────── */
@@ -271,11 +280,11 @@ export function buildExhibitorSeo(exhibitor: any, booths: any[], slug: string): 
 	const name = exhibitor.companyName || exhibitor.name || 'Exhibitor';
 	const rawDesc = stripHtml(exhibitor.companyDescription || exhibitor.bio);
 	const url = canonical(`/x/${slug}`);
-	const image = optimizeOgImage(
-		exhibitor.coverImageUrl ||
-			exhibitor.logoUrl ||
-			exhibitor.digitalBoothCoverImageUrl ||
-			exhibitor.profilePictureUrl
+	const { image, imageType } = pickImage(
+		exhibitor.coverImageUrl,
+		exhibitor.logoUrl,
+		exhibitor.digitalBoothCoverImageUrl,
+		exhibitor.profilePictureUrl
 	);
 	const boothCount = booths.length;
 
@@ -301,7 +310,7 @@ export function buildExhibitorSeo(exhibitor: any, booths: any[], slug: string): 
 		publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url }
 	};
 
-	return { title: titleOf(name), description, image, url, ogType: 'website', imageAlt: name, jsonLd };
+	return { title: titleOf(name), description, image, imageType, url, ogType: 'website', imageAlt: name, jsonLd };
 }
 
 /* ─────────────────────── Vendor product (detail) ─────────────────────── */
@@ -311,7 +320,7 @@ export function buildProductSeo(product: any, vendor: any, vendorSlug: string, p
 	const vendorName = vendor?.businessName || vendor?.name || 'Vendor';
 	const rawDesc = stripHtml(product.description);
 	const url = canonical(`/v/${vendorSlug}/${productSlug}`);
-	const image = optimizeOgImage(product.media?.[0]?.url || vendor?.coverImageUrl);
+	const { image, imageType } = pickImage(product.media?.[0]?.url, vendor?.coverImageUrl);
 
 	const description = buildDescription(
 		rawDesc,
@@ -342,6 +351,7 @@ export function buildProductSeo(product: any, vendor: any, vendorSlug: string, p
 		title: `${name} - ${vendorName} | ${SITE.name}`,
 		description,
 		image,
+		imageType,
 		url,
 		ogType: 'website',
 		imageAlt: name,
@@ -356,7 +366,7 @@ export function buildPortfolioSeo(portfolio: any, speaker: any, speakerSlug: str
 	const speakerName = speaker?.fullName || speaker?.name || 'Speaker';
 	const rawDesc = stripHtml(portfolio.description);
 	const url = canonical(`/s/${speakerSlug}/${portfolioSlug}`);
-	const image = optimizeOgImage(portfolio.media?.[0]?.url || speaker?.profilePhotoUrl);
+	const { image, imageType } = pickImage(portfolio.media?.[0]?.url, speaker?.profilePhotoUrl);
 
 	const description = buildDescription(
 		rawDesc,
@@ -379,6 +389,7 @@ export function buildPortfolioSeo(portfolio: any, speaker: any, speakerSlug: str
 		title: `${title} - ${speakerName} | ${SITE.name}`,
 		description,
 		image,
+		imageType,
 		url,
 		ogType: 'article',
 		imageAlt: title,
@@ -393,7 +404,7 @@ export function buildBoothSeo(booth: any, exhibitor: any, exhibitorSlug: string,
 	const exhibitorName = exhibitor?.companyName || exhibitor?.name || 'Exhibitor';
 	const rawDesc = stripHtml(booth.description);
 	const url = canonical(`/x/${exhibitorSlug}/${boothSlug}`);
-	const image = optimizeOgImage(booth.bannerUrl || booth.media?.[0]?.url || exhibitor?.coverImageUrl);
+	const { image, imageType } = pickImage(booth.bannerUrl, booth.media?.[0]?.url, exhibitor?.coverImageUrl);
 
 	const description = buildDescription(
 		rawDesc,
@@ -415,6 +426,7 @@ export function buildBoothSeo(booth: any, exhibitor: any, exhibitorSlug: string,
 		title: `${title} - ${exhibitorName} | ${SITE.name}`,
 		description,
 		image,
+		imageType,
 		url,
 		ogType: 'website',
 		imageAlt: title,

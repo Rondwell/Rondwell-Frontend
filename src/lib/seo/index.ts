@@ -1,6 +1,6 @@
-export { SITE, OG_IMAGE } from './config';
+export { SITE } from './config';
 export type { SeoMeta } from './types';
-export { stripHtml, truncate, optimizeOgImage, buildDescription, canonical } from './utils';
+export { stripHtml, truncate, resolveOgImage, ogImageType, buildDescription, canonical } from './utils';
 export {
 	buildEventSeo,
 	buildCollectionSeo,

@@ -1,12 +1,8 @@
 /**
  * Shared SEO primitives used by every server-side SEO builder.
- *
- * The two most important functions here are:
- *  - optimizeOgImage(): guarantees a WhatsApp-safe share image
- *  - buildDescription(): builds a clean, emoji-free social description
  */
 
-import { OG_IMAGE, SITE } from './config';
+import { SITE } from './config';
 
 /**
  * Strip HTML tags, decode a few common entities and collapse whitespace so a
@@ -36,42 +32,52 @@ export function truncate(text: string, max: number): string {
 }
 
 /**
- * Turn a raw image URL into a WhatsApp/OG-safe share image.
+ * Resolve a usable share-image URL.
  *
- * For Cloudinary-hosted images we inject an on-the-fly transformation that
- * resizes to the OG contract (1200x630), crops intelligently, forces JPEG and
- * auto-tunes quality. This keeps the file small enough for WhatsApp to render
- * and makes the declared `og:image:type` truthful.
- *
- * Non-Cloudinary URLs are returned untouched (we cannot safely transform them);
- * empty/missing URLs fall back to the site default share image.
+ * We pass the source image through unchanged (S3, or wherever it lives) and
+ * only substitute the self-hosted default when there is nothing usable. The
+ * URL must be absolute and https so crawlers can fetch it.
  */
-export function optimizeOgImage(url?: string | null): string {
+export function resolveOgImage(url?: string | null): string {
 	if (!url || typeof url !== 'string') return SITE.defaultImage;
-
 	const trimmed = url.trim();
 	if (!trimmed) return SITE.defaultImage;
+	// Protocol-relative or root-relative → make absolute against the site.
+	if (trimmed.startsWith('//')) return `https:${trimmed}`;
+	if (trimmed.startsWith('/')) return `${SITE.url}${trimmed}`;
+	// Upgrade bare http to https; crawlers require secure image URLs.
+	if (trimmed.startsWith('http://')) return `https://${trimmed.slice('http://'.length)}`;
+	if (!trimmed.startsWith('https://')) return SITE.defaultImage;
+	return trimmed;
+}
 
-	// Only Cloudinary delivery URLs can be transformed via URL params.
-	const marker = '/image/upload/';
-	const idx = trimmed.indexOf(marker);
-	if (!trimmed.includes('res.cloudinary.com') || idx === -1) {
-		return trimmed;
+/**
+ * Derive the correct `og:image:type` MIME from a URL's file extension.
+ *
+ * Declaring the *true* type matters: Facebook/WhatsApp reject a share image
+ * when the declared type does not match the actual bytes (e.g. claiming JPEG
+ * for a PNG), which is what makes previews fall back to a generic logo.
+ *
+ * Returns an empty string when the type cannot be determined, in which case
+ * the tag is omitted rather than guessed.
+ */
+export function ogImageType(url: string): string {
+	// Ignore query/hash, then read the extension.
+	const path = url.split(/[?#]/)[0].toLowerCase();
+	const ext = path.slice(path.lastIndexOf('.') + 1);
+	switch (ext) {
+		case 'jpg':
+		case 'jpeg':
+			return 'image/jpeg';
+		case 'png':
+			return 'image/png';
+		case 'webp':
+			return 'image/webp';
+		case 'gif':
+			return 'image/gif';
+		default:
+			return '';
 	}
-
-	const prefix = trimmed.slice(0, idx + marker.length);
-	let rest = trimmed.slice(idx + marker.length);
-
-	// If a transformation is already present as the first path segment, drop it
-	// so we do not stack conflicting directives.
-	const firstSeg = rest.split('/')[0] ?? '';
-	const looksLikeTransform = /(^|,)(f_|q_|c_|g_|w_|h_|dpr_|e_|b_)/.test(firstSeg);
-	if (looksLikeTransform) {
-		rest = rest.slice(firstSeg.length + 1);
-	}
-
-	const transform = `f_jpg,q_auto:good,c_fill,g_auto,w_${OG_IMAGE.width},h_${OG_IMAGE.height}`;
-	return `${prefix}${transform}/${rest}`;
 }
 
 /**
@@ -80,8 +86,6 @@ export function optimizeOgImage(url?: string | null): string {
  * Format: "<lead sentence> -- <detail> | <detail> | <detail>"
  *   - The lead text is separated from the metadata by a double dash " -- ".
  *   - Metadata facts are separated by a pipe " | ".
- *
- * Falls back to the lead text (or a provided fallback) when there are no facts.
  */
 export function buildDescription(
 	lead: string,

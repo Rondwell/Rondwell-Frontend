@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getUser, getUsers, updateUserStatus, getUserSubscription, updateUserPlan } from '$lib/services/admin.services';
+	import { getUser, getUsers, updateUserStatus, getUserSubscription, updateUserPlan, getUserWallet } from '$lib/services/admin.services';
 	import PlanSelect from '$lib/components/hq/PlanSelect.svelte';
 	import { onMount } from 'svelte';
 
@@ -37,6 +37,11 @@
 	// Confirmation modal
 	let showPlanConfirm = false;
 	let planConfirmTier: 'PLUS' | 'FREE' = 'PLUS';
+
+	// Wallet balance (admin view)
+	let userWallet: any = null;
+	let walletLoading = false;
+	let walletError = '';
 
 	const cycleOptions = [
 		{ label: 'Monthly', value: 'MONTHLY' },
@@ -133,12 +138,47 @@
 		planCurrency = 'NGN';
 		planDuration = 'DEFAULT';
 		showPlanConfirm = false;
+		// Reset wallet state.
+		userWallet = null;
+		walletError = '';
 		try {
 			const detail = await getUser(user._id);
 			selectedUser = detail;
 		} catch { /* use basic data */ }
 		finally { modalLoading = false; }
 		loadUserPlan(user._id);
+		loadUserWallet(user._id);
+	}
+
+	async function loadUserWallet(userId: string) {
+		walletLoading = true;
+		walletError = '';
+		try {
+			userWallet = await getUserWallet(userId);
+		} catch (e: any) {
+			walletError = e?.message ?? 'Failed to load wallet balance';
+		} finally {
+			walletLoading = false;
+		}
+	}
+
+	/** Currencies that carry a non-zero balance (or NGN as a sensible default). */
+	function walletCurrenciesToShow(w: any): any[] {
+		if (!w?.balances) return [];
+		const nonZero = w.balances.filter(
+			(b: any) => b.totalKobo > 0 || b.reservedKobo > 0 || b.disputedKobo > 0,
+		);
+		if (nonZero.length > 0) return nonZero;
+		// Nothing yet — still show NGN so the admin sees a zero balance.
+		return w.balances.filter((b: any) => b.currency === 'NGN');
+	}
+
+	const currencySymbols: Record<string, string> = { NGN: '₦', USD: '$', ETH: 'Ξ' };
+
+	/** Format a major-unit amount with its currency symbol. */
+	function fmtMoney(amount: number, currency: string): string {
+		const symbol = currencySymbols[currency] ?? '';
+		return `${symbol}${Number(amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 	}
 
 	async function loadUserPlan(userId: string) {
@@ -437,6 +477,63 @@
 						{/if}
 						{#if selectedUser.bio}
 							<div><p class="text-xs text-[#C1C2C2]">Bio</p><p class="text-sm text-gray-700">{selectedUser.bio}</p></div>
+						{/if}
+					</div>
+
+					<!-- Wallet Balance -->
+					<div class="mt-6 border-t border-gray-200 pt-6">
+						<div class="mb-3 flex items-center justify-between">
+							<h3 class="text-sm font-semibold text-gray-700">Wallet Balance</h3>
+							{#if userWallet}
+								{#if userWallet.frozen}
+									<span class="rounded-full bg-[#FDEAEA] px-2 py-0.5 text-[10px] font-medium text-[#E53935]">Frozen</span>
+								{:else}
+									<span class="rounded-full bg-[#E3F4E1] px-2 py-0.5 text-[10px] font-medium text-[#3CBD2C]">{userWallet.walletStatus ?? 'Active'}</span>
+								{/if}
+							{/if}
+						</div>
+
+						{#if walletLoading}
+							<div class="animate-pulse space-y-3">
+								<div class="h-16 w-full rounded-xl bg-gray-200"></div>
+							</div>
+						{:else if walletError}
+							<div class="rounded-lg bg-[#FDEAEA] px-3 py-2 text-xs text-[#E53935]">
+								{walletError}
+								<button on:click={() => selectedUser && loadUserWallet(selectedUser._id)} class="ml-2 font-medium underline">Retry</button>
+							</div>
+						{:else if userWallet}
+							<div class="space-y-3">
+								{#each walletCurrenciesToShow(userWallet) as bal}
+									<div class="rounded-xl border border-gray-200 bg-white p-4">
+										<div class="flex items-center justify-between">
+											<div>
+												<p class="text-xs text-[#C1C2C2]">Withdrawable ({bal.currency})</p>
+												<p class="text-xl font-semibold text-gray-900">{fmtMoney(bal.withdrawable, bal.currency)}</p>
+											</div>
+											<div class="text-right">
+												<p class="text-xs text-[#C1C2C2]">Total Balance</p>
+												<p class="text-sm font-medium text-gray-700">{fmtMoney(bal.total, bal.currency)}</p>
+											</div>
+										</div>
+										{#if bal.reservedKobo > 0 || bal.disputedKobo > 0}
+											<div class="mt-3 flex flex-wrap gap-4 border-t border-gray-100 pt-3">
+												{#if bal.reservedKobo > 0}
+													<div><p class="text-xs text-[#C1C2C2]">Reserved (withdrawals)</p><p class="text-sm font-medium text-[#EAAB26]">{fmtMoney(bal.reserved, bal.currency)}</p></div>
+												{/if}
+												{#if bal.disputedKobo > 0}
+													<div><p class="text-xs text-[#C1C2C2]">Disputed (held)</p><p class="text-sm font-medium text-[#E53935]">{fmtMoney(bal.disputed, bal.currency)}</p></div>
+												{/if}
+											</div>
+										{/if}
+									</div>
+								{/each}
+								{#if userWallet.balanceUpdatedAt}
+									<p class="text-[11px] text-gray-400">Balance as of {new Date(userWallet.balanceUpdatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+								{/if}
+							</div>
+						{:else}
+							<p class="text-sm text-gray-400">No wallet provisioned for this user yet.</p>
 						{/if}
 					</div>
 

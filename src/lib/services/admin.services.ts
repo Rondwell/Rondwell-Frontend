@@ -108,6 +108,35 @@ export async function getUserSubscription(id: string) {
 }
 
 /**
+ * Fetch a user's wallet balance for the User Management detail panel.
+ * Returns per-currency total / reserved / disputed / withdrawable amounts
+ * plus wallet status. A user with no provisioned wallet resolves to `null`
+ * (the API returns 404) so callers can show a "No wallet yet" state.
+ */
+export async function getUserWallet(id: string) {
+  const token = getAdminToken();
+  if (!token) throw new Error('Not authenticated');
+
+  const headers = new Headers();
+  headers.set('Authorization', `Bearer ${token}`);
+  headers.set('Content-Type', 'application/json');
+
+  const res = await fetch(`${API_URL}/api/v1/admin/users/${id}/wallet`, { headers });
+
+  if (res.status === 401) {
+    clearAdminAuth();
+    if (browser) window.location.href = '/hq/login';
+    throw new Error('Session expired');
+  }
+  // No wallet provisioned yet — surface as null rather than an error.
+  if (res.status === 404) return null;
+
+  if (!res.ok) await throwApiError(res, 'Failed to load wallet balance');
+  const data = await res.json();
+  return data.data;
+}
+
+/**
  * Change a user's plan. `tier` is 'PLUS' or 'FREE'.
  * For PLUS you may pass billingCycle ('MONTHLY'|'YEARLY') and currency ('NGN'|'USD').
  */

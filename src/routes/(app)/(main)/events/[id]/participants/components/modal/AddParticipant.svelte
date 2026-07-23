@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { inviteExhibitorByEmail, inviteSpeakerByEmail, inviteSpeakerByProfile, inviteVendorByEmail, manualAddExhibitor, manualAddSpeaker, manualAddVendor, searchRondwellSpeakers } from '$lib/services/event.services';
+	import { inviteExhibitorByEmail, inviteExhibitorByProfile, inviteSpeakerByEmail, inviteSpeakerByProfile, inviteVendorByEmail, inviteVendorByProfile, manualAddExhibitor, manualAddSpeaker, manualAddVendor, searchRondwellProfiles } from '$lib/services/event.services';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher } from 'svelte';
 
@@ -12,11 +12,15 @@
 	export let participant = 'Speaker';
 	export let eventId = '';
 	export let eventTitle = '';
-	let participantLowerCase = participant.toLocaleLowerCase();
+	$: participantLowerCase = participant.toLocaleLowerCase();
+	// Backend role key for the current participant type.
+	$: roleKey = (participant === 'Exhibitor' ? 'EXHIBITOR' : participant === 'Vendor' ? 'VENDOR' : 'SPEAKER') as 'SPEAKER' | 'EXHIBITOR' | 'VENDOR';
 
 	let selectedS: string[] = [];
 	let rondwellSpeakers: any[] = [];
 	let searchingRondwell = false;
+	let searchTimer: ReturnType<typeof setTimeout>;
+	let hasSearched = false;
 
 	// Email invite form
 	let emailFirstName = '';
@@ -30,6 +34,7 @@
 	// Manual add form
 	let manualFirstName = '';
 	let manualLastName = '';
+	let manualEmail = '';
 	let manualTitle = '';
 	let manualBio = '';
 	let manualLinkedin = '';
@@ -101,6 +106,7 @@
 			const payload = {
 				firstName: manualFirstName,
 				lastName: manualLastName,
+				email: manualEmail || undefined,
 				bio: manualBio || undefined,
 				socialLinks: {
 					linkedin: manualLinkedin || undefined,
@@ -115,9 +121,10 @@
 			} else {
 				await manualAddSpeaker(eventId, payload);
 			}
-			manualSuccess = 'Speaker added successfully!';
+			manualSuccess = `${participant} added successfully!`;
 			manualFirstName = '';
 			manualLastName = '';
+			manualEmail = '';
 			manualTitle = '';
 			manualBio = '';
 			manualLinkedin = '';
@@ -126,17 +133,22 @@
 			dispatch('added');
 			setTimeout(() => { open = false; manualSuccess = ''; }, 1500);
 		} catch (e: any) {
-			manualError = e.message || 'Failed to add speaker';
+			manualError = e.message || `Failed to add ${participantLowerCase}`;
 		} finally {
 			manualAdding = false;
 		}
 	}
 
 	async function handleSearchRondwell() {
-		if (!searchQuery.trim()) return;
+		if (!searchQuery.trim()) {
+			rondwellSpeakers = [];
+			hasSearched = false;
+			return;
+		}
 		searchingRondwell = true;
+		hasSearched = true;
 		try {
-			rondwellSpeakers = await searchRondwellSpeakers(eventId, searchQuery);
+			rondwellSpeakers = await searchRondwellProfiles(eventId, searchQuery.trim(), roleKey);
 		} catch {
 			rondwellSpeakers = [];
 		} finally {
@@ -144,13 +156,30 @@
 		}
 	}
 
+	// Debounce typing so results refresh without spamming the API.
+	function onSearchInput() {
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(handleSearchRondwell, 400);
+	}
+
+	async function inviteByProfileForRole(payload: { participantProfileId: string; participantUserId: string }) {
+		if (roleKey === 'EXHIBITOR') return inviteExhibitorByProfile(eventId, payload);
+		if (roleKey === 'VENDOR') return inviteVendorByProfile(eventId, payload);
+		return inviteSpeakerByProfile(eventId, payload);
+	}
+
 	async function handleAddSelectedSpeakers() {
+		if (selectedS.length === 0) {
+			inviteError = `Select at least one ${participantLowerCase} to add`;
+			return;
+		}
 		inviting = true;
+		inviteError = '';
 		try {
 			for (const id of selectedS) {
 				const speaker = rondwellSpeakers.find((s: any) => s.id === id || s._id === id);
 				if (speaker) {
-					await inviteSpeakerByProfile(eventId, {
+					await inviteByProfileForRole({
 						participantProfileId: speaker.id || speaker._id,
 						participantUserId: speaker.userId || speaker.id || speaker._id,
 					});
@@ -160,7 +189,7 @@
 			dispatch('added');
 			open = false;
 		} catch (e: any) {
-			inviteError = e.message || 'Failed to add speakers';
+			inviteError = e.message || `Failed to add ${participantLowerCase}s`;
 		} finally {
 			inviting = false;
 		}
@@ -169,7 +198,7 @@
 	function getButtonLabel() {
 		if (activeTab === 'email') return inviting ? 'Sending...' : 'Send Invitation';
 		if (activeTab === 'rondwell') return inviting ? 'Adding...' : `Add Selected ${participant}(s) to Event`;
-		if (activeTab === 'manual') return manualAdding ? 'Adding...' : 'Add Speaker Manually';
+		if (activeTab === 'manual') return manualAdding ? 'Adding...' : `Add ${participant} Manually`;
 		return 'Submit';
 	}
 
@@ -265,7 +294,7 @@
 						</h3>
 						<div class="mb-4 flex items-center gap-2">
 							<div class="relative w-full max-w-xl">
-								<input type="text" bind:value={searchQuery} on:keydown={(e) => e.key === 'Enter' && handleSearchRondwell()} placeholder="Search {participantLowerCase}s by name, expertise, or keywords..." class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-[#C5C6C6] focus:ring-0 focus:outline-none" />
+								<input type="text" bind:value={searchQuery} on:input={onSearchInput} on:keydown={(e) => e.key === 'Enter' && handleSearchRondwell()} placeholder="Search by email, or {participantLowerCase} name / keyword..." class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-[#616265] focus:ring-0 focus:outline-none" />
 								<span class="absolute top-2.5 left-3 text-gray-400">
 									<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />
 								</span>
@@ -308,7 +337,11 @@
 							</div>
 						{:else}
 							<p class="py-8 text-center text-sm text-gray-400">
-								{searchQuery ? 'No speakers found. Try a different search.' : 'Search for speakers to add them to your event.'}
+								{searchingRondwell
+									? 'Searching...'
+									: hasSearched
+										? `No ${participantLowerCase}s found. Try their exact email, or a different name/keyword.`
+										: `Search by email to invite a specific person, or by name to browse ${participantLowerCase} profiles.`}
 							</p>
 						{/if}
 					</div>
@@ -338,6 +371,10 @@
 							<div>
 								<label class="flex text-gray-900" for="manual_last_name">{participant}'s Last Name <span class="text-blue-600">*</span></label>
 								<input id="manual_last_name" type="text" placeholder="Brown" bind:value={manualLastName} class="mt-2 rounded-sm bg-[#FFFFFF] px-3 py-2 shadow-xs" />
+							</div>
+							<div>
+								<label class="flex text-gray-900" for="manual_email">{participant}'s Email <span class="ml-1 text-gray-700">(Optional)</span></label>
+								<input id="manual_email" type="email" placeholder="jamesbrown@email.com" bind:value={manualEmail} class="mt-2 rounded-sm bg-[#FFFFFF] px-3 py-2 shadow-xs" />
 							</div>
 						</div>
 

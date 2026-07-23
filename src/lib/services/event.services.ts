@@ -744,11 +744,26 @@ export async function assignSpeakerSessions(eventId: string, participantId: stri
   return data;
 }
 
-export async function searchRondwellSpeakers(eventId: string, query: string): Promise<any[]> {
-  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants/search-speakers?q=${encodeURIComponent(query)}`);
+/**
+ * Search existing Rondwell profiles to add as a participant.
+ * `query` can be an exact email (matches any registered user) or a
+ * name/keyword (matches the role's public directory).
+ */
+export async function searchRondwellProfiles(
+  eventId: string,
+  query: string,
+  role: 'SPEAKER' | 'EXHIBITOR' | 'VENDOR' = 'SPEAKER',
+): Promise<any[]> {
+  const params = new URLSearchParams({ q: query, role });
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants/search-profiles?${params.toString()}`);
   const data = await res.json();
   if (!res.ok) return [];
-  return data.speakers ?? [];
+  return data.profiles ?? data.speakers ?? [];
+}
+
+/** @deprecated use searchRondwellProfiles(eventId, query, 'SPEAKER') */
+export async function searchRondwellSpeakers(eventId: string, query: string): Promise<any[]> {
+  return searchRondwellProfiles(eventId, query, 'SPEAKER');
 }
 
 export async function getEventSessions(eventId: string): Promise<any[]> {
@@ -951,6 +966,21 @@ export async function inviteVendorByEmail(eventId: string, payload: {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...payload, role: 'VENDOR', inviteType: 'EMAIL' }),
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to invite vendor');
+  const data = await res.json();
+  return data;
+}
+
+export async function inviteVendorByProfile(eventId: string, payload: {
+  participantProfileId: string;
+  participantUserId: string;
+  message?: string;
+}): Promise<any> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants/invite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, role: 'VENDOR', inviteType: 'RONDWELL_PROFILE' }),
   });
   if (!res.ok) await throwApiError(res, 'Failed to invite vendor');
   const data = await res.json();

@@ -1,9 +1,18 @@
 <script lang="ts">
 	import { inviteExhibitorByEmail, inviteExhibitorByProfile, inviteSpeakerByEmail, inviteSpeakerByProfile, inviteVendorByEmail, inviteVendorByProfile, manualAddExhibitor, manualAddSpeaker, manualAddVendor, searchRondwellProfiles } from '$lib/services/event.services';
+	import { toast } from '$lib/stores/toast.store';
+	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
+
+	// Detects the backend's "already added / already invited" error so we can
+	// surface a friendly toast instead of a raw error string.
+	function isAlreadyInvitedError(msg: string): boolean {
+		const m = (msg || '').toLowerCase();
+		return m.includes('already been added') || m.includes('already added') || m.includes('already invited') || m.includes('already exist');
+	}
 
 	let activeTab = 'rondwell';
 	let searchQuery = '';
@@ -21,6 +30,10 @@
 	let searchingRondwell = false;
 	let searchTimer: ReturnType<typeof setTimeout>;
 	let hasSearched = false;
+
+	// Single source of truth for "an action is in flight" so the footer button
+	// shows a spinner + disabled state consistently across all three tabs.
+	$: busy = inviting || manualAdding;
 
 	// Email invite form
 	let emailFirstName = '';
@@ -45,6 +58,12 @@
 	let manualSuccess = '';
 
 	function toggleSelect(id: string) {
+		// Don't allow selecting a profile that's already on this event.
+		const profile = rondwellSpeakers.find((s: any) => (s.id || s._id) === id);
+		if (profile?.alreadyInvited) {
+			toast.info(`${profile.name || 'This ' + participantLowerCase} is already added to this event.`);
+			return;
+		}
 		if (selectedS.includes(id)) {
 			selectedS = selectedS.filter((s) => s !== id);
 		} else {
@@ -81,6 +100,7 @@
 				await inviteSpeakerByEmail(eventId, payload);
 			}
 			inviteSuccess = 'Invitation sent successfully!';
+			toast.success('Invitation sent successfully!');
 			emailFirstName = '';
 			emailLastName = '';
 			emailAddress = '';
@@ -88,7 +108,13 @@
 			dispatch('added');
 			setTimeout(() => { open = false; inviteSuccess = ''; }, 1500);
 		} catch (e: any) {
-			inviteError = e.message || 'Failed to send invitation';
+			if (isAlreadyInvitedError(e?.message)) {
+				inviteError = `${emailAddress} has already been invited to this event.`;
+				toast.info(inviteError);
+			} else {
+				inviteError = cleanErrorMessage(e?.message || 'Failed to send invitation');
+				toast.error(inviteError);
+			}
 		} finally {
 			inviting = false;
 		}
@@ -122,6 +148,7 @@
 				await manualAddSpeaker(eventId, payload);
 			}
 			manualSuccess = `${participant} added successfully!`;
+			toast.success(`${participant} added successfully!`);
 			manualFirstName = '';
 			manualLastName = '';
 			manualEmail = '';
@@ -133,7 +160,13 @@
 			dispatch('added');
 			setTimeout(() => { open = false; manualSuccess = ''; }, 1500);
 		} catch (e: any) {
-			manualError = e.message || `Failed to add ${participantLowerCase}`;
+			if (isAlreadyInvitedError(e?.message)) {
+				manualError = `This ${participantLowerCase} is already added to this event.`;
+				toast.info(manualError);
+			} else {
+				manualError = cleanErrorMessage(e?.message || `Failed to add ${participantLowerCase}`);
+				toast.error(manualError);
+			}
 		} finally {
 			manualAdding = false;
 		}
@@ -175,21 +208,58 @@
 		}
 		inviting = true;
 		inviteError = '';
+		inviteSuccess = '';
 		try {
-			for (const id of selectedS) {
-				const speaker = rondwellSpeakers.find((s: any) => s.id === id || s._id === id);
-				if (speaker) {
-					await inviteByProfileForRole({
+			// Fire all invites in parallel (was serial → N sequential round-trips,
+			// which is what made the button hang). allSettled so one failure
+			// doesn't discard the others.
+			const targets = selectedS
+				.map((id) => rondwellSpeakers.find((s: any) => s.id === id || s._id === id))
+				.filter(Boolean);
+
+			const results = await Promise.allSettled(
+				targets.map((speaker: any) =>
+					inviteByProfileForRole({
 						participantProfileId: speaker.id || speaker._id,
 						participantUserId: speaker.userId || speaker.id || speaker._id,
-					});
-				}
+					})
+				)
+			);
+
+			const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+			const alreadyInvitedCount = rejected.filter((r) => isAlreadyInvitedError(r.reason?.message)).length;
+			const otherFailures = rejected.length - alreadyInvitedCount;
+			const succeeded = results.length - rejected.length;
+
+			if (succeeded > 0) {
+				selectedS = [];
+				dispatch('added');
+				toast.success(`Added ${succeeded} ${participantLowerCase}${succeeded > 1 ? 's' : ''} to the event.`);
 			}
-			selectedS = [];
-			dispatch('added');
-			open = false;
+
+			// Surface already-invited profiles as a friendly info toast.
+			if (alreadyInvitedCount > 0) {
+				toast.info(
+					alreadyInvitedCount === 1
+						? `1 ${participantLowerCase} was already invited to this event.`
+						: `${alreadyInvitedCount} ${participantLowerCase}s were already invited to this event.`
+				);
+			}
+
+			if (rejected.length === 0) {
+				open = false;
+			} else if (succeeded === 0 && otherFailures === 0) {
+				// Everything selected was already invited — nothing to report as an error.
+				inviteError = '';
+				open = false;
+			} else if (otherFailures > 0) {
+				const firstOther = rejected.find((r) => !isAlreadyInvitedError(r.reason?.message));
+				inviteError = cleanErrorMessage(firstOther?.reason?.message || `Failed to add ${participantLowerCase}(s)`);
+				toast.error(inviteError);
+			}
 		} catch (e: any) {
-			inviteError = e.message || `Failed to add ${participantLowerCase}s`;
+			inviteError = cleanErrorMessage(e?.message || `Failed to add ${participantLowerCase}s`);
+			toast.error(inviteError);
 		} finally {
 			inviting = false;
 		}
@@ -308,11 +378,11 @@
 							<div class="divide-y rounded-lg border">
 								{#each rondwellSpeakers as speaker}
 									{@const speakerId = speaker.id || speaker._id}
-									<div class="flex items-start justify-between gap-2 p-3 hover:bg-gray-50 md:flex-row md:items-center">
+									<div class="flex items-start justify-between gap-2 p-3 md:flex-row md:items-center {speaker.alreadyInvited ? 'opacity-60' : 'hover:bg-gray-50'}">
 										<div class="flex flex-col gap-2 md:flex-row md:items-center">
 											<div class="flex items-center gap-2">
-												<button on:click={() => toggleSelect(speakerId)} class="flex h-5 w-5 items-center justify-center rounded-full border-2 {selectedS.includes(speakerId) ? 'bg-black' : 'border-gray-300'}">
-													{#if selectedS.includes(speakerId)}
+												<button on:click={() => toggleSelect(speakerId)} disabled={speaker.alreadyInvited} class="flex h-5 w-5 items-center justify-center rounded-full border-2 {speaker.alreadyInvited ? 'cursor-not-allowed border-gray-200 bg-gray-100' : selectedS.includes(speakerId) ? 'bg-black' : 'border-gray-300'}">
+													{#if selectedS.includes(speakerId) && !speaker.alreadyInvited}
 														<Icon icon="mdi:tick" class="text-2xl text-white" />
 													{/if}
 												</button>
@@ -328,9 +398,16 @@
 											</div>
 										</div>
 										<div class="flex flex-col items-end gap-2 sm:flex-row md:items-center">
-											{#each (speaker.expertise || []).slice(0, 2) as tag}
-												<button class="rounded-md bg-gray-200 px-3 py-1 text-gray-400">{tag}</button>
-											{/each}
+											{#if speaker.alreadyInvited}
+												<span class="flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-600">
+													<Icon icon="mdi:check-circle-outline" class="text-sm" />
+													Already invited
+												</span>
+											{:else}
+												{#each (speaker.expertise || []).slice(0, 2) as tag}
+													<button class="rounded-md bg-gray-200 px-3 py-1 text-gray-400">{tag}</button>
+												{/each}
+											{/if}
 										</div>
 									</div>
 								{/each}
@@ -411,9 +488,12 @@
 			</div>
 
 			<div class="mt-6 flex items-center gap-2">
-				<button on:click={() => (open = false)} class="rounded-md bg-white px-4 py-2 text-gray-600 shadow-xs">Cancel</button>
-				<button on:click={handleSubmit} disabled={inviting || manualAdding} class="rounded-md bg-black px-4 py-2 text-white shadow-xs disabled:opacity-50">
-					{getButtonLabel()}
+				<button on:click={() => (open = false)} disabled={busy} class="rounded-md bg-white px-4 py-2 text-gray-600 shadow-xs disabled:opacity-50">Cancel</button>
+				<button on:click={handleSubmit} disabled={busy} class="flex items-center justify-center gap-2 rounded-md bg-black px-4 py-2 text-white shadow-xs disabled:cursor-not-allowed disabled:opacity-60">
+					{#if busy}
+						<Icon icon="line-md:loading-twotone-loop" class="text-lg" />
+					{/if}
+					<span>{getButtonLabel()}</span>
 				</button>
 			</div>
 		</div>

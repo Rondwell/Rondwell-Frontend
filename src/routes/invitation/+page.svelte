@@ -114,9 +114,16 @@
 		const role = invitation?.role || 'SPEAKER';
 		const rolePath = getRolePath(role);
 
-		// Redirect to auth with return URL pointing to the accept-invite endpoint
-		const returnUrl = `/${rolePath}/invitations/${participantId}?token=${token}&eventId=${eventId}&action=accept`;
-		goto(`/auth?returnUrl=${encodeURIComponent(returnUrl)}&inviteRole=${rolePath}`);
+		// Land on the dedicated accept handler. It requires auth, so it will
+		// bounce unauthenticated/brand-new invitees through /auth (sign up +
+		// onboard) and return them here to finish linking + acceptance.
+		const params = new URLSearchParams({
+			participantId: participantId || '',
+			token: token || '',
+			eventId: eventId || '',
+			role: rolePath
+		});
+		goto(`/invitation/accept?${params.toString()}`);
 	}
 
 	async function handleDecline() {

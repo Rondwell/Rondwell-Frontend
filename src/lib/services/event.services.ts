@@ -2093,3 +2093,30 @@ export async function getGroupRegistrationMembers(
 		return [];
 	}
 }
+
+
+// ==================== PARTICIPANT INVITE ACCEPTANCE ====================
+
+/**
+ * Accept an event participant invitation from the emailed link.
+ *
+ * REQUIRES the invitee to be authenticated — the backend links their Rondwell
+ * userId to the EventParticipant and creates a collaboration dashboard record.
+ * The invite token from the email is still verified server-side.
+ */
+export async function acceptParticipantInvite(
+  eventId: string,
+  participantId: string,
+  inviteToken: string
+): Promise<any> {
+  const res = await authFetch(
+    `${EVENT_URL}/api/v1/events/${eventId}/participants/${participantId}/accept-invite`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inviteToken })
+    }
+  );
+  if (!res.ok) await throwApiError(res, 'Failed to accept invitation');
+  return res.json();
+}

@@ -14,7 +14,7 @@
 		name: 'Rondwell',
 		features: [],
 		limits: { emails: 250, aiPrompts: 10, activePaidEvents: 10, maxParticipantsPerEvent: 3, seatingLayoutEvents: 5 },
-		commissionStructure: { ticketFees: { NGN: 0.04, USD: 0.04 }, vendorBookingFee: 0.04, withdrawalFee: 0.03, usdSettlementFee: 0.01 }
+		commissionStructure: { ticketFees: { NGN: 0.04, USD: 0.04 }, vendorBookingFee: 0.04, exhibitorBookingFee: 0.04, withdrawalFee: 0.03, usdSettlementFee: 0.01 }
 	};
 
 	let plusPlan = {
@@ -22,7 +22,7 @@
 		pricing: { monthly: 1200000, yearly: 12000000, currency: 'NGN' },
 		features: [],
 		limits: { emails: 10000, aiPrompts: 50, activePaidEvents: 999999, maxParticipantsPerEvent: 999999, seatingLayoutEvents: -1 },
-		commissionStructure: { ticketFees: { NGN: 0.01, USD: 0.01 }, vendorBookingFee: 0.01, withdrawalFee: 0.03, usdSettlementFee: 0 }
+		commissionStructure: { ticketFees: { NGN: 0.01, USD: 0.01 }, vendorBookingFee: 0.01, exhibitorBookingFee: 0.01, withdrawalFee: 0.03, usdSettlementFee: 0 }
 	};
 
 	onMount(async () => {
@@ -45,6 +45,8 @@
 	$: plusUSD = Math.round(plusPlan.commissionStructure.ticketFees.USD * 100);
 	$: freeVendor = Math.round(freePlan.commissionStructure.vendorBookingFee * 100);
 	$: plusVendor = Math.round(plusPlan.commissionStructure.vendorBookingFee * 100);
+	$: freeExhibitor = Math.round(((freePlan.commissionStructure as any).exhibitorBookingFee ?? freePlan.commissionStructure.vendorBookingFee) * 100);
+	$: plusExhibitor = Math.round(((plusPlan.commissionStructure as any).exhibitorBookingFee ?? plusPlan.commissionStructure.vendorBookingFee) * 100);
 	$: freeWithdrawal = Math.round(freePlan.commissionStructure.withdrawalFee * 100);
 	$: plusWithdrawal = Math.round(plusPlan.commissionStructure.withdrawalFee * 100);
 
@@ -86,6 +88,7 @@
 		{ text: 'Emails:', bold: `${freePlan.limits.emails.toLocaleString()}/month` },
 		{ text: `Paid Events: NGN:`, bold: `${freeNGN}% + gateway,`, text2: ' USD/FX:', bold2: `${freeUSD}% + FX` },
 		{ text: 'Vendor bookings:', bold: `${freeVendor}%` },
+		{ text: 'Exhibitor booth payments:', bold: `${freeExhibitor}%` },
 		{ text: 'FX conversion:', bold: '1–2%' },
 		{ text: 'USD wallet settlement:', bold: `${Math.round((freePlan.commissionStructure.usdSettlementFee ?? 0.01) * 100)}%` },
 		{ text: 'OTC withdrawal:', bold: `${freeWithdrawal}% (capped at ₦500)` }
@@ -109,6 +112,7 @@
 		{ text: 'Higher revenue thresholds' },
 		{ text: `Paid Events: NGN:`, bold: `${plusNGN}% + gateway,`, text2: ' USD/FX:', bold2: `${plusUSD}% + FX` },
 		{ text: 'Vendor bookings:', bold: `${plusVendor}%` },
+		{ text: 'Exhibitor booth payments:', bold: `${plusExhibitor}%` },
 		{ text: 'FX conversion:', bold: '1%' },
 		{ text: 'OTC withdrawal:', bold: `${plusWithdrawal}%` },
 		{ text: 'USD wallet settlement:', bold: plusPlan.commissionStructure.usdSettlementFee === 0 ? 'No fee' : `${Math.round(plusPlan.commissionStructure.usdSettlementFee * 100)}%` }

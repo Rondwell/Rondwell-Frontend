@@ -5,6 +5,7 @@
 	import CreateOrder from './CreateOrder.svelte';
 	import DeclineParticipant from './DeclineParticipant.svelte';
 	import ManageContribution from './ManageContribution.svelte';
+	import IssueExhibitorInvoice from './IssueExhibitorInvoice.svelte';
 	import ProfileDetail from './ProfileDetail.svelte';
 	import RemoveParticipant from './RemoveParticipant.svelte';
 	import SendMail from './SendMail.svelte';
@@ -33,6 +34,7 @@
 	let showDeclineParticipant = false;
 	let showManageContribution = false;
 	let showCreateOrder = false;
+	let showIssueInvoice = false;
 
 	let items: any[];
 
@@ -59,6 +61,7 @@
 			{ label: 'Approve Application', icon: '/clipboard-tick.svg', condition: () => speakerData?.status === 'INVITED' || speakerData?.status === 'APPLIED' },
 			{ label: 'Decline Invitation', icon: '/clipboard-close.svg', condition: () => speakerData?.status === 'INVITED' || speakerData?.status === 'APPLIED' },
 			{ label: 'Manage Contribution/Payment', icon: '/setting.svg', condition: () => speakerData?.status === 'APPROVED' || speakerData?.status === 'PENDING_APPROVAL' },
+			{ label: 'Issue Booth Invoice', icon: '/setting.svg', condition: () => ['APPROVED', 'ACCEPTED', 'CONFIRMED', 'PENDING_APPROVAL'].includes(speakerData?.status) },
 			{ label: 'Manage Visibility', icon: '' },
 			{ label: 'Send Message', icon: '/message-text.svg' },
 			{ label: 'Send Reminder', icon: '/clock.svg', condition: () => speakerData?.status === 'INVITED' || speakerData?.status === 'ACCEPTED' },
@@ -107,6 +110,8 @@
 			showDeclineParticipant = true;
 		} else if (label.startsWith('Manage Contribution/Payment')) {
 			showManageContribution = true;
+		} else if (label.startsWith('Issue Booth Invoice')) {
+			showIssueInvoice = true;
 		} else if (label.startsWith('View Digital Booth')) {
 			// Open booth preview in new tab
 			if (speakerData?.id && eventId) {
@@ -195,3 +200,6 @@
 <DeclineParticipant bind:open={showDeclineParticipant} {participant} {speakerData} {eventId} on:declined={() => dispatch('updated')} />
 <ManageContribution bind:open={showManageContribution} {participant} {speakerData} {eventId} on:updated={() => dispatch('updated')} />
 <CreateOrder bind:open={showCreateOrder} {speakerData} {eventId} on:ordered={() => dispatch('updated')} />
+{#if participant === 'exhibitor'}
+	<IssueExhibitorInvoice bind:open={showIssueInvoice} {speakerData} {eventId} {eventTitle} on:issued={() => dispatch('updated')} />
+{/if}

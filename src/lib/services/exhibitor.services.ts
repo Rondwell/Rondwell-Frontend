@@ -133,6 +133,65 @@ export async function getExhibitorCollaboration(collaborationId: string) {
 	return data.data;
 }
 
+// ─── Booth Invoicing (organizer → exhibitor, paid via Paystack) ────────────
+
+/**
+ * Organizer issues a booth invoice to the exhibitor on a collaboration.
+ * The exhibitor is emailed a pay link and can pay via Paystack/Flutterwave.
+ */
+export async function issueExhibitorInvoice(
+	collaborationId: string,
+	payload: { amount: number; currency?: string; message?: string; serviceName?: string }
+) {
+	const res = await authFetch(`${PRODUCTS_API}/exhibitor/collaborations/${collaborationId}/issue-invoice`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) await throwApiError(res, 'Failed to issue invoice');
+	const data = await res.json();
+	return data.data;
+}
+
+/**
+ * Organizer issues a booth invoice from the event's exhibitor participant view.
+ * Finds-or-creates the collaboration by (eventId, exhibitorUserId) then emails
+ * the exhibitor a Paystack pay link.
+ */
+export async function issueExhibitorInvoiceByParticipant(payload: {
+	eventId: string;
+	exhibitorUserId: string;
+	exhibitorName?: string;
+	exhibitorEmail?: string;
+	eventName?: string;
+	organizerName?: string;
+	organizerEmail?: string;
+	amount: number;
+	currency?: string;
+	message?: string;
+	serviceName?: string;
+}) {
+	const res = await authFetch(`${PRODUCTS_API}/exhibitor/collaborations/organizer/issue-invoice`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(payload)
+	});
+	if (!res.ok) await throwApiError(res, 'Failed to issue invoice');
+	const data = await res.json();
+	return data.data;
+}
+
+/**
+ * Fetch the issued invoice + payment context for the pay page. Works for the
+ * exhibitor (payer) and the organizer (issuer).
+ */
+export async function getExhibitorInvoiceForPay(collaborationId: string) {
+	const res = await authFetch(`${PRODUCTS_API}/exhibitor/collaborations/${collaborationId}/invoice`);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch invoice');
+	const data = await res.json();
+	return data.data;
+}
+
 export async function sendExhibitorCollaborationRequest(requestData: Record<string, unknown>) {
 	const res = await authFetch(`${PRODUCTS_API}/exhibitor/collaborations/send`, {
 		method: 'POST',

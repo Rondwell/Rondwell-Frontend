@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { authFetch } from '$lib/services/api.client';
 	import { getCollaboration } from '$lib/services/vendor.services';
+	import { getExhibitorInvoiceForPay } from '$lib/services/exhibitor.services';
 	import { getOrCreateIdempotencyKey } from '$lib/utils/idempotency';
 	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
@@ -16,6 +17,45 @@
 
 	$: collaborationId = $page.url.searchParams.get('collaborationId') || '';
 	$: invoiceNumber = $page.url.searchParams.get('invoiceNumber') || '';
+	// `type=exhibitor` → organizer→exhibitor booth invoice (exhibitor pays the
+	// organizer). Default `vendor` → vendor→organizer service invoice.
+	$: invoiceType = ($page.url.searchParams.get('type') || 'vendor').toLowerCase();
+	$: isExhibitor = invoiceType === 'exhibitor';
+
+	// Normalised invoice view so the template is direction-agnostic.
+	$: inv = collab
+		? isExhibitor
+			? {
+					invoiceNumber: collab.invoice?.invoiceNumber,
+					amount: collab.invoice?.amount,
+					currency: collab.invoice?.currency || 'NGN',
+					paid: collab.invoice?.invoiceStatus === 'PAID',
+					sentAt: collab.invoice?.invoiceSentAt,
+					fromLabel: 'From (Organizer)',
+					fromName: collab.organizerName || 'Organizer',
+					toLabel: 'To (Exhibitor)',
+					toName: collab.exhibitorName || 'Exhibitor',
+					serviceName: collab.boothName || collab.packageName || collab.title || 'Exhibition Booth',
+					description: collab.description || '',
+					message: collab.invoice?.invoiceMessage || '',
+					messageFrom: 'organizer'
+				}
+			: {
+					invoiceNumber: collab.quote?.invoiceNumber,
+					amount: collab.quote?.quotedAmount,
+					currency: collab.quote?.quotedCurrency || 'NGN',
+					paid: collab.quote?.quoteStatus === 'PAID',
+					sentAt: collab.quote?.quoteSentAt,
+					fromLabel: 'From (Vendor)',
+					fromName: collab.vendorName || collab.title || 'Vendor',
+					toLabel: 'To (Organizer)',
+					toName: collab.organizerName || 'Organizer',
+					serviceName: collab.title || 'Service',
+					description: collab.description || '',
+					message: collab.proposal || '',
+					messageFrom: 'vendor'
+				}
+		: null;
 
 	onMount(async () => {
 		if (!collaborationId) {
@@ -25,16 +65,21 @@
 		}
 
 		try {
-			const data = await getCollaboration(collaborationId);
-			collab = data;
+			collab = isExhibitor
+				? await getExhibitorInvoiceForPay(collaborationId)
+				: await getCollaboration(collaborationId);
 
-			if (!collab?.quote?.invoiceNumber) {
+			const invoiceNo = isExhibitor ? collab?.invoice?.invoiceNumber : collab?.quote?.invoiceNumber;
+			if (!invoiceNo) {
 				status = 'error';
 				errorMessage = 'No invoice found for this collaboration.';
 				return;
 			}
 
-			if (collab.quote.quoteStatus === 'PAID') {
+			const alreadyPaid = isExhibitor
+				? collab.invoice?.invoiceStatus === 'PAID'
+				: collab.quote?.quoteStatus === 'PAID';
+			if (alreadyPaid) {
 				status = 'success';
 				return;
 			}
@@ -70,7 +115,7 @@
 	}
 
 	async function handlePay() {
-		if (!collab?.quote) return;
+		if (!inv?.invoiceNumber) return;
 		status = 'paying';
 		errorMessage = '';
 
@@ -80,31 +125,56 @@
 			// transaction instead of opening a duplicate. The backend derives
 			// its own key when omitted, but supplying a stable client key is
 			// the canonical safe path.
-			const idempotencyScope = `invoice:${collaborationId}:${collab.quote.invoiceNumber}`;
+			const idempotencyScope = `invoice:${collaborationId}:${inv.invoiceNumber}`;
 			const idempotencyKey = getOrCreateIdempotencyKey(idempotencyScope);
 
-			const res = await authFetch(`${PAYMENT_URL}/api/v1/payment/vendor-invoice/initiate`, {
+			const typeQuery = isExhibitor ? '&type=exhibitor' : '';
+			const endpoint = isExhibitor
+				? `${PAYMENT_URL}/api/v1/payment/exhibitor-invoice/initiate`
+				: `${PAYMENT_URL}/api/v1/payment/vendor-invoice/initiate`;
+
+			const body = isExhibitor
+				? {
+						collaborationId,
+						invoiceNumber: inv.invoiceNumber,
+						// Exhibitor is the authenticated payer (resolved server-side);
+						// we send the organizer (receiver) details from the invoice.
+						organizerUserId: String(collab.organizerId?._id || collab.organizerId),
+						organizerName: collab.organizerName || 'Organizer',
+						organizerEmail: collab.organizerEmail || '',
+						amount: inv.amount,
+						currency: inv.currency,
+						serviceName: inv.serviceName,
+						eventId: collab.eventId,
+						eventName: collab.eventName,
+						paymentGateway: selectedGateway,
+						successCallbackUrl: `${window.location.origin}/pay-invoice?collaborationId=${collaborationId}${typeQuery}&status=success`,
+						failureCallbackUrl: `${window.location.origin}/pay-invoice?collaborationId=${collaborationId}${typeQuery}&status=failed`
+					}
+				: {
+						collaborationId,
+						invoiceNumber: inv.invoiceNumber,
+						vendorUserId: String(collab.vendorId?._id || collab.vendorId),
+						vendorName: collab.vendorName || 'Vendor',
+						vendorEmail: collab.vendorEmail || '',
+						amount: inv.amount,
+						currency: inv.currency,
+						serviceName: collab.title || collab.description || 'Service',
+						eventId: collab.eventId,
+						eventName: collab.eventName,
+						paymentGateway: selectedGateway,
+						successCallbackUrl: `${window.location.origin}/pay-invoice?collaborationId=${collaborationId}&status=success`,
+						failureCallbackUrl: `${window.location.origin}/pay-invoice?collaborationId=${collaborationId}&status=failed`
+					};
+
+			const res = await authFetch(endpoint, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					'Idempotency-Key': idempotencyKey,
 					'x-idempotency-key': idempotencyKey,
 				},
-				body: JSON.stringify({
-					collaborationId,
-					invoiceNumber: collab.quote.invoiceNumber,
-					vendorUserId: String(collab.vendorId?._id || collab.vendorId),
-					vendorName: collab.vendorName || 'Vendor',
-					vendorEmail: collab.vendorEmail || '',
-					amount: collab.quote.quotedAmount,
-					currency: collab.quote.quotedCurrency || 'NGN',
-					serviceName: collab.title || collab.description || 'Service',
-					eventId: collab.eventId,
-					eventName: collab.eventName,
-					paymentGateway: selectedGateway,
-					successCallbackUrl: `${window.location.origin}/pay-invoice?collaborationId=${collaborationId}&status=success`,
-					failureCallbackUrl: `${window.location.origin}/pay-invoice?collaborationId=${collaborationId}&status=failed`,
-				}),
+				body: JSON.stringify(body),
 			});
 
 			const data = await res.json();
@@ -144,7 +214,7 @@
 			</div>
 			<h1 class="mb-2 text-xl font-semibold text-gray-900">Something Went Wrong</h1>
 			<p class="mb-6 text-sm text-gray-500">{errorMessage}</p>
-			<a href="/vendor/collab" class="rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
+			<a href={isExhibitor ? '/exhibitor/collab' : '/vendor/collab'} class="rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
 				Back to Collaborations
 			</a>
 		</div>
@@ -155,8 +225,12 @@
 				<Icon icon="mdi:check-circle" class="h-8 w-8 text-green-500" />
 			</div>
 			<h1 class="mb-2 text-xl font-semibold text-gray-900">Payment Complete</h1>
-			<p class="mb-1 text-sm text-gray-500">Invoice {collab?.quote?.invoiceNumber || invoiceNumber} has been paid.</p>
-			<p class="mb-6 text-xs text-gray-400">The vendor has been notified and funds have been credited to their wallet.</p>
+			<p class="mb-1 text-sm text-gray-500">Invoice {inv?.invoiceNumber || invoiceNumber} has been paid.</p>
+			<p class="mb-6 text-xs text-gray-400">
+				{isExhibitor
+					? 'The organizer has been notified and funds have been credited to their wallet.'
+					: 'The vendor has been notified and funds have been credited to their wallet.'}
+			</p>
 			<a href="/" class="rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
 				Go to Dashboard
 			</a>
@@ -170,7 +244,7 @@
 				<div class="flex items-center justify-between">
 					<div>
 						<p class="text-xs font-medium uppercase tracking-wider text-gray-400">Invoice</p>
-						<p class="mt-0.5 text-lg font-bold">{collab.quote?.invoiceNumber || '—'}</p>
+						<p class="mt-0.5 text-lg font-bold">{inv?.invoiceNumber || '—'}</p>
 					</div>
 					<div class="flex h-10 w-10 items-center justify-center rounded-full bg-white/10">
 						<Icon icon="mdi:receipt-text-outline" class="h-5 w-5 text-white" />
@@ -186,33 +260,33 @@
 				<!-- From / To -->
 				<div class="mb-6 grid grid-cols-2 gap-4">
 					<div>
-						<p class="text-xs font-medium uppercase tracking-wider text-gray-400">From (Vendor)</p>
-						<p class="mt-1 text-sm font-semibold text-gray-900">{collab.vendorName || collab.title || 'Vendor'}</p>
+						<p class="text-xs font-medium uppercase tracking-wider text-gray-400">{inv?.fromLabel}</p>
+						<p class="mt-1 text-sm font-semibold text-gray-900">{inv?.fromName}</p>
 					</div>
 					<div>
-						<p class="text-xs font-medium uppercase tracking-wider text-gray-400">To (Organizer)</p>
-						<p class="mt-1 text-sm font-semibold text-gray-900">{collab.organizerName || 'Organizer'}</p>
+						<p class="text-xs font-medium uppercase tracking-wider text-gray-400">{inv?.toLabel}</p>
+						<p class="mt-1 text-sm font-semibold text-gray-900">{inv?.toName}</p>
 					</div>
 				</div>
 
 				<!-- Service Details -->
 				<div class="mb-6 rounded-lg bg-gray-50 p-4">
 					<div class="flex items-center justify-between border-b border-gray-200 pb-3">
-						<p class="text-xs font-medium uppercase tracking-wider text-gray-400">Service</p>
+						<p class="text-xs font-medium uppercase tracking-wider text-gray-400">{isExhibitor ? 'Booth' : 'Service'}</p>
 						<p class="text-xs font-medium uppercase tracking-wider text-gray-400">Amount</p>
 					</div>
 					<div class="flex items-start justify-between pt-3">
 						<div class="flex-1 pr-4">
-							<p class="text-sm font-medium text-gray-900">{collab.title || 'Service'}</p>
-							{#if collab.description}
-								<p class="mt-1 text-xs leading-relaxed text-gray-500">{collab.description}</p>
+							<p class="text-sm font-medium text-gray-900">{inv?.serviceName}</p>
+							{#if inv?.description}
+								<p class="mt-1 text-xs leading-relaxed text-gray-500">{inv.description}</p>
 							{/if}
 							{#if collab.eventName}
 								<p class="mt-1 text-xs text-gray-400">Event: {collab.eventName}</p>
 							{/if}
 						</div>
 						<p class="shrink-0 text-sm font-bold text-gray-900">
-							{formatInvoiceTotal(collab.quote?.quotedAmount, collab.quote?.quotedCurrency || 'NGN')}
+							{formatInvoiceTotal(inv?.amount, inv?.currency)}
 						</p>
 					</div>
 				</div>
@@ -221,20 +295,20 @@
 				<div class="mb-6 flex items-center justify-between rounded-lg bg-gray-900 px-4 py-3">
 					<p class="text-sm font-medium text-gray-300">Total Due</p>
 					<p class="text-xl font-bold text-white">
-						{formatInvoiceTotal(collab.quote?.quotedAmount, collab.quote?.quotedCurrency || 'NGN')}
+						{formatInvoiceTotal(inv?.amount, inv?.currency)}
 					</p>
 				</div>
 
-				{#if collab.proposal}
+				{#if inv?.message}
 					<div class="mb-6 rounded-lg border-l-3 border-[#DB3EC6] bg-purple-50 p-3">
-						<p class="text-xs font-medium text-gray-500">Message from vendor</p>
-						<p class="mt-1 text-sm text-gray-700">{collab.proposal}</p>
+						<p class="text-xs font-medium text-gray-500">Message from {inv.messageFrom}</p>
+						<p class="mt-1 text-sm text-gray-700">{inv.message}</p>
 					</div>
 				{/if}
 
 				<!-- Date -->
-				{#if collab.quote?.quoteSentAt}
-					<p class="mb-6 text-xs text-gray-400">Invoice date: {formatDate(collab.quote.quoteSentAt)}</p>
+				{#if inv?.sentAt}
+					<p class="mb-6 text-xs text-gray-400">Invoice date: {formatDate(inv.sentAt)}</p>
 				{/if}
 
 				<!-- Payment Gateway Selection -->
@@ -271,7 +345,7 @@
 						Processing...
 					{:else}
 						<Icon icon="mdi:lock-outline" class="h-4 w-4" />
-						Pay {formatInvoiceTotal(collab.quote?.quotedAmount, collab.quote?.quotedCurrency || 'NGN')}
+						Pay {formatInvoiceTotal(inv?.amount, inv?.currency)}
 					{/if}
 				</button>
 

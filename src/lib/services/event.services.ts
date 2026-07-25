@@ -636,6 +636,12 @@ export async function inviteSpeakerByProfile(eventId: string, payload: {
   participantProfileId: string;
   participantUserId: string;
   message?: string;
+  // Carried from the profile search result so the participant row shows the
+  // invitee's onboarding name/photo/bio immediately.
+  displayName?: string;
+  email?: string;
+  profilePictureUrl?: string;
+  bio?: string;
 }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants/invite`, {
     method: 'POST',
@@ -813,6 +819,10 @@ export async function inviteExhibitorByProfile(eventId: string, payload: {
   participantProfileId: string;
   participantUserId: string;
   message?: string;
+  displayName?: string;
+  email?: string;
+  profilePictureUrl?: string;
+  bio?: string;
 }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants/invite`, {
     method: 'POST',
@@ -976,6 +986,10 @@ export async function inviteVendorByProfile(eventId: string, payload: {
   participantProfileId: string;
   participantUserId: string;
   message?: string;
+  displayName?: string;
+  email?: string;
+  profilePictureUrl?: string;
+  bio?: string;
 }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/participants/invite`, {
     method: 'POST',

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getSpeakerCollaboration, getSpeakerCollaborations, sendSpeakerMessage, updateSpeakerCollaborationStatus } from '$lib/services/speaker.services';
+	import { getSpeakerCollaboration, getSpeakerCollaborations, sendSpeakerMessage, sendSpeakerQuote, updateSpeakerCollaborationStatus } from '$lib/services/speaker.services';
+	import { downloadInvoice, downloadReceipt } from '$lib/services/invoice.services';
 	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
@@ -22,6 +23,35 @@
 	let messageText = '';
 	let messageSending = false;
 	let actionLoading = '';
+
+	// Invoice form — the speaker bills the organizer (organizer pays the speaker).
+	let showInvoiceForm = false;
+	let invoiceAmount: number | string = '';
+	let invoiceCurrency = 'NGN';
+	let invoiceMessage = '';
+	let invoiceSending = false;
+	let invoiceError = '';
+	let invoiceSuccess = false;
+
+	async function handleSendInvoice() {
+		const amount = Number(invoiceAmount);
+		if (!amount || amount <= 0) { invoiceError = 'Enter a valid amount greater than 0'; return; }
+		invoiceSending = true;
+		invoiceError = '';
+		try {
+			await sendSpeakerQuote(selectedId, {
+				quotedAmount: amount,
+				quotedCurrency: invoiceCurrency || 'NGN',
+				message: invoiceMessage || `Invoice for ${selectedCollab?.title || 'speaking engagement'} — ${selectedCollab?.eventName || 'event'}`,
+			});
+			showInvoiceForm = false;
+			invoiceSuccess = true;
+			setTimeout(() => { invoiceSuccess = false; }, 4000);
+			fetchEvents();
+			await loadDetail();
+		} catch (e: any) { invoiceError = e?.message || 'Failed to send invoice'; }
+		finally { invoiceSending = false; }
+	}
 
 	const statusOptions = [
 		{ label: 'Accepted', value: 'ACCEPTED' },
@@ -330,6 +360,65 @@
 								<span class="rounded px-2 py-0.5 text-[10px] font-medium {selectedCollab.quote.quoteStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-600'}">{selectedCollab.quote.quoteStatus === 'PAID' ? 'Paid' : 'Awaiting Payment'}</span>
 							</div>
 						</div>
+						<div class="mt-3 flex flex-wrap gap-2">
+							<button on:click={() => downloadInvoice(selectedId, selectedCollab.quote.invoiceNumber)} class="flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-[10px] font-medium text-gray-700 hover:bg-gray-50">
+								<Icon icon="mdi:download-outline" class="h-3 w-3" /> Download Invoice
+							</button>
+							{#if selectedCollab.quote.quoteStatus === 'PAID' && selectedCollab.quote.paymentReference}
+								<button on:click={() => downloadReceipt(String(selectedCollab.quote.paymentReference))} class="flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-[10px] font-medium text-green-700 hover:bg-green-50">
+									<Icon icon="mdi:receipt-text-check-outline" class="h-3 w-3" /> Download Receipt
+								</button>
+							{/if}
+						</div>
+					</div>
+				{/if}
+
+				<!-- Invoice / Billing (speaker bills the organizer) -->
+				{#if !selectedCollab.quote?.invoiceNumber && selectedCollab.status === 'ACCEPTED'}
+					<div class="mt-5 rounded-xl border border-gray-200 bg-white p-4">
+						{#if invoiceSuccess}
+							<div class="mb-3 rounded-lg bg-green-50 px-3 py-2 text-xs text-green-700">Invoice sent! The organizer will receive an email with payment details.</div>
+						{/if}
+						{#if !showInvoiceForm}
+							<div class="flex items-center justify-between gap-3">
+								<div>
+									<h3 class="text-sm font-bold text-gray-900">Billing</h3>
+									<p class="text-xs text-gray-400">Send an invoice to the organizer for this engagement.</p>
+								</div>
+								<button on:click={() => { showInvoiceForm = true; invoiceError = ''; }} class="flex shrink-0 items-center gap-1.5 rounded-lg bg-black px-3 py-2 text-xs font-bold text-white hover:bg-gray-800">
+									<Icon icon="mdi:receipt-text-outline" class="h-3.5 w-3.5" /> Issue Invoice
+								</button>
+							</div>
+						{:else}
+							<h3 class="mb-3 text-sm font-bold text-gray-900">Issue Invoice</h3>
+							{#if invoiceError}<p class="mb-2 text-xs text-red-500">{invoiceError}</p>{/if}
+							<div class="space-y-3">
+								<div class="flex gap-2">
+									<div class="w-28">
+										<label for="spk-inv-ccy" class="mb-1 block text-[10px] font-medium text-gray-500">Currency</label>
+										<select id="spk-inv-ccy" bind:value={invoiceCurrency} class="w-full rounded-md border border-gray-200 px-2 py-2 text-xs focus:outline-none">
+											<option value="NGN">NGN ₦</option>
+											<option value="USD">USD $</option>
+											<option value="GBP">GBP £</option>
+										</select>
+									</div>
+									<div class="flex-1">
+										<label for="spk-inv-amt" class="mb-1 block text-[10px] font-medium text-gray-500">Amount <span class="text-[#DB3EC6]">*</span></label>
+										<input id="spk-inv-amt" type="number" min="0" step="0.01" bind:value={invoiceAmount} placeholder="0.00" class="w-full rounded-md border border-gray-200 px-3 py-2 text-sm font-semibold focus:outline-none" />
+									</div>
+								</div>
+								<div>
+									<label for="spk-inv-msg" class="mb-1 block text-[10px] font-medium text-gray-500">Message <span class="text-gray-400">(Optional)</span></label>
+									<textarea id="spk-inv-msg" bind:value={invoiceMessage} rows="2" maxlength="500" placeholder="Add a note for the organizer..." class="w-full resize-none rounded-md border border-gray-200 px-3 py-2 text-xs focus:outline-none"></textarea>
+								</div>
+								<div class="flex gap-2">
+									<button on:click={() => { showInvoiceForm = false; invoiceError = ''; }} class="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+									<button on:click={handleSendInvoice} disabled={invoiceSending} class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#131517] px-4 py-2 text-xs font-bold text-white hover:bg-gray-800 disabled:opacity-50">
+										{#if invoiceSending}<div class="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white"></div> Sending...{:else}<Icon icon="mdi:send" class="h-3 w-3" /> Send Invoice{/if}
+									</button>
+								</div>
+							</div>
+						{/if}
 					</div>
 				{/if}
 

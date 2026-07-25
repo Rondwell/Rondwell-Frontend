@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { inviteExhibitorByEmail, inviteExhibitorByProfile, inviteSpeakerByEmail, inviteSpeakerByProfile, inviteVendorByEmail, inviteVendorByProfile, manualAddExhibitor, manualAddSpeaker, manualAddVendor, searchRondwellProfiles } from '$lib/services/event.services';
+	import { getVendorPublicProducts } from '$lib/services/vendor.services';
+	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import { toast } from '$lib/stores/toast.store';
 	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import Icon from '@iconify/svelte';
@@ -30,6 +32,52 @@
 	let searchingRondwell = false;
 	let searchTimer: ReturnType<typeof setTimeout>;
 	let hasSearched = false;
+
+	// VENDOR-only: browse a vendor's products/services (with pricing) and pick
+	// one to invite them against — the invite doubles as a request-for-quote.
+	let expandedVendor: string | null = null;
+	let vendorProducts: Record<string, any[]> = {};
+	let loadingProducts: Record<string, boolean> = {};
+	let selectedProduct: Record<string, any> = {};
+
+	function productPrice(p: any): number | undefined {
+		if (p?.price === undefined || p?.price === null) return undefined;
+		const raw = typeof p.price === 'object' ? p.price.$numberDecimal : p.price;
+		const n = Number(raw);
+		return Number.isFinite(n) ? n : undefined;
+	}
+	function productPriceLabel(p: any): string {
+		const amt = productPrice(p);
+		if (amt === undefined || amt === 0) return p?.pricingType === 'CUSTOM_QUOTE' ? 'Custom Quote' : 'Free';
+		const ccy = p.currency || 'NGN';
+		return formatMoney(majorToKobo(amt, ccy), ccy);
+	}
+
+	async function toggleVendorProducts(vendorId: string) {
+		if (expandedVendor === vendorId) { expandedVendor = null; return; }
+		expandedVendor = vendorId;
+		if (!vendorProducts[vendorId]) {
+			loadingProducts = { ...loadingProducts, [vendorId]: true };
+			try {
+				vendorProducts = { ...vendorProducts, [vendorId]: await getVendorPublicProducts(vendorId) };
+			} catch {
+				vendorProducts = { ...vendorProducts, [vendorId]: [] };
+			} finally {
+				loadingProducts = { ...loadingProducts, [vendorId]: false };
+			}
+		}
+	}
+
+	function chooseProduct(vendorId: string, product: any) {
+		// Toggle selection; auto-select the vendor when a product is picked.
+		if (selectedProduct[vendorId]?._id === product._id) {
+			const { [vendorId]: _drop, ...rest } = selectedProduct;
+			selectedProduct = rest;
+		} else {
+			selectedProduct = { ...selectedProduct, [vendorId]: product };
+			if (!selectedS.includes(vendorId)) selectedS = [...selectedS, vendorId];
+		}
+	}
 
 	// Single source of truth for "an action is in flight" so the footer button
 	// shows a spinner + disabled state consistently across all three tabs.
@@ -195,7 +243,7 @@
 		searchTimer = setTimeout(handleSearchRondwell, 400);
 	}
 
-	async function inviteByProfileForRole(payload: { participantProfileId: string; participantUserId: string }) {
+	async function inviteByProfileForRole(payload: { participantProfileId: string; participantUserId: string; displayName?: string; email?: string; profilePictureUrl?: string; bio?: string; productId?: string; productName?: string; productPrice?: number; productCurrency?: string; productImageUrl?: string; productDescription?: string }) {
 		if (roleKey === 'EXHIBITOR') return inviteExhibitorByProfile(eventId, payload);
 		if (roleKey === 'VENDOR') return inviteVendorByProfile(eventId, payload);
 		return inviteSpeakerByProfile(eventId, payload);
@@ -218,12 +266,30 @@
 				.filter(Boolean);
 
 			const results = await Promise.allSettled(
-				targets.map((speaker: any) =>
-					inviteByProfileForRole({
-						participantProfileId: speaker.id || speaker._id,
-						participantUserId: speaker.userId || speaker.id || speaker._id,
-					})
-				)
+				targets.map((speaker: any) => {
+					const vId = speaker.id || speaker._id;
+					const prod = roleKey === 'VENDOR' ? selectedProduct[vId] : undefined;
+					return inviteByProfileForRole({
+						participantProfileId: vId,
+						participantUserId: speaker.userId || vId,
+						// Carry the onboarding identity so the participant row isn't blank.
+						displayName: speaker.name || undefined,
+						email: speaker.email || undefined,
+						profilePictureUrl: speaker.profilePictureUrl || undefined,
+						bio: speaker.bio || undefined,
+						// RFQ: the product/service the organizer picked for this vendor.
+						...(prod
+							? {
+									productId: prod._id,
+									productName: prod.productName,
+									productPrice: productPrice(prod),
+									productCurrency: prod.currency || 'NGN',
+									productImageUrl: prod.media?.[0]?.url || undefined,
+									productDescription: prod.description || undefined,
+								}
+							: {}),
+					});
+				})
 			);
 
 			const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
@@ -281,10 +347,10 @@
 
 {#if open}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-		<div class="animate-fadeIn max-h-180 w-full max-w-2xl rounded-2xl bg-[#FDFCFB] px-4 py-6 shadow-xl md:max-h-150 md:p-6">
+		<div class="animate-fadeIn flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-[#FDFCFB] px-4 py-5 shadow-xl md:p-6">
 			<!-- Modal Header -->
-			<div class="relative flex w-full flex-col items-center">
-				<div class="mb-3 flex h-18 w-18 items-center justify-center rounded-full bg-gray-100">
+			<div class="relative flex w-full flex-shrink-0 flex-col items-center">
+				<div class="mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
 					<div class="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-2xl">
 						<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<path d="M19.2529 25.4017L21.2796 27.4283L25.3329 23.375" stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -302,7 +368,7 @@
 			</div>
 
 			<!-- Tabs -->
-			<div class="mt-6 overflow-hidden border-t pt-6">
+			<div class="mt-4 flex-shrink-0 overflow-hidden border-t pt-4">
 				<div class="custom-scrollbar flex items-center gap-2 overflow-x-auto rounded-lg bg-white p-1 shadow-xs">
 					{#each tabs as t}
 						<button class="flex-shrink-0 rounded-md px-3 py-2 text-xs font-medium transition-all {activeTab === t.id ? 'bg-[#EBECED] text-black' : ' text-gray-400 '}" on:click={() => (activeTab = t.id)}>
@@ -313,7 +379,7 @@
 			</div>
 
 			<!-- TAB CONTENT -->
-			<div class="custom-scrollbar mt-6 max-h-80 overflow-y-auto rounded-lg border p-4 md:h-60">
+			<div class="custom-scrollbar mt-4 min-h-0 flex-1 overflow-y-auto rounded-lg border p-4">
 				<!-- Invite by Email -->
 				{#if activeTab === 'email'}
 					<div>
@@ -403,6 +469,16 @@
 													<Icon icon="mdi:check-circle-outline" class="text-sm" />
 													Already invited
 												</span>
+											{:else if roleKey === 'VENDOR'}
+												{#if selectedProduct[speakerId]}
+													<span class="max-w-[150px] truncate rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-600" title={selectedProduct[speakerId].productName}>
+														{selectedProduct[speakerId].productName} · {productPriceLabel(selectedProduct[speakerId])}
+													</span>
+												{/if}
+												<button type="button" on:click={() => toggleVendorProducts(speakerId)} class="flex items-center gap-1 rounded-md bg-[#EBECED] px-2.5 py-1 text-xs font-medium text-[#616265] hover:bg-gray-300">
+													<Icon icon="mdi:package-variant-closed" class="text-sm" />
+													{expandedVendor === speakerId ? 'Hide' : 'Products'}
+												</button>
 											{:else}
 												{#each (speaker.expertise || []).slice(0, 2) as tag}
 													<button class="rounded-md bg-gray-200 px-3 py-1 text-gray-400">{tag}</button>
@@ -410,6 +486,39 @@
 											{/if}
 										</div>
 									</div>
+
+									{#if roleKey === 'VENDOR' && expandedVendor === speakerId}
+										<div class="border-t bg-gray-50 p-3">
+											{#if loadingProducts[speakerId]}
+												<p class="py-3 text-center text-xs text-gray-400">Loading products &amp; services…</p>
+											{:else if (vendorProducts[speakerId] || []).length === 0}
+												<p class="py-3 text-center text-xs text-gray-400">This vendor has no public products or services yet. You can still invite them and they'll send you an invoice.</p>
+											{:else}
+												<p class="mb-2 text-xs font-medium text-gray-500">Select a product / service to request a quote for:</p>
+												<div class="space-y-2">
+													{#each vendorProducts[speakerId] as product (product._id)}
+														<button type="button" on:click={() => chooseProduct(speakerId, product)} class="flex w-full items-center gap-3 rounded-lg border bg-white p-2 text-left transition {selectedProduct[speakerId]?._id === product._id ? 'border-[#DB3EC6] ring-1 ring-[#DB3EC6]' : 'border-gray-200 hover:border-gray-300'}">
+															<div class="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-gray-100">
+																{#if product.media?.[0]?.url}
+																	<img src={product.media[0].url} alt={product.productName} class="h-full w-full object-cover" />
+																{:else}
+																	<div class="flex h-full w-full items-center justify-center"><Icon icon="mdi:image-outline" class="h-5 w-5 text-gray-300" /></div>
+																{/if}
+															</div>
+															<div class="min-w-0 flex-1">
+																<p class="truncate text-xs font-semibold text-gray-900">{product.productName}</p>
+																{#if product.description}<p class="truncate text-[11px] text-gray-400">{product.description}</p>{/if}
+															</div>
+															<span class="shrink-0 text-xs font-bold text-gray-900">{productPriceLabel(product)}</span>
+															<span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 {selectedProduct[speakerId]?._id === product._id ? 'border-[#DB3EC6] bg-[#DB3EC6]' : 'border-gray-300'}">
+																{#if selectedProduct[speakerId]?._id === product._id}<Icon icon="mdi:check" class="text-xs text-white" />{/if}
+															</span>
+														</button>
+													{/each}
+												</div>
+											{/if}
+										</div>
+									{/if}
 								{/each}
 							</div>
 						{:else}
@@ -487,7 +596,7 @@
 				{/if}
 			</div>
 
-			<div class="mt-6 flex items-center gap-2">
+			<div class="mt-4 flex flex-shrink-0 items-center gap-2">
 				<button on:click={() => (open = false)} disabled={busy} class="rounded-md bg-white px-4 py-2 text-gray-600 shadow-xs disabled:opacity-50">Cancel</button>
 				<button on:click={handleSubmit} disabled={busy} class="flex items-center justify-center gap-2 rounded-md bg-black px-4 py-2 text-white shadow-xs disabled:cursor-not-allowed disabled:opacity-60">
 					{#if busy}

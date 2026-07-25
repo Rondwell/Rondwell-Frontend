@@ -3,6 +3,8 @@
 	import { authFetch } from '$lib/services/api.client';
 	import { getCollaboration } from '$lib/services/vendor.services';
 	import { getExhibitorInvoiceForPay } from '$lib/services/exhibitor.services';
+	import { getSpeakerCollaboration } from '$lib/services/speaker.services';
+	import { downloadInvoice, downloadReceipt } from '$lib/services/invoice.services';
 	import { getOrCreateIdempotencyKey } from '$lib/utils/idempotency';
 	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
@@ -21,6 +23,9 @@
 	// organizer). Default `vendor` → vendor→organizer service invoice.
 	$: invoiceType = ($page.url.searchParams.get('type') || 'vendor').toLowerCase();
 	$: isExhibitor = invoiceType === 'exhibitor';
+	// Speaker invoices mirror the vendor flow (organizer pays the payee) but use
+	// the speaker collaborations + speaker-invoice payment endpoint.
+	$: isSpeaker = invoiceType === 'speaker';
 
 	// Normalised invoice view so the template is direction-agnostic.
 	$: inv = collab
@@ -39,6 +44,22 @@
 					description: collab.description || '',
 					message: collab.invoice?.invoiceMessage || '',
 					messageFrom: 'organizer'
+				}
+			: isSpeaker
+			? {
+					invoiceNumber: collab.quote?.invoiceNumber,
+					amount: collab.quote?.quotedAmount,
+					currency: collab.quote?.quotedCurrency || 'NGN',
+					paid: collab.quote?.quoteStatus === 'PAID',
+					sentAt: collab.quote?.quoteSentAt,
+					fromLabel: 'From (Speaker)',
+					fromName: collab.speakerName || collab.title || 'Speaker',
+					toLabel: 'To (Organizer)',
+					toName: collab.organizerName || 'Organizer',
+					serviceName: collab.title || 'Speaking Engagement',
+					description: collab.description || '',
+					message: collab.quote?.quoteMessage || collab.proposal || '',
+					messageFrom: 'speaker'
 				}
 			: {
 					invoiceNumber: collab.quote?.invoiceNumber,
@@ -67,7 +88,9 @@
 		try {
 			collab = isExhibitor
 				? await getExhibitorInvoiceForPay(collaborationId)
-				: await getCollaboration(collaborationId);
+				: isSpeaker
+					? await getSpeakerCollaboration(collaborationId)
+					: await getCollaboration(collaborationId);
 
 			const invoiceNo = isExhibitor ? collab?.invoice?.invoiceNumber : collab?.quote?.invoiceNumber;
 			if (!invoiceNo) {
@@ -90,6 +113,23 @@
 			errorMessage = e.message || 'Failed to load invoice details.';
 		}
 	});
+
+	// Transaction reference recorded on the collaboration once paid — used to
+	// fetch the receipt PDF.
+	$: paymentRef = isExhibitor ? collab?.invoice?.paymentReference : collab?.quote?.paymentReference;
+
+	let downloadMsg = '';
+	async function onDownloadInvoice() {
+		downloadMsg = '';
+		const r = await downloadInvoice(collaborationId, inv?.invoiceNumber || invoiceNumber);
+		if (!r.ok) downloadMsg = r.message || 'Invoice not available yet';
+	}
+	async function onDownloadReceipt() {
+		downloadMsg = '';
+		if (!paymentRef) { downloadMsg = 'Receipt not available yet'; return; }
+		const r = await downloadReceipt(String(paymentRef));
+		if (!r.ok) downloadMsg = r.message || 'Receipt not available yet';
+	}
 
 	function getCurrencySymbol(c: string): string {
 		// FE-P1-01: legacy callsites still produce a symbol; prefer formatMoney
@@ -128,12 +168,32 @@
 			const idempotencyScope = `invoice:${collaborationId}:${inv.invoiceNumber}`;
 			const idempotencyKey = getOrCreateIdempotencyKey(idempotencyScope);
 
-			const typeQuery = isExhibitor ? '&type=exhibitor' : '';
+			const typeQuery = isExhibitor ? '&type=exhibitor' : isSpeaker ? '&type=speaker' : '';
 			const endpoint = isExhibitor
 				? `${PAYMENT_URL}/api/v1/payment/exhibitor-invoice/initiate`
-				: `${PAYMENT_URL}/api/v1/payment/vendor-invoice/initiate`;
+				: isSpeaker
+					? `${PAYMENT_URL}/api/v1/payment/speaker-invoice/initiate`
+					: `${PAYMENT_URL}/api/v1/payment/vendor-invoice/initiate`;
 
-			const body = isExhibitor
+			const speakerBody = {
+				collaborationId,
+				invoiceNumber: inv.invoiceNumber,
+				speakerUserId: String(collab.speakerUserId?._id || collab.speakerUserId),
+				speakerName: collab.speakerName || 'Speaker',
+				speakerEmail: collab.speakerEmail || '',
+				amount: inv.amount,
+				currency: inv.currency,
+				serviceName: collab.title || 'Speaking Engagement',
+				eventId: collab.eventId,
+				eventName: collab.eventName,
+				paymentGateway: selectedGateway,
+				successCallbackUrl: `${window.location.origin}/pay-invoice?collaborationId=${collaborationId}${typeQuery}&status=success`,
+				failureCallbackUrl: `${window.location.origin}/pay-invoice?collaborationId=${collaborationId}${typeQuery}&status=failed`
+			};
+
+			const body = isSpeaker
+				? speakerBody
+				: isExhibitor
 				? {
 						collaborationId,
 						invoiceNumber: inv.invoiceNumber,
@@ -229,11 +289,22 @@
 			<p class="mb-6 text-xs text-gray-400">
 				{isExhibitor
 					? 'The organizer has been notified and funds have been credited to their wallet.'
-					: 'The vendor has been notified and funds have been credited to their wallet.'}
+					: isSpeaker
+						? 'The speaker has been notified and funds have been credited to their wallet.'
+						: 'The vendor has been notified and funds have been credited to their wallet.'}
 			</p>
-			<a href="/" class="rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
-				Go to Dashboard
-			</a>
+			{#if downloadMsg}<p class="mb-3 text-xs text-amber-600">{downloadMsg}</p>{/if}
+			<div class="flex flex-wrap items-center justify-center gap-2">
+				<button on:click={onDownloadReceipt} class="flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+					<Icon icon="mdi:download-outline" class="h-4 w-4" /> Download Receipt
+				</button>
+				<button on:click={onDownloadInvoice} class="flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+					<Icon icon="mdi:file-document-outline" class="h-4 w-4" /> Download Invoice
+				</button>
+				<a href="/" class="rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
+					Go to Dashboard
+				</a>
+			</div>
 		</div>
 
 	{:else if collab}
@@ -348,6 +419,15 @@
 						Pay {formatInvoiceTotal(inv?.amount, inv?.currency)}
 					{/if}
 				</button>
+
+				<button
+					on:click={onDownloadInvoice}
+					class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50"
+				>
+					<Icon icon="mdi:file-document-outline" class="h-4 w-4" />
+					Download Invoice (PDF)
+				</button>
+				{#if downloadMsg}<p class="mt-2 text-center text-xs text-amber-600">{downloadMsg}</p>{/if}
 
 				<p class="mt-3 text-center text-[10px] text-gray-400">
 					Secured by Rondwell. Your payment is processed securely via {selectedGateway === 'PAYSTACK' ? 'Paystack' : 'Flutterwave'}.

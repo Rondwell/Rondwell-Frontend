@@ -359,6 +359,22 @@ export async function getPublicVendorProduct(vendorSlug: string, productSlug: st
   return data.data;
 }
 
+/**
+ * List a vendor's public, active products/services by their userId. Used by the
+ * organizer's participant-invite modal so they can pick a product to invite the
+ * vendor against (request-for-quote).
+ */
+export async function getVendorPublicProducts(vendorUserId: string): Promise<any[]> {
+  try {
+    const res = await fetch(`${PRODUCTS_API}/public/products?vendorId=${encodeURIComponent(vendorUserId)}&limit=50`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 // ─── Vendor Visibility ────────────────────────────────────────────────────
 
 export async function updateVendorVisibility(updates: { showReviews?: boolean; showContactInfo?: boolean }) {

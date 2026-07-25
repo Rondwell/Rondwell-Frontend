@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { cancelCollaboration, getCollaboration, resendInvoiceEmail, sendCollaborationMessage, sendCollaborationQuote, updateCollaborationStatus, uploadCollaborationDeliverable, uploadVendorMedia } from '$lib/services/vendor.services';
+	import { downloadInvoice, downloadReceipt } from '$lib/services/invoice.services';
 	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 
@@ -37,6 +38,14 @@
 	let resendingInvoice = false;
 	let resendMessage = '';
 
+	// Invoice form. The amount is EDITABLE — collaborations created from an
+	// organizer invitation have no pre-set budget, which previously left the
+	// vendor with no way to bill at all. Pre-filled from budget when present.
+	let invoiceAmount: number | string = '';
+	let invoiceCurrency = 'NGN';
+	let invoiceMessage = '';
+	let invoiceError = '';
+
 	$: if (open && collaborationId) loadDetail();
 	$: if (!open) { showInvoiceConfirm = false; invoiceSentSuccess = false; }
 
@@ -70,7 +79,16 @@
 		collab = initialData;
 		loading = true;
 		try { collab = await getCollaboration(collaborationId); } catch { /* use initial */ }
-		finally { loading = false; }
+		finally {
+			loading = false;
+			// Pre-fill the invoice form from the RFQ budget (if the organizer
+			// selected a product at invite time) — otherwise leave blank for the
+			// vendor to enter their own price.
+			if (collab && (invoiceAmount === '' || invoiceAmount === undefined)) {
+				invoiceAmount = collab.budget || '';
+				invoiceCurrency = collab.currency || collab.budgetCurrency || 'NGN';
+			}
+		}
 	}
 
 	async function handleStatusUpdate(status: string) {
@@ -81,20 +99,22 @@
 	}
 
 	async function handleSendInvoice() {
-		if (!collab?.budget) return;
+		const amount = Number(invoiceAmount);
+		if (!amount || amount <= 0) { invoiceError = 'Enter a valid amount greater than 0'; return; }
 		invoiceSending = true;
+		invoiceError = '';
 		try {
 			await sendCollaborationQuote(collaborationId, {
-				quotedAmount: collab.budget,
-				quotedCurrency: 'NGN',
-				message: `Invoice for ${collab.title || 'service'} — ${collab.eventName || 'event'}`,
+				quotedAmount: amount,
+				quotedCurrency: invoiceCurrency || 'NGN',
+				message: invoiceMessage || `Invoice for ${collab.title || 'service'} — ${collab.eventName || 'event'}`,
 			});
 			showInvoiceConfirm = false;
 			invoiceSentSuccess = true;
 			setTimeout(() => { invoiceSentSuccess = false; }, 4000);
 			onStatusChanged();
 			await loadDetail();
-		} catch (e) { console.error(e); }
+		} catch (e: any) { invoiceError = e?.message || 'Failed to send invoice'; }
 		finally { invoiceSending = false; }
 	}
 
@@ -168,15 +188,20 @@
 			</div>
 			<div class="flex items-center gap-1.5 sm:gap-2">
 				{#if collab?.quote?.invoiceNumber}
-					<button on:click={() => { if (collab?.quote?.invoiceNumber) window.open(`/pay-invoice?collaborationId=${collaborationId}&invoiceNumber=${collab.quote.invoiceNumber}`, '_blank'); }} class="flex items-center gap-1 rounded-md bg-white px-2.5 py-1.5 text-[10px] font-medium text-gray-700 shadow-sm hover:bg-gray-50 sm:text-xs">
-						<Icon icon="mdi:receipt-text-outline" class="h-3 w-3" /> View Invoice
+					<button on:click={() => downloadInvoice(collaborationId, collab.quote.invoiceNumber)} class="flex items-center gap-1 rounded-md bg-white px-2.5 py-1.5 text-[10px] font-medium text-gray-700 shadow-sm hover:bg-gray-50 sm:text-xs">
+						<Icon icon="mdi:download-outline" class="h-3 w-3" /> Invoice
 					</button>
+					{#if collab.quote.quoteStatus === 'PAID' && collab.quote.paymentReference}
+						<button on:click={() => downloadReceipt(String(collab.quote.paymentReference))} class="flex items-center gap-1 rounded-md bg-white px-2.5 py-1.5 text-[10px] font-medium text-green-700 shadow-sm hover:bg-green-50 sm:text-xs">
+							<Icon icon="mdi:receipt-text-check-outline" class="h-3 w-3" /> Receipt
+						</button>
+					{/if}
 					{#if collab.quote.quoteStatus !== 'PAID'}
 						<button on:click={handleResendInvoice} disabled={resendingInvoice} class="flex items-center gap-1 rounded-md bg-white px-2.5 py-1.5 text-[10px] font-medium text-blue-600 shadow-sm hover:bg-blue-50 sm:text-xs disabled:opacity-50">
 							<Icon icon="mdi:email-fast-outline" class="h-3 w-3" /> {resendingInvoice ? 'Sending...' : 'Resend Invoice'}
 						</button>
 					{/if}
-				{:else if collab?.status === 'ACCEPTED' && collab?.budget}
+				{:else if collab?.status === 'ACCEPTED'}
 					<button on:click={() => (showInvoiceConfirm = true)} class="flex items-center gap-1 rounded-md bg-white px-2.5 py-1.5 text-[10px] font-medium text-gray-700 shadow-sm hover:bg-gray-50 sm:text-xs">
 						<Icon icon="mdi:receipt-text-outline" class="h-3 w-3" /> Issue Invoice
 					</button>
@@ -209,40 +234,45 @@
 					</div>
 				{/if}
 
-				<!-- Invoice Confirmation Modal -->
+				<!-- Invoice Form -->
 				{#if showInvoiceConfirm}
 					<div class="mb-5 rounded-xl border-2 border-[#DB3EC6]/20 bg-purple-50 p-5">
 						<div class="mb-3 flex items-center gap-2">
 							<Icon icon="mdi:receipt-text-check-outline" class="h-5 w-5 text-[#DB3EC6]" />
-							<h3 class="text-sm font-bold text-gray-900">Confirm Invoice</h3>
+							<h3 class="text-sm font-bold text-gray-900">Issue Invoice</h3>
 						</div>
 						<p class="mb-4 text-xs text-gray-600">
-							Send an invoice to <strong>{collab.organizerName || 'the organizer'}</strong> for the following:
+							Send an invoice to <strong>{collab.organizerName || 'the organizer'}</strong> for
+							<strong>{collab.title || collab.description || 'your service'}</strong>{#if collab.eventName} — {collab.eventName}{/if}.
 						</p>
-						<div class="mb-4 rounded-lg bg-white p-3 space-y-2">
-							<div class="flex items-center justify-between">
-								<span class="text-xs text-gray-500">Service</span>
-								<span class="text-xs font-medium text-gray-900">{collab.title || collab.description || 'Service'}</span>
+
+						{#if invoiceError}
+							<p class="mb-3 text-xs text-red-500">{invoiceError}</p>
+						{/if}
+
+						<div class="mb-4 space-y-3 rounded-lg bg-white p-3">
+							<div class="flex gap-2">
+								<div class="w-28">
+									<label for="inv-ccy" class="mb-1 block text-[10px] font-medium text-gray-500">Currency</label>
+									<select id="inv-ccy" bind:value={invoiceCurrency} class="w-full rounded-md border border-gray-200 px-2 py-2 text-xs text-gray-900 focus:outline-none">
+										<option value="NGN">NGN ₦</option>
+										<option value="USD">USD $</option>
+										<option value="GBP">GBP £</option>
+									</select>
+								</div>
+								<div class="flex-1">
+									<label for="inv-amt" class="mb-1 block text-[10px] font-medium text-gray-500">Amount <span class="text-[#DB3EC6]">*</span></label>
+									<input id="inv-amt" type="number" min="0" step="0.01" bind:value={invoiceAmount} placeholder="0.00" class="w-full rounded-md border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none" />
+								</div>
 							</div>
-							{#if collab.description}
-								<div>
-									<span class="text-xs text-gray-500">Description</span>
-									<p class="mt-0.5 text-xs text-gray-700">{collab.description}</p>
-								</div>
-							{/if}
-							{#if collab.eventName}
-								<div class="flex items-center justify-between">
-									<span class="text-xs text-gray-500">Event</span>
-									<span class="text-xs font-medium text-gray-900">{collab.eventName}</span>
-								</div>
-							{/if}
-							<div class="flex items-center justify-between border-t border-gray-100 pt-2">
-								<span class="text-xs font-medium text-gray-700">Total Amount</span>
-								<span class="text-base font-bold text-gray-900">{formatCollabBudget(collab)}</span>
+							<div>
+								<label for="inv-msg" class="mb-1 block text-[10px] font-medium text-gray-500">Message <span class="text-gray-400">(Optional)</span></label>
+								<textarea id="inv-msg" bind:value={invoiceMessage} rows="2" maxlength="500" placeholder="Add a note for the organizer..." class="w-full resize-none rounded-md border border-gray-200 px-3 py-2 text-xs text-gray-900 focus:outline-none"></textarea>
 							</div>
 						</div>
+
 						<div class="flex gap-2">
-							<button on:click={() => (showInvoiceConfirm = false)} class="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+							<button on:click={() => { showInvoiceConfirm = false; invoiceError = ''; }} class="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
 								Cancel
 							</button>
 							<button on:click={handleSendInvoice} disabled={invoiceSending} class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#131517] px-4 py-2.5 text-xs font-bold text-white hover:bg-gray-800 disabled:opacity-50">
@@ -358,7 +388,7 @@
 						<Icon icon="mdi:close" class="h-3.5 w-3.5" /> Cancel
 					</button>
 				{/if}
-				{#if collab?.status === 'ACCEPTED' && !collab?.quote?.invoiceNumber && collab?.budget}
+				{#if collab?.status === 'ACCEPTED' && !collab?.quote?.invoiceNumber}
 					<button on:click={() => (showInvoiceConfirm = true)} disabled={invoiceSending} class="flex items-center gap-1.5 rounded-lg bg-black px-4 py-2 text-xs font-bold text-white hover:bg-gray-800 disabled:opacity-50">
 						<Icon icon="mdi:receipt-text-outline" class="h-3.5 w-3.5" /> Issue Invoice
 					</button>

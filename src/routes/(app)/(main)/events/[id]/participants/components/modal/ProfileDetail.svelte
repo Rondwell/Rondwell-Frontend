@@ -53,7 +53,7 @@
 	}
 
 	function getDisplayName(): string {
-		return speakerData?.displayName || speakerData?.applicationDetails?.contactEmail || 'Unknown Speaker';
+		return speakerData?.displayName || speakerData?.applicationDetails?.contactEmail || `Unknown ${participant}`;
 	}
 
 	function getEmail(): string {
@@ -125,7 +125,7 @@
 
 					<div class="mb-4">
 						<label class="mb-1 block font-medium" for="edit_display_name">Display Name</label>
-						<input id="edit_display_name" type="text" bind:value={editDisplayName} disabled={!isEditable} placeholder="Speaker's display name for this event" class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500" />
+						<input id="edit_display_name" type="text" bind:value={editDisplayName} disabled={!isEditable} placeholder="{participant}'s display name for this event" class="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500" />
 					</div>
 
 					<!-- Contact Details (Read-only) -->
@@ -172,7 +172,7 @@
 							{/if}
 						</div>
 						<div class="relative">
-							<textarea bind:value={editBio} rows="3" maxlength="2000" disabled={!isEditable} placeholder="Speaker bio for this event..." class="mt-2 w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"></textarea>
+							<textarea bind:value={editBio} rows="3" maxlength="2000" disabled={!isEditable} placeholder="{participant} bio for this event..." class="mt-2 w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-gray-800 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"></textarea>
 							<div class="absolute right-2 bottom-3 text-xs text-gray-500">
 								{editBio.length}/2000
 							</div>

@@ -452,6 +452,8 @@
 
 				<ul class="mb-5 space-y-2 text-sm text-gray-700">
 					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> 1% platform fee (vs 4%)</li>
+					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> 1% vendor booking fee (vs 4%)</li>
+					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> 1% exhibitor booth fee (vs 4%)</li>
 					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> Unlimited active paid events</li>
 					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> Unlimited participants per event</li>
 					<li class="flex items-center gap-2"><Icon icon="mdi:check-circle" class="text-pink-500" /> 50 AI prompts/month</li>

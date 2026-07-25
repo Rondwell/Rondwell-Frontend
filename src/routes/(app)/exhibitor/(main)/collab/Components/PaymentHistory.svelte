@@ -31,8 +31,12 @@
 			let allCollabs = result?.collaborations || result?.data || [];
 			if (!Array.isArray(allCollabs)) allCollabs = [];
 
-			// Filter to only show collaborations with invoice data or payment-related statuses
-			let filtered = allCollabs.filter((c: any) => c.invoice || ['PAYMENT_PENDING', 'CONFIRMED'].includes(c.status));
+			// Only show collaborations where an invoice has actually been ISSUED.
+			// A DRAFT (or absent) invoice means the organizer hasn't billed yet, so
+			// it must NOT appear in Payment History.
+			let filtered = allCollabs.filter(
+				(c: any) => c.invoice?.invoiceNumber && c.invoice.invoiceStatus && c.invoice.invoiceStatus !== 'DRAFT'
+			);
 
 			if (statusFilter === 'CONFIRMED') {
 				filtered = filtered.filter((c: any) => c.invoice?.invoiceStatus === 'PAID' || c.status === 'CONFIRMED');
@@ -72,6 +76,14 @@
 			return formatMoney(majorToKobo(Number(c.invoice.amount), ccy), ccy);
 		}
 		return '—';
+	}
+	function isPaid(c: any) {
+		return c.invoice?.invoiceStatus === 'PAID' || c.status === 'CONFIRMED';
+	}
+	// Reuse the shared pay-invoice page: it shows the receipt/success state when
+	// paid, and the pay button (Paystack/Flutterwave) when still outstanding.
+	function payUrl(c: any) {
+		return `/pay-invoice?collaborationId=${c._id}&invoiceNumber=${encodeURIComponent(c.invoice?.invoiceNumber || '')}&type=exhibitor`;
 	}
 </script>
 
@@ -116,26 +128,31 @@
 					<div class="col-span-3 truncate font-medium text-gray-900">{p.eventName || p.title || '—'}</div>
 					<div class="col-span-2 truncate text-gray-600">{p.organizerName || '—'}</div>
 					<div class="col-span-2 text-xs text-gray-400">{p.invoice?.invoiceNumber || '—'}</div>
-					<div class="col-span-2 text-xs font-medium text-green-600">{getAmount(p)}</div>
-					<div class="col-span-1 text-xs text-gray-400">{formatDate(p.invoice?.invoiceSentAt || p.createdAt)}</div>
-					<div class="col-span-2 flex items-center justify-end">
+					<div class="col-span-1 text-xs font-medium text-green-600">{getAmount(p)}</div>
+					<div class="col-span-2 flex items-center">
 						<span class="rounded px-2 py-0.5 text-[10px] font-medium {getPaymentStatusClass(p)}">{getPaymentStatusLabel(p)}</span>
+					</div>
+					<div class="col-span-2 flex items-center justify-end">
+						<a href={payUrl(p)} class="rounded-md px-2.5 py-1 text-[10px] font-medium {isPaid(p) ? 'bg-[#EBECED] text-[#616265] hover:bg-gray-300' : 'bg-[#DB3EC6] text-white hover:bg-[#c235b0]'}">
+							{isPaid(p) ? 'View Receipt' : 'Pay Now'}
+						</a>
 					</div>
 				</div>
 			{/each}
 		</div>
 		<div class="space-y-2 sm:hidden">
 			{#each payments as p (p._id)}
-				<div class="flex w-full items-center justify-between rounded-lg bg-white p-3">
+				<a href={payUrl(p)} class="flex w-full items-center justify-between rounded-lg bg-white p-3">
 					<div class="min-w-0">
 						<p class="truncate text-sm font-medium text-gray-900">{p.eventName || p.title || '—'}</p>
 						<p class="truncate text-xs text-gray-400">{p.invoice?.invoiceNumber || 'No invoice'} · {p.organizerName || ''}</p>
+						<p class="mt-0.5 text-[10px] font-medium {isPaid(p) ? 'text-[#616265]' : 'text-[#DB3EC6]'}">{isPaid(p) ? 'View Receipt →' : 'Pay Now →'}</p>
 					</div>
 					<div class="flex flex-col items-end gap-0.5 shrink-0">
 						<span class="text-xs font-medium text-green-600">{getAmount(p)}</span>
 						<span class="rounded px-2 py-0.5 text-[10px] font-medium {getPaymentStatusClass(p)}">{getPaymentStatusLabel(p)}</span>
 					</div>
-				</div>
+				</a>
 			{/each}
 		</div>
 		{#if totalPages > 1}

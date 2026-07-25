@@ -182,6 +182,18 @@ export async function issueExhibitorInvoiceByParticipant(payload: {
 }
 
 /**
+ * Organizer-facing lookup of an exhibitor participant's invoice + payment
+ * status (by eventId + exhibitorUserId). Returns null when nothing issued yet.
+ */
+export async function getExhibitorInvoiceForOrganizer(eventId: string, exhibitorUserId: string) {
+	const params = new URLSearchParams({ eventId, exhibitorUserId });
+	const res = await authFetch(`${PRODUCTS_API}/exhibitor/collaborations/organizer/by-participant?${params}`);
+	if (!res.ok) await throwApiError(res, 'Failed to fetch invoice status');
+	const data = await res.json();
+	return data.data; // collaboration or null
+}
+
+/**
  * Fetch the issued invoice + payment context for the pay page. Works for the
  * exhibitor (payer) and the organizer (issuer).
  */

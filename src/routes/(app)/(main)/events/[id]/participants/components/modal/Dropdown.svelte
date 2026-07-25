@@ -61,7 +61,7 @@
 			{ label: 'Approve Application', icon: '/clipboard-tick.svg', condition: () => speakerData?.status === 'INVITED' || speakerData?.status === 'APPLIED' },
 			{ label: 'Decline Invitation', icon: '/clipboard-close.svg', condition: () => speakerData?.status === 'INVITED' || speakerData?.status === 'APPLIED' },
 			{ label: 'Manage Contribution/Payment', icon: '/setting.svg', condition: () => speakerData?.status === 'APPROVED' || speakerData?.status === 'PENDING_APPROVAL' },
-			{ label: 'Issue Booth Invoice', icon: '/setting.svg', condition: () => ['APPROVED', 'ACCEPTED', 'CONFIRMED', 'PENDING_APPROVAL'].includes(speakerData?.status) },
+			{ label: 'Booth Invoice & Payment', icon: '/setting.svg', condition: () => ['APPROVED', 'ACCEPTED', 'CONFIRMED', 'PENDING_APPROVAL'].includes(speakerData?.status) },
 			{ label: 'Manage Visibility', icon: '' },
 			{ label: 'Send Message', icon: '/message-text.svg' },
 			{ label: 'Send Reminder', icon: '/clock.svg', condition: () => speakerData?.status === 'INVITED' || speakerData?.status === 'ACCEPTED' },
@@ -110,7 +110,7 @@
 			showDeclineParticipant = true;
 		} else if (label.startsWith('Manage Contribution/Payment')) {
 			showManageContribution = true;
-		} else if (label.startsWith('Issue Booth Invoice')) {
+		} else if (label.startsWith('Booth Invoice & Payment')) {
 			showIssueInvoice = true;
 		} else if (label.startsWith('View Digital Booth')) {
 			// Open booth preview in new tab

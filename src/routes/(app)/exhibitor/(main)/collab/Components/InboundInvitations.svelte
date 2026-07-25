@@ -18,12 +18,13 @@
 	let selectedId = '';
 	let selectedInvitation: any = null;
 
+	// Inbound = invitations still awaiting a response. Once accepted/confirmed
+	// they move to the "Accepted Collaborations" tab; declined/cancelled drop off.
+	const ACTIONABLE = ['PENDING', 'REVIEWING'];
 	const statusOptions = [
 		{ label: 'All', value: '' },
 		{ label: 'Pending', value: 'PENDING' },
-		{ label: 'Accepted', value: 'ACCEPTED' },
-		{ label: 'Declined', value: 'DECLINED' },
-		{ label: 'Confirmed', value: 'CONFIRMED' },
+		{ label: 'Reviewing', value: 'REVIEWING' },
 	];
 
 	async function fetchInvitations() {
@@ -33,8 +34,13 @@
 			if (statusFilter) filters.status = statusFilter;
 			if (searchQuery) filters.search = searchQuery;
 			const result = await getExhibitorCollaborations(filters);
-			invitations = result?.collaborations || result?.data || [];
-			if (!Array.isArray(invitations)) invitations = [];
+			let list = result?.collaborations || result?.data || [];
+			if (!Array.isArray(list)) list = [];
+			// Only show invitations that still need a response — accepted ones
+			// belong in "Accepted Collaborations", not here.
+			invitations = statusFilter
+				? list
+				: list.filter((i: any) => ACTIONABLE.includes(i.status));
 			const pg = result?.pagination;
 			if (pg) totalPages = pg.totalPages || 1;
 		} catch { invitations = []; }

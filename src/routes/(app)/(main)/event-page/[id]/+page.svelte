@@ -34,6 +34,8 @@
 	let organizers: any[] = [];
 	let attendeeCount = 0;
 	let attendingSample: any[] = [];
+	// Public-page display controls. Privacy-first defaults: names hidden.
+	let pageSettings = { showAttendeeCount: true, showAttendeeNames: false, showCoOrganizers: true };
 	let collectionInfo: any = null;
 	let registrationFields: any[] = [];
 	let organizerProfile: any = null;
@@ -54,6 +56,7 @@
 			organizers = data.organizers;
 			attendeeCount = data.attendeeCount;
 			attendingSample = data.attendingSample;
+			if (data.pageSettings) pageSettings = { ...pageSettings, ...data.pageSettings };
 			collectionInfo = data.collection;
 			registrationFields = data.registrationFields ?? [];
 			organizerProfile = data.organizerProfile ?? null;
@@ -257,6 +260,10 @@
 
 	$: attendingNames = attendingSample.map(g => [g.firstName, g.lastName].filter(Boolean).join(' ') || 'Guest').join(', ');
 	$: remainingCount = Math.max(0, attendeeCount - attendingSample.length);
+	// Display gating driven by the organizer's event-page settings.
+	$: showAttendeeCount = pageSettings?.showAttendeeCount !== false;
+	$: showAttendeeNames = pageSettings?.showAttendeeNames === true && attendingSample.length > 0;
+	$: showAttendingSection = showAttendeeCount || showAttendeeNames;
 
 	$: organizerEmail = organizerProfile?.email
 		|| (organizers.length > 0 ? organizers[0].email : '')
@@ -497,21 +504,23 @@
 						{/each}
 					</div>
 
-					<!-- Attending -->
+					<!-- Attending (organizer-controlled: count / names) -->
+					{#if showAttendingSection}
 					<div class="mt-6">
 						<h3 class="mb-4 border-b pb-2 text-sm font-normal" style="color: {themeColor.lightText}; border-color: {themeColor.toggle};">
-							{attendeeCount} Attending
+							{#if showAttendeeCount}{attendeeCount} Attending{:else}Attending{/if}
 						</h3>
-						{#if attendeeCount > 0}
+						{#if showAttendeeCount && attendeeCount === 0}
+						<p class="text-sm" style="color: {themeColor.lightText};">Be the first to register</p>
+						{:else if showAttendeeNames}
 						<div class="space-y-2">
 							<p class="max-w-[334px] text-sm" style="color: {themeColor.lightText};">
-								{attendingNames}{#if remainingCount > 0}, and {remainingCount} others{/if}
+								{attendingNames}{#if showAttendeeCount && remainingCount > 0} and {remainingCount} others{/if}
 							</p>
 						</div>
-						{:else}
-						<p class="text-sm" style="color: {themeColor.lightText};">Be the first to register</p>
 						{/if}
 					</div>
+					{/if}
 
 					<!-- Footer Links -->
 					<div class="mt-6 flex flex-col space-y-2">
@@ -983,18 +992,20 @@
 							/>
 						{/each}
 					</div>
+					{#if showAttendingSection}
 					<div class="mt-6">
 						<h3 class="mb-4 border-b pb-2 text-sm font-normal" style="color: {themeColor.lightText}; border-color: {themeColor.toggle};">
-							{attendeeCount} Attending
+							{#if showAttendeeCount}{attendeeCount} Attending{:else}Attending{/if}
 						</h3>
-						{#if attendeeCount > 0}
-						<p class="max-w-[334px] text-sm" style="color: {themeColor.lightText};">
-							{attendingNames}{#if remainingCount > 0}, and {remainingCount} others{/if}
-						</p>
-						{:else}
+						{#if showAttendeeCount && attendeeCount === 0}
 						<p class="text-sm" style="color: {themeColor.lightText};">Be the first to register</p>
+						{:else if showAttendeeNames}
+						<p class="max-w-[334px] text-sm" style="color: {themeColor.lightText};">
+							{attendingNames}{#if showAttendeeCount && remainingCount > 0} and {remainingCount} others{/if}
+						</p>
 						{/if}
 					</div>
+					{/if}
 					<div class="mt-6 flex flex-col space-y-2 mb-4">
 						<a href="mailto:{organizerEmail || 'info@rondwell.com'}" class="text-sm" style="color: {themeColor.lightText};">Contact the Organizer</a>
 						<a href="mailto:info@rondwell.com?subject=Report Event: {event.title}" class="text-sm" style="color: {themeColor.lightText};">Report Event</a>

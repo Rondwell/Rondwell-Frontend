@@ -26,6 +26,15 @@ export interface CreateEventPayload {
   donationsEnabled?: boolean;
   publicGuestListEnabled?: boolean;
   postEventFeedbackEnabled?: boolean;
+  /**
+   * Public event-page display controls. Names are OFF by default (privacy);
+   * count and co-organizers ON by default.
+   */
+  pageSettings?: {
+    showAttendeeCount?: boolean;
+    showAttendeeNames?: boolean;
+    showCoOrganizers?: boolean;
+  };
   checkinSettings?: {
     isCheckinEnabled: boolean;
     passcodeEnabled: boolean;
@@ -141,6 +150,7 @@ export async function getPublicEventPage(eventId: string): Promise<{
   organizers: any[];
   attendeeCount: number;
   attendingSample: any[];
+  pageSettings?: { showAttendeeCount: boolean; showAttendeeNames: boolean; showCoOrganizers: boolean };
   collection: any;
   registrationFields: any[];
   organizerProfile: any;

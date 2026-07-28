@@ -12,6 +12,7 @@
 	import type { Color } from '$lib/utils/colors';
 	import { colors } from '$lib/utils/colors';
 	import { formatMoney, majorToKobo } from '$lib/utils/money';
+	import { toast } from '$lib/stores/toast.store';
 	import Icon from '@iconify/svelte';
 	import Dropdown from '../Dropdown.svelte';
 	import SeatSelector from '../SeatSelector.svelte';
@@ -502,7 +503,18 @@
 				}),
 			});
 			const regData = await regRes.json();
-			if (!regRes.ok) throw new Error(regData.message ?? 'Registration failed');
+			if (!regRes.ok) {
+				// Carry the backend's `code`/`meta`/`status` onto the Error so the
+				// catch block's code-based branches (SOLD_OUT, PLAN_LIMIT_EXCEEDED,
+				// …) actually fire. Throwing a bare `new Error(message)` discarded
+				// all of that and forced every failure through the generic fallback.
+				const err = new Error(regData.message ?? regData.error ?? 'Registration failed') as any;
+				err.code = regData.code;
+				err.meta = regData.meta;
+				err.status = regRes.status;
+				err.data = regData;
+				throw err;
+			}
 
 			registrationResult = regData.registration;
 			// P1-15: prefer the registration-time token (binds the chosen
@@ -542,6 +554,11 @@
 				submitError = dt
 					? `Sales for this ticket type ended ${dt}.`
 					: 'Sales for this ticket type have ended.';
+			} else if (code === 'PLAN_LIMIT_EXCEEDED' || msg.toLowerCase().includes('plan limit')) {
+				// The organizer's plan cap for this event has been reached. Show a
+				// clean, attendee-facing message — never the raw internal text
+				// ("maxParticipantsPerEvent: tier FREE allows 3").
+				submitError = 'Registration for this event is full. Please check back later or contact the organizer.';
 			} else if (code === 'SOLD_OUT') {
 				submitError = 'This ticket type just sold out. Pick another one.';
 			} else if (code === 'SEAT_UNAVAILABLE') {
@@ -571,6 +588,9 @@
 			} else {
 				submitError = msg || 'Something went wrong. Please try again.';
 			}
+			// Also surface the resolved, user-friendly reason on a toast so it's
+			// visible even if the inline banner is scrolled out of view.
+			if (submitError) toast.error(submitError);
 			if (step === 'seats' || step === 'group-members') step = 'form';
 		} finally {
 			submitting = false;

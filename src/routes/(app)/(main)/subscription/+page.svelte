@@ -241,7 +241,7 @@
 
 	// Usage rows
 	const USAGE_LABELS: Record<string, string> = {
-		maxParticipantsPerEvent: 'Participants per event',
+		maxParticipantsPerEvent: 'Attendees per event',
 		maxAdminsPerEvent: 'Admins per event',
 		maxVendorsPerEvent: 'Vendors per event',
 		maxSpeakersPerEvent: 'Speakers per event',

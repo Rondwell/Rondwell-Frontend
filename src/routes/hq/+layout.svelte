@@ -40,6 +40,8 @@
 		{ label: 'KYC', path: '/hq/kyc', icon: 'compliance' },
 		// Finance module (includes Analytics, Beneficiaries, AML, Wallet Audit)
 		{ label: 'Finance', path: '/hq/finance', icon: 'finance' },
+		// Subscription plan catalog management (edit FREE/PLUS limits & pricing)
+		{ label: 'Subscriptions', path: '/hq/subscriptions', icon: 'subscriptions' },
 		{ label: 'Settings', path: '/hq/settings', icon: 'settings' },
 	];
 
@@ -120,6 +122,8 @@
 										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 1.667l-7.5 3.333v5c0 4.583 3.125 8.875 7.5 9.583 4.375-.708 7.5-5 7.5-9.583v-5L10 1.667z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M7.5 10l1.667 1.667L12.5 8.333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 									{:else if item.icon === 'finance'}
 										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.5 17.5h15M2.5 17.5V12.5M5.833 17.5V9.167M9.167 17.5V6.667M12.5 17.5V10.833M15.833 17.5V4.167" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									{:else if item.icon === 'subscriptions'}
+										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.5 7.5h15M5.833 13.333h3.334M2.5 6.167v7.666c0 2.5 1.25 3.334 3.75 3.334h7.5c2.5 0 3.75-.834 3.75-3.334V6.167c0-2.5-1.25-3.334-3.75-3.334h-7.5c-2.5 0-3.75.834-3.75 3.334z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
 									{:else if item.icon === 'settings'}
 										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M1.667 10.733V9.267c0-.734.6-1.334 1.333-1.334.95 0 1.342-.666.867-1.483a1.004 1.004 0 01.366-1.367l1.434-.825a.88.88 0 011.2.333l.083.142c.467.816 1.234.816 1.7 0l.084-.142a.88.88 0 011.2-.333l1.433.825a1.004 1.004 0 01.367 1.367c-.475.817-.084 1.483.866 1.483.734 0 1.334.6 1.334 1.334v1.466c0 .734-.6 1.334-1.334 1.334-.95 0-1.341.666-.866 1.483a1.004 1.004 0 01-.367 1.367l-1.433.825a.88.88 0 01-1.2-.333l-.084-.142c-.466-.817-1.233-.817-1.7 0l-.083.142a.88.88 0 01-1.2.333l-1.434-.825a1.004 1.004 0 01-.366-1.367c.475-.817.083-1.483-.867-1.483a1.338 1.338 0 01-1.333-1.334z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
 									{/if}

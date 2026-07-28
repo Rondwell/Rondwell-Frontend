@@ -284,6 +284,82 @@ export async function releaseUserPayoutHolds(
   return data.data;
 }
 
+// ─── Subscription plan catalog management ───────────────────────────────────
+//
+// Edits the FREE / PLUS plan documents that define every platform limit, price
+// and commission. `maxParticipantsPerEvent` is the per-event ATTENDEE cap; the
+// vendor/speaker/exhibitor "participant" caps are their own fields.
+
+export interface SubscriptionPlanLimits {
+  emails: number;
+  aiPrompts: number;
+  activePaidEvents: number;
+  maxParticipantsPerEvent: number; // attendee cap per event
+  freeEventsUnlimited?: boolean;
+  seatingLayoutEvents: number;
+  maxCollections: number;
+  maxAdminsPerEvent: number;
+  maxVendorsPerEvent: number;
+  maxSpeakersPerEvent: number;
+  maxExhibitorsPerEvent: number;
+}
+
+export interface SubscriptionPlanPricing {
+  monthly: number;
+  yearly: number;
+  currency: string;
+  byCurrency?: {
+    NGN?: { monthly: number; yearly: number };
+    USD?: { monthly: number; yearly: number };
+  };
+}
+
+export interface SubscriptionPlanCommission {
+  ticketFees: { NGN: number; USD: number; FX_Markup: number };
+  vendorBookingFee: number;
+  exhibitorBookingFee: number;
+  withdrawalFee: number;
+  usdSettlementFee: number;
+}
+
+export interface SubscriptionPlan {
+  _id?: string;
+  planId: 'FREE' | 'PLUS';
+  pricing: SubscriptionPlanPricing;
+  commissionStructure: SubscriptionPlanCommission;
+  limits: SubscriptionPlanLimits;
+  features: string[];
+  isActive: boolean;
+  updatedAt?: string;
+}
+
+export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+  const data = await adminFetch('/subscription-plans');
+  return data.data ?? [];
+}
+
+export async function getSubscriptionPlan(planId: string): Promise<SubscriptionPlan> {
+  const data = await adminFetch(`/subscription-plans/${planId}`);
+  return data.data;
+}
+
+export async function updateSubscriptionPlan(
+  planId: string,
+  body: Partial<{
+    limits: Partial<SubscriptionPlanLimits>;
+    pricing: Partial<SubscriptionPlanPricing>;
+    commissionStructure: Partial<SubscriptionPlanCommission>;
+    features: string[];
+    isActive: boolean;
+  }>,
+): Promise<SubscriptionPlan> {
+  const data = await adminFetch(`/subscription-plans/${planId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  return data.data;
+}
+
 // ─── Events ───────────────────────────────────────────────────────────────
 export async function getAdminEvents(params: Record<string, any> = {}) {
   const query = new URLSearchParams(params).toString();

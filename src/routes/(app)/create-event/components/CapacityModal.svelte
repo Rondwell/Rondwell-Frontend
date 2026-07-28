@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { usageStore, loadUsage } from '$lib/stores/usage.store';
+
 	export let open = false;
 	export let maxAttendees: number | null = null;
 	export let waitlistEnabled = false;
@@ -6,11 +9,23 @@
 	let capacityInput = 50;
 	let overCapacityWaitlist = false;
 
+	onMount(() => { loadUsage().catch(() => {}); });
+
+	// The per-event ATTENDEE cap from the organizer's plan. -1 / 999999 =
+	// unlimited. This mirrors the backend guard (`checkMaxAttendeesAgainstPlan`)
+	// so the limit is honest at the point the toggle is set, not a surprise
+	// rejection later.
+	$: tier = $usageStore.tier ?? 'FREE';
+	$: attendeeCap = $usageStore.limits?.maxParticipantsPerEvent ?? -1;
+	$: unlimited = attendeeCap < 0 || attendeeCap >= 999999;
+	$: overCap = !unlimited && Number(capacityInput) > attendeeCap;
+
 	function toggleWaitlist() {
 		overCapacityWaitlist = !overCapacityWaitlist;
 	}
 
 	function setLimit() {
+		if (overCap) return; // guarded by the disabled button; belt-and-braces
 		maxAttendees = capacityInput;
 		waitlistEnabled = overCapacityWaitlist;
 		open = false;
@@ -64,10 +79,27 @@
 			<!-- Capacity Input -->
 			<label for="capacity" class="mb-1 block text-sm font-medium text-gray-700">Capacity</label>
 			<input
-				type="text"
+				type="number"
+				min="1"
+				max={unlimited ? undefined : attendeeCap}
 				bind:value={capacityInput}
-				class="h-[40px] w-full rounded-md border border-gray-300 bg-[#FFFFFF] px-3 py-1 text-sm text-black focus:ring-2 focus:ring-gray-400 focus:outline-none"
+				class="h-[40px] w-full rounded-md border bg-[#FFFFFF] px-3 py-1 text-sm text-black focus:ring-2 focus:outline-none {overCap ? 'border-red-400 focus:ring-red-300' : 'border-gray-300 focus:ring-gray-400'}"
 			/>
+
+			<!-- Plan attendee-cap hint / warning -->
+			{#if !unlimited}
+				{#if overCap}
+					<p class="mt-2 text-xs text-red-600">
+						Your {tier} plan allows up to <strong>{attendeeCap}</strong> attendees per event.
+						<a href="/subscription" class="font-semibold text-[#F31A7C] underline">Upgrade to PLUS</a>
+						for unlimited attendees.
+					</p>
+				{:else}
+					<p class="mt-2 text-xs text-gray-400">
+						{tier} plan: up to {attendeeCap} attendees per event.
+					</p>
+				{/if}
+			{/if}
 
 			<!-- Toggle -->
 			<div class="mt-4 flex items-center justify-between">
@@ -91,7 +123,8 @@
 			<!-- Buttons -->
 			<div class="mt-6 flex justify-between gap-4">
 				<button
-					class="w-full rounded-lg bg-gray-900 py-2.5 font-medium text-white transition hover:bg-gray-800"
+					class="w-full rounded-lg bg-gray-900 py-2.5 font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+					disabled={overCap}
 					on:click={setLimit}
 				>
 					Set Limit

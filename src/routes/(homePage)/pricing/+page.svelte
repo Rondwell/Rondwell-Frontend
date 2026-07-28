@@ -13,7 +13,7 @@
 	let freePlan = {
 		name: 'Rondwell',
 		features: [],
-		limits: { emails: 250, aiPrompts: 10, activePaidEvents: 10, maxParticipantsPerEvent: 3, seatingLayoutEvents: 5 },
+		limits: { emails: 250, aiPrompts: 10, activePaidEvents: 10, maxParticipantsPerEvent: 50, maxVendorsPerEvent: 10, seatingLayoutEvents: 5 },
 		commissionStructure: { ticketFees: { NGN: 0.04, USD: 0.04 }, vendorBookingFee: 0.04, exhibitorBookingFee: 0.04, withdrawalFee: 0.03, usdSettlementFee: 0.01 }
 	};
 
@@ -21,7 +21,7 @@
 		name: 'Rondwell Plus',
 		pricing: { monthly: 1200000, yearly: 12000000, currency: 'NGN' },
 		features: [],
-		limits: { emails: 10000, aiPrompts: 50, activePaidEvents: 999999, maxParticipantsPerEvent: 999999, seatingLayoutEvents: -1 },
+		limits: { emails: 10000, aiPrompts: 50, activePaidEvents: 999999, maxParticipantsPerEvent: 999999, maxVendorsPerEvent: -1, seatingLayoutEvents: -1 },
 		commissionStructure: { ticketFees: { NGN: 0.01, USD: 0.01 }, vendorBookingFee: 0.01, exhibitorBookingFee: 0.01, withdrawalFee: 0.03, usdSettlementFee: 0 }
 	};
 
@@ -80,7 +80,8 @@
 		{ text: 'Unlimited Event collections' },
 		{ text: '3D seating & capacity', bold: `(${freePlan.limits.seatingLayoutEvents} events / month)` },
 		{ text: 'Community & real-time chat' },
-		{ text: 'Vendor / Speaker / Exhibitor management', bold: `(max ${freePlan.limits.maxParticipantsPerEvent} per event)`, separator: true },
+		{ text: 'Attendees', bold: `up to ${freePlan.limits.maxParticipantsPerEvent} per event` },
+		{ text: 'Vendor / Speaker / Exhibitor management', bold: `(max ${(freePlan.limits as any).maxVendorsPerEvent ?? 10} per event)`, separator: true },
 		{ text: 'Wallets (NGN & USD)' },
 		{ text: 'Unlimited forms & tickets', highlight: true, separator: true },
 		{ text: 'Basic analytics' },
@@ -98,7 +99,7 @@
 		{ text: 'Everything in Free, plus:', isBold: true },
 		{ text: `AI Event Creation:`, bold: `${plusPlan.limits.aiPrompts} prompts/month` },
 		{ text: 'Unlimited active paid events' },
-		{ text: 'Unlimited participants per event' },
+		{ text: 'Unlimited attendees per event' },
 		{ text: 'Unlimited 3D seating capacity/layout' },
 		{ text: 'Unlimited vendors / speakers / exhibitors (participants)' },
 		{ text: 'Advanced marketing tools' },

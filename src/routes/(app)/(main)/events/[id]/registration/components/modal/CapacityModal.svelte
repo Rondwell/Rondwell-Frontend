@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { usageStore, loadUsage } from '$lib/stores/usage.store';
+
 	export let open = false;
 	export let currentCapacity = 0;
 	export let currentWaitlist = false;
@@ -7,6 +10,15 @@
 	let capacity = 50;
 	let overCapacityWaitlist = false;
 	let saving = false;
+
+	onMount(() => { loadUsage().catch(() => {}); });
+
+	// Per-event ATTENDEE cap from the organizer's plan (mirrors the backend
+	// `checkMaxAttendeesAgainstPlan` guard). -1 / 999999 = unlimited.
+	$: tier = $usageStore.tier ?? 'FREE';
+	$: attendeeCap = $usageStore.limits?.maxParticipantsPerEvent ?? -1;
+	$: unlimited = attendeeCap < 0 || attendeeCap >= 999999;
+	$: overCap = !unlimited && Number(capacity) > attendeeCap;
 
 	$: if (open) {
 		capacity = currentCapacity > 0 ? currentCapacity : 50;
@@ -18,6 +30,7 @@
 	}
 
 	async function setLimit() {
+		if (overCap) return; // guarded by the disabled button; belt-and-braces
 		saving = true;
 		await onSetLimit(capacity, overCapacityWaitlist);
 		saving = false;
@@ -52,9 +65,25 @@
 			<input
 				type="number"
 				min="1"
+				max={unlimited ? undefined : attendeeCap}
 				bind:value={capacity}
-				class="h-[40px] w-full rounded-md border border-gray-300 bg-[#FFFFFF] px-3 py-1 text-sm text-black focus:ring-2 focus:ring-gray-400 focus:outline-none"
+				class="h-[40px] w-full rounded-md border bg-[#FFFFFF] px-3 py-1 text-sm text-black focus:ring-2 focus:outline-none {overCap ? 'border-red-400 focus:ring-red-300' : 'border-gray-300 focus:ring-gray-400'}"
 			/>
+
+			<!-- Plan attendee-cap hint / warning -->
+			{#if !unlimited}
+				{#if overCap}
+					<p class="mt-2 text-xs text-red-600">
+						Your {tier} plan allows up to <strong>{attendeeCap}</strong> attendees per event.
+						<a href="/subscription" class="font-semibold text-[#F31A7C] underline">Upgrade to PLUS</a>
+						for unlimited attendees.
+					</p>
+				{:else}
+					<p class="mt-2 text-xs text-gray-400">
+						{tier} plan: up to {attendeeCap} attendees per event.
+					</p>
+				{/if}
+			{/if}
 
 			<div class="mt-4 flex items-center justify-between">
 				<label class="text-sm font-medium text-gray-700">Over-Capacity Waitlist</label>
@@ -74,8 +103,8 @@
 
 			<div class="mt-6 flex justify-between gap-4">
 				<button
-					class="w-full rounded-lg bg-gray-900 py-2.5 font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
-					disabled={saving}
+					class="w-full rounded-lg bg-gray-900 py-2.5 font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+					disabled={saving || overCap}
 					on:click={setLimit}
 				>
 					{saving ? 'Saving...' : 'Set Limit'}

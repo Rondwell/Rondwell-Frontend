@@ -44,6 +44,11 @@
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.4993 18.9557H7.49935C2.97435 18.9557 1.04102 17.0224 1.04102 12.4974V7.4974C1.04102 2.9724 2.97435 1.03906 7.49935 1.03906H12.4993C17.0243 1.03906 18.9577 2.9724 18.9577 7.4974V12.4974C18.9577 17.0224 17.0243 18.9557 12.4993 18.9557ZM7.49935 2.28906C3.65768 2.28906 2.29102 3.65573 2.29102 7.4974V12.4974C2.29102 16.3391 3.65768 17.7057 7.49935 17.7057H12.4993C16.341 17.7057 17.7077 16.3391 17.7077 12.4974V7.4974C17.7077 3.65573 16.341 2.28906 12.4993 2.28906H7.49935Z" fill="currentColor"/><path d="M12.9824 16.0391C12.6408 16.0391 12.3574 15.7557 12.3574 15.4141V12.1641C12.3574 11.8224 12.6408 11.5391 12.9824 11.5391C13.3241 11.5391 13.6074 11.8224 13.6074 12.1641V15.4141C13.6074 15.7557 13.3241 16.0391 12.9824 16.0391Z" fill="currentColor"/><path d="M12.9824 6.83594C12.6408 6.83594 12.3574 6.5526 12.3574 6.21094V4.58594C12.3574 4.24427 12.6408 3.96094 12.9824 3.96094C13.3241 3.96094 13.6074 4.24427 13.6074 4.58594V6.21094C13.6074 6.5526 13.3241 6.83594 12.9824 6.83594Z" fill="currentColor"/><path d="M12.9831 11.1693C11.4414 11.1693 10.1914 9.91927 10.1914 8.3776C10.1914 6.83594 11.4414 5.58594 12.9831 5.58594C14.5247 5.58594 15.7747 6.83594 15.7747 8.3776C15.7747 9.91927 14.5164 11.1693 12.9831 11.1693Z" fill="currentColor"/><path d="M7.01758 16.0391C6.67591 16.0391 6.39258 15.7557 6.39258 15.4141V13.7891C6.39258 13.4474 6.67591 13.1641 7.01758 13.1641C7.35924 13.1641 7.64258 13.4474 7.64258 13.7891V15.4141C7.64258 15.7557 7.36758 16.0391 7.01758 16.0391Z" fill="currentColor"/><path d="M7.01758 8.46094C6.67591 8.46094 6.39258 8.1776 6.39258 7.83594V4.58594C6.39258 4.24427 6.67591 3.96094 7.01758 3.96094C7.35924 3.96094 7.64258 4.24427 7.64258 4.58594V7.83594C7.64258 8.1776 7.36758 8.46094 7.01758 8.46094Z" fill="currentColor"/><path d="M7.01628 14.4193C5.47461 14.4193 4.22461 13.1693 4.22461 11.6276C4.22461 10.0859 5.47461 8.83594 7.01628 8.83594C8.55794 8.83594 9.80794 10.0859 9.80794 11.6276C9.80794 13.1693 8.55794 14.4193 7.01628 14.4193Z" fill="currentColor"/></svg>`
 		},
 		{
+			id: 'event-page',
+			label: 'Event Page',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 6.667h15M6.667 2.5v3.333M2.5 5.833v8.334c0 2.5 1.25 3.333 3.75 3.333h7.5c2.5 0 3.75-.833 3.75-3.333V5.833c0-2.5-1.25-3.333-3.75-3.333h-7.5c-2.5 0-3.75.833-3.75 3.333z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.667 11.25h6.666M6.667 14.167h4.166" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+		},
+		{
 			id: 'developer-tools',
 			label: 'Developer Tools',
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.66667 7.5L3.33333 10L6.66667 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.3333 7.5L16.6667 10L13.3333 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.6667 5L8.33333 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
@@ -258,6 +263,37 @@
 			toast.error(policyError);
 		} finally {
 			policySaving = false;
+		}
+	}
+
+	// ── Event Page display settings (attendee privacy) ─────────────────────
+	// Privacy-first: names are OFF by default. Count and co-organizers ON.
+	let showAttendeeCount = true;
+	let showAttendeeNames = false;
+	let showCoOrganizers = true;
+	let pageSettingsSeeded = false;
+	let pageSettingsSaving = false;
+
+	$: if (rawEvent && !pageSettingsSeeded) {
+		const psd = rawEvent.pageSettings ?? {};
+		showAttendeeCount = psd.showAttendeeCount !== false;
+		showAttendeeNames = psd.showAttendeeNames === true;
+		showCoOrganizers = psd.showCoOrganizers !== false;
+		pageSettingsSeeded = true;
+	}
+
+	async function savePageSettings() {
+		pageSettingsSaving = true;
+		try {
+			const { updateEvent } = await import('$lib/services/event.services');
+			await updateEvent(eventId!, {
+				pageSettings: { showAttendeeCount, showAttendeeNames, showCoOrganizers },
+			} as any);
+			toast.success('Event page settings saved.');
+		} catch (e: any) {
+			toast.error(cleanErrorMessage(e.message || 'Failed to save event page settings'));
+		} finally {
+			pageSettingsSaving = false;
 		}
 	}
 
@@ -632,6 +668,100 @@
 		>
 			<Icon icon="mdi:delete-forever-outline" class="text-lg" />
 			Delete Event Permanently
+		</button>
+	</div>
+
+	{:else if activeTab === 'event-page'}
+
+	<!-- Event Page — public display / privacy controls -->
+	<div class="mb-6 sm:mb-8">
+		<h2 class="mb-2 text-lg font-semibold sm:text-xl">Public event page</h2>
+		<p class="mb-6 text-xs text-gray-600 sm:text-sm lg:max-w-[70%]">
+			Control what visitors see on your public event page. For privacy, attendee names are hidden by
+			default — turn them on only if your guests are happy to be listed publicly.
+		</p>
+
+		<div class="space-y-3">
+			<!-- Show attendee count -->
+			<div class="flex items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4">
+				<div>
+					<p class="text-sm font-medium text-gray-900">Show attendee count</p>
+					<p class="mt-0.5 text-xs text-gray-500">
+						Display “{showAttendeeCount ? 'N Attending' : 'Attending'}” with the number of people going.
+					</p>
+				</div>
+				<button
+					type="button"
+					on:click={() => (showAttendeeCount = !showAttendeeCount)}
+					aria-pressed={showAttendeeCount}
+					aria-label="Toggle attendee count"
+					class="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors {showAttendeeCount ? 'bg-pink-600' : 'bg-gray-300'}"
+				>
+					<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {showAttendeeCount ? 'translate-x-5' : ''}"></span>
+				</button>
+			</div>
+
+			<!-- Show attendee names -->
+			<div class="flex items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4">
+				<div>
+					<p class="text-sm font-medium text-gray-900">Show attendee names</p>
+					<p class="mt-0.5 text-xs text-gray-500">
+						Show a few names publicly, like “Ada, Bola, Chidi and 82 others”. Off by default for privacy.
+					</p>
+				</div>
+				<button
+					type="button"
+					on:click={() => (showAttendeeNames = !showAttendeeNames)}
+					aria-pressed={showAttendeeNames}
+					aria-label="Toggle attendee names"
+					class="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors {showAttendeeNames ? 'bg-pink-600' : 'bg-gray-300'}"
+				>
+					<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {showAttendeeNames ? 'translate-x-5' : ''}"></span>
+				</button>
+			</div>
+
+			<!-- Show co-organizers -->
+			<div class="flex items-start justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4">
+				<div>
+					<p class="text-sm font-medium text-gray-900">Show co-organizers</p>
+					<p class="mt-0.5 text-xs text-gray-500">
+						List your accepted co-organizers on the event page. Individual co-organizers can still be
+						hidden from the Team settings.
+					</p>
+				</div>
+				<button
+					type="button"
+					on:click={() => (showCoOrganizers = !showCoOrganizers)}
+					aria-pressed={showCoOrganizers}
+					aria-label="Toggle co-organizers"
+					class="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors {showCoOrganizers ? 'bg-pink-600' : 'bg-gray-300'}"
+				>
+					<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {showCoOrganizers ? 'translate-x-5' : ''}"></span>
+				</button>
+			</div>
+		</div>
+
+		<!-- Live preview -->
+		<div class="mt-6 rounded-xl border border-gray-100 bg-[#FAFAFB] p-4">
+			<p class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Preview</p>
+			{#if !showAttendeeCount && !showAttendeeNames}
+				<p class="text-sm text-gray-400 italic">The attending section will be hidden from your event page.</p>
+			{:else}
+				<p class="text-sm font-normal text-gray-500">
+					{#if showAttendeeCount}42 Attending{:else}Attending{/if}
+				</p>
+				{#if showAttendeeNames}
+					<p class="mt-1 text-sm text-gray-500">Ada Obi, Bola Ade, Chidi Eze{#if showAttendeeCount} and 39 others{/if}</p>
+				{/if}
+			{/if}
+		</div>
+
+		<button
+			on:click={savePageSettings}
+			disabled={pageSettingsSaving}
+			class="mt-5 flex w-fit items-center justify-center gap-2 rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50 sm:py-2"
+		>
+			{pageSettingsSaving ? 'Saving…' : 'Save event page settings'}
 		</button>
 	</div>
 

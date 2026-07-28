@@ -1,5 +1,18 @@
 <script lang="ts">
-	import { getUser, getUsers, updateUserStatus, getUserSubscription, updateUserPlan, getUserWallet } from '$lib/services/admin.services';
+	import {
+		getUser,
+		getUsers,
+		updateUserStatus,
+		getUserSubscription,
+		updateUserPlan,
+		getUserWallet,
+		getUserPayout,
+		updateUserPayoutPolicy,
+		releaseUserPayoutHolds,
+		type PayoutPanel,
+		type PayoutPolicyMode,
+		type PayoutRiskTier
+	} from '$lib/services/admin.services';
 	import PlanSelect from '$lib/components/hq/PlanSelect.svelte';
 	import { onMount } from 'svelte';
 
@@ -42,6 +55,145 @@
 	let userWallet: any = null;
 	let walletLoading = false;
 	let walletError = '';
+
+	// ── Payout reserve (FE-P5-03 / NEW-11.1) ────────────────────────────────
+	//
+	// Rolling reserve is ON for every organizer by default. This section is where
+	// an admin eases it for a proven organizer, tightens it for a risky one, or
+	// releases held funds early.
+	let userPayout: PayoutPanel | null = null;
+	let payoutLoading = false;
+	let payoutUpdating = false;
+	let payoutError = '';
+	let payoutSuccess = '';
+	// Draft controls
+	let payoutMode: PayoutPolicyMode = 'ROLLING';
+	let payoutTier: PayoutRiskTier = 'STANDARD';
+	let payoutReservePercent = 20; // whole percent in the UI; bps on the wire
+	let payoutDelayDays = 3;
+	let payoutEaseExpiry = ''; // yyyy-mm-dd, '' = no expiry
+	let payoutReason = '';
+	// Confirmation modals
+	let showPayoutConfirm = false;
+	let showReleaseConfirm = false;
+	let releaseReason = '';
+
+	const payoutModeOptions = [
+		{ label: 'Rolling (hold a reserve)', value: 'ROLLING' },
+		{ label: 'Instant (no reserve)', value: 'INSTANT' }
+	];
+	const payoutTierOptions = [
+		{ label: 'Trusted (low reserve)', value: 'TRUSTED' },
+		{ label: 'Standard (default)', value: 'STANDARD' },
+		{ label: 'Elevated (high reserve)', value: 'ELEVATED' }
+	];
+
+	async function loadUserPayout(userId: string) {
+		payoutLoading = true;
+		payoutError = '';
+		payoutSuccess = '';
+		try {
+			userPayout = await getUserPayout(userId);
+			// Seed the draft controls from the stored policy so the admin edits the
+			// real current values rather than a blank form.
+			payoutMode = userPayout.stored.policy;
+			payoutTier = userPayout.stored.riskTier;
+			payoutReservePercent = Math.round((userPayout.stored.reservePercentBps ?? 2000) / 100);
+			payoutDelayDays = userPayout.stored.releaseDelayDays ?? 3;
+			payoutEaseExpiry = userPayout.stored.easedUntil
+				? new Date(userPayout.stored.easedUntil).toISOString().slice(0, 10)
+				: '';
+			payoutReason = '';
+		} catch (e: any) {
+			payoutError = e?.message ?? 'Failed to load payout settings';
+		} finally {
+			payoutLoading = false;
+		}
+	}
+
+	/** Total held across every currency, for the summary line. */
+	function totalHeldLabel(panel: PayoutPanel | null): string {
+		if (!panel || panel.outstanding.length === 0) return '—';
+		return panel.outstanding
+			.filter((c) => c.heldKobo > 0)
+			.map((c) => fmtMoney(c.heldKobo / 100, c.currency))
+			.join(' · ') || '—';
+	}
+
+	function openPayoutConfirm() {
+		if (!selectedUser?._id || payoutUpdating) return;
+		payoutError = '';
+		// The backend requires a reason for an INSTANT grant; check here so the
+		// admin gets the message before a round trip.
+		if (payoutMode === 'INSTANT' && payoutReason.trim().length < 3) {
+			payoutError = 'A reason is required when granting instant payouts.';
+			return;
+		}
+		showPayoutConfirm = true;
+	}
+
+	async function confirmPayoutUpdate() {
+		if (!selectedUser?._id || payoutUpdating) return;
+		payoutUpdating = true;
+		payoutError = '';
+		try {
+			userPayout = await updateUserPayoutPolicy(selectedUser._id, {
+				policy: payoutMode,
+				riskTier: payoutTier,
+				reservePercentBps: Math.round(payoutReservePercent * 100),
+				releaseDelayDays: payoutDelayDays,
+				easedUntil: payoutMode === 'INSTANT' ? (payoutEaseExpiry || null) : null,
+				reason: payoutReason.trim() || undefined
+			});
+			showPayoutConfirm = false;
+			payoutSuccess =
+				payoutMode === 'INSTANT'
+					? 'Instant payouts granted. Future ticket sales will not be held.'
+					: 'Rolling reserve updated. Applies to future ticket sales.';
+			payoutReason = '';
+		} catch (e: any) {
+			payoutError = e?.message ?? 'Failed to update payout settings';
+		} finally {
+			payoutUpdating = false;
+		}
+	}
+
+	async function confirmReleaseHolds() {
+		if (!selectedUser?._id || payoutUpdating) return;
+		if (releaseReason.trim().length < 3) {
+			payoutError = 'A reason is required to release held funds early.';
+			return;
+		}
+		payoutUpdating = true;
+		payoutError = '';
+		try {
+			const result = await releaseUserPayoutHolds(selectedUser._id, {
+				reason: releaseReason.trim()
+			});
+			userPayout = result.panel;
+			showReleaseConfirm = false;
+			releaseReason = '';
+			payoutSuccess =
+				result.releasedCount === 0
+					? 'No outstanding holds to release.'
+					: `Released ${result.releasedCount} hold(s) — ${fmtMoney(result.releasedKobo / 100, 'NGN')} is now withdrawable.`;
+			// The wallet panel above now shows a different withdrawable figure.
+			if (selectedUser?._id) loadUserWallet(selectedUser._id);
+		} catch (e: any) {
+			payoutError = e?.message ?? 'Failed to release held funds';
+		} finally {
+			payoutUpdating = false;
+		}
+	}
+
+	function payoutBadgeClass(mode: string): string {
+		return mode === 'INSTANT' ? 'bg-[#E3F4E1] text-[#3CBD2C]' : 'bg-[#EEF0FF] text-[#513BE2]';
+	}
+	function tierBadgeClass(tier: string): string {
+		if (tier === 'TRUSTED') return 'bg-[#E3F4E1] text-[#3CBD2C]';
+		if (tier === 'ELEVATED') return 'bg-[#FDEAEA] text-[#E53935]';
+		return 'bg-gray-100 text-gray-600';
+	}
 
 	const cycleOptions = [
 		{ label: 'Monthly', value: 'MONTHLY' },
@@ -141,6 +293,13 @@
 		// Reset wallet state.
 		userWallet = null;
 		walletError = '';
+		// Reset payout-reserve state (FE-P5-03).
+		userPayout = null;
+		payoutError = '';
+		payoutSuccess = '';
+		showPayoutConfirm = false;
+		showReleaseConfirm = false;
+		releaseReason = '';
 		try {
 			const detail = await getUser(user._id);
 			selectedUser = detail;
@@ -148,6 +307,7 @@
 		finally { modalLoading = false; }
 		loadUserPlan(user._id);
 		loadUserWallet(user._id);
+		loadUserPayout(user._id);
 	}
 
 	async function loadUserWallet(userId: string) {
@@ -516,13 +676,18 @@
 												<p class="text-sm font-medium text-gray-700">{fmtMoney(bal.total, bal.currency)}</p>
 											</div>
 										</div>
-										{#if bal.reservedKobo > 0 || bal.disputedKobo > 0}
+										{#if bal.reservedKobo > 0 || bal.disputedKobo > 0 || bal.payoutReserveKobo > 0}
 											<div class="mt-3 flex flex-wrap gap-4 border-t border-gray-100 pt-3">
 												{#if bal.reservedKobo > 0}
 													<div><p class="text-xs text-[#C1C2C2]">Reserved (withdrawals)</p><p class="text-sm font-medium text-[#EAAB26]">{fmtMoney(bal.reserved, bal.currency)}</p></div>
 												{/if}
 												{#if bal.disputedKobo > 0}
 													<div><p class="text-xs text-[#C1C2C2]">Disputed (held)</p><p class="text-sm font-medium text-[#E53935]">{fmtMoney(bal.disputed, bal.currency)}</p></div>
+												{/if}
+												<!-- FE-P5-03 — the rolling payout reserve. Omitting it here made
+												     the panel overstate what the organizer could withdraw. -->
+												{#if bal.payoutReserveKobo > 0}
+													<div><p class="text-xs text-[#C1C2C2]">Payout reserve (held)</p><p class="text-sm font-medium text-[#513BE2]">{fmtMoney(bal.payoutReserveHeld, bal.currency)}</p></div>
 												{/if}
 											</div>
 										{/if}
@@ -601,6 +766,258 @@
 						{/if}
 					</div>
 
+					<!--
+						Payout Reserve (FE-P5-03 / NEW-11.1)
+
+						Rondwell is the merchant of record: Paystack takes refunds and lost
+						chargebacks out of OUR balance, not the organizer's. Ticket settlement
+						credits the organizer's spendable wallet immediately, so without a
+						holdback an organizer could withdraw 100% of a sale the same day and
+						any later reversal became an unsecured debt.
+
+						We hold a MINORITY slice (default 20%) and release it a few days after
+						the event ends, rather than holding everything until the event —
+						organizers need cash flow before the event to pay venues and vendors.
+
+						This panel is where an admin eases that for a proven organizer.
+					-->
+					<div class="mt-6 border-t border-gray-200 pt-6">
+						<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+							<h3 class="text-sm font-semibold text-gray-700">Payout Reserve</h3>
+							{#if userPayout}
+								<div class="flex items-center gap-2">
+									<span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {payoutBadgeClass(userPayout.effective.policy)}">
+										{userPayout.effective.policy === 'INSTANT' ? 'Instant payouts' : 'Rolling reserve'}
+									</span>
+									<span class="rounded-full px-2 py-0.5 text-[10px] font-medium {tierBadgeClass(userPayout.effective.riskTier)}">
+										{userPayout.effective.riskTier}
+									</span>
+								</div>
+							{/if}
+						</div>
+
+						{#if payoutLoading}
+							<div class="animate-pulse space-y-3">
+								<div class="h-16 w-full rounded-xl bg-gray-200"></div>
+								<div class="h-10 w-full rounded bg-gray-200"></div>
+							</div>
+						{:else if payoutError && !userPayout}
+							<div class="rounded-lg bg-[#FDEAEA] px-3 py-2 text-xs text-[#E53935]">
+								{payoutError}
+								<button on:click={() => selectedUser && loadUserPayout(selectedUser._id)} class="ml-2 font-medium underline">Retry</button>
+							</div>
+						{:else if userPayout}
+							{#if payoutSuccess}
+								<div class="mb-3 rounded-lg bg-[#E3F4E1] px-3 py-2 text-xs text-[#2E8C22]">{payoutSuccess}</div>
+							{/if}
+							{#if payoutError}
+								<div class="mb-3 rounded-lg bg-[#FDEAEA] px-3 py-2 text-xs text-[#E53935]">{payoutError}</div>
+							{/if}
+
+							<!-- Current effective policy, in plain language -->
+							<div class="rounded-xl border border-gray-200 bg-white p-4">
+								{#if userPayout.effective.policy === 'INSTANT'}
+									<p class="text-sm text-gray-700">
+										Ticket revenue is withdrawable <span class="font-medium">as soon as it settles</span> — nothing is held.
+									</p>
+									{#if userPayout.stored.easedBy}
+										<p class="mt-1 text-xs text-[#C1C2C2]">
+											Eased by {userPayout.stored.easedBy}
+											{#if userPayout.stored.easedAt}on {fmtDate(userPayout.stored.easedAt)}{/if}
+											{#if userPayout.stored.easedReason}— “{userPayout.stored.easedReason}”{/if}
+										</p>
+									{/if}
+									{#if userPayout.effective.easedUntil}
+										<p class="mt-1 text-xs text-[#EAAB26]">
+											Expires {fmtDate(userPayout.effective.easedUntil)} — reverts to rolling automatically.
+										</p>
+									{/if}
+								{:else}
+									<p class="text-sm text-gray-700">
+										<span class="font-medium">{(userPayout.effective.reservePercentBps / 100).toFixed(userPayout.effective.reservePercentBps % 100 === 0 ? 0 : 2)}%</span>
+										of each ticket sale is held, released
+										<span class="font-medium">{userPayout.effective.releaseDelayDays} day{userPayout.effective.releaseDelayDays === 1 ? '' : 's'}</span>
+										after the event ends. The rest is withdrawable immediately.
+									</p>
+								{/if}
+								{#if userPayout.effective.easeExpired}
+									<p class="mt-1 text-xs text-[#EAAB26]">A previous instant-payout grant expired and has reverted to rolling.</p>
+								{/if}
+								{#if userPayout.stored.autoElevatedAt}
+									<p class="mt-1 text-xs text-[#E53935]">
+										Auto-escalated to ELEVATED on {fmtDate(userPayout.stored.autoElevatedAt)} after chargebacks.
+									</p>
+								{/if}
+							</div>
+
+							<!-- Exposure snapshot -->
+							<div class="mt-3 grid grid-cols-2 gap-3">
+								<div>
+									<p class="text-xs text-[#C1C2C2]">Currently held</p>
+									<p class="text-sm font-medium text-gray-800">{totalHeldLabel(userPayout)}</p>
+								</div>
+								<div>
+									<p class="text-xs text-[#C1C2C2]">Next release</p>
+									<p class="text-sm font-medium text-gray-800">
+										{userPayout.outstanding.find((c) => c.nextReleaseAt)?.nextReleaseAt
+											? fmtDate(userPayout.outstanding.find((c) => c.nextReleaseAt)!.nextReleaseAt!)
+											: '—'}
+									</p>
+								</div>
+								<div>
+									<p class="text-xs text-[#C1C2C2]">Chargebacks</p>
+									<p class="text-sm font-medium {userPayout.stored.chargebackCount > 0 ? 'text-[#E53935]' : 'text-gray-800'}">
+										{userPayout.stored.chargebackCount}
+									</p>
+								</div>
+								<div>
+									<p class="text-xs text-[#C1C2C2]">Refunds</p>
+									<p class="text-sm font-medium text-gray-800">{userPayout.stored.refundCount}</p>
+								</div>
+							</div>
+
+							<!-- Per-event release schedule -->
+							{#if userPayout.upcoming.length > 0}
+								<div class="mt-3 rounded-xl border border-gray-200 bg-white p-3">
+									<p class="mb-2 text-xs font-medium text-gray-600">Release schedule</p>
+									<div class="max-h-40 space-y-1.5 overflow-y-auto">
+										{#each userPayout.upcoming as h}
+											<div class="flex items-center justify-between gap-2 text-xs">
+												<span class="truncate text-gray-700">{h.eventTitle || h.eventId}</span>
+												<span class="flex shrink-0 items-center gap-2">
+													<span class="font-medium text-gray-800">{fmtMoney(h.heldKobo / 100, h.currency)}</span>
+													<span class="text-[#C1C2C2]">{fmtDate(h.releaseDueAt)}</span>
+													{#if h.isFallbackDate}
+														<!-- The event's end date couldn't be resolved at settlement
+														     time, so this date is provisional and will move once it can. -->
+														<span class="rounded bg-[#FFF6E5] px-1.5 py-0.5 text-[10px] font-medium text-[#EAAB26]">provisional</span>
+													{/if}
+												</span>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
+
+							<!-- Controls -->
+							<div class="mt-5 rounded-xl border border-gray-200 bg-white p-4">
+								<p class="mb-3 text-xs font-medium text-gray-600">
+									Adjust payout policy (applies to future ticket sales)
+								</p>
+								<div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+									<PlanSelect label="Payout mode" bind:value={payoutMode} options={payoutModeOptions} disabled={payoutUpdating} />
+									<PlanSelect label="Risk tier" bind:value={payoutTier} options={payoutTierOptions} disabled={payoutUpdating} />
+								</div>
+
+								{#if payoutMode === 'ROLLING'}
+									<div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+										<label class="block">
+											<span class="text-xs text-[#C1C2C2]">Reserve percentage</span>
+											<div class="mt-1 flex items-center gap-2">
+												<input
+													type="number"
+													min="0"
+													max="100"
+													step="1"
+													bind:value={payoutReservePercent}
+													disabled={payoutUpdating}
+													class="h-[38px] w-full rounded-lg border border-gray-200 px-3 text-sm focus:ring-1 focus:ring-[#513BE2] focus:outline-none disabled:opacity-50"
+												/>
+												<span class="text-sm text-gray-500">%</span>
+											</div>
+										</label>
+										<label class="block">
+											<span class="text-xs text-[#C1C2C2]">Release delay after event ends</span>
+											<div class="mt-1 flex items-center gap-2">
+												<input
+													type="number"
+													min="0"
+													max="90"
+													step="1"
+													bind:value={payoutDelayDays}
+													disabled={payoutUpdating}
+													class="h-[38px] w-full rounded-lg border border-gray-200 px-3 text-sm focus:ring-1 focus:ring-[#513BE2] focus:outline-none disabled:opacity-50"
+												/>
+												<span class="text-sm text-gray-500">days</span>
+											</div>
+										</label>
+									</div>
+								{:else}
+									<!-- A trust grant that lives forever is a standing risk. Offering an
+									     expiry makes "ease it for this festival" the easy default. -->
+									<label class="mb-3 block">
+										<span class="text-xs text-[#C1C2C2]">Expires on (optional — reverts to rolling automatically)</span>
+										<input
+											type="date"
+											bind:value={payoutEaseExpiry}
+											disabled={payoutUpdating}
+											class="mt-1 h-[38px] w-full rounded-lg border border-gray-200 px-3 text-sm focus:ring-1 focus:ring-[#513BE2] focus:outline-none disabled:opacity-50"
+										/>
+									</label>
+								{/if}
+
+								<label class="mb-4 block">
+									<span class="text-xs text-[#C1C2C2]">
+										Reason {payoutMode === 'INSTANT' ? '(required)' : '(optional)'}
+									</span>
+									<input
+										type="text"
+										bind:value={payoutReason}
+										disabled={payoutUpdating}
+										placeholder="e.g. Long-standing organizer, 40+ events, zero disputes"
+										class="mt-1 h-[38px] w-full rounded-lg border border-gray-200 px-3 text-sm focus:ring-1 focus:ring-[#513BE2] focus:outline-none disabled:opacity-50"
+									/>
+								</label>
+
+								<div class="flex flex-wrap gap-2">
+									<button on:click={openPayoutConfirm} disabled={payoutUpdating}
+										class="rounded-lg bg-[#513BE2] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#4230bd] disabled:opacity-50">
+										Save payout policy
+									</button>
+									{#if userPayout.outstanding.some((c) => c.heldKobo > 0)}
+										<!-- Deliberately a SEPARATE action from the policy change: this moves
+										     real money now, against exposure that has not yet expired. -->
+										<button on:click={() => { payoutError = ''; showReleaseConfirm = true; }} disabled={payoutUpdating}
+											class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">
+											Release held funds now
+										</button>
+									{/if}
+								</div>
+								<p class="mt-3 text-[11px] text-gray-400">
+									Changing the policy affects future sales only. Money already held stays held
+									until its release date, or until you release it explicitly.
+								</p>
+							</div>
+
+							<!-- Audit trail -->
+							{#if userPayout.history.length > 0}
+								<div class="mt-3 rounded-xl border border-gray-200 bg-white p-3">
+									<p class="mb-2 text-xs font-medium text-gray-600">Change history</p>
+									<div class="max-h-40 space-y-2 overflow-y-auto">
+										{#each userPayout.history as h}
+											<div class="text-xs">
+												<p class="text-gray-700">
+													<span class="font-medium">{h.actor}</span>
+													{#if h.fromPolicy && h.toPolicy && h.fromPolicy !== h.toPolicy}
+														· {h.fromPolicy} → {h.toPolicy}
+													{/if}
+													{#if h.toReservePercentBps !== undefined}
+														· {(h.toReservePercentBps / 100).toFixed(0)}% / {h.toReleaseDelayDays}d
+													{/if}
+												</p>
+												<p class="text-[#C1C2C2]">
+													{fmtDate(h.at)}{#if h.reason} — “{h.reason}”{/if}
+												</p>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
+						{:else}
+							<p class="text-sm text-gray-400">No payout data for this user yet.</p>
+						{/if}
+					</div>
+
 					<!-- Actions -->
 					<div class="mt-6 border-t border-gray-200 pt-6">
 						<h3 class="mb-3 text-sm font-semibold text-gray-700">Actions</h3>
@@ -666,6 +1083,124 @@
 				<button on:click={confirmPlanChange} disabled={planUpdating}
 					class="rounded-lg px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50 {planConfirmTier === 'PLUS' ? 'bg-[#F31A7C] hover:bg-[#d1176b]' : 'bg-red-600 hover:bg-red-700'}">
 					{planUpdating ? 'Working…' : planConfirmTier === 'PLUS' ? 'Confirm Grant' : 'Confirm Revert'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Payout Policy Confirmation (FE-P5-03) -->
+{#if showPayoutConfirm && selectedUser}
+	<div on:click={() => !payoutUpdating && (showPayoutConfirm = false)} on:keydown={(e) => e.key === 'Escape' && !payoutUpdating && (showPayoutConfirm = false)}
+		class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" tabindex="-1">
+		<div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" role="document" on:click|stopPropagation on:keydown|stopPropagation>
+			{#if payoutMode === 'INSTANT'}
+				<h3 class="text-lg font-semibold text-gray-900">Grant instant payouts?</h3>
+				<p class="mt-1 text-sm text-gray-500">
+					<span class="font-medium text-gray-800">{selectedUser.name || selectedUser.email}</span>
+					will be able to withdraw 100% of every ticket sale as soon as it settles. Nothing will be
+					held back to cover refunds or chargebacks.
+				</p>
+				<div class="mt-4 rounded-xl bg-[#FFF6E5] p-3 text-xs text-[#8A6A12]">
+					Rondwell is the merchant of record — if a refund or chargeback lands after this organizer
+					has withdrawn, the platform absorbs it and has to recover the money from them directly.
+					Only ease this for organizers you'd extend credit to.
+				</div>
+			{:else}
+				<h3 class="text-lg font-semibold text-gray-900">Update rolling reserve?</h3>
+				<p class="mt-1 text-sm text-gray-500">
+					This changes how much of <span class="font-medium text-gray-800">{selectedUser.name || selectedUser.email}</span>'s
+					future ticket sales is held back.
+				</p>
+			{/if}
+
+			<div class="mt-4 space-y-2 rounded-xl bg-[#F9F5FF] p-4 text-sm">
+				<div class="flex justify-between"><span class="text-gray-500">Mode</span><span class="font-medium text-[#513BE2]">{payoutMode === 'INSTANT' ? 'Instant (no reserve)' : 'Rolling reserve'}</span></div>
+				<div class="flex justify-between"><span class="text-gray-500">Risk tier</span><span class="font-medium text-gray-800">{payoutTier}</span></div>
+				{#if payoutMode === 'ROLLING'}
+					<div class="flex justify-between"><span class="text-gray-500">Reserve</span><span class="font-medium text-gray-800">{payoutReservePercent}% of each sale</span></div>
+					<div class="flex justify-between"><span class="text-gray-500">Released</span><span class="font-medium text-gray-800">{payoutDelayDays} day{payoutDelayDays === 1 ? '' : 's'} after event ends</span></div>
+				{:else if payoutEaseExpiry}
+					<div class="flex justify-between border-t border-[#EADDFB] pt-2"><span class="text-gray-500">Expires</span><span class="font-semibold text-gray-900">{fmtDate(payoutEaseExpiry)}</span></div>
+				{:else}
+					<div class="flex justify-between border-t border-[#EADDFB] pt-2"><span class="text-gray-500">Expires</span><span class="font-semibold text-[#EAAB26]">Never — permanent grant</span></div>
+				{/if}
+				{#if payoutReason.trim()}
+					<div class="border-t border-[#EADDFB] pt-2"><span class="text-gray-500">Reason</span><p class="mt-0.5 text-gray-800">{payoutReason.trim()}</p></div>
+				{/if}
+			</div>
+
+			<p class="mt-3 text-xs text-gray-400">
+				Applies to future ticket sales. Funds already held keep their existing release dates —
+				use “Release held funds now” if you also want to free those.
+			</p>
+
+			{#if payoutError}
+				<div class="mt-3 rounded-lg bg-[#FDEAEA] px-3 py-2 text-xs text-[#E53935]">{payoutError}</div>
+			{/if}
+
+			<div class="mt-6 flex justify-end gap-2">
+				<button on:click={() => (showPayoutConfirm = false)} disabled={payoutUpdating}
+					class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+				<button on:click={confirmPayoutUpdate} disabled={payoutUpdating}
+					class="rounded-lg bg-[#513BE2] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#4230bd] disabled:opacity-50">
+					{payoutUpdating ? 'Working…' : 'Confirm'}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Release Held Funds Confirmation (FE-P5-03) -->
+{#if showReleaseConfirm && selectedUser && userPayout}
+	<div on:click={() => !payoutUpdating && (showReleaseConfirm = false)} on:keydown={(e) => e.key === 'Escape' && !payoutUpdating && (showReleaseConfirm = false)}
+		class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" tabindex="-1">
+		<div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" role="document" on:click|stopPropagation on:keydown|stopPropagation>
+			<h3 class="text-lg font-semibold text-gray-900">Release held funds now?</h3>
+			<p class="mt-1 text-sm text-gray-500">
+				This immediately makes every held reserve for
+				<span class="font-medium text-gray-800">{selectedUser.name || selectedUser.email}</span>
+				withdrawable, ahead of its scheduled release date.
+			</p>
+
+			<div class="mt-4 space-y-2 rounded-xl bg-[#F9F5FF] p-4 text-sm">
+				<div class="flex justify-between">
+					<span class="text-gray-500">Amount to release</span>
+					<span class="font-semibold text-gray-900">{totalHeldLabel(userPayout)}</span>
+				</div>
+				<div class="flex justify-between">
+					<span class="text-gray-500">Holds affected</span>
+					<span class="font-medium text-gray-800">{userPayout.outstanding.reduce((n, c) => n + c.holdCount, 0)}</span>
+				</div>
+			</div>
+
+			<div class="mt-3 rounded-xl bg-[#FFF6E5] p-3 text-xs text-[#8A6A12]">
+				This reserve was taken to cover refunds and chargebacks on sales that may not have cleared
+				their dispute window yet. Once released, the organizer can withdraw it and the platform
+				carries that exposure.
+			</div>
+
+			<label class="mt-4 block">
+				<span class="text-xs text-[#C1C2C2]">Reason (required — recorded on the audit trail)</span>
+				<input
+					type="text"
+					bind:value={releaseReason}
+					disabled={payoutUpdating}
+					placeholder="e.g. Event completed, organizer needs vendor settlement funds"
+					class="mt-1 h-[38px] w-full rounded-lg border border-gray-200 px-3 text-sm focus:ring-1 focus:ring-[#513BE2] focus:outline-none disabled:opacity-50"
+				/>
+			</label>
+
+			{#if payoutError}
+				<div class="mt-3 rounded-lg bg-[#FDEAEA] px-3 py-2 text-xs text-[#E53935]">{payoutError}</div>
+			{/if}
+
+			<div class="mt-6 flex justify-end gap-2">
+				<button on:click={() => (showReleaseConfirm = false)} disabled={payoutUpdating}
+					class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+				<button on:click={confirmReleaseHolds} disabled={payoutUpdating || releaseReason.trim().length < 3}
+					class="rounded-lg bg-[#F31A7C] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#d1176b] disabled:opacity-50">
+					{payoutUpdating ? 'Releasing…' : 'Confirm Release'}
 				</button>
 			</div>
 		</div>

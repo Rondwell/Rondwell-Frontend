@@ -15,7 +15,11 @@
 	onMount(() => loadKyc());
 
 	$: tier = $kycStore.tier ?? 'UNVERIFIED';
-	$: status = $kycStore.status ?? 'NOT_SUBMITTED';
+	// FE-P5-08 — `UNVERIFIED`, not `NOT_SUBMITTED`. The backend never emitted
+	// `NOT_SUBMITTED` or `APPROVED`, so both branches below were unreachable and a
+	// verified user saw no action button at all.
+	$: status = $kycStore.status ?? 'UNVERIFIED';
+	$: wasRevoked = !!$kycStore.wasRevoked;
 
 	function tierColor(t: string): string {
 		if (t === 'VERIFIED') return 'bg-green-100 text-green-700';
@@ -108,14 +112,63 @@
 				</div>
 			</div>
 
+			<!--
+				FE-P5-08 — Rejection banner.
+
+				A rejected user previously landed here with nothing but a "Resubmit"
+				button and no indication of what had gone wrong, so their most likely
+				next move was to resubmit the same document and be rejected again.
+			-->
+			{#if status === 'REJECTED'}
+				<div class="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
+					<div class="flex items-start gap-2">
+						<Icon
+							icon={wasRevoked ? 'mdi:shield-off-outline' : 'mdi:alert-circle-outline'}
+							class="mt-0.5 text-lg text-red-500"
+						/>
+						<div>
+							<p class="text-sm font-medium text-red-900">
+								{wasRevoked
+									? 'Your verified status was withdrawn'
+									: 'Your last submission was not approved'}
+							</p>
+							{#if $kycStore.rejectedReason}
+								<p class="mt-1 text-sm text-red-800">{$kycStore.rejectedReason}</p>
+							{:else}
+								<p class="mt-1 text-sm text-red-800">
+									Please review your details and submit again.
+								</p>
+							{/if}
+							{#if wasRevoked}
+								<p class="mt-1 text-xs text-red-700">
+									Withdrawals are paused until you're verified again.
+								</p>
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			<div class="mt-6 flex flex-wrap items-center gap-2">
-				{#if status === 'NOT_SUBMITTED' || status === 'REJECTED'}
+				{#if status === 'UNVERIFIED' || status === 'REJECTED'}
 					<button
 						on:click={() => goto('/account/kyc/start')}
 						class="rounded-md bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700"
 					>
-						{status === 'REJECTED' ? 'Resubmit' : 'Start verification'}
+						{status === 'REJECTED'
+							? wasRevoked
+								? 'Re-verify my identity'
+								: 'Fix and resubmit'
+							: 'Start verification'}
 					</button>
+					{#if status === 'REJECTED'}
+						<button
+							on:click={() => goto('/account/kyc/status')}
+							class="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+						>
+							View details
+						</button>
+					{/if}
 				{:else if status === 'PENDING_REVIEW'}
 					<button
 						on:click={() => goto('/account/kyc/status')}
@@ -123,7 +176,7 @@
 					>
 						View submission
 					</button>
-				{:else if status === 'APPROVED'}
+				{:else if status === 'VERIFIED'}
 					<button
 						on:click={() => goto('/account/kyc/status')}
 						class="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"

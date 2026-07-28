@@ -253,6 +253,10 @@
 			<a href="/hq/finance/vendors" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Top vendors</a>
 			<a href="/hq/finance/organizers" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Top organizers</a>
 			<a href="/hq/finance/disputes" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Disputes</a>
+			<!-- FE-P5-07 — refunds were previously visible only as the aggregate
+			     `refundRate` figure above, with no way to inspect individual refunds
+			     or spot ones that FAILED at the gateway. -->
+			<a href="/hq/finance/refunds" class="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Refunds</a>
 		</div>
 
 		<!-- Filters -->

@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { sendSpeakerMessage } from '$lib/services/event.services';
+	import { toast } from '$lib/stores/toast.store';
 
 	const dispatch = createEventDispatcher();
 
@@ -9,6 +10,7 @@
 	export let items: any[] = [];
 	export let vendorName = 'Vendor';
 	export let eventId = '';
+	export let participantId = '';
 
 	let dateTime = '';
 	let logisticsNotes = '';
@@ -19,25 +21,44 @@
 	const increase = (id: string) => { items = items.map(i => i.id === id ? { ...i, quantity: (i.quantity || 1) + 1 } : i); };
 	const decrease = (id: string) => { items = items.map(i => i.id === id && (i.quantity || 1) > 1 ? { ...i, quantity: i.quantity - 1 } : i); };
 	$: totalAmount = items.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
+	$: currency = items[0]?.currency || 'NGN';
 
-	let buttonOpen = false;
-	let paymentMethod = 'Paystack';
-	let paymentOptions = [
-		{ id: 'paystack', label: 'Paystack', icon: '/paystack.svg', enabled: false },
-		{ id: 'flutterwave', label: 'Flutterwave', icon: '/Logo_Flutterwave Logo.svg', enabled: false },
-		{ id: 'stripe', label: 'Stripe', icon: '/Stripe.svg', enabled: false }
-	];
+	// Build the itemised request-for-quote body sent to the vendor. The vendor
+	// receives it and issues an invoice from their collaboration dashboard,
+	// which the organizer then pays via the pay-invoice flow.
+	function buildRfqMessage(): string {
+		const lines = items.map((i) => {
+			const qty = i.quantity || 1;
+			const priceText = i.price > 0 ? `${currency} ${(i.price * qty).toLocaleString()}` : 'Quote on request';
+			return `• ${i.title} × ${qty} — ${priceText}`;
+		});
+		let body = `Hi ${vendorName},\n\nWe'd like to order the following for our event:\n\n${lines.join('\n')}`;
+		if (totalAmount > 0) body += `\n\nEstimated total: ${currency} ${totalAmount.toLocaleString()}`;
+		if (dateTime) body += `\n\nNeeded by: ${new Date(dateTime).toLocaleString()}`;
+		if (logisticsNotes) body += `\n\nNotes: ${logisticsNotes}`;
+		body += `\n\nPlease review and send us an invoice to proceed with payment.`;
+		return body;
+	}
 
 	async function handlePlaceOrder() {
 		if (items.length === 0) return;
+		if (!eventId || !participantId) {
+			error = 'Missing event/participant context — please reopen this order.';
+			return;
+		}
 		placing = true;
 		error = '';
 		try {
-			// In production, this would call an order creation API
+			await sendSpeakerMessage(eventId, participantId, {
+				subject: `Order request from event organizer`,
+				message: buildRfqMessage()
+			});
+			toast.success(`Order request sent to ${vendorName}. They'll send an invoice to pay.`);
 			dispatch('ordered');
 			open = false;
 		} catch (e: any) {
-			error = e.message || 'Failed to place order';
+			error = e.message || 'Failed to send order request';
+			toast.error(error);
 		} finally {
 			placing = false;
 		}
@@ -58,7 +79,7 @@
 					</div>
 					<div class="flex items-center gap-3">
 						<button on:click={handlePlaceOrder} disabled={placing || items.length === 0} class="flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
-							{placing ? 'Placing...' : 'Place Order'}
+							{placing ? 'Sending...' : 'Send Order Request'}
 						</button>
 						<button on:click={() => (open = false)} class="flex items-center gap-1 rounded-lg bg-[#F0F1F1] px-3 py-1.5 text-sm font-medium text-[#727375]">Cancel</button>
 					</div>
@@ -87,7 +108,7 @@
 										<div>
 											<p class="font-medium">{item.title}</p>
 											<div class="mt-1 flex items-center gap-2 text-sm">
-												<span class="font-semibold text-gray-800">${(item.price || 0).toLocaleString()}</span>
+												<span class="font-semibold text-gray-800">{item.price > 0 ? `${item.currency || currency} ${(item.price).toLocaleString()}` : 'Quote on request'}</span>
 											</div>
 											<div class="mt-3 flex w-fit items-center gap-3 rounded-lg border border-gray-500 px-2 py-1.5">
 												<button on:click={() => decrease(item.id)}>–</button>
@@ -106,8 +127,8 @@
 
 					<!-- Total -->
 					<div class="mt-6 border-t-3 border-dashed pt-6">
-						<p class="mb-1 text-sm text-gray-500">Total Amount</p>
-						<input class="w-full rounded-lg border bg-white px-3 py-2.5" value="${totalAmount.toLocaleString()}" disabled />
+						<p class="mb-1 text-sm text-gray-500">Estimated Total</p>
+						<input class="w-full rounded-lg border bg-white px-3 py-2.5" value={`${currency} ${totalAmount.toLocaleString()}`} disabled />
 					</div>
 
 					<!-- Date/Time -->
@@ -125,30 +146,13 @@
 						</div>
 					</div>
 
-					<!-- Payment Method -->
-					<div class="mt-6">
-						<label class="flex text-gray-900">Select Payment Method</label>
-						<div use:clickOutside={() => (buttonOpen = false)} class="relative w-full">
-							<button class="mb-2 flex w-full cursor-pointer items-center justify-between rounded-lg border bg-white p-3 text-sm font-medium text-[#3a3b3d]" on:click={() => (buttonOpen = !buttonOpen)}>
-								<span>{paymentMethod || 'Select option'}</span>
-								<img src="/arrow-left.svg" alt="" class="rotate-90" />
-							</button>
-							{#if buttonOpen}
-								<div class="absolute left-0 z-10 w-full rounded-lg border bg-white p-2 shadow-lg">
-									{#each paymentOptions as option}
-										<button class="flex w-full items-center justify-between rounded-sm p-2 hover:bg-gray-50" on:click={() => { paymentMethod = option.label; buttonOpen = false; }}>
-											<div class="flex items-center gap-2">
-												<div class="flex h-10 w-10 items-center justify-center rounded-full border">
-													<img src={option.icon} alt="" class="h-6" />
-												</div>
-												<span class="text-sm">{option.label}</span>
-												<span class="rounded-xl bg-gray-100 px-2 py-0.5 text-xs text-gray-400">soon</span>
-											</div>
-										</button>
-									{/each}
-								</div>
-							{/if}
-						</div>
+					<!-- How payment works -->
+					<div class="mt-6 flex items-start gap-2 rounded-lg border border-[#DB3EC6]/30 bg-purple-50 p-3">
+						<Icon icon="mdi:information-outline" class="mt-0.5 h-4 w-4 flex-shrink-0 text-[#DB3EC6]" />
+						<p class="text-xs leading-relaxed text-gray-600">
+							Sending this order notifies <span class="font-medium">{vendorName}</span>. They'll issue an invoice
+							you can pay securely via Rondwell (Paystack / Flutterwave) from the vendor's row menu.
+						</p>
 					</div>
 				</div>
 			</div>

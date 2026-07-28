@@ -3,6 +3,8 @@
 	import { getEventSpeakers } from '$lib/services/event.services';
 	import { clickOutside } from '$lib/utils/constant';
 	import { getStatusStyle } from '$lib/utils/statusStyle';
+	import { downloadCsv, safeFilePart, type CsvColumn } from '$lib/utils/exportCsv';
+	import { toast } from '$lib/stores/toast.store';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import AddParticipant from './modal/AddParticipant.svelte';
@@ -102,6 +104,20 @@
 	function handleSpeakerUpdated() {
 		loadSpeakers();
 	}
+
+	function exportSpeakersCsv() {
+		const columns: CsvColumn<any>[] = [
+			{ header: 'Name', value: (s) => getDisplayName(s) },
+			{ header: 'Bio', value: (s) => s.bio || s.applicationDetails?.bio || '' },
+			{ header: 'Status', value: (s) => getStatusLabel(s.status) },
+			{ header: 'Email', value: (s) => s.applicationDetails?.contactEmail || '' },
+			{ header: 'Sessions', value: (s) => (s.assignedSessions || []).length },
+			{ header: 'Added', value: (s) => s.createdAt || '' }
+		];
+		const ok = downloadCsv(`speakers-${safeFilePart(eventTitle)}`, speakers, columns);
+		if (!ok) toast.info('No speakers to export');
+		else toast.success('Speakers exported to CSV');
+	}
 </script>
 
 <div class="">
@@ -141,12 +157,12 @@
 			</div>
 
 			<div class="flex items-center gap-1 md:flex-row">
-				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+				<button type="button" title="Download speakers as CSV" on:click={exportSpeakersCsv} class="flex h-[33px] w-[33px] cursor-pointer items-center justify-center rounded-lg bg-[#EBECED] hover:bg-[#e0e1e2]">
 					<img src="/download-icon.svg" alt="download icon" />
-				</div>
-				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+				</button>
+				<button type="button" title="Export speakers as CSV" on:click={exportSpeakersCsv} class="flex h-[33px] w-[33px] cursor-pointer items-center justify-center rounded-lg bg-[#EBECED] hover:bg-[#e0e1e2]">
 					<img src="/export.svg" alt="export icon" />
-				</div>
+				</button>
 
 				<div use:clickOutside={() => (showStatus = false)} class="relative">
 					<button

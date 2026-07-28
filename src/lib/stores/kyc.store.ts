@@ -24,9 +24,17 @@ interface KycSnapshot extends Partial<MyKyc> {
 	loadedAt: number;
 }
 
+/**
+ * FE-P5-08 — default status is now `UNVERIFIED`, matching the backend enum.
+ *
+ * It was `NOT_SUBMITTED`, a value the backend never emits. Combined with the
+ * status pages testing for `APPROVED` (which the backend also never emits), two
+ * of the four possible states rendered no UI at all — a verified user saw an
+ * empty card with no button.
+ */
 const DEFAULT: KycSnapshot = {
 	tier: 'UNVERIFIED',
-	status: 'NOT_SUBMITTED',
+	status: 'UNVERIFIED',
 	loaded: false,
 	loadedAt: 0,
 };

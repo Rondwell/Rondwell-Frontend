@@ -3,6 +3,8 @@
 	import { getCollaborationRequests } from '$lib/services/event.services';
 	import { clickOutside } from '$lib/utils/constant';
 	import { getStatusStyle } from '$lib/utils/statusStyle';
+	import { downloadCsv, safeFilePart, type CsvColumn } from '$lib/utils/exportCsv';
+	import { toast } from '$lib/stores/toast.store';
 	import { onMount } from 'svelte';
 	import Filter from './modal/Filter.svelte';
 	import RequestDetail from './modal/RequestDetail.svelte';
@@ -79,6 +81,21 @@
 		selectedRequest = null;
 		loadRequests();
 	}
+
+	function exportRequestsCsv() {
+		const columns: CsvColumn<any>[] = [
+			{ header: 'Sender', value: (r) => r.senderName || '' },
+			{ header: 'Company', value: (r) => r.companyName || '' },
+			{ header: 'Role', value: (r) => r.role || '' },
+			{ header: 'Email', value: (r) => r.senderEmail || '' },
+			{ header: 'Proposal', value: (r) => r.proposal || '' },
+			{ header: 'Status', value: (r) => getStatusLabel(r.status) },
+			{ header: 'Date Sent', value: (r) => r.dateSent || '' }
+		];
+		const ok = downloadCsv(`collaboration-requests-${safeFilePart(eventTitle)}`, requests, columns);
+		if (!ok) toast.info('No requests to export');
+		else toast.success('Requests exported to CSV');
+	}
 </script>
 
 <div class="">
@@ -100,12 +117,12 @@
 			</div>
 
 			<div class="flex items-center gap-1 md:flex-row">
-				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+				<button type="button" title="Download requests as CSV" on:click={exportRequestsCsv} class="flex h-[33px] w-[33px] cursor-pointer items-center justify-center rounded-lg bg-[#EBECED] hover:bg-[#e0e1e2]">
 					<img src="/download-icon.svg" alt="download icon" />
-				</div>
-				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+				</button>
+				<button type="button" title="Export requests as CSV" on:click={exportRequestsCsv} class="flex h-[33px] w-[33px] cursor-pointer items-center justify-center rounded-lg bg-[#EBECED] hover:bg-[#e0e1e2]">
 					<img src="/export.svg" alt="export icon" />
-				</div>
+				</button>
 
 				<div use:clickOutside={() => (showStatus = false)} class="relative">
 					<button on:click={() => (showStatus = !showStatus)} class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm">

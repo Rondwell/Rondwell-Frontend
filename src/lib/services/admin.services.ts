@@ -152,6 +152,138 @@ export async function updateUserPlan(
   return data;
 }
 
+// ─── Payout reserve (FE-P5-03 / NEW-11.1) ─────────────────────────────────
+//
+// Rolling reserve applies to EVERY organizer by default: a percentage of each
+// ticket sale is held and released shortly after the event ends, because Rondwell
+// is the merchant of record and Paystack takes refunds and lost chargebacks out
+// of OUR balance — not the organizer's.
+//
+// These helpers let an admin ease that for a trustworthy organizer, tighten it
+// for a risky one, and release money that is currently held. Easing the POLICY
+// and RELEASING existing holds are deliberately separate calls: one toggle must
+// not silently dump a reserve that was taken against known exposure.
+
+export type PayoutPolicyMode = 'ROLLING' | 'INSTANT';
+export type PayoutRiskTier = 'TRUSTED' | 'STANDARD' | 'ELEVATED';
+
+export interface PayoutHeldByCurrency {
+  currency: string;
+  heldKobo: number;
+  holdCount: number;
+  nextReleaseAt: string | null;
+}
+
+export interface PayoutUpcomingHold {
+  holdId: string;
+  eventId: string;
+  eventTitle: string | null;
+  currency: string;
+  heldKobo: number;
+  releaseDueAt: string;
+  isFallbackDate: boolean;
+}
+
+export interface PayoutPolicyChange {
+  at: string;
+  actor: string;
+  fromPolicy?: PayoutPolicyMode;
+  toPolicy?: PayoutPolicyMode;
+  fromReservePercentBps?: number;
+  toReservePercentBps?: number;
+  fromReleaseDelayDays?: number;
+  toReleaseDelayDays?: number;
+  fromRiskTier?: PayoutRiskTier;
+  toRiskTier?: PayoutRiskTier;
+  reason?: string;
+  releasedKobo?: number;
+}
+
+export interface PayoutPanel {
+  userId: string;
+  effective: {
+    policy: PayoutPolicyMode;
+    riskTier: PayoutRiskTier;
+    reservePercentBps: number;
+    releaseDelayDays: number;
+    easeExpired: boolean;
+    easedUntil: string | null;
+    easedBy: string | null;
+    easedReason: string | null;
+  };
+  stored: {
+    policy: PayoutPolicyMode;
+    riskTier: PayoutRiskTier;
+    reservePercentBps: number;
+    releaseDelayDays: number;
+    easedBy: string | null;
+    easedAt: string | null;
+    easedReason: string | null;
+    easedUntil: string | null;
+    chargebackCount: number;
+    refundCount: number;
+    lastChargebackAt: string | null;
+    autoElevatedAt: string | null;
+  };
+  outstanding: PayoutHeldByCurrency[];
+  upcoming: PayoutUpcomingHold[];
+  lifetime: {
+    heldKobo: number;
+    releasedKobo: number;
+    consumedKobo: number;
+    holdCount: number;
+  };
+  history: PayoutPolicyChange[];
+  defaults: {
+    reservePercentBps: number;
+    releaseDelayDays: number;
+    tiers: Record<PayoutRiskTier, { reservePercentBps: number; releaseDelayDays: number }>;
+  };
+}
+
+/** Read an organizer's payout policy, outstanding reserve and change history. */
+export async function getUserPayout(id: string): Promise<PayoutPanel> {
+  const data = await adminFetch(`/users/${id}/payout`);
+  return data.data;
+}
+
+/**
+ * Update an organizer's payout policy. Affects FUTURE settlements only.
+ * A `reason` is required by the backend when granting INSTANT payouts.
+ */
+export async function updateUserPayoutPolicy(
+  id: string,
+  body: {
+    policy?: PayoutPolicyMode;
+    riskTier?: PayoutRiskTier;
+    reservePercentBps?: number;
+    releaseDelayDays?: number;
+    easedUntil?: string | null;
+    reason?: string;
+  },
+): Promise<PayoutPanel> {
+  const data = await adminFetch(`/users/${id}/payout`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  return data.data;
+}
+
+/**
+ * Release an organizer's outstanding reserve immediately.
+ * Separate from the policy change on purpose — this moves real money now.
+ */
+export async function releaseUserPayoutHolds(
+  id: string,
+  body: { reason: string; eventId?: string },
+): Promise<{ releasedCount: number; releasedKobo: number; panel: PayoutPanel }> {
+  const data = await adminFetch(`/users/${id}/payout/release`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  return data.data;
+}
+
 // ─── Events ───────────────────────────────────────────────────────────────
 export async function getAdminEvents(params: Record<string, any> = {}) {
   const query = new URLSearchParams(params).toString();
@@ -161,6 +293,33 @@ export async function getAdminEvents(params: Record<string, any> = {}) {
 
 export async function getAdminEvent(id: string) {
   const data = await adminFetch(`/events/${id}`);
+  return data.data;
+}
+
+/**
+ * Registration/group/ticket detail for a single event. These back the tabs on
+ * the Event Details panel — the panel used to render only the fields already
+ * present in the list response, which is why it couldn't answer anything about
+ * who had actually registered.
+ */
+export async function getAdminEventStats(id: string) {
+  const data = await adminFetch(`/events/${id}/stats`);
+  return data.data;
+}
+
+export async function getAdminEventRegistrations(id: string, params: Record<string, any> = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '') as [string, string][]
+  ).toString();
+  const data = await adminFetch(`/events/${id}/registrations?${query}`);
+  return data.data;
+}
+
+export async function getAdminEventGroups(id: string, params: Record<string, any> = {}) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '') as [string, string][]
+  ).toString();
+  const data = await adminFetch(`/events/${id}/groups?${query}`);
   return data.data;
 }
 

@@ -46,28 +46,93 @@ export interface Refund {
 }
 
 export interface InitiateTicketRefundBody {
-	/** Optional partial-refund amount in minor units (kobo). Omit for full refund. */
+	/**
+	 * Optional partial-refund amount in minor units (kobo). Omit for full refund.
+	 *
+	 * IGNORED when `registrationIds` is supplied — a seat-scoped refund derives its
+	 * amount server-side from the per-seat price, so the caller cannot accidentally
+	 * refund a different amount than the seats are worth.
+	 */
 	amountKobo?: number;
 	/** 3-char minimum reason copied to the attendee email. */
 	reason: string;
+	/**
+	 * FE-P5-01 — SEAT-SCOPED GROUP REFUND.
+	 *
+	 * Name the specific seats to release. A group of 4 where one person can't come
+	 * refunds ONE seat: one unit price, one registration voided, one unit of
+	 * inventory released, prorated platform fee — the other three tickets untouched.
+	 *
+	 * Omit for a whole-group (or single-ticket) refund.
+	 *
+	 * Previously there was no way to express this: a partial refund of one seat
+	 * voided the ENTIRE group's tickets, and a full group refund paid back all N
+	 * seats while leaving N-1 QR codes working.
+	 */
+	registrationIds?: string[];
+	/**
+	 * Super-admin only. Allows refunding a seat that has already been checked in.
+	 * The override is recorded verbatim on the refund's reason for audit.
+	 */
+	overrideCheckedIn?: boolean;
+}
+
+export interface InitiateRefundResult extends Refund {
+	/** Set when the refund resolved to a group purchase. */
+	groupId?: string | null;
+	/** The exact seats released. */
+	registrationIds?: string[];
+	seatCount?: number;
+	isFull?: boolean;
+	platformFeeRefundedKobo?: number;
 }
 
 /**
  * Organizer (or super-admin) initiates a ticket refund. The cascade is
  * fully driven server-side.
+ *
+ * Server-side guards you should surface to the user (all return a `code`):
+ *   - `TICKET_ALREADY_CHECKED_IN`  — the seat has been used at the door.
+ *   - `TICKET_TRANSFER_IN_FLIGHT`  — a transfer is racing the refund.
+ *   - `CHARGEBACK_OPEN`            — the bank is already reversing this charge.
+ *   - 409 over-refund              — prior refunds + this one exceed the sale.
  */
 export async function initiateTicketRefund(
 	ticketPaymentId: string,
 	body: InitiateTicketRefundBody
-): Promise<Refund> {
+): Promise<InitiateRefundResult> {
 	const res = await authFetch(`${BASE_URL}/api/v1/payment/refunds/ticket/${ticketPaymentId}`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(body),
+		body: JSON.stringify({
+			reason: body.reason,
+			// Only send `amountKobo` when we're NOT scoping to seats — the server
+			// derives the amount from the seats and would otherwise log a warning
+			// about the conflicting value.
+			...(body.registrationIds?.length ? {} : body.amountKobo !== undefined ? { amountKobo: body.amountKobo } : {}),
+			...(body.registrationIds?.length ? { registrationIds: body.registrationIds } : {}),
+			...(body.overrideCheckedIn ? { overrideCheckedIn: true } : {})
+		})
 	});
 	if (!res.ok) await throwApiError(res, 'Failed to initiate refund');
 	const data = await res.json();
 	return data.data ?? data;
+}
+
+/**
+ * Convenience wrapper: refund specific seats of a group purchase.
+ *
+ * The amount is computed server-side from the per-seat price.
+ */
+export async function refundGroupSeats(
+	ticketPaymentId: string,
+	registrationIds: string[],
+	reason: string
+): Promise<InitiateRefundResult> {
+	if (!registrationIds.length) {
+		throw new Error('Select at least one seat to refund.');
+	}
+	return initiateTicketRefund(ticketPaymentId, { reason, registrationIds });
 }
 
 /** Super-admin generic transaction refund. Used by the admin queue. */

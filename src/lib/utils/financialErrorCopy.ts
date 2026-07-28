@@ -113,15 +113,72 @@ const REGISTRY: Record<string, (ctx: ErrorContext) => FinancialErrorCopy> = {
 		ctaHref: '/account/kyc/start',
 		severity: 'warn',
 	}),
+	/**
+	 * FE-P5-08 — this entry was previously UNREACHABLE.
+	 *
+	 * `KycEnforcement` propagates `kycCheck`'s `reason` as the error `code`, and
+	 * `kycCheck` only ever returned `KYC_REQUIRED` for the UNVERIFIED bucket —
+	 * which a REJECTED user also falls into. So a rejected organizer attempting a
+	 * withdrawal was told "Identity verification required", with no hint they had
+	 * already been reviewed and turned down. The backend now distinguishes
+	 * `KYC_REJECTED` and `KYC_PENDING_REVIEW`.
+	 */
 	KYC_REJECTED: ({ meta }) => ({
-		title: 'KYC rejected',
+		title: 'Verification was not approved',
 		body: meta?.reason
-			? `Your verification was rejected: ${meta.reason}. Resubmit with corrected details.`
-			: 'Your verification was rejected. Resubmit with corrected details.',
-		cta: 'Resubmit',
+			? `Your verification was rejected: ${meta.reason}. Fix that and resubmit to enable withdrawals.`
+			: 'Your verification was rejected. Resubmit with corrected details to enable withdrawals.',
+		cta: 'Fix and resubmit',
 		ctaHref: '/account/kyc/start',
 		severity: 'error',
 	}),
+	/**
+	 * FE-P5-08 — `KYC_PENDING_REVIEW`.
+	 *
+	 * `kycCheck` used to return `KYC_REQUIRED` for every UNVERIFIED tier, so a user
+	 * whose submission was already sitting in the review queue was told to "start
+	 * verification" — and would submit again. The backend now distinguishes the
+	 * three UNVERIFIED sub-states.
+	 */
+	KYC_PENDING_REVIEW: () => ({
+		title: 'Verification under review',
+		body: "Your documents are with our compliance team. We'll email you as soon as it's approved — usually within 24 hours.",
+		cta: 'Check status',
+		ctaHref: '/account/kyc/status',
+		severity: 'warn',
+	}),
+	/**
+	 * FE-P5-03 (NEW-11.1) — `AMOUNT_EXCEEDS_WITHDRAWABLE`.
+	 *
+	 * Raised by the new withdrawable-balance gate. Before that gate existed the
+	 * withdrawal path only checked `balance >= amount`, which ignored the disputed
+	 * reserve and the rolling payout reserve entirely — meaning an organizer with an
+	 * open chargeback could withdraw the disputed funds.
+	 */
+	AMOUNT_EXCEEDS_WITHDRAWABLE: ({ meta }) => {
+		const held = Number(meta?.payoutReserveKobo ?? 0);
+		const disputed = Number(meta?.disputedKobo ?? 0);
+		const available = meta?.withdrawableKobo;
+		const parts: string[] = [];
+		if (available !== undefined) {
+			parts.push(`You can withdraw ${fmtKobo(available, meta?.currency)} right now.`);
+		}
+		if (held > 0) {
+			parts.push(
+				`${fmtKobo(held, meta?.currency)} is held as a payout reserve and is released shortly after your event ends.`
+			);
+		}
+		if (disputed > 0) {
+			parts.push(`${fmtKobo(disputed, meta?.currency)} is held against an open dispute.`);
+		}
+		return {
+			title: 'More than you can withdraw',
+			body: parts.length > 0 ? parts.join(' ') : 'That amount is more than your available balance.',
+			cta: 'View wallet',
+			ctaHref: '/settings?tab=wallet',
+			severity: 'warn',
+		};
+	},
 	DAILY_LIMIT_EXCEEDED: ({ meta }) => ({
 		title: 'Daily limit reached',
 		body: meta?.limitKobo

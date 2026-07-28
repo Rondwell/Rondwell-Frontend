@@ -19,10 +19,11 @@
 		type IdType,
 		type KycAddress,
 	} from '$lib/services/kyc.services';
-	import { loadKyc } from '$lib/stores/kyc.store';
+	import { kycStore, loadKyc } from '$lib/stores/kyc.store';
 	import { toast } from '$lib/stores/toast.store';
 	import { financialErrorMessage } from '$lib/utils/financialErrorCopy';
 	import Icon from '@iconify/svelte';
+	import { onMount } from 'svelte';
 
 	let step: 1 | 2 | 3 | 4 | 5 = 1;
 	let idType: IdType = 'PASSPORT';
@@ -38,6 +39,61 @@
 
 	let submitting = false;
 	let error = '';
+
+	// ── FE-P5-08: prefill on re-submission ─────────────────────────────────
+	//
+	// This page never called `loadKyc()`. A rejected user arriving here from the
+	// "Resubmit" button got a completely blank 5-step form: no previous ID type,
+	// no ID number, no address, and — critically — no sight of WHY they were
+	// rejected. The most likely outcome was re-entering the same details and being
+	// rejected again for the same reason.
+	//
+	// We now load their profile, prefill everything the backend already has, and
+	// show the rejection reason at the top of the form.
+	let prefilled = false;
+	let previousRejection: string | null = null;
+	let previousReviewerNotes: string | null = null;
+	let wasRevoked = false;
+	let hadPreviousDocument = false;
+
+	onMount(async () => {
+		await loadKyc(true);
+		const snap = $kycStore;
+
+		// Only prefill when there is something to correct. A first-time submitter
+		// should see a clean form.
+		if (snap.status === 'REJECTED' || snap.status === 'UNVERIFIED') {
+			previousRejection = snap.rejectedReason ?? null;
+			previousReviewerNotes = snap.reviewerNotes ?? null;
+			wasRevoked = !!snap.wasRevoked;
+
+			if (snap.idType && ID_TYPES.some((t) => t.value === snap.idType)) {
+				idType = snap.idType as IdType;
+			}
+			if (snap.idNumber) idNumber = snap.idNumber;
+			if (snap.bvn) bvn = snap.bvn;
+			if (snap.nin) nin = snap.nin;
+			if (snap.address) {
+				address = { country: 'Nigeria', ...snap.address };
+				addressInput = snap.address.formatted || snap.address.street || '';
+			}
+			// The document itself is NOT reused automatically — a rejection is most
+			// often about the document, so silently re-submitting the same file would
+			// guarantee another rejection. We tell them one exists and make them
+			// upload again deliberately.
+			hadPreviousDocument = !!snap.idDocumentUrl;
+			prefilled = !!(snap.idNumber || snap.address);
+		}
+
+		// Already sorted — don't let them re-submit over a live verification.
+		if (snap.status === 'VERIFIED') {
+			toast.success('Your identity is already verified.');
+			goto('/account/kyc/status');
+		} else if (snap.status === 'PENDING_REVIEW') {
+			toast.success("Your submission is already under review — we'll email you shortly.");
+			goto('/account/kyc/status');
+		}
+	});
 
 	const ID_TYPES: { value: IdType; label: string; hint?: string }[] = [
 		{ value: 'PASSPORT', label: 'International passport' },
@@ -124,6 +180,45 @@
 	</button>
 
 	<div class="rounded-xl border bg-white p-6">
+		<!--
+			FE-P5-08 — Show the previous rejection reason right where the user is
+			about to fix it. Without this the resubmission flow was blind: they were
+			told "rejected" by email, then handed an empty form.
+		-->
+		{#if previousRejection}
+			<div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4">
+				<div class="flex items-start gap-3">
+					<Icon
+						icon={wasRevoked ? 'mdi:shield-off-outline' : 'mdi:alert-circle-outline'}
+						class="mt-0.5 shrink-0 text-lg text-red-600"
+					/>
+					<div>
+						<p class="text-sm font-semibold text-red-900">
+							{wasRevoked
+								? 'Your verified status was withdrawn'
+								: 'Here’s what we need you to fix'}
+						</p>
+						<p class="mt-1 text-sm text-red-800">{previousRejection}</p>
+						{#if previousReviewerNotes}
+							<p class="mt-2 text-xs text-red-700">{previousReviewerNotes}</p>
+						{/if}
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		{#if prefilled}
+			<div class="mb-5 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+				<Icon icon="mdi:autorenew" class="mt-0.5 shrink-0 text-lg text-blue-600" />
+				<p class="text-xs text-blue-800">
+					We've filled in your previous answers — change only what needs correcting.
+					{#if hadPreviousDocument}
+						You'll need to <strong>upload your ID document again</strong> so we review a fresh copy.
+					{/if}
+				</p>
+			</div>
+		{/if}
+
 		<!-- Important notice -->
 		<div class="mb-5 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
 			<Icon icon="mdi:information-outline" class="mt-0.5 shrink-0 text-lg text-amber-600" />

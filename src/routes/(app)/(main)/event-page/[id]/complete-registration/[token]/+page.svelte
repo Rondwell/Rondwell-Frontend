@@ -28,6 +28,15 @@
 	let completed = false;
 	let result: any = null;
 
+	// Group lifecycle state. A member can land here before the lead's payment
+	// has settled (they get the invite the moment the group activates, but a
+	// slow gateway or a replayed email can still race it), so the page has to
+	// say so instead of failing on submit.
+	let groupInfo: any = null;
+	let declining = false;
+	let declined = false;
+	$: awaitingPayment = !!groupInfo?.awaitingPayment;
+
 	onMount(async () => {
 		if (!token) { error = 'Invalid link'; loading = false; return; }
 		const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
@@ -39,6 +48,7 @@
 			memberData = data.member;
 			eventInfo = data.event;
 			ticketInfo = data.ticketType;
+			groupInfo = data.group ?? null;
 			registrationFields = data.registrationFields ?? [];
 
 			firstName = memberData.firstName || '';
@@ -46,6 +56,16 @@
 
 			if (memberData.status === 'CONFIRMED') {
 				completed = true;
+				// The seat is already live, so show the real ticket rather than a
+				// bare "you're all set" with no QR.
+				result = {
+					attendee_details: { firstName: memberData.firstName, lastName: memberData.lastName },
+					event_passcode: memberData.event_passcode,
+					qr_code_data: memberData.qr_code_data,
+					qr_code_url: memberData.qr_code_url
+				};
+			} else if (memberData.status === 'DECLINED') {
+				declined = true;
 			}
 
 			// Apply theme
@@ -129,10 +149,37 @@
 			if (!res.ok) throw new Error(data.error ?? data.message ?? 'Failed to complete profile');
 			result = data.result;
 			completed = true;
+			declined = false;
 		} catch (e: any) {
 			submitError = e.message || 'Something went wrong. Please try again.';
 		} finally {
 			submitting = false;
+		}
+	}
+
+	/**
+	 * Decline the seat. The ticket stays paid for — the group lead is free to
+	 * hand it to someone else — so this is a "not attending" signal, not a
+	 * refund request.
+	 */
+	async function handleDecline() {
+		if (declining) return;
+		declining = true;
+		submitError = '';
+		const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
+		try {
+			const res = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/group-member/${token}/decline`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({})
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error ?? data.message ?? 'Could not decline this invitation');
+			declined = true;
+		} catch (e: any) {
+			submitError = e.message || 'Something went wrong. Please try again.';
+		} finally {
+			declining = false;
 		}
 	}
 </script>
@@ -158,6 +205,23 @@
 			</div>
 			<h2 class="text-xl font-semibold" style="color: {themeColor.text};">Unable to load</h2>
 			<p class="text-sm" style="color: {themeColor.lightText};">{error}</p>
+		</div>
+
+		{:else if declined}
+		<!-- Declined state — the seat stays with the group lead to reassign -->
+		<div class="flex flex-col items-center text-center gap-5 rounded-2xl p-8" style="background-color: {themeColor.cover}; border: 1px solid {themeColor.toggle};">
+			<div class="flex h-16 w-16 items-center justify-center rounded-full" style="background-color: {themeColor.smallCover};">
+				<Icon icon="mdi:account-remove-outline" width="32" height="32" style="color: {themeColor.lightText};" />
+			</div>
+			<h2 class="text-xl font-semibold" style="color: {themeColor.text};">Invitation declined</h2>
+			<p class="text-sm leading-relaxed" style="color: {themeColor.lightText};">
+				We've let the group know you won't be attending {eventInfo?.title ?? 'this event'}. Their ticket can be passed on to someone else.
+			</p>
+			<button type="button" on:click={() => { declined = false; submitError = ''; }}
+				class="w-full rounded-lg py-2.5 text-sm font-medium"
+				style="background-color: {themeColor.button}; color: {themeColor.buttonText};">
+				Changed my mind — claim my ticket
+			</button>
 		</div>
 
 		{:else if completed}
@@ -216,7 +280,11 @@
 
 			<div class="mb-5 rounded-lg px-3 py-2" style="background-color: {themeColor.smallCover};">
 				<p class="text-xs" style="color: {themeColor.lightText};">
-					You've been registered for this event. Please confirm your details below to receive your ticket.
+					{#if awaitingPayment}
+						Your seat is reserved, but the group's payment is still being confirmed. You can fill this in now — we'll enable the button as soon as payment clears.
+					{:else}
+						You've been registered for this event. Please confirm your details below to receive your ticket.
+					{/if}
 				</p>
 			</div>
 
@@ -315,7 +383,7 @@
 				</div>
 				{/each}
 
-				<button type="submit" disabled={submitting}
+				<button type="submit" disabled={submitting || awaitingPayment}
 					class="w-full rounded-lg py-3 text-base font-medium transition-all disabled:opacity-60"
 					style="background-color: {themeColor.button}; color: {themeColor.buttonText};">
 					{#if submitting}
@@ -323,9 +391,17 @@
 							<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
 							Completing...
 						</span>
+					{:else if awaitingPayment}
+						Waiting for payment confirmation
 					{:else}
 						Complete Registration
 					{/if}
+				</button>
+
+				<button type="button" on:click={handleDecline} disabled={declining || submitting}
+					class="w-full rounded-lg py-2.5 text-sm font-medium transition-all disabled:opacity-60"
+					style="background-color: transparent; color: {themeColor.lightText}; border: 1px solid {themeColor.toggle};">
+					{declining ? 'Declining...' : "I can't make it"}
 				</button>
 			</form>
 		</div>

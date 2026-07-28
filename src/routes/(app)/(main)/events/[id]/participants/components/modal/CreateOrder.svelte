@@ -2,6 +2,7 @@
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher } from 'svelte';
 	import OrderSummary from './OrderSummary.svelte';
+	import { getVendorPublicProducts } from '$lib/services/vendor.services';
 
 	const dispatch = createEventDispatcher();
 
@@ -12,15 +13,47 @@
 	let showSummary = false;
 
 	$: vendorName = speakerData?.displayName || speakerData?.applicationDetails?.companyName || 'Vendor';
+	$: vendorUserId = speakerData?.participantUserId || speakerData?.participantProfileId || '';
+	$: participantId = speakerData?.id || '';
 
 	let selectedItems: any[] = [];
+	let catalogItems: any[] = [];
+	let loadingCatalog = false;
+	let catalogError = '';
+	let loadedForVendor = '';
 
-	// Mock catalog items - in production these would come from the vendor's Rondwell profile
-	let catalogItems = [
-		{ id: '1', title: 'Conference Photography Package', desc: 'Full-day event coverage by a professional photographer', price: 2994, type: 'fixed' },
-		{ id: '2', title: 'Onsite Registration Kiosk', desc: 'Self-service check-in unit with badge printing', price: 0, type: 'quote' },
-		{ id: '3', title: 'LED Video Wall (12ft x 8ft)', desc: 'High-resolution indoor display for presentations', price: 4500, type: 'fixed' },
-	];
+	// Load the vendor's REAL products/services from their Rondwell profile when
+	// the modal opens (replaces the previous hardcoded mock catalog).
+	async function loadCatalog() {
+		if (!vendorUserId || loadedForVendor === vendorUserId) return;
+		loadingCatalog = true;
+		catalogError = '';
+		try {
+			const products = await getVendorPublicProducts(vendorUserId);
+			catalogItems = (products || []).map((p: any) => {
+				const price = Number(p.price ?? p.amount ?? 0);
+				return {
+					id: String(p._id || p.id),
+					title: p.name || p.title || 'Untitled',
+					desc: p.description || p.shortDescription || '',
+					price,
+					currency: p.currency || 'NGN',
+					imageUrl: p.imageUrl || (Array.isArray(p.images) ? p.images[0] : '') || '',
+					// A zero/absent price means the vendor quotes on request.
+					type: price > 0 ? 'fixed' : 'quote'
+				};
+			});
+			loadedForVendor = vendorUserId;
+		} catch (e: any) {
+			catalogError = e?.message || 'Failed to load vendor catalog';
+			catalogItems = [];
+		} finally {
+			loadingCatalog = false;
+		}
+	}
+
+	// Trigger load whenever the modal is opened for a vendor.
+	$: if (open && vendorUserId) loadCatalog();
 
 	function addToOrder(item: any) {
 		if (!selectedItems.find(s => s.id === item.id)) {
@@ -40,7 +73,7 @@
 
 	$: filteredCatalog = catalogItems.filter(item => {
 		if (!searchQuery) return true;
-		return item.title.toLowerCase().includes(searchQuery.toLowerCase()) || item.desc.toLowerCase().includes(searchQuery.toLowerCase());
+		return (item.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || (item.desc || '').toLowerCase().includes(searchQuery.toLowerCase());
 	});
 </script>
 
@@ -76,33 +109,44 @@
 					</div>
 				{/if}
 
+				{#if loadingCatalog}
+					<div class="flex flex-col items-center justify-center py-10 text-sm text-gray-400">
+						<div class="mb-3 h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-gray-500"></div>
+						Loading {vendorName}'s catalog…
+					</div>
+				{:else if catalogError}
+					<div class="rounded-md bg-red-50 p-3 text-sm text-red-600">{catalogError}</div>
+				{:else if filteredCatalog.length === 0}
+					<div class="flex flex-col items-center justify-center py-10 text-center text-sm text-gray-400">
+						<Icon icon="mdi:package-variant" class="mb-2 h-8 w-8" />
+						{searchQuery ? 'No matching products.' : `${vendorName} hasn't published any products yet.`}
+					</div>
+				{:else}
 				<div class="divide-y rounded-lg border">
 					{#each filteredCatalog as item}
 						{@const isSelected = selectedItems.some(s => s.id === item.id)}
 						<div class="flex items-start justify-between gap-2 p-3 hover:bg-gray-50 md:flex-row md:items-center">
 							<div class="flex flex-col gap-2 md:flex-row md:items-center">
 								<div class="flex items-center gap-2">
-									<img src="/menu-board.svg" alt="" class="h-6 w-6 rounded-full" />
+									<img src={item.imageUrl || '/menu-board.svg'} alt="" class="h-6 w-6 rounded-full object-cover" />
 									<div class="max-w-[120px] truncate font-medium">{item.title}</div>
 								</div>
 								<div class="max-w-[200px] truncate text-sm text-[#B6B7B7] md:max-w-[150px]">{item.desc}</div>
 								{#if item.price > 0}
-									<p class="text-sm font-medium">${item.price.toLocaleString()}</p>
+									<p class="text-sm font-medium">{item.currency} {item.price.toLocaleString()}</p>
 								{/if}
 							</div>
 
-							{#if item.type === 'fixed'}
-								{#if isSelected}
-									<button on:click={() => removeFromOrder(item.id)} class="flex w-35 items-center gap-2 rounded-md bg-red-100 px-2 py-1 text-sm text-red-600">
-										<Icon icon="mdi:close" class="h-4 w-4" /> Remove
-									</button>
-								{:else}
-									<button on:click={() => addToOrder(item)} class="flex w-35 items-center gap-2 rounded-md bg-gray-200 px-2 py-1 text-sm text-gray-600">
-										<Icon icon="mdi:plus" class="h-5 w-5" /> Add to order
-									</button>
-								{/if}
+							{#if isSelected}
+								<button on:click={() => removeFromOrder(item.id)} class="flex w-35 items-center gap-2 rounded-md bg-red-100 px-2 py-1 text-sm text-red-600">
+									<Icon icon="mdi:close" class="h-4 w-4" /> Remove
+								</button>
+							{:else if item.type === 'fixed'}
+								<button on:click={() => addToOrder(item)} class="flex w-35 items-center gap-2 rounded-md bg-gray-200 px-2 py-1 text-sm text-gray-600">
+									<Icon icon="mdi:plus" class="h-5 w-5" /> Add to order
+								</button>
 							{:else}
-								<button class="flex w-35 items-center gap-2 rounded-md bg-gray-200 px-2 py-1 text-sm text-gray-400">
+								<button on:click={() => addToOrder(item)} class="flex w-35 items-center gap-2 rounded-md bg-gray-200 px-2 py-1 text-sm text-gray-600">
 									Request Quote
 									<img src="/send-icon.png" alt="icon" class="h-3 w-3" />
 								</button>
@@ -110,6 +154,7 @@
 						</div>
 					{/each}
 				</div>
+				{/if}
 			</div>
 
 			<div class="mt-6 flex items-center gap-2">
@@ -122,7 +167,7 @@
 	</div>
 {/if}
 
-<OrderSummary bind:open={showSummary} items={selectedItems} {vendorName} {eventId} on:ordered={() => dispatch('ordered')} />
+<OrderSummary bind:open={showSummary} items={selectedItems} {vendorName} {eventId} {participantId} on:ordered={() => dispatch('ordered')} />
 
 <style>
 	.animate-fadeIn { animation: fade 0.15s ease-out; }

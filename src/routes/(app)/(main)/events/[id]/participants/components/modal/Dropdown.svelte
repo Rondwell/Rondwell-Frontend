@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount, tick } from 'svelte';
+	import { toast } from '$lib/stores/toast.store';
+	import { downloadInvoice, downloadReceipt } from '$lib/services/invoice.services';
 	import ApproveParticipant from './ApproveParticipant.svelte';
 	import Assign from './Assign.svelte';
 	import CreateOrder from './CreateOrder.svelte';
@@ -45,6 +47,15 @@
 	// Check if participant was added via collaboration (not manually)
 	$: isCollaborationAdded = speakerData?.source === 'COLLABORATION' || (speakerData?.applicationDetails?.additionalInfo?.collaborationId);
 
+	// Money/document context for invoice + receipt + pay actions.
+	$: collaborationId = speakerData?.applicationDetails?.additionalInfo?.collaborationId || '';
+	$: invoiceNumber = speakerData?.paymentDetails?.invoiceNumber || '';
+	$: paymentReference = speakerData?.paymentDetails?.paymentReference || '';
+	$: isPaid = speakerData?.paymentDetails?.paymentStatus === 'COMPLETED';
+	// The organizer can pay a vendor/speaker once they've issued an invoice
+	// (collaboration exists) and it isn't already settled.
+	$: canPayInvoice = (participant === 'vendor' || participant === 'speaker') && !!collaborationId && !isPaid;
+
 	if (participant === 'speaker') {
 		items = [
 			{ label: 'View/Edit Details', icon: '/eye.svg' },
@@ -83,6 +94,28 @@
 		];
 	}
 
+	// Shared money/document actions appended to every role's menu. Conditions
+	// are evaluated reactively in filteredItems, so they reflect live status.
+	const moneyItems: any[] = [
+		{ label: 'Pay Invoice', icon: '/setting.svg', condition: () => canPayInvoice },
+		{ label: 'Download Invoice', icon: '/download-icon.svg', condition: () => !!(collaborationId && invoiceNumber) },
+		{ label: 'Download Receipt', icon: '/download-icon.svg', condition: () => !!(isPaid && paymentReference) }
+	];
+	items = [...(items || []), ...moneyItems];
+
+	async function handleDownloadInvoice() {
+		const r = await downloadInvoice(collaborationId, invoiceNumber);
+		if (!r.ok) toast.error(r.message || 'Invoice not available yet');
+	}
+	async function handleDownloadReceipt() {
+		const r = await downloadReceipt(String(paymentReference));
+		if (!r.ok) toast.error(r.message || 'Receipt not available yet');
+	}
+	function handlePayInvoice() {
+		const type = participant === 'speaker' ? 'speaker' : 'vendor';
+		window.open(`/pay-invoice?collaborationId=${encodeURIComponent(collaborationId)}&type=${type}`, '_blank');
+	}
+
 	function handleItemClick(label: string) {
 		if (label.includes('Send Message')) {
 			showEmailTemplate = true;
@@ -100,8 +133,8 @@
 			import('$lib/services/event.services').then(({ resendSpeakerInvitation }) => {
 				if (speakerData?.id && eventId) {
 					resendSpeakerInvitation(eventId, speakerData.id)
-						.then(() => { alert('Invitation resent successfully'); dispatch('updated'); })
-						.catch((e) => alert(e.message || 'Failed to resend invitation'));
+						.then(() => { toast.success('Invitation resent successfully'); dispatch('updated'); })
+						.catch((e) => toast.error(e.message || 'Failed to resend invitation'));
 				}
 			});
 		} else if (label.startsWith('Approve Application')) {
@@ -120,8 +153,15 @@
 		} else if (label.startsWith('Create Order')) {
 			showCreateOrder = true;
 		} else if (label.startsWith('View All Orders')) {
-			// For now, show the create order modal as a placeholder for viewing orders
-			showCreateOrder = true;
+			// Open the participant profile which surfaces their order/payment
+			// history (contribution + invoice status).
+			showProfile = true;
+		} else if (label.startsWith('Pay Invoice')) {
+			handlePayInvoice();
+		} else if (label.startsWith('Download Invoice')) {
+			handleDownloadInvoice();
+		} else if (label.startsWith('Download Receipt')) {
+			handleDownloadReceipt();
 		}
 		open = false;
 	}

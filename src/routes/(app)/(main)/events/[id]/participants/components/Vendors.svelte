@@ -3,6 +3,8 @@
 	import { getEventVendors } from '$lib/services/event.services';
 	import { clickOutside } from '$lib/utils/constant';
 	import { getStatusStyle } from '$lib/utils/statusStyle';
+	import { downloadCsv, safeFilePart, type CsvColumn } from '$lib/utils/exportCsv';
+	import { toast } from '$lib/stores/toast.store';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import AddParticipant from './modal/AddParticipant.svelte';
@@ -79,6 +81,23 @@
 	function openProfile(v: any) { selectedVendor = v; showProfile = true; }
 	function handleVendorAdded() { showAddModal = false; loadVendors(); }
 	function handleVendorUpdated() { loadVendors(); }
+
+	function exportVendorsCsv() {
+		const columns: CsvColumn<any>[] = [
+			{ header: 'Name', value: (v) => getDisplayName(v) },
+			{ header: 'Services', value: (v) => getServices(v) },
+			{ header: 'Status', value: (v) => getStatusLabel(v.status) },
+			{ header: 'Email', value: (v) => v.applicationDetails?.contactEmail || '' },
+			{ header: 'Amount', value: (v) => v.paymentDetails?.contributionAmount ?? '' },
+			{ header: 'Currency', value: (v) => v.paymentDetails?.currency || '' },
+			{ header: 'Payment Status', value: (v) => v.paymentDetails?.paymentStatus || '' },
+			{ header: 'Invoice #', value: (v) => v.paymentDetails?.invoiceNumber || '' },
+			{ header: 'Added', value: (v) => v.createdAt || '' }
+		];
+		const ok = downloadCsv(`vendors-${safeFilePart(eventTitle)}`, vendors, columns);
+		if (!ok) toast.info('No vendors to export');
+		else toast.success('Vendors exported to CSV');
+	}
 </script>
 
 <div class="">
@@ -107,12 +126,12 @@
 			</div>
 
 			<div class="flex items-center gap-1 md:flex-row">
-				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+				<button type="button" title="Download vendors as CSV" on:click={exportVendorsCsv} class="flex h-[33px] w-[33px] cursor-pointer items-center justify-center rounded-lg bg-[#EBECED] hover:bg-[#e0e1e2]">
 					<img src="/download-icon.svg" alt="download icon" />
-				</div>
-				<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
+				</button>
+				<button type="button" title="Export vendors as CSV" on:click={exportVendorsCsv} class="flex h-[33px] w-[33px] cursor-pointer items-center justify-center rounded-lg bg-[#EBECED] hover:bg-[#e0e1e2]">
 					<img src="/export.svg" alt="export icon" />
-				</div>
+				</button>
 
 				<div use:clickOutside={() => (showStatus = false)} class="relative">
 					<button on:click={() => (showStatus = !showStatus)} class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm">

@@ -38,6 +38,8 @@
 	import { openReceipt } from '$lib/utils/receipt';
 	import { COMMON_TIMEZONES, getBrowserTz } from '$lib/utils/tz';
 	import { mapWithdrawalError, type MappedWithdrawalError } from '$lib/utils/withdrawalErrors';
+	// FE-P5-03 (NEW-11.1) — rolling payout reserve explainer + release schedule.
+	import PayoutReservePanel from '$lib/components/PayoutReservePanel.svelte';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -48,6 +50,8 @@
 	let balancesByCurrency: Record<CurrencyKey, number> = { NGN: 0, USD: 0, ETH: 0 };
 	let reservedByCurrency: Record<CurrencyKey, number> = { NGN: 0, USD: 0, ETH: 0 };
 	let disputedReserveByCurrency: Record<CurrencyKey, number> = { NGN: 0, USD: 0, ETH: 0 };
+	// FE-P5-03 (NEW-11.1) — rolling payout reserve held from settled ticket sales.
+	let payoutReserveByCurrency: Record<CurrencyKey, number> = { NGN: 0, USD: 0, ETH: 0 };
 	let withdrawableByCurrency: Record<CurrencyKey, number> = { NGN: 0, USD: 0, ETH: 0 };
 	let activeCurrency: CurrencyKey = 'NGN';
 	let showAggregateView = false;
@@ -153,6 +157,16 @@
 				USD: Number(disputed.USD ?? 0),
 				ETH: Number(disputed.ETH ?? 0),
 			};
+			// FE-P5-03 (NEW-11.1) — the rolling payout reserve is a FOURTH bucket.
+			// Leaving it out of the withdrawable math here would show a figure the
+			// backend will refuse at the last step of a withdrawal, which is the
+			// worst way for an organizer to discover the reserve exists.
+			const payoutHeld = wallet?.payoutReserve ?? {};
+			payoutReserveByCurrency = {
+				NGN: Number(payoutHeld.NGN ?? 0),
+				USD: Number(payoutHeld.USD ?? 0),
+				ETH: Number(payoutHeld.ETH ?? 0),
+			};
 			// FE-P4-01 — pick up the frozen flag from the wallet payload.
 			walletFrozen = Boolean(wallet?.frozen);
 			walletFrozenReason = wallet?.frozenReason ?? null;
@@ -169,9 +183,9 @@
 				};
 			} else {
 				withdrawableByCurrency = {
-					NGN: Math.max(0, balancesByCurrency.NGN - reservedByCurrency.NGN - disputedReserveByCurrency.NGN),
-					USD: Math.max(0, balancesByCurrency.USD - reservedByCurrency.USD - disputedReserveByCurrency.USD),
-					ETH: Math.max(0, balancesByCurrency.ETH - reservedByCurrency.ETH - disputedReserveByCurrency.ETH),
+					NGN: Math.max(0, balancesByCurrency.NGN - reservedByCurrency.NGN - disputedReserveByCurrency.NGN - payoutReserveByCurrency.NGN),
+					USD: Math.max(0, balancesByCurrency.USD - reservedByCurrency.USD - disputedReserveByCurrency.USD - payoutReserveByCurrency.USD),
+					ETH: Math.max(0, balancesByCurrency.ETH - reservedByCurrency.ETH - disputedReserveByCurrency.ETH - payoutReserveByCurrency.ETH),
 				};
 			}
 			// Pick the first non-zero currency as active so users don't land
@@ -614,6 +628,9 @@
 					<div class="flex justify-between"><span>Total balance</span><span class="font-medium">{formatMoney(balancesByCurrency[activeCurrency], activeCurrency)}</span></div>
 					<div class="flex justify-between"><span>− Reserved (in-flight withdrawals)</span><span>{formatMoney(reservedByCurrency[activeCurrency], activeCurrency)}</span></div>
 					<div class="flex justify-between"><span>− Disputed (pending dispute reserve)</span><span>{formatMoney(disputedReserveByCurrency[activeCurrency], activeCurrency)}</span></div>
+					<!-- FE-P5-03 — show the payout reserve as its own line so the
+					     breakdown actually adds up to the withdrawable figure. -->
+					<div class="flex justify-between"><span>− Payout reserve (released after your event)</span><span>{formatMoney(payoutReserveByCurrency[activeCurrency], activeCurrency)}</span></div>
 					<div class="mt-1 flex justify-between border-t pt-1 font-medium text-gray-900"><span>= Withdrawable</span><span class="text-green-600">{formatMoney(withdrawableByCurrency[activeCurrency], activeCurrency)}</span></div>
 				</div>
 			{/if}
@@ -632,7 +649,7 @@
 					{:else}
 						<p class="mt-1 text-3xl font-semibold text-green-600">{formatMoney(withdrawableByCurrency[activeCurrency], activeCurrency)}</p>
 					{/if}
-					<p class="mt-2 text-xs text-gray-400">Available for withdrawal · excludes reserved &amp; disputed funds</p>
+					<p class="mt-2 text-xs text-gray-400">Available for withdrawal · excludes reserved, disputed &amp; held payout reserve</p>
 				</div>
 				{#if $kycStore.loaded && $kycStore.tier === 'UNVERIFIED' && $kycStore.status !== 'PENDING_REVIEW'}
 					<button
@@ -656,7 +673,26 @@
 				{/if}
 			</div>
 			<!-- FE-P2-07/09: KYC + AML pre-flight banners -->
-			{#if $kycStore.loaded && $kycStore.tier === 'UNVERIFIED' && $kycStore.status !== 'PENDING_REVIEW'}
+			{#if $kycStore.loaded && $kycStore.status === 'REJECTED'}
+				<!--
+					FE-P5-08 — A rejected (or revoked) organizer previously saw the
+					generic "Verify your identity" banner, because `kycCheck` returned
+					`KYC_REQUIRED` for every UNVERIFIED tier regardless of whether the
+					user had already been reviewed and turned down. They had no idea a
+					decision had been made, or why.
+				-->
+				<div class="mt-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs">
+					<Icon icon="mdi:close-circle-outline" class="mt-0.5 text-red-600" />
+					<p class="text-red-800">
+						{#if $kycStore.wasRevoked}
+							Your verified status was withdrawn{#if $kycStore.rejectedReason}: {$kycStore.rejectedReason}{/if}
+						{:else}
+							Your verification wasn't approved{#if $kycStore.rejectedReason}: {$kycStore.rejectedReason}{/if}
+						{/if}
+						<a href="/account/kyc/start" class="font-medium text-red-900 underline">Fix and resubmit</a>
+					</p>
+				</div>
+			{:else if $kycStore.loaded && $kycStore.tier === 'UNVERIFIED' && $kycStore.status !== 'PENDING_REVIEW'}
 				<div class="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs">
 					<Icon icon="mdi:shield-account-outline" class="mt-0.5 text-amber-600" />
 					<p class="text-amber-800">
@@ -685,6 +721,17 @@
 				</div>
 			{/if}
 		</div>
+	</div>
+
+	<!--
+		FE-P5-03 (NEW-11.1) — Payout reserve panel.
+
+		Explains the gap between total earnings and withdrawable balance, and shows
+		exactly when each held slice unlocks. Without it, an organizer's only signal
+		that a reserve exists is a refused withdrawal.
+	-->
+	<div class="mb-8">
+		<PayoutReservePanel />
 	</div>
 
 	<!-- FE-P1-06: Withdrawals state machine -->

@@ -292,23 +292,26 @@
 		await proceedToRegistration();
 	}
 
-	function validateGroupMembers(): boolean {
-		// Check all members have required fields
-		for (let i = 0; i < groupMembers.length; i++) {
-			const m = groupMembers[i];
+	/**
+	 * Group member validation. Dependencies are passed in explicitly so the
+	 * reactive statement below tracks them — Svelte can't see inside a
+	 * zero-arg function, which is why the Continue button used to stay
+	 * disabled after members were filled in.
+	 */
+	function validateGroupMembers(
+		members: GroupMember[] = groupMembers,
+		leadEmail: string = email
+	): boolean {
+		for (const m of members) {
 			if (!m.firstName.trim() || !m.email.trim()) return false;
 			if (!isValidEmail(m.email)) return false;
 		}
-		// Check for duplicate emails (including lead email)
-		const allEmails = [email.toLowerCase(), ...groupMembers.map(m => m.email.toLowerCase())];
+		// Every attendee in the purchase needs a unique email, lead included.
+		const allEmails = [leadEmail.toLowerCase(), ...members.map((m) => m.email.toLowerCase())];
 		return new Set(allEmails).size === allEmails.length;
 	}
 
-	// Reactive validity flag: Svelte can't track the internal dependencies of
-	// validateGroupMembers() when it's called directly in markup, so the
-	// Continue button never re-enabled after members were filled in. Referencing
-	// groupMembers and email here forces re-evaluation whenever they change.
-	$: groupMembersValid = (groupMembers, email, validateGroupMembers());
+	$: groupMembersValid = validateGroupMembers(groupMembers, email);
 
 	function validateMemberForm(): boolean {
 		memberErrors = {};
@@ -445,11 +448,22 @@
 				const groupRegData = await groupRegRes.json();
 				if (!groupRegRes.ok) throw new Error(groupRegData.error ?? groupRegData.message ?? 'Group registration failed');
 
-				// For group registration, we need to get the lead's registration
-				// The backend creates it, so we fetch it
-				const leadRegRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/event/${eventId}/attendee/${attendeeId}`);
-				const leadRegData = await leadRegRes.json();
-				registrationResult = leadRegData || { registration_id: 'group-pending', attendeeId };
+				// The endpoint now returns the whole purchase: group_id, the lead's
+				// registration_id and every member's registration_id. We used to
+				// re-fetch the lead registration here because the response was
+				// empty — which meant `group_id` was frequently missing and the
+				// group payment callback silently degraded to the single-ticket
+				// path, leaving members unconfirmed.
+				registrationResult = {
+					...groupRegData,
+					attendeeId
+				};
+				if (!registrationResult.registration_id) {
+					// Defensive fallback for an older backend build.
+					const leadRegRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/event/${eventId}/attendee/${attendeeId}`);
+					const leadRegData = await leadRegRes.json();
+					registrationResult = { ...(leadRegData ?? {}), ...registrationResult, ...(leadRegData ?? {}) };
+				}
 
 				// P1-15: attach the registrationToken so the payment step can
 				// forward it to the payment service. The token was issued at
@@ -461,13 +475,9 @@
 				if (isPaid) {
 					step = 'payment';
 				} else {
-					// Free group: finalize the LEAD so they're confirmed (ATTENDING),
-					// get their ticket, and the organizer notification fires. Members
-					// confirm their own details via the invitation email link.
-					await fetch(
-						`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`,
-						{ method: 'POST', headers: { 'Content-Type': 'application/json' } }
-					).catch(() => {});
+					// Free group: the backend already activated the whole group
+					// (every seat finalized, invites sent) inside register/group, so
+					// there is nothing to finalize from here. Just show the ticket.
 					registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
 					step = 'confirmation';
 				}
@@ -627,7 +637,17 @@
 				successCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=success&reg=${registrationResult.registration_id}`,
 				failureCallbackUrl: `${window.location.origin}/event-page/${eventId}?payment=failed&reg=${registrationResult.registration_id}`,
 				returnWalletPaymentLink: false,
-				registrationIds: [registrationResult.registration_id],
+				// Every seat's registration id, lead first. The payment service fans
+				// `ticket.purchase.completed` out over this list on settlement, so
+				// sending only the lead (the old behaviour) meant a group's members
+				// were never finalized by the webhook — they depended entirely on
+				// this browser tab surviving the redirect.
+				registrationIds: [
+					registrationResult.registration_id,
+					...(Array.isArray(registrationResult.member_registration_ids)
+						? registrationResult.member_registration_ids
+						: [])
+				].filter(Boolean)
 			});
 
 			if (paymentData.checkoutUrl) {
@@ -681,14 +701,18 @@
 							// reference is safe even if the webhook beats us to it.
 							verifyAndSettleTicketPayment(paymentData.reference, verificationToken)
 								.then(() => {
-									if (isGroupRegistration && registrationResult.group_id) {
-										// Step 2 (Group): call handlePaymentSuccess which
-										// finalizes the lead AND all member registrations
+									if (isGroupRegistration) {
+										// Step 2 (Group): activate the group — finalizes the
+										// lead AND every member seat. This is now only a
+										// latency optimisation: the payment webhook performs
+										// the same activation, and both paths are idempotent,
+										// so a closed tab no longer strands paid members.
 										return fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/payment/success`, {
 											method: 'POST',
 											headers: { 'Content-Type': 'application/json' },
 											body: JSON.stringify({
 												groupId: registrationResult.group_id,
+												registrationId: registrationResult.registration_id,
 												eventId,
 												paymentReference: paymentData.reference,
 											}),

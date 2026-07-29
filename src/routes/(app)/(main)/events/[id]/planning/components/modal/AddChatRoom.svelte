@@ -1,3 +1,13 @@
+<!--
+	UNUSED — not imported anywhere.
+
+	Despite the name, this creates an *event room* (event service) rather than a
+	community chat channel (community service). Do not wire it up as-is: the
+	real "add a chat channel" path is `createCommunityRoom()` in
+	`$lib/services/community.services.ts`, which is what the Community planning
+	tab and the public event page both use. A room's chat channel is provisioned
+	through `syncRoomCommunityChannel()` in `$lib/services/roomChat.ts`.
+-->
 <script lang="ts">
 	import { createEventRoom } from '$lib/services/event.services';
 	import Icon from '@iconify/svelte';

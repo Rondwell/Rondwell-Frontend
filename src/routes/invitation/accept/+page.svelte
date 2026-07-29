@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { getToken } from '$lib/stores/auth.store';
 	import { acceptParticipantInvite } from '$lib/services/event.services';
+	import { setPostAuthRedirect } from '$lib/utils/redirect';
 	import Icon from '@iconify/svelte';
 
 	type State = 'checking' | 'accepting' | 'success' | 'error';
@@ -11,6 +12,12 @@
 	let state: State = 'checking';
 	let message = '';
 	let role = 'speaker';
+
+	function bounceToSignIn() {
+		const returnUrl = `${$page.url.pathname}${$page.url.search}`;
+		setPostAuthRedirect(returnUrl);
+		goto(`/auth?returnUrl=${encodeURIComponent(returnUrl)}&inviteRole=${role}`);
+	}
 
 	function dashboardPath(r: string): string {
 		if (r === 'vendor') return '/vendor';
@@ -38,10 +45,10 @@
 
 		// Must be signed in so the backend can link this account to the invite.
 		// Brand-new invitees get bounced to /auth to sign up + onboard, then
-		// returned here to complete acceptance.
+		// returned here to complete acceptance. Store the continuation as well as
+		// passing it in the URL, so it survives a session cleanup mid-flow.
 		if (!getToken()) {
-			const returnUrl = `${$page.url.pathname}${$page.url.search}`;
-			goto(`/auth?returnUrl=${encodeURIComponent(returnUrl)}&inviteRole=${role}`);
+			bounceToSignIn();
 			return;
 		}
 
@@ -53,11 +60,17 @@
 			// Give the user a moment to read, then send them to their dashboard.
 			setTimeout(() => goto(dashboardPath(role)), 2200);
 		} catch (e: any) {
+			// An auth failure here means the token expired between the check above
+			// and the request. Send them to sign in rather than showing a dead end.
+			if (e?.status === 401) {
+				bounceToSignIn();
+				return;
+			}
 			const msg = (e?.message || '').toLowerCase();
 			if (msg.includes('expired')) {
 				state = 'error';
 				message = 'This invitation link has expired. Please ask the organizer to resend it.';
-			} else if (msg.includes('already')) {
+			} else if (msg.includes('already') || msg.includes('no longer valid')) {
 				state = 'success';
 				message = 'This invitation was already accepted. Redirecting you to your dashboard.';
 				setTimeout(() => goto(dashboardPath(role)), 2000);

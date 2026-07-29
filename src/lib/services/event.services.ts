@@ -743,6 +743,8 @@ export async function inviteSpeakerByProfile(eventId: string, payload: {
 export async function manualAddSpeaker(eventId: string, payload: {
   firstName: string;
   lastName: string;
+  /** Optional, but it is what dedupes a manual entry against an email invite. */
+  email?: string;
   bio?: string;
   profilePictureUrl?: string;
   socialLinks?: { linkedin?: string; twitter?: string; website?: string };
@@ -920,6 +922,8 @@ export async function inviteExhibitorByProfile(eventId: string, payload: {
 export async function manualAddExhibitor(eventId: string, payload: {
   firstName: string;
   lastName: string;
+  /** Optional, but it is what dedupes a manual entry against an email invite. */
+  email?: string;
   companyName?: string;
   bio?: string;
   profilePictureUrl?: string;
@@ -1087,6 +1091,8 @@ export async function inviteVendorByProfile(eventId: string, payload: {
 export async function manualAddVendor(eventId: string, payload: {
   firstName: string;
   lastName: string;
+  /** Optional, but it is what dedupes a manual entry against an email invite. */
+  email?: string;
   companyName?: string;
   bio?: string;
   socialLinks?: { linkedin?: string; twitter?: string; website?: string };
@@ -1143,8 +1149,12 @@ export async function createEventRoom(eventId: string, payload: {
   accessType?: string;
   capacity?: number;
   communityChatEnabled?: boolean;
+  communityChatRoomId?: string;
   scheduledStartDate?: string;
   scheduledEndDate?: string;
+  bannerImageUrl?: string;
+  bannerImageTitle?: string;
+  allowedTicketTypeIds?: string[];
 }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/rooms`, {
     method: 'POST',
@@ -1162,6 +1172,7 @@ export async function updateEventRoom(eventId: string, roomId: string, payload: 
   accessType?: string;
   capacity?: number;
   communityChatEnabled?: boolean;
+  communityChatRoomId?: string;
   isActive?: boolean;
   allowedTicketTypeIds?: string[];
   scheduledStartDate?: string;
@@ -1245,6 +1256,8 @@ export async function createEventSession(eventId: string, roomId: string, payloa
   isPublic?: boolean;
   communityChatEnabled?: boolean;
   capacity?: number;
+  eventDayId?: string;
+  mediaUrls?: { type: string; url: string }[];
 }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/rooms/${roomId}/sessions`, {
     method: 'POST',
@@ -1268,6 +1281,8 @@ export async function updateEventSession(eventId: string, roomId: string, sessio
   communityChatEnabled?: boolean;
   capacity?: number;
   roomId?: string;
+  eventDayId?: string;
+  mediaUrls?: { type: string; url: string }[];
 }): Promise<any> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/rooms/${roomId}/sessions/${sessionId}`, {
     method: 'PUT',

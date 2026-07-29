@@ -12,9 +12,22 @@
 	export let eventTitle = '';
 	participant = participant.charAt(0).toUpperCase() + participant.slice(1);
 
-	// Collaboration-added participants should not be editable by the organizer
+	// Collaboration-added participants: the organizer must not rewrite the
+	// collaborator's own name/bio. Public visibility is a different matter — it
+	// is a decision about the organizer's own event page, so it stays editable
+	// for every participant. Previously the whole Save button was hidden here,
+	// which meant a collaboration-sourced speaker could not be hidden at all.
 	$: isCollaborationAdded = speakerData?.source === 'COLLABORATION' || speakerData?.status === 'APPLIED' || speakerData?.status === 'APPROVED' && speakerData?.applicationDetails?.additionalInfo?.collaborationId;
 	$: isEditable = !isCollaborationAdded;
+
+	/**
+	 * Statuses that make a participant eligible for the public event page.
+	 * Must stay in step with PUBLICLY_VISIBLE_PARTICIPANT_STATUSES in
+	 * `services/event/src/services/event-participant.service.ts`.
+	 */
+	const PUBLIC_STATUSES = ['APPROVED', 'ACCEPTED', 'CONFIRMED', 'MANUAL_ADD'];
+	$: statusAllowsPublic = PUBLIC_STATUSES.includes(speakerData?.status);
+	$: willAppearPublicly = editIsPublic && statusAllowsPublic;
 
 	let editDisplayName = '';
 	let editBio = '';
@@ -22,10 +35,17 @@
 	let isSaving = false;
 	let saveError = '';
 
-	$: if (speakerData && open) {
-		editDisplayName = speakerData.displayName || '';
-		editBio = speakerData.bio || '';
-		editIsPublic = speakerData.isPublic ?? true;
+	// Hydrate on the closed -> open transition only, so editing a field can
+	// never trigger a re-initialisation that discards what was just typed.
+	let wasOpen = false;
+	$: if (open !== wasOpen) {
+		wasOpen = open;
+		if (open && speakerData) {
+			editDisplayName = speakerData.displayName || '';
+			editBio = speakerData.bio || '';
+			editIsPublic = speakerData.isPublic ?? true;
+			saveError = '';
+		}
 	}
 
 	function closeModal() {
@@ -38,11 +58,14 @@
 		isSaving = true;
 		saveError = '';
 		try {
-			await updateSpeakerDetails(eventId, speakerData.id, {
-				displayName: editDisplayName,
-				bio: editBio,
-				isPublic: editIsPublic,
-			});
+			// Visibility is always ours to set; identity fields only when this
+			// participant wasn't added through a collaboration request.
+			const payload: Record<string, any> = { isPublic: editIsPublic };
+			if (isEditable) {
+				payload.displayName = editDisplayName;
+				payload.bio = editBio;
+			}
+			await updateSpeakerDetails(eventId, speakerData.id, payload);
 			dispatch('save');
 			closeModal();
 		} catch (e: any) {
@@ -50,6 +73,14 @@
 		} finally {
 			isSaving = false;
 		}
+	}
+
+	function statusLabel(status: string): string {
+		if (status === 'INVITED') return 'invitation not accepted yet';
+		if (status === 'APPLIED' || status === 'PENDING_APPROVAL') return 'application not approved yet';
+		if (status === 'DECLINED') return 'invitation declined';
+		if (status === 'INACTIVE') return 'marked inactive';
+		return (status || '').toLowerCase();
 	}
 
 	function getDisplayName(): string {
@@ -85,12 +116,11 @@
 						<p>{participant} Details</p>
 					</div>
 					<div class="flex items-center gap-3">
-						{#if isEditable}
-							<button on:click={saveChanges} disabled={isSaving} class="flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
-								{isSaving ? 'Saving...' : 'Save Changes'}
-							</button>
-						{:else}
-							<span class="rounded-lg bg-yellow-50 px-3 py-1.5 text-xs font-medium text-yellow-700">Added via Collaboration — View Only</span>
+						<button on:click={saveChanges} disabled={isSaving} class="flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
+							{isSaving ? 'Saving...' : isEditable ? 'Save Changes' : 'Save Visibility'}
+						</button>
+						{#if !isEditable}
+							<span class="rounded-lg bg-yellow-50 px-3 py-1.5 text-xs font-medium text-yellow-700">Added via Collaboration</span>
 						{/if}
 						<button on:click={closeModal} class="flex items-center gap-1 rounded-lg bg-[#F0F1F1] px-3 py-1.5 text-sm font-medium text-[#727375]">
 							Close
@@ -200,16 +230,38 @@
 					</div>
 
 					<!-- Public Visibility -->
-					<div class="flex items-center justify-between">
+					<div class="flex items-start justify-between gap-3">
 						<div>
 							<div class="mb-1 flex items-center gap-1">
 								<h3 class="font-medium">Public Visibility</h3>
 								<Icon icon="mdi:information-outline" width="14" class="text-gray-400" />
 							</div>
 							<p class="mb-2 text-xs font-light text-gray-700">Show on Public Event Page</p>
+							<!--
+								Two independent conditions decide whether someone is listed
+								publicly: this toggle AND their acceptance status. Spelling
+								that out here prevents the "I turned it off/on and nothing
+								changed" confusion.
+							-->
+							{#if willAppearPublicly}
+								<p class="flex items-center gap-1 text-xs text-green-600">
+									<Icon icon="mdi:eye-outline" width="14" />
+									Listed on the public event page.
+								</p>
+							{:else if !editIsPublic}
+								<p class="flex items-center gap-1 text-xs text-gray-500">
+									<Icon icon="mdi:eye-off-outline" width="14" />
+									Hidden from the public event page.
+								</p>
+							{:else}
+								<p class="flex items-start gap-1 text-xs text-amber-600">
+									<Icon icon="mdi:alert-outline" width="14" class="mt-0.5 flex-shrink-0" />
+									<span>Not listed yet — {statusLabel(speakerData.status)}. They appear automatically once that changes.</span>
+								</p>
+							{/if}
 						</div>
 						<label class="relative inline-flex cursor-pointer items-center">
-							<button aria-label="toggle" class="relative h-6 w-10 rounded-full transition-colors duration-300" class:bg-gray-300={!editIsPublic} class:bg-gray-800={editIsPublic} on:click={() => (editIsPublic = !editIsPublic)}>
+							<button aria-label="Toggle public visibility" class="relative h-6 w-10 flex-shrink-0 rounded-full transition-colors duration-300" class:bg-gray-300={!editIsPublic} class:bg-gray-800={editIsPublic} on:click={() => (editIsPublic = !editIsPublic)}>
 								<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" class:translate-x-4={editIsPublic}></span>
 							</button>
 						</label>

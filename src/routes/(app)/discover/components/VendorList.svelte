@@ -126,7 +126,7 @@
 	{:else}
 		<div class="mb-8 grid grid-cols-1 gap-4 py-5 lg:grid-cols-2">
 			{#each displayVendors as vendor (vendor.slug)}
-				<VendorCard {vendor} />
+				<VendorCard {vendor} newTab />
 			{/each}
 		</div>
 

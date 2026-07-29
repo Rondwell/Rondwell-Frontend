@@ -121,17 +121,29 @@
 
 	async function duplicateSession(s: any) {
 		if (!eventId) return;
+		if (!s.roomId) { alert('Assign this session to a room before duplicating it.'); return; }
 		try {
+			// The server rejects overlapping sessions in the same room, so a copy at
+			// the original's exact time always failed. Slot the copy in directly
+			// after the original instead, keeping the same duration.
+			const originalStart = new Date(s.startTime);
+			const originalEnd = new Date(s.endTime);
+			const durationMs = Math.max(originalEnd.getTime() - originalStart.getTime(), 30 * 60_000);
+			const copyStart = originalEnd;
+			const copyEnd = new Date(copyStart.getTime() + durationMs);
+
 			await createEventSession(eventId, s.roomId, {
 				title: `${s.title} (Copy)`,
 				description: s.description,
-				startTime: s.startTime,
-				endTime: s.endTime,
+				startTime: copyStart.toISOString(),
+				endTime: copyEnd.toISOString(),
 				type: s.type,
 				speakers: s.speakers,
 				tags: s.tags,
 				isPublic: s.isPublic,
 				communityChatEnabled: s.communityChatEnabled,
+				eventDayId: s.eventDayId || undefined,
+				mediaUrls: s.mediaUrls,
 			});
 			loadSessions();
 		} catch (e: any) { alert(e.message || 'Failed to duplicate session'); }

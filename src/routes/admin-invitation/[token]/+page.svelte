@@ -7,7 +7,7 @@
 		declineAdminInvite,
 		getAdminInvitation
 	} from '$lib/services/event.services';
-	import { isAuthenticated } from '$lib/stores/auth.store';
+	import { getToken, isAuthenticated } from '$lib/stores/auth.store';
 	import { setPostAuthRedirect } from '$lib/utils/redirect';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
@@ -53,9 +53,14 @@
 			invitation = await getAdminInvitation(eventId, token);
 			status = 'loaded';
 
-			// If the page was opened with action=accept (post-login redirect), auto-accept.
+			// If the page was opened with action=accept (post-login redirect),
+			// finish the job automatically. We gate on the presence of a token
+			// rather than the derived `isAuthenticated` store: right after a
+			// sign-in the token is in storage but the store's `user` may not have
+			// rehydrated yet, and treating that as "logged out" is what made the
+			// continuation silently do nothing.
 			const action = $page.url.searchParams.get('action');
-			if (action === 'accept' && browser && $isAuthenticated) {
+			if (action === 'accept' && browser && isSignedIn()) {
 				await handleAccept();
 			}
 		} catch (e: any) {
@@ -101,13 +106,29 @@
 		return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 	}
 
+	/** True when a usable access token exists (see the note in onMount). */
+	function isSignedIn(): boolean {
+		return browser && (!!getToken() || $isAuthenticated);
+	}
+
+	/** Where to come back to once the invitee has signed in. */
+	function acceptContinuationUrl(): string {
+		return `/admin-invitation/${token}?eventId=${eventId}&action=accept`;
+	}
+
+	/** Bounce to sign-in, preserving the continuation both ways. */
+	function goSignIn() {
+		const target = acceptContinuationUrl();
+		setPostAuthRedirect(target);
+		goto(`/auth?returnUrl=${encodeURIComponent(target)}`);
+	}
+
 	async function handleAccept() {
 		if (!token || !eventId) return;
 
-		// If not logged in, save redirect target and bounce to /auth.
-		if (browser && !$isAuthenticated) {
-			setPostAuthRedirect(`/admin-invitation/${token}?eventId=${eventId}&action=accept`);
-			goto(`/auth?returnUrl=${encodeURIComponent(`/admin-invitation/${token}?eventId=${eventId}&action=accept`)}`);
+		// If not logged in, save the continuation and bounce to /auth.
+		if (browser && !isSignedIn()) {
+			goSignIn();
 			return;
 		}
 
@@ -128,12 +149,15 @@
 			} else if (e.status === 410) {
 				status = 'expired';
 				message = 'This invitation has expired.';
-			} else if (e.status === 409) {
+			} else if (e.status === 409 || e.status === 404) {
+				// Accepting consumes the token, so a refresh or a second click can
+				// legitimately arrive with a token the server no longer recognises.
+				// The server treats a repeat accept by the same user as success, so
+				// reaching here means the invitation is genuinely already resolved.
 				status = 'already_processed';
 				message = e.message || 'This invitation has already been responded to.';
 			} else if (e.status === 401) {
-				setPostAuthRedirect(`/admin-invitation/${token}?eventId=${eventId}&action=accept`);
-				goto(`/auth?returnUrl=${encodeURIComponent(`/admin-invitation/${token}?eventId=${eventId}&action=accept`)}`);
+				goSignIn();
 			} else {
 				status = 'error';
 				message = e.message || 'Failed to accept invitation. Please try again.';
@@ -386,11 +410,17 @@
 				<p class="mb-8 max-w-md text-sm leading-relaxed text-[#919091]">{message}</p>
 			</div>
 			<div class="actions-entrance" class:mounted>
+				<!--
+					If they're signed in the invitation is already resolved and the event
+					is in their list, so go straight to it. Otherwise send them to sign
+					in and land on the event afterwards. (This used to link to /auth
+					unconditionally and was labelled "Go to Dashboard".)
+				-->
 				<a
-					href="/auth"
+					href={isSignedIn() ? `/events/${eventId}` : `/auth?returnUrl=${encodeURIComponent(`/events/${eventId}`)}`}
 					class="inline-flex h-12 items-center gap-2 rounded-xl bg-[#333537] px-7 text-sm text-white transition-all duration-300 hover:bg-gray-900"
 				>
-					Go to Dashboard
+					{isSignedIn() ? 'Go to Event' : 'Sign in to continue'}
 				</a>
 			</div>
 

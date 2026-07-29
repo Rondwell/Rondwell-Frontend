@@ -5,7 +5,7 @@
   import { smartRequestOTP, googleSignIn, getPostLoginRedirect, beginPasskeyAuth, completePasskeyAuth } from '$lib/services/auth.services';
   import { authState, setUser, setVerified } from '$lib/stores/auth.store';
   import { toast } from '$lib/stores/toast.store';
-  import { setPostAuthRedirect, consumePostAuthRedirect } from '$lib/utils/redirect';
+  import { setPostAuthRedirect, resolvePostAuthRedirect, withReturnUrl } from '$lib/utils/redirect';
   import { isValidEmail, isValidPhone } from '$lib/utils/validation';
   import { onMount } from 'svelte';
   import Header from './components/Header.svelte';
@@ -102,14 +102,14 @@
       // Check if 2FA is required
       if (result.status === '2FA_REQUIRED') {
         localStorage.setItem('2fa-pending-email', result.user.email);
-        goto(`/auth/2fa?email=${encodeURIComponent(result.user.email)}`);
+        goto(withReturnUrl(`/auth/2fa?email=${encodeURIComponent(result.user.email)}`, $page.url));
         return;
       }
 
       toast.success(result.isNewUser ? 'Account created successfully!' : 'Signed in successfully!');
 
-      const storedRedirect = consumePostAuthRedirect();
-      const redirect = storedRedirect || await getPostLoginRedirect(result.token);
+      const pending = resolvePostAuthRedirect($page.url);
+      const redirect = pending || await getPostLoginRedirect(result.token);
       goto(redirect);
     } catch (err) {
       errorMsg = err instanceof Error ? err.message : 'Google sign-in failed. Please try again.';
@@ -184,7 +184,7 @@
       // 5. Check if 2FA is required
       if (result.status === '2FA_REQUIRED') {
         localStorage.setItem('2fa-pending-email', contact);
-        goto(`/auth/2fa?email=${encodeURIComponent(contact)}`);
+        goto(withReturnUrl(`/auth/2fa?email=${encodeURIComponent(contact)}`, $page.url));
         return;
       }
 
@@ -194,8 +194,8 @@
       setVerified();
       toast.success('Signed in with passkey!');
 
-      const storedRedirect = consumePostAuthRedirect();
-      const redirect = storedRedirect || await getPostLoginRedirect(token);
+      const pending = resolvePostAuthRedirect($page.url);
+      const redirect = pending || await getPostLoginRedirect(token);
       goto(redirect);
     } catch (err: any) {
       if (err.name !== 'NotAllowedError') {
@@ -233,7 +233,8 @@
       localStorage.setItem('pending-email', contact);
       localStorage.setItem('pending-is-phone', usePhone ? '1' : '0');
       localStorage.setItem('pending-is-new-user', isNewUser ? '1' : '0');
-      goto(`/auth/verify?email=${encodeURIComponent(contact)}`);
+      // Carry any pending destination (e.g. an admin invitation) forward.
+      goto(withReturnUrl(`/auth/verify?email=${encodeURIComponent(contact)}`, $page.url));
     } catch (err) {
       errorMsg = err instanceof Error ? err.message : 'Failed to send OTP. Please try again.';
     }

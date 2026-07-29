@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { createEventSession, deleteEventMediaByUrl, getEventDays, getEventRooms, getEventSpeakers, updateEventSession, uploadSessionThumbnail } from '$lib/services/event.services';
+	import { getRoomChatState } from '$lib/services/roomChat';
 	import { clickOutside } from '$lib/utils/constant';
+	import { combineDateAndTime, defaultScheduleWithin, formatDayLabel, minutesToTimeLabel, timeLabelToMinutes, toTimeLabel } from '$lib/utils/schedule';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher, tick } from 'svelte';
 	import DatePickerModal from '../../../../../../create-event/components/DatePickerModal.svelte';
@@ -23,48 +25,57 @@
 		: null;
 	$: boundaryMinDate = selectedDay ? new Date(selectedDay.date) : (eventData?.startDateTime ? new Date(eventData.startDateTime) : null);
 	$: boundaryMaxDate = selectedDay ? new Date(selectedDay.date) : (eventData?.endDateTime ? new Date(eventData.endDateTime) : null);
-	$: boundaryMinTime = selectedDay ? formatTimeFrom24(selectedDay.startTime) : (eventData?.startDateTime ? formatTimeFromISO(eventData.startDateTime) : null);
-	$: boundaryMaxTime = selectedDay ? formatTimeFrom24(selectedDay.endTime) : (eventData?.endDateTime ? formatTimeFromISO(eventData.endDateTime) : null);
+	/**
+	 * Time-of-day bounds only make sense when the window is a single calendar
+	 * day. For an event spanning e.g. Dec 19 10:00 → Dec 21 18:00, clamping every
+	 * day to 10:00–18:00 would wrongly hide valid times on the middle days.
+	 */
+	$: singleDayWindow = !!selectedDay || (
+		!!eventData?.startDateTime && !!eventData?.endDateTime &&
+		new Date(eventData.startDateTime).toDateString() === new Date(eventData.endDateTime).toDateString()
+	);
+	$: boundaryMinTime = selectedDay
+		? formatTimeFrom24(selectedDay.startTime)
+		: (singleDayWindow && eventData?.startDateTime ? formatTimeFromISO(eventData.startDateTime) : null);
+	$: boundaryMaxTime = selectedDay
+		? formatTimeFrom24(selectedDay.endTime)
+		: (singleDayWindow && eventData?.endDateTime ? formatTimeFromISO(eventData.endDateTime) : null);
 
 	function formatTimeFromISO(iso: string): string | null {
 		try {
 			const d = new Date(iso);
-			let hours = d.getHours();
-			const minutes = d.getMinutes();
-			const meridiem = hours >= 12 ? 'PM' : 'AM';
-			hours = hours % 12 || 12;
-			return `${hours}:${String(minutes).padStart(2, '0')} ${meridiem}`;
+			return isNaN(d.getTime()) ? null : toTimeLabel(d);
 		} catch { return null; }
 	}
 
 	function formatTimeFrom24(timeVal: any): string | null {
 		if (!timeVal) return null;
-		if (typeof timeVal === 'string' && timeVal.includes('AM') || typeof timeVal === 'string' && timeVal.includes('PM')) return timeVal;
+		if (typeof timeVal === 'string' && (timeVal.includes('AM') || timeVal.includes('PM'))) return timeVal;
 		try {
 			const d = new Date(timeVal);
-			if (isNaN(d.getTime())) return null;
-			let hours = d.getHours();
-			const minutes = d.getMinutes();
-			const meridiem = hours >= 12 ? 'PM' : 'AM';
-			hours = hours % 12 || 12;
-			return `${hours}:${String(minutes).padStart(2, '0')} ${meridiem}`;
+			return isNaN(d.getTime()) ? null : toTimeLabel(d);
 		} catch { return null; }
 	}
 
 	let title = '';
 	let description = '';
 	let selectedRoomId = '';
+	/** The room the session currently lives in — needed to address it on update
+	 * when the organiser moves it to a different room. */
+	let originalRoomId = '';
 	let selectedEventDayId = '';
 	let startDate: Date = new Date();
 	let endDate: Date = new Date();
-	let startTime = '07:30 PM';
-	let endTime = '08:30 PM';
+	let startTime = '7:30 PM';
+	let endTime = '8:30 PM';
 	let sessionType = '';
 	let selectedSpeakers: any[] = [];
-	let liveStreamEnabled = false;
+	let chatEnabled = false;
 	let isPublic = true;
 	let saving = false;
 	let error = '';
+	/** Event-wide community state — a session's chat is only visible when on. */
+	let communityEnabled = false;
 
 	let showRoomDropdown = false;
 	let showTypeDropdown = false;
@@ -95,52 +106,114 @@
 		{ label: 'Q&A', value: 'QNA' },
 	];
 
-	$: if (open) { loadData(); initForm(); }
+	// Populate on the closed -> open transition only, so nothing the organiser
+	// picks inside the modal can trigger a re-initialisation.
+	let wasOpen = false;
+	$: if (open !== wasOpen) {
+		wasOpen = open;
+		if (open) {
+			initForm();
+			loadData();
+			loadCommunityState();
+		}
+	}
 
 	async function loadData() {
 		try { [rooms, speakers, eventDays] = await Promise.all([getEventRooms(eventId), getEventSpeakers(eventId), getEventDays(eventId)]); }
 		catch (e) { console.error('Failed to load data:', e); }
 	}
 
+	async function loadCommunityState() {
+		communityEnabled = (await getRoomChatState(eventId)).communityEnabled;
+	}
+
 	function initForm() {
+		const fallback = defaultScheduleWithin(
+			eventData?.startDateTime ? new Date(eventData.startDateTime) : null,
+			eventData?.endDateTime ? new Date(eventData.endDateTime) : null,
+			60
+		);
+
 		if (session) {
 			title = session.title || ''; description = session.description || '';
 			selectedRoomId = session.roomId || ''; sessionType = session.type || '';
+			originalRoomId = session.roomId || '';
 			selectedEventDayId = session.eventDayId || '';
 			selectedSpeakers = (session.speakers || []).map((s: any) => ({ ...s }));
-			liveStreamEnabled = session.communityChatEnabled ?? false;
+			chatEnabled = session.communityChatEnabled ?? false;
 			isPublic = session.isPublic ?? true;
 			thumbnailUrl = (session.mediaUrls || []).find((m: any) => m.type === 'thumbnail')?.url || '';
 			uploadedFiles = thumbnailUrl ? [{ name: 'Session Thumbnail', size: '', status: 'completed' as const, url: thumbnailUrl }] : [];
 			if (session.startTime) {
 				startDate = new Date(session.startTime);
-				const h = startDate.getHours(), m = startDate.getMinutes();
-				startTime = `${h % 12 === 0 ? 12 : h % 12}:${m === 0 ? '00' : '30'} ${h >= 12 ? 'PM' : 'AM'}`;
+				startTime = toTimeLabel(startDate);
+			} else {
+				startDate = fallback.startDate; startTime = fallback.startTime;
 			}
 			if (session.endTime) {
 				endDate = new Date(session.endTime);
-				const h = endDate.getHours(), m = endDate.getMinutes();
-				endTime = `${h % 12 === 0 ? 12 : h % 12}:${m === 0 ? '00' : '30'} ${h >= 12 ? 'PM' : 'AM'}`;
+				endTime = toTimeLabel(endDate);
+			} else {
+				endDate = fallback.endDate; endTime = fallback.endTime;
 			}
 		} else {
 			title = ''; description = ''; selectedRoomId = ''; sessionType = '';
+			originalRoomId = '';
 			selectedEventDayId = '';
-			selectedSpeakers = []; liveStreamEnabled = false; isPublic = true;
-			startDate = new Date(); endDate = new Date();
-			startTime = '07:30 PM'; endTime = '08:30 PM';
+			selectedSpeakers = []; chatEnabled = false; isPublic = true;
+			// Default to the event's own start rather than "now".
+			startDate = fallback.startDate; startTime = fallback.startTime;
+			endDate = fallback.endDate; endTime = fallback.endTime;
 			thumbnailUrl = ''; uploadedFiles = [];
 		}
 		error = '';
+		openStartDatePicker = openEndDatePicker = openStartTimePicker = openEndTimePicker = false;
 	}
 
-	function formatDate(date: Date): string { return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); }
+	/**
+	 * Picking a day on a multi-day event pins the session to that calendar day
+	 * and snaps its times into the day's window. Without this the date buttons
+	 * kept showing a day outside the selected one, and every date in the picker
+	 * was greyed out.
+	 */
+	function applyDay(dayId: string) {
+		selectedEventDayId = dayId;
+		const day = eventDays.find((d: any) => (d._id || d.id) === dayId);
+		if (!day) return;
+		const dayDate = new Date(day.date);
+		if (isNaN(dayDate.getTime())) return;
+
+		const dayStart = formatTimeFrom24(day.startTime);
+		const dayEnd = formatTimeFrom24(day.endTime);
+
+		startDate = new Date(dayDate);
+		endDate = new Date(dayDate);
+		if (dayStart) startTime = dayStart;
+
+		const startMinutes = timeLabelToMinutes(startTime);
+		const latestMinutes = dayEnd ? timeLabelToMinutes(dayEnd) : 24 * 60;
+		const endMinutes = Math.min(startMinutes + 60, latestMinutes);
+		endTime = minutesToTimeLabel(endMinutes > startMinutes ? endMinutes : startMinutes + 60);
+		normalizeEnd();
+	}
+
+	/** Keeps the end at or after the start as the organiser edits. */
+	function normalizeEnd() {
+		const start = combineDateAndTime(startDate, startTime);
+		const end = combineDateAndTime(endDate, endTime);
+		if (end <= start) {
+			const bumped = new Date(start.getTime() + 60 * 60_000);
+			endDate = bumped;
+			endTime = toTimeLabel(bumped);
+		}
+	}
+
+	$: sameDay = startDate.toDateString() === endDate.toDateString();
+
+	function formatDate(date: Date): string { return formatDayLabel(date); }
 
 	function buildDateTime(date: Date, timeStr: string): string {
-		const [timePart, meridiem] = timeStr.split(' ');
-		let [hours, minutes] = timePart.split(':').map(Number);
-		if (meridiem === 'PM' && hours !== 12) hours += 12;
-		if (meridiem === 'AM' && hours === 12) hours = 0;
-		const d = new Date(date); d.setHours(hours, minutes, 0, 0); return d.toISOString();
+		return combineDateAndTime(date, timeStr).toISOString();
 	}
 
 	function scrollToId(id: string) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
@@ -178,14 +251,50 @@
 
 	async function handleSave() {
 		if (!title.trim()) { error = 'Session title is required'; return; }
+		if (title.trim().length < 3) { error = 'Session title must be at least 3 characters'; return; }
 		if (!selectedRoomId) { error = 'Please assign a room'; return; }
 		if (!sessionType) { error = 'Please select a session type'; return; }
+		if (isMultiDay && eventDays.length > 0 && !selectedEventDayId) {
+			error = 'Please assign this session to a day'; return;
+		}
+
+		const start = combineDateAndTime(startDate, startTime);
+		const end = combineDateAndTime(endDate, endTime);
+		if (end <= start) { error = 'Session end date/time must be after the start'; return; }
+		if (boundaryMinDate && start < new Date(new Date(boundaryMinDate).setHours(0, 0, 0, 0))) {
+			error = selectedDay ? 'Session cannot start before the selected day' : 'Session cannot start before the event starts';
+			return;
+		}
+		if (boundaryMaxDate && end > new Date(new Date(boundaryMaxDate).setHours(23, 59, 59, 999))) {
+			error = selectedDay ? 'Session cannot end after the selected day' : 'Session cannot end after the event ends';
+			return;
+		}
+
 		saving = true; error = '';
 		try {
 			const mediaUrls = thumbnailUrl ? [{ type: 'thumbnail', url: thumbnailUrl }] : [];
-			const payload: any = { title: title.trim(), description: description.trim() || undefined, startTime: buildDateTime(startDate, startTime), endTime: buildDateTime(endDate, endTime), type: sessionType, speakers: selectedSpeakers, tags: [getTypeName(sessionType)], isPublic, communityChatEnabled: liveStreamEnabled, mediaUrls, eventDayId: selectedEventDayId || undefined };
-			if (isEdit) { await updateEventSession(eventId, session.roomId, session.id, payload); }
-			else { await createEventSession(eventId, selectedRoomId, payload); }
+			const payload: any = {
+				title: title.trim(),
+				description: description.trim() || undefined,
+				startTime: start.toISOString(),
+				endTime: end.toISOString(),
+				type: sessionType,
+				speakers: selectedSpeakers,
+				tags: [getTypeName(sessionType)],
+				isPublic,
+				communityChatEnabled: chatEnabled,
+				mediaUrls,
+				// '' clears the assignment ("All Days"); undefined would leave it as-is.
+				eventDayId: selectedEventDayId || '',
+			};
+			if (isEdit) {
+				// Address the session through the room it currently lives in, and send
+				// the destination room in the body so moving it actually takes effect.
+				if (selectedRoomId !== originalRoomId) payload.roomId = selectedRoomId;
+				await updateEventSession(eventId, originalRoomId || selectedRoomId, session.id, payload);
+			} else {
+				await createEventSession(eventId, selectedRoomId, payload);
+			}
 			dispatch('saved'); open = false;
 		} catch (e: any) { error = e.message || 'Failed to save session'; }
 		finally { saving = false; }
@@ -276,7 +385,7 @@
 					<button on:click={() => { selectedEventDayId = ''; showDayDropdown = false; }} class="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50"><Icon icon="mdi:minus-circle-outline" class="text-lg" /> All Days</button>
 					{#each eventDays as day}
 					{@const dayId = day._id || day.id}
-					<button on:click={() => { selectedEventDayId = dayId; showDayDropdown = false; }} class="flex w-full items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 {selectedEventDayId === dayId ? 'bg-gray-50 font-medium' : ''}">
+					<button on:click={() => { applyDay(dayId); showDayDropdown = false; }} class="flex w-full items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 {selectedEventDayId === dayId ? 'bg-gray-50 font-medium' : ''}">
 						<Icon icon="mdi:calendar" class="text-lg text-gray-400" />
 						{day.label || 'Day ' + day.dayNumber} — {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
 					</button>
@@ -292,11 +401,11 @@
 			<div class="flex items-center gap-2">
 				<div class="relative" use:clickOutside={() => (openStartDatePicker = false)}>
 					<button on:click={async () => { openStartDatePicker = !openStartDatePicker; await tick(); scrollToId('date'); }} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">{formatDate(startDate)}</button>
-					<DatePickerModal open={openStartDatePicker} bind:selectedDate={startDate} minDate={boundaryMinDate} maxDate={boundaryMaxDate} />
+					<DatePickerModal bind:open={openStartDatePicker} bind:selectedDate={startDate} minDate={boundaryMinDate} maxDate={boundaryMaxDate} on:select={() => { openStartDatePicker = false; normalizeEnd(); }} />
 				</div>
 				<div class="relative" use:clickOutside={() => (openStartTimePicker = false)}>
 					<button on:click={() => (openStartTimePicker = !openStartTimePicker)} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">{startTime}</button>
-					<TimeModal open={openStartTimePicker} bind:selectedTime={startTime} minTime={boundaryMinTime} maxTime={boundaryMaxTime} />
+					<TimeModal bind:open={openStartTimePicker} bind:selectedTime={startTime} minTime={boundaryMinTime} maxTime={boundaryMaxTime} on:select={() => { openStartTimePicker = false; normalizeEnd(); }} />
 				</div>
 			</div>
 		</div>
@@ -306,11 +415,11 @@
 			<div class="flex items-center gap-2">
 				<div class="relative" use:clickOutside={() => (openEndDatePicker = false)}>
 					<button on:click={async () => { openEndDatePicker = !openEndDatePicker; await tick(); scrollToId('date'); }} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">{formatDate(endDate)}</button>
-					<DatePickerModal open={openEndDatePicker} bind:selectedDate={endDate} {startDate} minDate={boundaryMinDate} maxDate={boundaryMaxDate} />
+					<DatePickerModal bind:open={openEndDatePicker} bind:selectedDate={endDate} {startDate} minDate={startDate} maxDate={boundaryMaxDate} on:select={() => { openEndDatePicker = false; normalizeEnd(); }} />
 				</div>
 				<div class="relative" use:clickOutside={() => (openEndTimePicker = false)}>
 					<button on:click={() => (openEndTimePicker = !openEndTimePicker)} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">{endTime}</button>
-					<TimeModal open={openEndTimePicker} bind:selectedTime={endTime} referenceTime={startTime} minTime={boundaryMinTime} maxTime={boundaryMaxTime} />
+					<TimeModal bind:open={openEndTimePicker} bind:selectedTime={endTime} referenceTime={startTime} minTime={sameDay ? startTime : boundaryMinTime} maxTime={boundaryMaxTime} afterReference={sameDay} on:select={() => (openEndTimePicker = false)} />
 				</div>
 			</div>
 		</div>
@@ -399,12 +508,27 @@
 		{/each}
 	</div>
 
-	<!-- Enable Live Stream Toggle -->
-	<div class="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
-		<div class="flex items-center gap-2"><span class="text-sm font-medium text-gray-900">Enable Live Stream / Video Conferencing</span><Icon icon="mdi:information-outline" width="14" class="text-gray-400" /></div>
-		<button aria-label="Toggle live stream" on:click={() => (liveStreamEnabled = !liveStreamEnabled)} class="relative h-6 w-10 rounded-full transition-colors duration-300" class:bg-gray-300={!liveStreamEnabled} class:bg-gray-800={liveStreamEnabled}>
-			<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" class:translate-x-4={liveStreamEnabled}></span>
-		</button>
+	<!--
+		This toggle writes the session's `communityChatEnabled` field. It was
+		previously labelled "Enable Live Stream / Video Conferencing", which
+		described a feature it never touched (streaming lives on `meetingLink`).
+	-->
+	<div class="rounded-lg border border-gray-200 bg-white p-4">
+		<div class="flex items-center justify-between">
+			<div class="flex items-center gap-2"><span class="text-sm font-medium text-gray-900">Enable Session Chat</span><Icon icon="mdi:information-outline" width="14" class="text-gray-400" /></div>
+			<button type="button" aria-label="Toggle session chat" on:click={() => (chatEnabled = !chatEnabled)} class="relative h-6 w-10 flex-shrink-0 rounded-full transition-colors duration-300" class:bg-gray-300={!chatEnabled} class:bg-gray-800={chatEnabled}>
+				<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" class:translate-x-4={chatEnabled}></span>
+			</button>
+		</div>
+		{#if chatEnabled}
+			<p class="mt-2 text-xs text-gray-500">Attendees can discuss this session in the event Community.</p>
+			{#if !communityEnabled}
+				<p class="mt-2 flex items-start gap-2 rounded-md bg-amber-50 p-2 text-xs text-amber-800">
+					<Icon icon="mdi:alert-outline" class="mt-0.5 flex-shrink-0 text-base" />
+					<span>Community is off for this event, so this discussion stays hidden until you turn it on from the Community tab.</span>
+				</p>
+			{/if}
+		{/if}
 	</div>
 
 	<!-- Show on Public Agenda Toggle -->

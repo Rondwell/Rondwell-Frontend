@@ -1,7 +1,32 @@
 import { browser } from '$app/environment';
 import { clearUser } from '$lib/stores/auth.store';
+import { setPostAuthRedirect } from '$lib/utils/redirect';
 
 const USER_URL = import.meta.env.VITE_API_URL;
+
+/**
+ * Sends an expired session back to /auth WITHOUT losing where they were going.
+ *
+ * `clearUser()` deliberately wipes `post_auth_redirect` (correct for an
+ * explicit logout), and this handler then did a bare
+ * `window.location.href = '/auth'`. That combination is what silently broke the
+ * admin-invitation flow: an invitee with a stale token clicked "Accept", the
+ * refresh failed, their pending destination was erased, and after logging in
+ * they were dropped on the default landing page instead of completing the
+ * acceptance. We now re-arm the redirect (after the clear) and also pass it as
+ * a query param so it survives even if storage is unavailable.
+ */
+function bounceToAuth(): void {
+  if (!browser) return;
+  const current = `${window.location.pathname}${window.location.search}`;
+  // Never bounce back to /auth itself, and don't try to return to a page that
+  // isn't a legitimate post-auth destination.
+  setPostAuthRedirect(current);
+  const target = current.startsWith('/auth')
+    ? '/auth'
+    : `/auth?returnUrl=${encodeURIComponent(current)}`;
+  window.location.href = target;
+}
 
 /**
  * FE-P1-09 (FA-8.1) — Idempotency-Key convention.
@@ -49,7 +74,7 @@ async function refreshAccessToken(): Promise<string | null> {
 
     if (!res.ok) {
       clearUser();
-      if (browser) window.location.href = '/auth';
+      bounceToAuth();
       return null;
     }
 
@@ -60,7 +85,7 @@ async function refreshAccessToken(): Promise<string | null> {
     return newToken;
   } catch {
     clearUser();
-    if (browser) window.location.href = '/auth';
+    bounceToAuth();
     return null;
   }
 }
@@ -71,7 +96,14 @@ async function refreshAccessToken(): Promise<string | null> {
  */
 export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = getStoredToken();
-  if (!token) throw new Error('Not authenticated');
+  if (!token) {
+    // Tagged with a status so callers (e.g. invitation pages) can tell an
+    // auth problem apart from a generic failure and bounce to login instead of
+    // showing "something went wrong".
+    const err: any = new Error('Not authenticated');
+    err.status = 401;
+    throw err;
+  }
 
   const headers = new Headers(options.headers);
   headers.set('Authorization', `Bearer ${token}`);
@@ -89,7 +121,11 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
     }
 
     const newToken = await refreshPromise;
-    if (!newToken) throw new Error('Session expired. Please log in again.');
+    if (!newToken) {
+      const err: any = new Error('Session expired. Please log in again.');
+      err.status = 401;
+      throw err;
+    }
 
     // Retry original request with new token
     headers.set('Authorization', `Bearer ${newToken}`);

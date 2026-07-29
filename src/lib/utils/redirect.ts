@@ -71,6 +71,43 @@ export function consumePostAuthRedirect(): string | null {
 }
 
 /**
+ * Validates a candidate redirect path, returning it or null.
+ * Exposed so pages can vet a `returnUrl` query param before using it.
+ */
+export function sanitizeRedirect(path: string | null | undefined): string | null {
+  if (!path) return null;
+  return isAllowedRedirect(path) ? path : null;
+}
+
+/**
+ * The redirect target to use after a successful sign-in.
+ *
+ * Prefers the `returnUrl` carried in the URL over the value in localStorage.
+ * Threading it through the auth pages as a query param means the destination
+ * survives anything that clears storage mid-flow (an expired-session cleanup,
+ * a different tab logging out, privacy modes that drop localStorage). The
+ * stored value remains as a fallback for entry points that can't pass a param.
+ *
+ * Always consumes the stored value so a stale target can't fire later.
+ */
+export function resolvePostAuthRedirect(url?: URL | null): string | null {
+  const fromQuery = sanitizeRedirect(url?.searchParams.get('returnUrl'));
+  const fromStorage = consumePostAuthRedirect();
+  return fromQuery || fromStorage;
+}
+
+/**
+ * Appends the current `returnUrl` to an internal auth path so it survives the
+ * next hop in the sign-in flow (/auth → /auth/verify → /auth/2fa).
+ */
+export function withReturnUrl(path: string, url?: URL | null): string {
+  const returnUrl = sanitizeRedirect(url?.searchParams.get('returnUrl'));
+  if (!returnUrl) return path;
+  const separator = path.includes('?') ? '&' : '?';
+  return `${path}${separator}returnUrl=${encodeURIComponent(returnUrl)}`;
+}
+
+/**
  * Clears any stored redirect without consuming it.
  * Useful for cleanup on logout.
  */

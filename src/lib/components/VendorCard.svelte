@@ -12,10 +12,15 @@
 		serviceArea: string;
 		productCount?: number;
 	};
+
+	/** Open the vendor profile in a new tab (Discover uses this, matching events). */
+	export let newTab = false;
 </script>
 
 <a
 	href="/v/{vendor.slug}"
+	target={newTab ? '_blank' : undefined}
+	rel={newTab ? 'noopener noreferrer' : undefined}
 	class="flex cursor-pointer gap-3 rounded-xl bg-[#FDFDFD] p-3 no-underline transition-shadow hover:shadow-md sm:gap-4 sm:p-4 md:p-5"
 >
 	<!-- Left content -->

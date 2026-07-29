@@ -4,7 +4,7 @@
   import { page } from '$app/stores';
   import { getPostLoginRedirect, smartRequestOTP, smartVerifyOTP } from '$lib/services/auth.services';
   import { authState } from '$lib/stores/auth.store';
-  import { consumePostAuthRedirect } from '$lib/utils/redirect';
+  import { resolvePostAuthRedirect, withReturnUrl } from '$lib/utils/redirect';
   import { onDestroy, onMount } from 'svelte';
   import Header from '../components/Header.svelte';
 
@@ -86,7 +86,7 @@
       // Check if 2FA is required
       if (result.status === '2FA_REQUIRED') {
         localStorage.setItem('2fa-pending-email', email);
-        goto(`/auth/2fa?email=${encodeURIComponent(email)}`);
+        goto(withReturnUrl(`/auth/2fa?email=${encodeURIComponent(email)}`, $page.url));
         return;
       }
 
@@ -95,9 +95,10 @@
       localStorage.removeItem('pending-is-new-user');
       message = 'Verified successfully';
 
-      // Priority: stored redirect (onboarding link / invitation) > default redirect
-      const storedRedirect = consumePostAuthRedirect();
-      const redirect = storedRedirect || await getPostLoginRedirect(result.token);
+      // Priority: returnUrl in the URL (invitation links) > stored redirect >
+      // default landing page.
+      const pending = resolvePostAuthRedirect($page.url);
+      const redirect = pending || await getPostLoginRedirect(result.token);
       goto(redirect);
     } catch (err) {
       message = err instanceof Error ? err.message : 'OTP verification failed';

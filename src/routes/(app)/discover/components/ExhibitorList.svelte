@@ -62,6 +62,12 @@
 	}
 
 	$: total = pagination?.totalItems ?? pagination?.total ?? 0;
+
+	/** Fall back to the id when an exhibitor has no public slug. */
+	$: displayExhibitors = exhibitors.map((e) => ({
+		...e,
+		href: `/x/${e.publicProfileSlug || e._id}`,
+	}));
 </script>
 
 <section class="relative max-w-6xl">
@@ -109,8 +115,9 @@
 		</div>
 	{:else}
 		<div class="mb-8 grid grid-cols-1 gap-4 py-5 lg:grid-cols-2">
-			{#each exhibitors as exhibitor (exhibitor._id)}
-				<a href="/x/{exhibitor.publicProfileSlug}"
+			{#each displayExhibitors as exhibitor (exhibitor._id)}
+				<!-- Opens in a new tab, matching the behaviour of the event cards. -->
+				<a href={exhibitor.href} target="_blank" rel="noopener noreferrer"
 					class="group flex gap-4 overflow-hidden rounded-2xl bg-white p-4 no-underline transition-shadow hover:shadow-md">
 					<!-- Logo -->
 					<div class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">

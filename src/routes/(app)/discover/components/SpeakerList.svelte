@@ -62,6 +62,15 @@
 	}
 
 	$: total = pagination?.totalItems ?? pagination?.total ?? 0;
+
+	/**
+	 * A speaker without a public slug has no profile page — link by id so the
+	 * card never resolves to `/s/undefined`.
+	 */
+	$: displaySpeakers = speakers.map((s) => ({
+		...s,
+		href: `/s/${s.publicProfileSlug || s._id}`,
+	}));
 </script>
 
 <section class="relative max-w-6xl">
@@ -109,8 +118,9 @@
 		</div>
 	{:else}
 		<div class="mb-8 grid grid-cols-1 gap-4 py-5 sm:grid-cols-2 lg:grid-cols-3">
-			{#each speakers as speaker (speaker._id)}
-				<a href="/s/{speaker.publicProfileSlug}"
+			{#each displaySpeakers as speaker (speaker._id)}
+				<!-- Opens in a new tab, matching the behaviour of the event cards. -->
+				<a href={speaker.href} target="_blank" rel="noopener noreferrer"
 					class="group flex flex-col items-center overflow-hidden rounded-2xl bg-white p-6 text-center no-underline transition-shadow hover:shadow-md">
 					<!-- Avatar -->
 					<div class="h-20 w-20 overflow-hidden rounded-full bg-gray-100">

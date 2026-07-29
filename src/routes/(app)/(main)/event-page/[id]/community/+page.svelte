@@ -77,6 +77,16 @@
 	onMount(async () => {
 		if (!eventId) return;
 		await load();
+
+		// Deep link support: `?room=<channelId>` opens straight into that channel.
+		// The planning page's "View Room Community" action and the room modal both
+		// link here, so an organiser lands on the channel they just created.
+		const deepLinkRoomId = $page.url.searchParams.get('room');
+		if (deepLinkRoomId) {
+			const target = rooms.find((r) => r._id === deepLinkRoomId);
+			if (target) await openRoom(target);
+		}
+
 		disposeFeed = connectFeed(eventId, handleFeedEvent);
 		live = true;
 	});

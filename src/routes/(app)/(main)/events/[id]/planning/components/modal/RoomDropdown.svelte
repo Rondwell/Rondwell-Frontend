@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { deleteEventRoom, updateEventRoom } from '$lib/services/event.services';
+	import { roomCommunityUrl, syncRoomCommunityChannel } from '$lib/services/roomChat';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher, onMount, tick } from 'svelte';
 
@@ -22,7 +23,7 @@
 		{ label: 'Toggle Chat', icon: 'mdi:chat-outline', action: 'toggleChat' },
 		{ label: 'Manage Access', icon: 'mdi:cog-outline', action: 'manageAccess' },
 		{ label: 'Copy Room Link', icon: 'mdi:link-variant', action: 'copyLink' },
-		{ label: 'View Room Community', icon: 'mdi:eye-outline', action: 'viewCommunity', condition: () => room?.communityChatEnabled },
+		{ label: 'View Room Community', icon: 'mdi:eye-outline', action: 'viewCommunity', condition: () => room?.communityChatEnabled && room?.communityChatRoomId },
 		{ label: 'Deactivate Room', icon: 'mdi:close-circle-outline', action: 'deactivate', condition: () => room?.isActive },
 		{ label: 'Delete Room', icon: 'mdi:trash-can-outline', action: 'delete', danger: true },
 	];
@@ -35,15 +36,30 @@
 		else if (action === 'edit') dispatch('action', { type: 'edit', room });
 		else if (action === 'manageAccess') dispatch('action', { type: 'manageAccess', room });
 		else if (action === 'toggleChat') {
+			// Goes through the same channel provisioning as the card toggle, so a
+			// room's chat switch always matches a real community channel.
 			try {
-				await updateEventRoom(eventId, room.id, { communityChatEnabled: !room.communityChatEnabled });
-				dispatch('updated');
+				const next = !room.communityChatEnabled;
+				const sync = await syncRoomCommunityChannel({
+					eventId,
+					name: room.name,
+					description: room.description,
+					enabled: next,
+					communityChatRoomId: room.communityChatRoomId,
+				});
+				await updateEventRoom(eventId, room.id, {
+					communityChatEnabled: next,
+					communityChatRoomId: sync.communityChatRoomId || '',
+				});
+				dispatch('updated', { notice: sync.warning });
 			} catch (e: any) { alert(e.message || 'Failed to toggle chat'); }
 		} else if (action === 'copyLink') {
 			const link = room?.roomLink || `https://rondwell.com/event/${eventId}/room/${room?.id}`;
 			navigator.clipboard.writeText(link).then(() => { linkCopied = true; setTimeout(() => (linkCopied = false), 2000); });
 		} else if (action === 'viewCommunity') {
-			window.open(`/events/${eventId}/community?room=${room?.id}`, '_blank');
+			// The community lives on the public event page, keyed by the community
+			// service's channel id — not the event-room id.
+			window.open(roomCommunityUrl(eventId, room?.communityChatRoomId), '_blank', 'noopener');
 		} else if (action === 'deactivate') {
 			showDeactivateConfirm = true; open = true;
 		} else if (action === 'delete') {
@@ -61,6 +77,16 @@
 
 	async function confirmDelete() {
 		try {
+			// Tear the room's community channel down first so deleting a room can't
+			// leave an orphaned channel behind on the public community page.
+			if (room?.communityChatRoomId) {
+				await syncRoomCommunityChannel({
+					eventId,
+					name: room.name,
+					enabled: false,
+					communityChatRoomId: room.communityChatRoomId,
+				});
+			}
 			await deleteEventRoom(eventId, room.id);
 			dispatch('updated');
 		} catch (e: any) { alert(e.message || 'Failed to delete room'); }

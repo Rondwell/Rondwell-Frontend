@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { createEventRoom, deleteEventMediaByUrl, getAllEventSessionsForEvent, updateEventRoom, updateEventSession, uploadRoomBanner } from '$lib/services/event.services';
+	import { getRoomChatState, roomCommunityUrl, syncRoomCommunityChannel } from '$lib/services/roomChat';
 	import { clickOutside } from '$lib/utils/constant';
+	import { combineDateAndTime, defaultScheduleWithin, formatDayLabel, toTimeLabel } from '$lib/utils/schedule';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher, tick } from 'svelte';
 	import DatePickerModal from '../../../../../../create-event/components/DatePickerModal.svelte';
@@ -21,11 +23,18 @@
 	let description = '';
 	let startDate: Date = new Date();
 	let endDate: Date = new Date();
-	let startTime = '07:30 PM';
-	let endTime = '08:30 PM';
+	let startTime = '7:30 PM';
+	let endTime = '8:30 PM';
 	let chatEnabled = false;
+	let communityChatRoomId = '';
 	let saving = false;
 	let error = '';
+	let warning = '';
+
+	// Event-wide community state — a room channel lives *inside* it.
+	let communityEnabled = false;
+	let communityExists = false;
+	let alsoEnableEventCommunity = false;
 
 	// Date/time picker states
 	let openStartDatePicker = false;
@@ -62,16 +71,24 @@
 		if (!eventId) return;
 		try {
 			allSessions = await getAllEventSessionsForEvent(eventId);
-			if (isEdit) {
+			if (room) {
 				roomSessions = allSessions.filter(s => s.roomId === (room?.id || room?._id));
 			}
 		} catch (e) { console.error('Failed to load sessions:', e); }
+	}
+
+	async function loadCommunityState() {
+		const state = await getRoomChatState(eventId);
+		communityEnabled = state.communityEnabled;
+		communityExists = state.communityExists;
 	}
 
 	async function addSessionToRoom(session: any) {
 		const sid = session.id || session._id;
 		if (isEdit && room?.id) {
 			try {
+				// The URL carries the session's *current* room; the body carries the
+				// destination. Sending only the body silently did nothing before.
 				await updateEventSession(eventId, session.roomId || room.id, sid, { roomId: room.id });
 				await loadSessions();
 			} catch (e: any) { error = e.message || 'Failed to add session'; }
@@ -87,61 +104,92 @@
 		pendingSessionIds = pendingSessionIds.filter(id => id !== sid);
 	}
 
-	$: if (open) {
+	/**
+	 * Populates the form for the room being opened.
+	 *
+	 * Deliberately a plain function called from an open-transition guard rather
+	 * than a `$: if (open) { ... }` block. That reactive form also depended on
+	 * `startDate`/`endDate` (it reads them back to derive the time labels), so
+	 * every date selection re-ran the whole block — wiping the chosen date back
+	 * to today and resetting the community-chat toggle. That was the root cause
+	 * of both "the date picker won't select" and "the toggle deselects itself".
+	 */
+	function initForm() {
+		const fallback = defaultScheduleWithin(eventStartDate, eventEndDate, 60);
+
 		if (room) {
 			name = room.name || '';
 			description = room.description || '';
 			chatEnabled = room.communityChatEnabled ?? false;
+			communityChatRoomId = room.communityChatRoomId || '';
 			bannerUrl = room.bannerImageUrl || '';
 			bannerTitle = room.bannerImageTitle || '';
-			// Show existing banner in the uploaded files list
-			if (room.bannerImageUrl) {
-				const fileName = room.bannerImageTitle || 'Room Banner';
-				uploadedFiles = [{ name: fileName, size: '', status: 'completed' as const, url: room.bannerImageUrl }];
-			} else {
-				uploadedFiles = [];
-			}
+			uploadedFiles = room.bannerImageUrl
+				? [{ name: room.bannerImageTitle || 'Room Banner', size: '', status: 'completed' as const, url: room.bannerImageUrl }]
+				: [];
+
 			if (room.scheduledStartDate) {
 				startDate = new Date(room.scheduledStartDate);
-				const h = startDate.getHours();
-				const m = startDate.getMinutes();
-				const ampm = h >= 12 ? 'PM' : 'AM';
-				const h12 = h % 12 === 0 ? 12 : h % 12;
-				startTime = `${h12}:${m === 0 ? '00' : '30'} ${ampm}`;
+				startTime = toTimeLabel(startDate);
+			} else {
+				startDate = fallback.startDate;
+				startTime = fallback.startTime;
 			}
 			if (room.scheduledEndDate) {
 				endDate = new Date(room.scheduledEndDate);
-				const h = endDate.getHours();
-				const m = endDate.getMinutes();
-				const ampm = h >= 12 ? 'PM' : 'AM';
-				const h12 = h % 12 === 0 ? 12 : h % 12;
-				endTime = `${h12}:${m === 0 ? '00' : '30'} ${ampm}`;
+				endTime = toTimeLabel(endDate);
+			} else {
+				endDate = fallback.endDate;
+				endTime = fallback.endTime;
 			}
 		} else {
-			name = ''; description = ''; chatEnabled = false; bannerUrl = ''; bannerTitle = '';
-			startDate = new Date(); endDate = new Date();
-			startTime = '07:30 PM'; endTime = '08:30 PM';
+			name = '';
+			description = '';
+			chatEnabled = false;
+			communityChatRoomId = '';
+			bannerUrl = '';
+			bannerTitle = '';
 			uploadedFiles = [];
 			pendingSessionIds = [];
 			roomSessions = [];
+			// Default to the event's own start, not "now" — an organiser scheduling
+			// a room for a future event should never have to correct today's date.
+			startDate = fallback.startDate;
+			startTime = fallback.startTime;
+			endDate = fallback.endDate;
+			endTime = fallback.endTime;
 		}
+
 		error = '';
-		loadSessions();
+		warning = '';
+		alsoEnableEventCommunity = false;
+		openStartDatePicker = openEndDatePicker = openStartTimePicker = openEndTimePicker = false;
 	}
 
-	function formatDate(date: Date): string {
-		return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+	let wasOpen = false;
+	$: if (open !== wasOpen) {
+		wasOpen = open;
+		if (open) {
+			initForm();
+			loadSessions();
+			loadCommunityState();
+		}
 	}
 
-	function buildDateTime(date: Date, timeStr: string): string {
-		const [timePart, meridiem] = timeStr.split(' ');
-		let [hours, minutes] = timePart.split(':').map(Number);
-		if (meridiem === 'PM' && hours !== 12) hours += 12;
-		if (meridiem === 'AM' && hours === 12) hours = 0;
-		const d = new Date(date);
-		d.setHours(hours, minutes, 0, 0);
-		return d.toISOString();
+	// Keep the end of the window at or after its start as the organiser edits.
+	function normalizeEnd() {
+		const start = combineDateAndTime(startDate, startTime);
+		const end = combineDateAndTime(endDate, endTime);
+		if (end <= start) {
+			const bumped = new Date(start.getTime() + 60 * 60_000);
+			endDate = bumped;
+			endTime = toTimeLabel(bumped);
+		}
 	}
+
+	$: sameDay = startDate.toDateString() === endDate.toDateString();
+	// On a single-day window the end time cannot precede the start time.
+	$: endMinTime = sameDay ? startTime : null;
 
 	function scrollToId(id: string) {
 		const el = document.getElementById(id);
@@ -160,8 +208,7 @@
 			return;
 		}
 
-		const sizeKB = Math.round(file.size / 1024);
-		const totalKB = sizeKB;
+		const totalKB = Math.round(file.size / 1024);
 		// Replace any existing files — only one banner at a time
 		uploadedFiles = [{ name: file.name, size: `0 KB of ${totalKB} KB`, status: 'uploading' as const, progress: 0 }];
 		uploading = true;
@@ -208,14 +255,40 @@
 
 	async function handleSave() {
 		if (!name.trim()) { error = 'Room name is required'; return; }
-		saving = true; error = '';
+		if (uploading) { error = 'Wait for the banner upload to finish'; return; }
+
+		const start = combineDateAndTime(startDate, startTime);
+		const end = combineDateAndTime(endDate, endTime);
+		if (end <= start) { error = 'Room end date/time must be after the start'; return; }
+		if (eventStartDate && start < new Date(new Date(eventStartDate).setHours(0, 0, 0, 0))) {
+			error = 'Room cannot start before the event starts'; return;
+		}
+		if (eventEndDate && end > new Date(new Date(eventEndDate).setHours(23, 59, 59, 999))) {
+			error = 'Room cannot end after the event ends'; return;
+		}
+
+		saving = true; error = ''; warning = '';
 		try {
+			// Provision / tear down the community channel first: if this fails we
+			// surface it instead of persisting a room that claims to have chat.
+			const chatSync = await syncRoomCommunityChannel({
+				eventId,
+				name: name.trim(),
+				description: description.trim() || undefined,
+				enabled: chatEnabled,
+				communityChatRoomId,
+				alsoEnableEventCommunity: chatEnabled && alsoEnableEventCommunity,
+			});
+			communityChatRoomId = chatSync.communityChatRoomId;
+			communityEnabled = chatSync.communityEnabled;
+
 			const payload: any = {
 				name: name.trim(),
 				description: description.trim() || undefined,
 				communityChatEnabled: chatEnabled,
-				scheduledStartDate: buildDateTime(startDate, startTime),
-				scheduledEndDate: buildDateTime(endDate, endTime),
+				communityChatRoomId: communityChatRoomId || '',
+				scheduledStartDate: start.toISOString(),
+				scheduledEndDate: end.toISOString(),
 			};
 			if (bannerUrl) {
 				payload.bannerImageUrl = bannerUrl;
@@ -243,6 +316,15 @@
 					}
 				}
 			}
+
+			if (chatSync.warning) {
+				// The room saved, but the chat channel didn't. Keep the modal open so
+				// the organiser sees why rather than assuming chat is live.
+				warning = chatSync.warning;
+				dispatch('saved', { keepOpen: true });
+				return;
+			}
+
 			dispatch('saved');
 			open = false;
 		} catch (e: any) {
@@ -284,6 +366,12 @@
 				{#if error}
 					<p class="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</p>
 				{/if}
+				{#if warning}
+					<p class="flex items-start gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-700">
+						<Icon icon="mdi:alert-outline" class="mt-0.5 flex-shrink-0 text-base" />
+						<span>{warning}</span>
+					</p>
+				{/if}
 
 				<!-- Room Name -->
 				<div>
@@ -319,15 +407,21 @@
 						<div class="flex items-center gap-2">
 							<div class="relative" use:clickOutside={() => (openStartDatePicker = false)}>
 								<button on:click={async () => { openStartDatePicker = !openStartDatePicker; await tick(); scrollToId('date'); }} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">
-									{formatDate(startDate)}
+									{formatDayLabel(startDate)}
 								</button>
-								<DatePickerModal open={openStartDatePicker} bind:selectedDate={startDate} minDate={eventStartDate} maxDate={eventEndDate} />
+								<DatePickerModal
+									bind:open={openStartDatePicker}
+									bind:selectedDate={startDate}
+									minDate={eventStartDate}
+									maxDate={eventEndDate}
+									on:select={() => { openStartDatePicker = false; normalizeEnd(); }}
+								/>
 							</div>
 							<div class="relative" use:clickOutside={() => (openStartTimePicker = false)}>
 								<button on:click={() => (openStartTimePicker = !openStartTimePicker)} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">
 									{startTime}
 								</button>
-								<TimeModal open={openStartTimePicker} bind:selectedTime={startTime} />
+								<TimeModal bind:open={openStartTimePicker} bind:selectedTime={startTime} on:select={() => { openStartTimePicker = false; normalizeEnd(); }} />
 							</div>
 						</div>
 					</div>
@@ -343,33 +437,77 @@
 						<div class="flex items-center gap-2">
 							<div class="relative" use:clickOutside={() => (openEndDatePicker = false)}>
 								<button on:click={async () => { openEndDatePicker = !openEndDatePicker; await tick(); scrollToId('date'); }} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">
-									{formatDate(endDate)}
+									{formatDayLabel(endDate)}
 								</button>
-							<DatePickerModal open={openEndDatePicker} bind:selectedDate={endDate} {startDate} minDate={eventStartDate} maxDate={eventEndDate} />
+								<DatePickerModal
+									bind:open={openEndDatePicker}
+									bind:selectedDate={endDate}
+									{startDate}
+									minDate={startDate}
+									maxDate={eventEndDate}
+									on:select={() => { openEndDatePicker = false; normalizeEnd(); }}
+								/>
 							</div>
 							<div class="relative" use:clickOutside={() => (openEndTimePicker = false)}>
 								<button on:click={() => (openEndTimePicker = !openEndTimePicker)} class="rounded-md border border-gray-200 bg-[#F4F4F4] px-3 py-2 text-sm font-medium text-gray-700">
 									{endTime}
 								</button>
-								<TimeModal open={openEndTimePicker} bind:selectedTime={endTime} referenceTime={startTime} />
+								<TimeModal
+									bind:open={openEndTimePicker}
+									bind:selectedTime={endTime}
+									referenceTime={startTime}
+									minTime={endMinTime}
+									afterReference={sameDay}
+									on:select={() => (openEndTimePicker = false)}
+								/>
 							</div>
 						</div>
 					</div>
 				</div>
 
 				<!-- Community Chat Toggle -->
-				<div class="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4">
-					<div class="flex items-center gap-2">
-						<span class="text-sm font-medium text-gray-900">Enable Community Chat</span>
-						<Icon icon="mdi:information-outline" width="14" class="text-gray-400" />
+				<div class="rounded-lg border border-gray-200 bg-white p-4">
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<span class="text-sm font-medium text-gray-900">Enable Community Chat</span>
+							<Icon icon="mdi:information-outline" width="14" class="text-gray-400" />
+						</div>
+						<button type="button" aria-label="Toggle community chat" on:click={() => (chatEnabled = !chatEnabled)} class="relative h-6 w-10 flex-shrink-0 rounded-full transition-colors duration-300" class:bg-gray-300={!chatEnabled} class:bg-gray-800={chatEnabled}>
+							<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" class:translate-x-4={chatEnabled}></span>
+						</button>
 					</div>
-					<button on:click={() => (chatEnabled = !chatEnabled)} class="relative h-6 w-10 rounded-full transition-colors duration-300" class:bg-gray-300={!chatEnabled} class:bg-gray-800={chatEnabled}>
-						<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" class:translate-x-4={chatEnabled}></span>
-					</button>
+
+					{#if chatEnabled}
+						<p class="mt-2 text-xs text-gray-500">
+							Creates a dedicated <span class="font-medium">{name.trim() || 'room'}</span> channel inside this event's Community, so attendees can discuss this room specifically.
+						</p>
+
+						{#if !communityEnabled}
+							<!--
+								A room channel is a child of the event community. With the event
+								community off, the channel exists but attendees can't reach it.
+								We ask before flipping an event-wide setting.
+							-->
+							<div class="mt-3 rounded-md bg-amber-50 p-3">
+								<p class="flex items-start gap-2 text-xs text-amber-800">
+									<Icon icon="mdi:alert-outline" class="mt-0.5 flex-shrink-0 text-base" />
+									<span>
+										Community is currently <span class="font-semibold">off</span> for this event, so
+										attendees won't see this room's chat{communityExists ? '' : ' and the channel cannot be created yet'}.
+									</span>
+								</p>
+								<label class="mt-2 flex cursor-pointer items-start gap-2 text-xs text-amber-900">
+									<input type="checkbox" bind:checked={alsoEnableEventCommunity} class="mt-0.5 h-3.5 w-3.5 rounded border-amber-400" />
+									<span>Turn on Community for this event as well</span>
+								</label>
+							</div>
+						{:else if communityChatRoomId}
+							<a href={roomCommunityUrl(eventId, communityChatRoomId)} target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-purple-600 hover:underline">
+								<Icon icon="mdi:open-in-new" class="text-sm" /> View this room's channel
+							</a>
+						{/if}
+					{/if}
 				</div>
-				{#if chatEnabled}
-					<p class="text-xs text-gray-500">This creates a dedicated chat space for attendees within this room.</p>
-				{/if}
 
 				<!-- Sessions Management -->
 				<div>

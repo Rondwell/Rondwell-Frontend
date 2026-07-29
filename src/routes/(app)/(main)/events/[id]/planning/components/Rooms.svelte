@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { getEventRooms, updateEventRoom } from '$lib/services/event.services';
+	import { getRoomChatState, syncRoomCommunityChannel } from '$lib/services/roomChat';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
@@ -11,7 +12,7 @@
 
 	export let eventTitle = '';
 	export let eventData: any = null;
-	$: eventId = $page.params.id;
+	$: eventId = $page.params.id ?? '';
 
 	let searchQuery = '';
 	let showCreateModal = false;
@@ -29,6 +30,11 @@
 	let chatFilter = 'All';
 	let accessFilter = 'All';
 
+	/** Is the event-wide community on? Room channels are invisible without it. */
+	let communityEnabled = false;
+	let chatNotice = '';
+	let togglingChatFor: string | null = null;
+
 	async function loadRooms() {
 		if (!eventId) return;
 		loading = true;
@@ -42,7 +48,12 @@
 		}
 	}
 
-	onMount(() => { loadRooms(); });
+	async function loadCommunityState() {
+		const state = await getRoomChatState(eventId);
+		communityEnabled = state.communityEnabled;
+	}
+
+	onMount(() => { loadRooms(); loadCommunityState(); });
 
 	$: filteredRooms = rooms.filter(r => {
 		if (searchQuery && !r.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -69,11 +80,42 @@
 	function openEdit(room: any) { editRoom = room; showCreateModal = true; }
 	function openAccess(room: any) { accessRoom = room; showAccessModal = true; }
 
+	/**
+	 * Flipping a room's chat provisions (or disables) a real channel inside the
+	 * event community and stores the link on the room, so the switch reflects
+	 * something attendees can actually open.
+	 *
+	 * The event-wide community is never switched on implicitly from here — that
+	 * changes what every attendee sees. If it is off we save the room's intent
+	 * and tell the organiser what is still needed.
+	 */
 	async function toggleChat(room: any) {
+		const next = !room.communityChatEnabled;
+		togglingChatFor = room.id;
+		chatNotice = '';
 		try {
-			await updateEventRoom(eventId, room.id, { communityChatEnabled: !room.communityChatEnabled });
-			loadRooms();
-		} catch (e: any) { console.error(e); }
+			const sync = await syncRoomCommunityChannel({
+				eventId,
+				name: room.name,
+				description: room.description,
+				enabled: next,
+				communityChatRoomId: room.communityChatRoomId,
+			});
+			await updateEventRoom(eventId, room.id, {
+				communityChatEnabled: next,
+				communityChatRoomId: sync.communityChatRoomId || '',
+			});
+			communityEnabled = sync.communityEnabled;
+			if (sync.warning) chatNotice = sync.warning;
+			else if (next && !sync.communityEnabled) {
+				chatNotice = `Chat is on for "${room.name}", but Community is off for this event so attendees can't see it yet. Turn Community on from the Community tab.`;
+			}
+			await loadRooms();
+		} catch (e: any) {
+			chatNotice = e?.message || 'Failed to update community chat for this room.';
+		} finally {
+			togglingChatFor = null;
+		}
 	}
 
 	function handleDropdownAction(e: CustomEvent) {
@@ -83,7 +125,14 @@
 		else if (type === 'manageAccess') openAccess(room);
 	}
 
-	function handleSaved() { showCreateModal = false; showAccessModal = false; loadRooms(); }
+	function handleSaved(e?: CustomEvent) {
+		// The room modal keeps itself open when the room saved but its chat
+		// channel didn't, so the organiser can read the warning.
+		if (!e?.detail?.keepOpen) showCreateModal = false;
+		showAccessModal = false;
+		loadRooms();
+		loadCommunityState();
+	}
 </script>
 
 <div>
@@ -150,6 +199,18 @@
 			</div>
 		</div>
 
+		{#if chatNotice}
+			<div class="mb-4 flex items-start justify-between gap-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+				<span class="flex items-start gap-2">
+					<Icon icon="mdi:alert-outline" class="mt-0.5 flex-shrink-0 text-base" />
+					{chatNotice}
+				</span>
+				<button aria-label="Dismiss" on:click={() => (chatNotice = '')} class="flex-shrink-0 text-amber-700">
+					<Icon icon="mdi:close" class="text-base" />
+				</button>
+			</div>
+		{/if}
+
 		{#if loading}
 			<div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
 				{#each [1, 2] as _}
@@ -175,7 +236,7 @@
 							<button bind:this={buttonEls[room.id]} on:click={() => (showActionModal = showActionModal === room.id ? null : room.id)} class="text-gray-400 hover:text-gray-600">
 								<Icon icon="mdi:dots-horizontal" class="h-5 w-5" />
 							</button>
-							<RoomDropdown open={showActionModal === room.id} buttonEl={buttonEls[room.id]} {room} {eventId} on:action={handleDropdownAction} on:updated={() => { showActionModal = null; loadRooms(); }} />
+							<RoomDropdown open={showActionModal === room.id} buttonEl={buttonEls[room.id]} {room} {eventId} on:action={handleDropdownAction} on:updated={(e) => { showActionModal = null; if (e.detail?.notice) chatNotice = e.detail.notice; loadRooms(); loadCommunityState(); }} />
 						</div>
 
 						<!-- Room name (clickable to edit) -->
@@ -205,8 +266,22 @@
 
 							<!-- Community Chat toggle -->
 							<div class="flex items-center justify-between gap-2 text-sm text-gray-600 md:justify-normal">
-								<span>Community Chat</span>
-								<button on:click={() => toggleChat(room)} class="relative h-6 w-10 rounded-full transition-colors duration-300" class:bg-gray-200={!room.communityChatEnabled} class:bg-black={room.communityChatEnabled}>
+								<span class="flex items-center gap-1">
+									Community Chat
+									{#if room.communityChatEnabled && !communityEnabled}
+										<span title="Community is off for this event, so attendees can't see this channel yet.">
+											<Icon icon="mdi:alert-outline" class="text-base text-amber-500" />
+										</span>
+									{/if}
+								</span>
+								<button
+									aria-label="Toggle community chat for {room.name}"
+									disabled={togglingChatFor === room.id}
+									on:click={() => toggleChat(room)}
+									class="relative h-6 w-10 rounded-full transition-colors duration-300 disabled:opacity-50"
+									class:bg-gray-200={!room.communityChatEnabled}
+									class:bg-black={room.communityChatEnabled}
+								>
 									<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-300" class:translate-x-4={room.communityChatEnabled}></span>
 								</button>
 							</div>

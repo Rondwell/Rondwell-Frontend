@@ -96,7 +96,6 @@
 	let manualFirstName = '';
 	let manualLastName = '';
 	let manualEmail = '';
-	let manualTitle = '';
 	let manualBio = '';
 	let manualLinkedin = '';
 	let manualTwitter = '';
@@ -200,7 +199,6 @@
 			manualFirstName = '';
 			manualLastName = '';
 			manualEmail = '';
-			manualTitle = '';
 			manualBio = '';
 			manualLinkedin = '';
 			manualTwitter = '';

@@ -4,7 +4,7 @@
   import { page } from '$app/stores';
   import { verify2FALogin, getPostLoginRedirect } from '$lib/services/auth.services';
   import { authState } from '$lib/stores/auth.store';
-  import { consumePostAuthRedirect } from '$lib/utils/redirect';
+  import { resolvePostAuthRedirect } from '$lib/utils/redirect';
   import { onMount } from 'svelte';
   import Header from '../components/Header.svelte';
 
@@ -57,8 +57,8 @@
       localStorage.removeItem('pending-is-phone');
       localStorage.removeItem('pending-is-new-user');
 
-      const storedRedirect = consumePostAuthRedirect();
-      const redirect = storedRedirect || await getPostLoginRedirect(token);
+      const pending = resolvePostAuthRedirect($page.url);
+      const redirect = pending || await getPostLoginRedirect(token);
       goto(redirect);
     } catch (err) {
       message = err instanceof Error ? err.message : '2FA verification failed';

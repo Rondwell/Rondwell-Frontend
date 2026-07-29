@@ -2,16 +2,11 @@
 	import { page } from '$app/stores';
 	import { enableEventCommunity, updateCommunitySettings, updateEvent } from '$lib/services/event.services';
 	import { createCommunityRoom, updateCommunityRoom, deleteCommunityRoom, getEventOverview, setCommunityEnabled } from '$lib/services/community.services';
-	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
 	export let eventTitle = '';
 	$: eventId = $page.params.id ?? '';
-
-	// Use cached event data for communityEnabled state
-	$: ({ event: eventStore } = getEventCache(eventId));
-	$: cachedEvent = $eventStore;
 
 	let community: any = null;
 	let rooms: any[] = [];
@@ -52,7 +47,11 @@
 			community = overview.community;
 			rooms = overview.rooms;
 			overviewStats = overview.stats;
-			communityEnabled = cachedEvent?.communityEnabled ?? overview.enabled;
+			// The community service is the source of truth for the lock state — it
+			// is what the public event page reads. `event.communityEnabled` is only
+			// a mirror, and trusting it first made this toggle show "on" while
+			// attendees still saw a locked community whenever the two drifted.
+			communityEnabled = overview.enabled;
 			if (community) {
 				const s = community.settings || {};
 				allowPosts = s.allowPosts ?? true;

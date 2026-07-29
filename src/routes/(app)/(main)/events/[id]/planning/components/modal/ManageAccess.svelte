@@ -40,6 +40,12 @@
 
 	async function handleSave() {
 		if (!room?.id || !eventId) return;
+		// Saving TICKET_TIERED with an empty allowlist locks everyone out without
+		// saying so. Make the organiser pick at least one tier.
+		if (accessMode === 'SPECIFIC' && selectedTicketIds.length === 0) {
+			error = 'Select at least one ticket type, or choose "All Attendees".';
+			return;
+		}
 		saving = true; error = '';
 		try {
 			const payload: any = {

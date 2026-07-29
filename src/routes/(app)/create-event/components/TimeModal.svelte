@@ -6,6 +6,9 @@
 	export let referenceTime: string | null = null; // e.g., "11:30 PM"
 	export let minTime: string | null = null; // e.g., "9:00 AM" — hide times before this
 	export let maxTime: string | null = null; // e.g., "5:00 PM" — hide times after this
+	/** When true the list starts *after* referenceTime, so an end time can never
+	 * be earlier than the start time it is paired with. */
+	export let afterReference = false;
 
 	const dispatch = createEventDispatcher();
 
@@ -18,10 +21,11 @@
 	}
 
 	// Generate 30-min interval times
-	function generateTimes() {
+	function generateTimes(min: string | null, max: string | null, ref: string | null, after: boolean) {
 		const times = [];
-		const minMinutes = minTime ? parseTimeTo24(minTime) : 0;
-		const maxMinutes = maxTime ? parseTimeTo24(maxTime) : 24 * 60;
+		let minMinutes = min ? parseTimeTo24(min) : 0;
+		const maxMinutes = max ? parseTimeTo24(max) : 24 * 60;
+		if (after && ref) minMinutes = Math.max(minMinutes, parseTimeTo24(ref) + 30);
 		for (let h = 0; h < 24; h++) {
 			for (let m = 0; m < 60; m += 30) {
 				const totalMin = h * 60 + m;
@@ -35,19 +39,13 @@
 		return times;
 	}
 
-	$: times = generateTimes();
+	$: times = generateTimes(minTime, maxTime, referenceTime, afterReference);
 
 	// Calculate difference between time and reference
 	function getTimeDiff(h: number, m: number) {
 		if (!referenceTime) return '';
 
-		// Parse reference time: "11:30 PM"
-		const [time, ampm] = referenceTime.split(' ');
-		let [refHour, refMinute] = time.split(':').map(Number);
-		if (ampm.toUpperCase() === 'PM' && refHour !== 12) refHour += 12;
-		if (ampm.toUpperCase() === 'AM' && refHour === 12) refHour = 0;
-
-		const refTotal = refHour * 60 + refMinute;
+		const refTotal = parseTimeTo24(referenceTime);
 		const currentTotal = h * 60 + m;
 
 		let diff = currentTotal - refTotal;
@@ -70,24 +68,31 @@
 </script>
 
 {#if open}
+	<!--
+		On small screens this is centred in the viewport instead of anchored to a
+		narrow trigger button, which previously pushed it past the screen edge.
+	-->
 	<div
 		id="time"
-		class="triangle absolute top-full right-0 z-40 mt-2 max-w-[185px] {referenceTime !== null
-			? 'w-[185px]'
-			: 'w-[135px]'}"
+		class="triangle fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:top-full sm:right-0 sm:left-auto sm:z-40 sm:mt-2 sm:translate-x-0 sm:translate-y-0
+			{referenceTime !== null ? 'w-[185px]' : 'w-[150px] sm:w-[135px]'}"
 	>
 		<div
-			class="custom-scrollbar relative h-[300px] w-full space-y-1 overflow-hidden overflow-y-auto rounded-sm bg-[#FFFCFC] p-2"
+			class="custom-scrollbar relative h-[300px] w-full space-y-1 overflow-hidden overflow-y-auto rounded-sm bg-[#FFFCFC] p-2 shadow-lg"
 		>
+			{#if times.length === 0}
+				<p class="px-2 py-3 text-xs text-gray-400">No times available in this window.</p>
+			{/if}
 			{#each times as time}
 				<button
+					type="button"
 					class="flex w-full cursor-pointer rounded-md px-2.5 py-1.5 text-xs hover:bg-[#F31A7C] hover:text-white {selectedTime ===
 					time.label
 						? 'bg-[#F31A7C]  text-white'
 						: 'text-black'}"
 					on:click={() => selectTime(time.label)}
 				>
-					<span class="w-full">{time.label}</span>
+					<span class="w-full text-left">{time.label}</span>
 					{#if referenceTime}
 						<span class="w-full text-left text-xs text-gray-400">{getTimeDiff(time.h, time.m)}</span
 						>
@@ -99,14 +104,16 @@
 {/if}
 
 <style>
-	/* Triangle pointer */
-	.triangle::before {
-		content: '';
-		position: absolute;
-		top: -18px;
-		right: 30px;
-		border-width: 8px;
-		border-style: solid;
-		border-color: transparent transparent white transparent;
+	/* Triangle pointer — only meaningful when anchored to the trigger. */
+	@media (min-width: 640px) {
+		.triangle::before {
+			content: '';
+			position: absolute;
+			top: -18px;
+			right: 30px;
+			border-width: 8px;
+			border-style: solid;
+			border-color: transparent transparent white transparent;
+		}
 	}
 </style>

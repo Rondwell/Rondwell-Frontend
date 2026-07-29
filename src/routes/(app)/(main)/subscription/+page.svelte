@@ -253,14 +253,23 @@
 		aiPrompts: 'AI prompts this period',
 	};
 
+	/** Sentinel used by the seeded plans for "effectively unlimited". */
+	const UNLIMITED_SENTINEL = 999999;
+
 	function usageRows(snapshot: typeof $usageStore) {
 		const out: Array<{ key: string; label: string; current: number; limit: number }> = [];
-		for (const [key, limit] of Object.entries(snapshot.limits)) {
+		for (const [key, rawLimit] of Object.entries(snapshot.limits)) {
+			// Plans also carry non-metered flags (e.g. `freeEventsUnlimited`) — those
+			// aren't usage rows.
+			if (typeof rawLimit !== 'number') continue;
+
 			out.push({
 				key,
 				label: USAGE_LABELS[key] ?? key,
 				current: snapshot.usage[key] ?? 0,
-				limit: limit as number,
+				// Normalize both unlimited spellings so the row renders "unlimited"
+				// instead of "3 / 999999".
+				limit: rawLimit >= UNLIMITED_SENTINEL ? -1 : rawLimit,
 			});
 		}
 		return out;

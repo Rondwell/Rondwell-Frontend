@@ -2,9 +2,10 @@
 	import { page } from '$app/stores';
 	import { getCollectionSubscribers } from '$lib/services/collection.services';
 	import {
-		getEmailUsage,
+		getEmailQuota,
 		getEventAttendees,
-		inviteAttendees
+		inviteAttendees,
+		type EmailQuota
 	} from '$lib/services/event.services';
 	import { authState } from '$lib/stores/auth.store';
 	import { getEventCache } from '$lib/stores/eventCache.store';
@@ -39,10 +40,24 @@
 	let sendResult: { success: any[]; failed: any[] } | null = null;
 	let csvFileInput: HTMLInputElement;
 
-	// Email usage / limits
-	let emailUsage = { used: 0, limit: 15, tier: 'FREE' };
-	$: weeklyLimit = emailUsage.limit;
-	$: remaining = Math.max(0, weeklyLimit - emailUsage.used);
+	/**
+	 * Monthly email allowance for the organizer. Invitations spend the same pool
+	 * as blasts and newsletters, so this comes from the shared quota endpoint —
+	 * it used to default to a hard-coded 15 and read a counter that was never
+	 * written, which is why PLUS organizers saw the FREE allowance.
+	 */
+	let emailQuota: EmailQuota | null = null;
+	let quotaLoading = true;
+
+	$: monthlyLimit = emailQuota?.limit ?? 0;
+	$: isUnlimited = emailQuota?.unlimited === true;
+	$: remaining = isUnlimited
+		? Number.POSITIVE_INFINITY
+		: Math.max(0, monthlyLimit - (emailQuota?.used ?? 0));
+	$: remainingAfterSelection = isUnlimited
+		? Number.POSITIVE_INFINITY
+		: Math.max(0, remaining - selectedCount);
+	$: overQuota = !isUnlimited && !quotaLoading && !!emailQuota && selectedCount > remaining;
 
 	// Collections (sidebar subscriber groups)
 	interface CollectionItem {
@@ -91,11 +106,17 @@
 	}
 
 	async function loadEmailUsage() {
-		if (!userId) return;
+		quotaLoading = true;
 		try {
-			emailUsage = await getEmailUsage(userId);
+			const quota = await getEmailQuota();
+			// An unresolved plan is "unknown", not "FREE with 250".
+			emailQuota = quota.resolved ? quota : null;
 		} catch {
-			emailUsage = { used: 0, limit: 15, tier: 'FREE' };
+			// Leave the badge blank rather than inventing an allowance — a wrong
+			// number here is what sent organizers down the wrong path before.
+			emailQuota = null;
+		} finally {
+			quotaLoading = false;
 		}
 	}
 
@@ -290,7 +311,9 @@
 
 	// Counting
 	$: selectedCount = emailList.filter((e) => e.selected).length;
-	$: canSendMore = selectedCount <= remaining;
+	// Unknown quota must not block sending — the server is the enforcer, and a
+	// failed quota fetch previously left the Send button permanently disabled.
+	$: canSendMore = !emailQuota || isUnlimited || selectedCount <= remaining;
 
 	// Filtered list for current tab
 	$: filteredList = (() => {
@@ -330,7 +353,9 @@
 			);
 			existingAttendeeEmails = new Set([...existingAttendeeEmails, ...sentEmails]);
 		} catch (err: any) {
-			sendResult = { success: [], failed: [{ email: 'all', reason: err.message }] };
+			sendResult = { success: [], failed: [{ email: 'all', reason: err?.message ?? 'Invitation failed' }] };
+			// A plan-limit rejection means our cached numbers are stale.
+			await loadEmailUsage();
 		} finally {
 			sending = false;
 		}
@@ -382,9 +407,25 @@
 							on:click={() => (activeTab = 'limit_details')}
 							class="flex w-[120px] items-center gap-2 rounded-full border-2 px-3 py-1 {activeTab === 'limit_details' ? 'border-black' : 'border-[#E5E6E6]'}"
 						>
-							<span class="h-[22px] w-[22px] rounded-full border-3 border-[#E5E6E6]"></span>
+							<span
+								class="h-[22px] w-[22px] rounded-full border-3 {quotaLoading || !emailQuota
+									? 'border-[#E5E6E6]'
+									: isUnlimited || remainingAfterSelection > 50
+										? 'border-green-400'
+										: remainingAfterSelection > 10
+											? 'border-yellow-400'
+											: 'border-red-400'}"
+							></span>
 							<p class="text-[#A8A9A9]">
-								{remaining - selectedCount < 0 ? 0 : remaining - selectedCount} Left
+								{#if quotaLoading}
+									…
+								{:else if !emailQuota}
+									—
+								{:else if isUnlimited}
+									Unlimited
+								{:else}
+									{remainingAfterSelection} Left
+								{/if}
 							</p>
 						</button>
 					{/if}
@@ -576,29 +617,42 @@
 											{/if}
 											<div>
 												<div class="text-md font-semibold">{cachedCollections?.[0]?.name ?? 'My Collection'}</div>
-												<div class="text-xs text-[#ABADAD]">{emailUsage.tier === 'PLUS' ? 'Rondwell Plus' : 'Rondwell Free'}</div>
+												<div class="text-xs text-[#ABADAD]">{emailQuota?.tier === 'PLUS' ? 'Rondwell Plus' : 'Rondwell Free'}</div>
 											</div>
 										</div>
 
 										<div class="mb-2 text-sm">
-											You can send {weeklyLimit} invites from this calendar each month.
+											{#if quotaLoading}
+												Checking your email allowance…
+											{:else if !emailQuota}
+												We couldn't load your email allowance. Invitations still send; the limit is enforced server-side.
+											{:else if isUnlimited}
+												Your plan includes unlimited invitation emails.
+											{:else}
+												You can send {monthlyLimit.toLocaleString()} emails per month. Invitations, event blasts and
+												collection newsletters all draw from this allowance.
+											{/if}
 										</div>
 
 										<!-- Progress -->
-										<div class="space-y-2">
-											<div class="flex justify-between text-sm text-gray-600">
-												<span>{emailUsage.used} Used</span>
-												<span>{remaining} Available</span>
+										{#if emailQuota && !isUnlimited}
+											<div class="space-y-2">
+												<div class="flex justify-between text-sm text-gray-600">
+													<span>{emailQuota.used.toLocaleString()} Used</span>
+													<span>{remaining.toLocaleString()} Available</span>
+												</div>
+												<div class="h-2 w-full rounded bg-gray-200">
+													<div
+														class="h-2 rounded bg-blue-500"
+														style="width: {monthlyLimit > 0
+															? Math.min((emailQuota.used / monthlyLimit) * 100, 100)
+															: 0}%;"
+													></div>
+												</div>
 											</div>
-											<div class="h-2 w-full rounded bg-gray-200">
-												<div
-													class="h-2 rounded bg-blue-500"
-													style="width: {weeklyLimit > 0 ? (emailUsage.used / weeklyLimit) * 100 : 0}%;"
-												></div>
-											</div>
-										</div>
+										{/if}
 
-										{#if emailUsage.tier !== 'PLUS'}
+										{#if emailQuota?.tier !== 'PLUS'}
 											<div class="border-t pt-4">
 												<div class="font-medium">How to increase your invite limit</div>
 												<div class="mt-3 space-y-3 rounded-lg bg-[#FDFDFD] p-3">
@@ -845,6 +899,12 @@
 					</button>
 				{:else}
 					<span></span>
+				{/if}
+
+				{#if overQuota && !sendResult}
+					<span class="mr-2 text-xs font-medium text-red-500">
+						{selectedCount} selected but only {remaining} email{remaining === 1 ? '' : 's'} left this month
+					</span>
 				{/if}
 
 				{#if !sendResult}

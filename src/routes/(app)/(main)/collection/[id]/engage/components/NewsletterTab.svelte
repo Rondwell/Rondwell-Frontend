@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { cancelCollectionBlast, getCollectionBlastQuota, getCollectionBlasts, getCollectionVerificationStatus, sendCollectionBlastNow } from '$lib/services/event.services';
+	import { cancelCollectionBlast, getCollectionBlastQuota, getCollectionBlasts, getCollectionVerificationStatus, sendCollectionBlastNow, type EmailQuota } from '$lib/services/event.services';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import CollectionBlastModal from './CollectionBlastModal.svelte';
@@ -15,13 +15,25 @@
 	// Blast data
 	let blasts: any[] = [];
 	let blastsLoading = true;
-	let quota = { used: 0, limit: 250, tier: 'FREE' };
+	/**
+	 * Plan-resolved email allowance (shared with event blasts and attendee
+	 * invitations). `null` while unknown so the UI never shows a guessed number.
+	 */
+	let quota: EmailQuota | null = null;
 	let actionLoading = '';
 
 	$: isVerified = approvalStatus === 'APPROVED';
 	$: isPending = approvalStatus === 'PENDING';
 	$: isRejected = approvalStatus === 'REJECTED';
-	$: emailsRemaining = Math.max(0, quota.limit - quota.used);
+	$: isUnlimited = quota?.unlimited === true;
+	$: emailsRemaining = quota
+		? isUnlimited
+			? Number.POSITIVE_INFINITY
+			: Math.max(0, quota.limit - quota.used)
+		: null;
+	$: usedPercent = quota && !isUnlimited && quota.limit > 0
+		? Math.min((quota.used / quota.limit) * 100, 100)
+		: 0;
 	$: scheduledBlasts = blasts.filter((b) => b.status === 'SCHEDULED');
 	$: sentBlasts = blasts.filter((b) => b.status === 'SENT');
 	$: sendingBlasts = blasts.filter((b) => b.status === 'SENDING');
@@ -45,7 +57,8 @@
 				getCollectionBlastQuota(collectionId),
 			]);
 			blasts = blastData.blasts || [];
-			quota = quotaData;
+			// An unresolved plan is "unknown", not a guessed FREE allowance.
+			quota = quotaData.resolved ? quotaData : null;
 		} catch { blasts = []; }
 		finally { blastsLoading = false; }
 	}
@@ -97,21 +110,46 @@
 			<span class="text-sm text-[#B9BABA]">Send a newsletter to your subscribers...</span>
 		</button>
 
-		<!-- Quota -->
+		<!-- Quota — shared with event blasts and attendee invitations -->
 		<div class="mb-6 rounded-xl border border-gray-100 bg-[#FDFDFD] p-4 shadow-sm">
 			<div class="flex items-center justify-between text-xs">
 				<div class="flex items-center gap-1.5">
 					<Icon icon="mdi:email-outline" class="text-sm text-[#A5A6A6]" />
-					<span class="text-[#666769]">Monthly email limit ({quota.tier})</span>
+					<span class="text-[#666769]">Monthly email limit{quota ? ` (${quota.tier})` : ''}</span>
 				</div>
-				<span class="font-medium text-gray-800">{quota.used} / {quota.limit} used</span>
+				<span class="font-medium text-gray-800">
+					{#if !quota}
+						—
+					{:else if isUnlimited}
+						{quota.used.toLocaleString()} used · Unlimited
+					{:else}
+						{quota.used.toLocaleString()} / {quota.limit.toLocaleString()} used
+					{/if}
+				</span>
 			</div>
-			<div class="mt-2 h-1.5 w-full rounded-full bg-gray-200">
-				<div class="h-1.5 rounded-full transition-all {emailsRemaining > 50 ? 'bg-green-400' : emailsRemaining > 10 ? 'bg-yellow-400' : 'bg-red-400'}" style="width: {Math.min((quota.used / quota.limit) * 100, 100)}%;"></div>
-			</div>
+			{#if quota && !isUnlimited}
+				<div class="mt-2 h-1.5 w-full rounded-full bg-gray-200">
+					<div
+						class="h-1.5 rounded-full transition-all {(emailsRemaining ?? 0) > 50
+							? 'bg-green-400'
+							: (emailsRemaining ?? 0) > 10
+								? 'bg-yellow-400'
+								: 'bg-red-400'}"
+						style="width: {usedPercent}%;"
+					></div>
+				</div>
+			{/if}
 			<div class="mt-1.5 flex items-center justify-between text-xs text-[#A5A6A6]">
-				<span>{emailsRemaining} emails remaining</span>
-				{#if quota.tier === 'FREE'}<button class="text-pink-600 hover:underline">Upgrade Plan</button>{/if}
+				<span>
+					{#if !quota}
+						Checking your allowance…
+					{:else if isUnlimited}
+						Unlimited emails on your plan
+					{:else}
+						{(emailsRemaining ?? 0).toLocaleString()} emails remaining
+					{/if}
+				</span>
+				{#if quota?.tier === 'FREE'}<a href="/subscription" class="text-pink-600 hover:underline">Upgrade Plan</a>{/if}
 			</div>
 		</div>
 
@@ -207,7 +245,7 @@
 			</div>
 		{/if}
 
-		<CollectionBlastModal bind:open={showBlastModal} collectionName="" {emailsRemaining} onBlastSent={loadBlastData} />
+		<CollectionBlastModal bind:open={showBlastModal} collectionName="" {quota} onBlastSent={loadBlastData} />
 
 	{:else}
 		<!-- ❌ NOT VERIFIED — Verification prompt -->

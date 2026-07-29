@@ -1,6 +1,11 @@
 <!-- src/lib/components/Sidebar.svelte -->
 <script lang="ts">
-	export let activeItem = 'Events';
+	import {
+		discoverTab,
+		setTab,
+		TAB_SHORTCUTS,
+		type DiscoverTab
+	} from '$lib/stores/discover.store';
 
 	const GRAY = '#545260';
 	const PURPLE = '#A667E4';
@@ -75,36 +80,24 @@
 		<nav class="flex-1 space-y-3">
 			{#each menuItems as item}
 				<button
+					type="button"
+					aria-current={$discoverTab === item.name ? 'page' : undefined}
 					class={`flex w-full cursor-pointer items-center gap-3 rounded-md px-4 py-2 transition ${
-						activeItem === item.name
+						$discoverTab === item.name
 							? 'rounded-2xl border border-purple-700 text-purple-700'
 							: 'text-gray-700 hover:bg-gray-100'
 					}`}
-					on:click={() => {
-						activeItem = item.name;
-						if (typeof window !== 'undefined') {
-							const url = new URL(window.location.href);
-							url.searchParams.set('tab', item.name.toLowerCase());
-							window.history.replaceState({}, '', url.toString());
-						}
-					}}
+					on:click={() => setTab(item.name as DiscoverTab)}
 				>
-					<span>{@html activeItem === item.name ? item.selectedIcon : item.icon}</span>
+					<span>{@html $discoverTab === item.name ? item.selectedIcon : item.icon}</span>
 					{item.name}
-					<!-- Badge placeholder -->
-					{#if item.name === 'Events'}
-						<span
-							class="ml-auto rounded-md {activeItem === item.name
-								? 'bg-purple-100'
-								: ''} p-2 text-xs">⌘E</span
-						>
-					{:else}
-						<span
-							class="ml-auto rounded-md p-2 text-xs {activeItem === item.name
-								? 'bg-purple-100'
-								: ''}">⌘V</span
-						>
-					{/if}
+					<!-- Keyboard shortcut hint — handled on the discover page -->
+					<span
+						title="Press {TAB_SHORTCUTS[item.name as DiscoverTab]} to switch"
+						class="ml-auto rounded-md px-2 py-1 text-xs font-semibold {$discoverTab === item.name
+							? 'bg-purple-100 text-purple-700'
+							: 'bg-gray-100 text-gray-400'}">{TAB_SHORTCUTS[item.name as DiscoverTab]}</span
+					>
 				</button>
 			{/each}
 		</nav>

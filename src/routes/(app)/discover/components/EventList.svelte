@@ -1,43 +1,68 @@
 <script lang="ts">
 	import EventCard from '$lib/components/EventCard.svelte';
 	import { discoverEvents } from '$lib/services/event.services';
-	import { onMount } from 'svelte';
+	import { clearAllFilters, discoverFilters, eventQueryParams, hasActiveFilters } from '$lib/stores/discover.store';
+	import Icon from '@iconify/svelte';
+	import { onDestroy } from 'svelte';
+
+	const PAGE_SIZE = 20;
 
 	let events: any[] = [];
 	let loading = true;
-	let pagination: any = { page: 1, limit: 20, total: 0, totalPages: 0 };
-
-	// Filters (self-managed, no props needed)
-	let searchQuery = '';
-	let categoryFilter = '';
-	let eventTypeFilter = '';
-	let registrationTypeFilter = '';
-
+	let failed = false;
+	let pagination: any = { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 0 };
 	let currentPage = 1;
 
-	async function loadEvents() {
+	/** Serialized filters of the last request — guards against duplicate loads. */
+	let lastKey = '';
+	let requestId = 0;
+	let debounce = 0;
+
+	onDestroy(() => clearTimeout(debounce));
+
+	async function loadEvents(params: Record<string, string>, pageNumber: number) {
+		const id = ++requestId;
 		loading = true;
+		failed = false;
 		try {
 			const data = await discoverEvents({
-				page: currentPage,
-				limit: 20,
-				search: searchQuery || undefined,
-				category: categoryFilter || undefined,
-				eventType: eventTypeFilter || undefined,
-				registrationType: registrationTypeFilter || undefined,
+				page: pageNumber,
+				limit: PAGE_SIZE,
+				...params
 			});
-			events = data.events;
-			pagination = data.pagination;
-		} catch { events = []; }
-		finally { loading = false; }
+			if (id !== requestId) return;
+			events = data.events ?? [];
+			pagination = data.pagination ?? { page: pageNumber, limit: PAGE_SIZE, total: 0, totalPages: 0 };
+		} catch {
+			if (id !== requestId) return;
+			events = [];
+			failed = true;
+		} finally {
+			if (id === requestId) loading = false;
+		}
 	}
 
-	onMount(() => loadEvents());
+	function schedule(params: Record<string, string>, pageNumber: number, delay = 0) {
+		clearTimeout(debounce);
+		if (typeof window === 'undefined') return;
+		debounce = window.setTimeout(() => loadEvents(params, pageNumber), delay);
+	}
 
-	// Reload when filters change
-	$: if (searchQuery !== undefined || categoryFilter || eventTypeFilter || registrationTypeFilter) {
-		currentPage = 1;
-		loadEvents();
+	// Filters changed → back to page 1, debounced so typing doesn't spam the API.
+	$: {
+		const key = JSON.stringify($eventQueryParams);
+		if (key !== lastKey) {
+			const isFirstLoad = lastKey === '';
+			lastKey = key;
+			currentPage = 1;
+			schedule({ ...$eventQueryParams }, 1, isFirstLoad ? 0 : 220);
+		}
+	}
+
+	function goToPage(pageNumber: number) {
+		currentPage = pageNumber;
+		schedule({ ...$eventQueryParams }, pageNumber, 0);
+		if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
 	function normalizeEvent(e: any) {
@@ -78,12 +103,18 @@
 	}
 
 	$: displayEvents = events.map(normalizeEvent);
+	$: searchTerm = $discoverFilters.search.trim();
+	$: heading = searchTerm ? `Results for “${searchTerm}”` : $hasActiveFilters ? 'Filtered Events' : 'Featured Events';
+	$: totalLabel = pagination.total === 1 ? '1 event' : `${(pagination.total ?? 0).toLocaleString()} events`;
 </script>
 
 <section class="relative max-w-6xl">
-	<h1 class="text-xl font-bold">
-		{searchQuery ? `Results for "${searchQuery}"` : 'Featured Events'}
-	</h1>
+	<div class="flex flex-wrap items-baseline justify-between gap-2">
+		<h1 class="text-xl font-bold">{heading}</h1>
+		{#if !loading && !failed}
+			<span class="text-xs font-semibold text-gray-400">{totalLabel}</span>
+		{/if}
+	</div>
 
 	{#if loading}
 	<div class="py-5 grid gap-4 lg:grid-cols-2 animate-pulse">
@@ -92,14 +123,35 @@
 		{/each}
 	</div>
 
+	{:else if failed}
+	<div class="flex h-48 flex-col items-center justify-center gap-3">
+		<Icon icon="mdi:cloud-off-outline" class="h-7 w-7 text-gray-300" />
+		<p class="text-sm text-gray-500">We couldn't load events just now.</p>
+		<button
+			class="rounded-lg bg-gray-900 px-4 py-2 text-xs font-semibold text-white"
+			on:click={() => loadEvents({ ...$eventQueryParams }, currentPage)}
+		>
+			Try again
+		</button>
+	</div>
+
 	{:else if displayEvents.length === 0}
-	<div class="flex h-48 items-center justify-center">
-		<div class="text-center">
-			<p class="text-lg text-gray-400">No events found</p>
-			<p class="text-sm text-gray-300 mt-1">
-				{searchQuery ? 'Try a different search term' : 'Check back later for upcoming events'}
-			</p>
-		</div>
+	<div class="flex h-56 flex-col items-center justify-center gap-2">
+		<Icon icon="mdi:calendar-search" class="h-7 w-7 text-gray-300" />
+		<p class="text-base font-semibold text-gray-500">No events match these filters</p>
+		<p class="max-w-sm text-center text-sm text-gray-400">
+			{$hasActiveFilters
+				? 'Try widening your search — fewer categories, more locations, or a different event type.'
+				: 'Check back later for upcoming events.'}
+		</p>
+		{#if $hasActiveFilters}
+			<button
+				class="mt-1 rounded-lg border border-purple-500 px-4 py-2 text-xs font-semibold text-purple-600 transition hover:bg-purple-50"
+				on:click={clearAllFilters}
+			>
+				Clear all filters
+			</button>
+		{/if}
 	</div>
 
 	{:else}
@@ -118,7 +170,7 @@
 			<button
 				class="rounded-lg px-3 py-1.5 text-sm {currentPage <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'}"
 				disabled={currentPage <= 1}
-				on:click={() => { currentPage--; loadEvents(); }}
+				on:click={() => goToPage(currentPage - 1)}
 			>
 				Previous
 			</button>
@@ -128,7 +180,7 @@
 			<button
 				class="rounded-lg px-3 py-1.5 text-sm {currentPage >= pagination.totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'}"
 				disabled={currentPage >= pagination.totalPages}
-				on:click={() => { currentPage++; loadEvents(); }}
+				on:click={() => goToPage(currentPage + 1)}
 			>
 				Next
 			</button>

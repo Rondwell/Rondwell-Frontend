@@ -909,6 +909,24 @@
 									<PlanSelect label="Risk tier" bind:value={payoutTier} options={payoutTierOptions} disabled={payoutUpdating} />
 								</div>
 
+								<!-- The risk tier only supplies the DEFAULT reserve % and release
+								     delay. It has no effect while Instant is active (no reserve is
+								     taken at all); it applies again if rolling reserve resumes. -->
+								{#if payoutMode === 'INSTANT'}
+									<p class="mb-3 rounded-lg bg-[#FFF7ED] px-3 py-2 text-xs text-[#9A6B00]">
+										Instant mode holds <strong>no reserve</strong> on future sales — the risk
+										tier and reserve settings below don't apply while it's active. They take
+										effect again if rolling reserve resumes (for example when this grant
+										expires).
+									</p>
+								{:else}
+									<p class="mb-3 text-[11px] text-gray-400">
+										The risk tier sets the default reserve % and release delay
+										(Trusted 5% / 1d · Standard 20% / 3d · Elevated 40% / 14d). Values you
+										type below override the tier default.
+									</p>
+								{/if}
+
 								{#if payoutMode === 'ROLLING'}
 									<div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
 										<label class="block">

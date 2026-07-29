@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { createEventBlast, previewBlastDraft, uploadBlastImage } from '$lib/services/event.services';
+	import { createEventBlast, previewBlastDraft, uploadBlastImage, type EmailQuota } from '$lib/services/event.services';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import Image from '@tiptap/extension-image';
@@ -15,8 +15,22 @@
 
 	export let open = false;
 	export let eventTitle = '';
-	export let emailsRemaining = 250;
+	/**
+	 * Plan-resolved email allowance, or `null` while unknown. Passed as an object
+	 * rather than a bare number so "unlimited" and "not loaded yet" can't be
+	 * mistaken for a real remaining count (the old default was a literal 250,
+	 * which is what showed PLUS organizers the FREE allowance).
+	 */
+	export let quota: EmailQuota | null = null;
 	export let onBlastSent: (() => void) | undefined = undefined;
+
+	$: isUnlimited = quota?.unlimited === true;
+	/** `null` when the allowance is unknown, `Infinity` when unlimited. */
+	$: emailsRemaining = quota
+		? isUnlimited
+			? Number.POSITIVE_INFINITY
+			: Math.max(0, quota.limit - quota.used)
+		: null;
 
 	$: void eventTitle; // used in SendPostModal child
 	$: eventId = $page.params.id ?? '';
@@ -161,7 +175,10 @@
 		}
 	}
 
-	$: canSend = subject.trim() && emailContent.trim() && emailsRemaining > 0 && !sending;
+	// An unknown allowance must not disable sending — the server enforces the
+	// limit and returns PLAN_LIMIT_EXCEEDED with the real numbers.
+	$: hasAllowance = emailsRemaining === null || emailsRemaining > 0;
+	$: canSend = subject.trim() && emailContent.trim() && hasAllowance && !sending;
 	$: canPreview = subject.trim() && emailContent.trim() && !previewing && !sending;
 
 	async function handlePreview() {
@@ -200,9 +217,28 @@
 					</div>
 				</div>
 				<div class="flex items-center gap-3">
-					<span class="flex items-center gap-1.5 rounded-full border-2 border-[#E5E6E6] px-3 py-1">
-						<span class="h-[18px] w-[18px] rounded-full border-3 {emailsRemaining > 50 ? 'border-green-400' : emailsRemaining > 10 ? 'border-yellow-400' : 'border-red-400'}"></span>
-						<span class="whitespace-nowrap text-xs text-[#A8A9A9]">{emailsRemaining} Left</span>
+					<span
+						class="flex items-center gap-1.5 rounded-full border-2 border-[#E5E6E6] px-3 py-1"
+						title={quota ? `${quota.tier} plan · ${quota.used} used this month` : 'Email allowance'}
+					>
+						<span
+							class="h-[18px] w-[18px] rounded-full border-3 {emailsRemaining === null
+								? 'border-[#E5E6E6]'
+								: emailsRemaining > 50
+									? 'border-green-400'
+									: emailsRemaining > 10
+										? 'border-yellow-400'
+										: 'border-red-400'}"
+						></span>
+						<span class="whitespace-nowrap text-xs text-[#A8A9A9]">
+							{#if emailsRemaining === null}
+								—
+							{:else if isUnlimited}
+								Unlimited
+							{:else}
+								{emailsRemaining.toLocaleString()} Left
+							{/if}
+						</span>
 					</span>
 					<button class="flex h-8 w-8 items-center justify-center rounded-full bg-[#EBECED]" on:click={() => (open = false)} aria-label="Close">
 						<Icon icon="mdi:close" class="text-lg text-gray-700" />

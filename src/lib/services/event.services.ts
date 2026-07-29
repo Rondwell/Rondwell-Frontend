@@ -120,26 +120,44 @@ export async function getEventById(eventId: string): Promise<any> {
   return data.event;
 }
 
-/** Discover public events — no auth required */
-export async function discoverEvents(options?: {
+/**
+ * Discover public events — no auth required.
+ *
+ * Multi-value filters (`category`, `eventType`, `registrationType`, `location`)
+ * accept a comma-separated string and are OR'd together server-side; different
+ * filters are AND'd. `category` takes plain labels ("Art"), not the emoji form.
+ */
+export interface DiscoverEventsOptions {
   page?: number;
   limit?: number;
   search?: string;
   category?: string;
   eventType?: string;
   registrationType?: string;
-}): Promise<{ events: any[]; pagination: any }> {
+  location?: string;
+  startsAfter?: string;
+  startsBefore?: string;
+  sort?: 'newest' | 'upcoming';
+  organizerId?: string;
+  signal?: AbortSignal;
+}
+
+export async function discoverEvents(
+  options?: DiscoverEventsOptions
+): Promise<{ events: any[]; pagination: any }> {
   const params = new URLSearchParams();
-  if (options?.page) params.set('page', String(options.page));
-  if (options?.limit) params.set('limit', String(options.limit));
-  if (options?.search) params.set('search', options.search);
-  if (options?.category) params.set('category', options.category);
-  if (options?.eventType) params.set('eventType', options.eventType);
-  if (options?.registrationType) params.set('registrationType', options.registrationType);
-  const res = await fetch(`${EVENT_URL}/api/v1/events/discover?${params.toString()}`);
+  const { signal, ...rest } = options ?? {};
+  for (const [key, value] of Object.entries(rest)) {
+    if (value === undefined || value === null || value === '') continue;
+    params.set(key, String(value));
+  }
+  const res = await fetch(`${EVENT_URL}/api/v1/events/discover?${params.toString()}`, { signal });
+  if (!res.ok) await throwApiError(res, 'Failed to load events');
   const data = await res.json();
-  if (!res.ok) return { events: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
-  return data;
+  return {
+    events: data?.events ?? [],
+    pagination: data?.pagination ?? { page: 1, limit: 20, total: 0, totalPages: 0 }
+  };
 }
 
 /** Public event page data — no auth required */
@@ -348,11 +366,66 @@ export async function inviteAttendees(
   return data.data;
 }
 
-export async function getEmailUsage(userId: string): Promise<{ used: number; limit: number; tier: string }> {
+/**
+ * The organizer's monthly email allowance.
+ *
+ * One shape for every "N emails left" surface (Invite Attendee, Email Blast,
+ * Newsletter): resolved server-side from the organizer's actual plan and the
+ * canonical usage counter. `limit === -1` / `unlimited` means no cap.
+ */
+export interface EmailQuota {
+  used: number;
+  /** `-1` when unlimited. */
+  limit: number;
+  tier: string;
+  unlimited: boolean;
+  /** `-1` when unlimited. */
+  remaining: number;
+  /**
+   * False when the server could not resolve the plan (payment service
+   * unreachable). Treat as "unknown" and render a dash — the send itself still
+   * goes through, because enforcement fails open in that state too.
+   */
+  resolved: boolean;
+}
+
+/** Normalize a quota payload from any of the quota endpoints. */
+export function normalizeEmailQuota(raw: any): EmailQuota {
+  const limit = Number(raw?.limit ?? 0);
+  const used = Number(raw?.used ?? 0);
+  const unlimited = raw?.unlimited === true || limit === -1 || limit >= 999999;
+  return {
+    used,
+    limit: unlimited ? -1 : limit,
+    tier: raw?.tier ?? 'FREE',
+    unlimited,
+    remaining: unlimited ? -1 : Math.max(0, limit - used),
+    // Older responses (and the notification mirror) don't carry the flag; assume
+    // resolved unless the server explicitly says otherwise.
+    resolved: raw?.limitResolved !== false
+  };
+}
+
+/**
+ * Organizer-scoped email quota (not tied to one event). Used by the attendee
+ * invitation flow, which spends the same allowance as blasts and newsletters.
+ */
+export async function getEmailQuota(): Promise<EmailQuota> {
+  const res = await authFetch(`${EVENT_URL}/api/v1/events/email-quota`);
+  if (!res.ok) await throwApiError(res, 'Failed to fetch email quota');
+  return normalizeEmailQuota(await res.json());
+}
+
+/**
+ * Notification-service view of the same allowance (its local mirror + the
+ * canonical counter). Kept for tooling/debugging; product surfaces should use
+ * {@link getEmailQuota} so every badge reads one number.
+ */
+export async function getEmailUsage(userId: string): Promise<EmailQuota> {
   const res = await authFetch(`${EVENT_URL}/api/v1/email/usage/${userId}`);
   if (!res.ok) await throwApiError(res, 'Failed to fetch email usage');
   const data = await res.json();
-  return data.data;
+  return normalizeEmailQuota(data.data);
 }
 
 
@@ -1834,11 +1907,10 @@ export async function getEventBlasts(eventId: string, params: Record<string, str
   return data;
 }
 
-export async function getBlastQuota(eventId: string): Promise<{ used: number; limit: number; tier: string }> {
+export async function getBlastQuota(eventId: string): Promise<EmailQuota> {
   const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/blasts/quota`);
   if (!res.ok) await throwApiError(res, 'Failed to fetch quota');
-  const data = await res.json();
-  return data;
+  return normalizeEmailQuota(await res.json());
 }
 
 export async function cancelEventBlast(eventId: string, blastId: string): Promise<any> {
@@ -1934,11 +2006,10 @@ export async function getCollectionBlasts(collectionId: string, params: Record<s
   return data;
 }
 
-export async function getCollectionBlastQuota(collectionId: string): Promise<{ used: number; limit: number; tier: string }> {
+export async function getCollectionBlastQuota(collectionId: string): Promise<EmailQuota> {
   const res = await authFetch(`${EVENT_URL}/api/v1/collections/${collectionId}/blasts/quota`);
   if (!res.ok) await throwApiError(res, 'Failed to fetch quota');
-  const data = await res.json();
-  return data;
+  return normalizeEmailQuota(await res.json());
 }
 
 export async function cancelCollectionBlast(collectionId: string, blastId: string): Promise<any> {

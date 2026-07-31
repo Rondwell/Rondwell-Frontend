@@ -277,13 +277,6 @@ const REGISTRY: Record<string, (ctx: ErrorContext) => FinancialErrorCopy> = {
 			: 'The name you entered doesn\'t match the bank record. Verify the account number and bank code.',
 		severity: 'error',
 	}),
-	BENEFICIARY_COOL_DOWN: ({ meta }) => ({
-		title: 'Cool-down active',
-		body: meta?.availableAt
-			? `This account was added recently. Available for withdrawal at ${fmtDate(meta.availableAt)}.`
-			: 'This account was added recently. The first withdrawal is delayed by 24h for security.',
-		severity: 'info',
-	}),
 	BENEFICIARY_BLOCKED: () => ({
 		title: 'Account unavailable',
 		body: 'This account is unavailable. Contact support for assistance.',

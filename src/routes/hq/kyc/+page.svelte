@@ -5,6 +5,7 @@
 <script lang="ts">
 	import {
 		approveKyc,
+		getKycDocumentViewUrl,
 		listPendingKyc,
 		listApprovedKyc,
 		listRejectedKyc,
@@ -115,6 +116,25 @@
 		revokeReason = '';
 		reviewerNotes = '';
 		actionSuccess = '';
+		docError = '';
+	}
+
+	// The stored `idDocumentUrl` is an identifier — the document itself is not
+	// publicly readable. Viewing fetches a 1-hour presigned URL on demand.
+	let loadingDoc = false;
+	let docError = '';
+	async function viewDocument() {
+		if (!selected || loadingDoc) return;
+		loadingDoc = true;
+		docError = '';
+		try {
+			const url = await getKycDocumentViewUrl(selected.id);
+			window.open(url, '_blank', 'noopener,noreferrer');
+		} catch (e: any) {
+			docError = financialErrorMessage(e);
+		} finally {
+			loadingDoc = false;
+		}
 	}
 
 	/**
@@ -516,12 +536,15 @@
 					{#if selected.idDocumentUrl}
 						<div>
 							<p class="mb-2 text-xs text-gray-400">Uploaded Document</p>
-							<a href={selected.idDocumentUrl} target="_blank" rel="noopener noreferrer"
-								class="inline-flex items-center gap-2 rounded-lg border border-pink-200 bg-pink-50 px-3 py-2 text-xs font-medium text-pink-700 transition hover:bg-pink-100">
-								<Icon icon="mdi:file-document-outline" class="text-base" />
-								View ID Document
+							<button on:click={viewDocument} disabled={loadingDoc}
+								class="inline-flex items-center gap-2 rounded-lg border border-pink-200 bg-pink-50 px-3 py-2 text-xs font-medium text-pink-700 transition hover:bg-pink-100 disabled:opacity-50">
+								<Icon icon={loadingDoc ? 'mdi:loading' : 'mdi:file-document-outline'} class="text-base {loadingDoc ? 'animate-spin' : ''}" />
+								{loadingDoc ? 'Opening…' : 'View ID Document'}
 								<Icon icon="mdi:open-in-new" class="text-xs" />
-							</a>
+							</button>
+							{#if docError}
+								<p class="mt-2 text-xs text-red-600">{docError}</p>
+							{/if}
 						</div>
 					{/if}
 				</div>

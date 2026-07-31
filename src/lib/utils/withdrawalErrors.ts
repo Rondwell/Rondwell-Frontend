@@ -21,7 +21,7 @@
  *   - KYC_REQUIRED / DAILY_LIMIT_EXCEEDED / AML_REVIEW_REQUIRED / AML_VELOCITY_LOCKED /
  *     AML_ACCOUNT_LOCKED / AML_CHECK_UNAVAILABLE — Phase 2 codes (kept here so we
  *     don't have to hop files when Phase 2 ships)
- *   - BENEFICIARY_INVALID / BENEFICIARY_COOL_DOWN — beneficiary lifecycle
+ *   - BENEFICIARY_INVALID — beneficiary lifecycle
  */
 
 export interface WithdrawalErrorContext {
@@ -133,6 +133,12 @@ export function mapWithdrawalError(ctx: WithdrawalErrorContext): MappedWithdrawa
 				hint: 'Request a new code to continue.',
 				requireFreshOtp: true,
 			};
+		case 'OTP_AMOUNT_MISMATCH':
+			return {
+				copy: 'This code was issued for a different amount.',
+				hint: 'Request a new code for the amount you want to withdraw.',
+				requireFreshOtp: true,
+			};
 
 		case 'INSUFFICIENT_FUNDS':
 			return {
@@ -171,11 +177,6 @@ export function mapWithdrawalError(ctx: WithdrawalErrorContext): MappedWithdrawa
 				hint: 'Please try again shortly.',
 			};
 
-		case 'BENEFICIARY_COOL_DOWN':
-			return {
-				copy: 'This beneficiary is in a 24‑hour cool‑down.',
-				hint: 'New bank accounts cool down before the first withdrawal.',
-			};
 		case 'BENEFICIARY_INVALID':
 			return {
 				copy: 'This bank account can\'t be used right now.',

@@ -374,6 +374,20 @@ export const listApprovedKyc = (opts: { page?: number; pageSize?: number; cursor
 export const listRejectedKyc = (opts: { page?: number; pageSize?: number; cursor?: string; limit?: number } = {}) =>
 	listKycQueue('rejected', opts);
 
+/**
+ * Fetch a short-lived (1-hour) presigned URL for a submission's ID document.
+ *
+ * `idDocumentUrl` on a review item is an identifier, not a viewable link —
+ * identity documents are not publicly readable at their bucket URL. Call this
+ * when the reviewer clicks "View ID Document" and open the returned URL.
+ */
+export async function getKycDocumentViewUrl(submissionId: string): Promise<string> {
+	const payload = await adminKycFetch(`/${submissionId}/document`);
+	const url = payload?.url ?? payload?.data?.url;
+	if (!url) throw new Error('Document link unavailable');
+	return url;
+}
+
 export async function approveKyc(submissionId: string, note?: string): Promise<KycReviewItem> {
 	// Send BOTH spellings. The backend historically read `notes` while this
 	// client sent `note`, so every reviewer note was silently discarded.

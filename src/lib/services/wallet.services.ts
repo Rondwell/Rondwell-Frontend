@@ -192,21 +192,10 @@ export async function verifyWithdrawalOtp(
 	return await res.json();
 }
 
-export async function withdrawFunds(
-	amount: number,
-	currency: string,
-	beneficiaryId: string,
-	userPin: string
-): Promise<any> {
-	const res = await authFetch(`${BASE_URL}/api/v1/payment/transaction/disbursement/`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ amount, currency, beneficiaryId, userPin, reason: 'Wallet withdrawal' })
-	});
-	if (!res.ok) await throwApiError(res, 'Withdrawal failed');
-	const data = await res.json();
-	return data;
-}
+// `withdrawFunds` was removed: it targeted the legacy
+// `/transaction/disbursement/` endpoint, which the backend has permanently
+// closed (410) because it bypassed the OTP/KYC/AML/beneficiary gates. All
+// withdrawals go through `requestWithdrawalOtp` + `verifyWithdrawalOtp`.
 
 // ==================== TRANSACTIONS ====================
 

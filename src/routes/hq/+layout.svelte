@@ -38,8 +38,10 @@
 		{ label: 'Collections', path: '/hq/collections', icon: 'collections' },
 		// FE-P2-07 — KYC review queue.
 		{ label: 'KYC', path: '/hq/kyc', icon: 'compliance' },
-		// Finance module (includes Analytics, Beneficiaries, AML, Wallet Audit)
+		// Finance module (includes Analytics, Beneficiaries, AML, Wallet Audit, Transfers)
 		{ label: 'Finance', path: '/hq/finance', icon: 'finance' },
+		// Platform-wide announcement / marketing emails
+		{ label: 'Broadcasts', path: '/hq/blasts', icon: 'broadcasts' },
 		// Subscription plan catalog management (edit FREE/PLUS limits & pricing)
 		{ label: 'Subscriptions', path: '/hq/subscriptions', icon: 'subscriptions' },
 		{ label: 'Settings', path: '/hq/settings', icon: 'settings' },
@@ -122,6 +124,8 @@
 										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 1.667l-7.5 3.333v5c0 4.583 3.125 8.875 7.5 9.583 4.375-.708 7.5-5 7.5-9.583v-5L10 1.667z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M7.5 10l1.667 1.667L12.5 8.333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 									{:else if item.icon === 'finance'}
 										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.5 17.5h15M2.5 17.5V12.5M5.833 17.5V9.167M9.167 17.5V6.667M12.5 17.5V10.833M15.833 17.5V4.167" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									{:else if item.icon === 'broadcasts'}
+										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M15.833 6.667v6.666a2.5 2.5 0 01-3.333 2.357L7.5 14.167H5a2.5 2.5 0 01-2.5-2.5V8.333a2.5 2.5 0 012.5-2.5h2.5l5-1.523a2.5 2.5 0 013.333 2.357z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6.667 14.167v2.5a1.667 1.667 0 003.333 0v-1.667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 									{:else if item.icon === 'subscriptions'}
 										<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2.5 7.5h15M5.833 13.333h3.334M2.5 6.167v7.666c0 2.5 1.25 3.334 3.75 3.334h7.5c2.5 0 3.75-.834 3.75-3.334V6.167c0-2.5-1.25-3.334-3.75-3.334h-7.5c-2.5 0-3.75.834-3.75 3.334z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
 									{:else if item.icon === 'settings'}

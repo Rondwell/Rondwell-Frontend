@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { adminLogin, seedAdmin, setAdminAuth } from '$lib/services/admin.services';
-	import { onDestroy, onMount } from 'svelte';
+	import { adminLogin, setAdminAuth } from '$lib/services/admin.services';
+	import { onDestroy } from 'svelte';
 
 	let email = '';
 	let password = '';
@@ -22,10 +22,6 @@
 	}
 	const interval = setInterval(() => { now = formatTime(); }, 60000);
 	onDestroy(() => clearInterval(interval));
-
-	onMount(async () => {
-		try { await seedAdmin(); } catch { /* ignore */ }
-	});
 
 	async function handleLogin() {
 		if (!email || !password) { errorMsg = 'Please enter email and password'; return; }

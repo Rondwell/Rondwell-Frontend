@@ -20,6 +20,7 @@
 	import EventTypeModal from '../../../../create-event/components/EventTypeModal.svelte';
 	import TimeModal from '../../../../create-event/components/TimeModal.svelte';
 	import VisibilityModal from '../../../../create-event/components/VisibilityModal.svelte';
+	import { buildZonedInstant } from '$lib/utils/eventTime';
 
 	$: eventId = $page.params.id ?? '';
 
@@ -261,19 +262,47 @@
 		$descEditor?.destroy();
 	});
 
+	/**
+	 * H-75 — the event's timezone is now USED, not just stored.
+	 *
+	 * This function assembled `"YYYY-MM-DDTHH:mm:00"` and handed it to
+	 * `new Date(...)`, which parses a string with no offset as **browser-local**.
+	 * So a Lagos-based organizer creating a New York event, selecting
+	 * `America/New_York` and typing 7:00 PM, stored `19:00 WAT` = `18:00 UTC`.
+	 * The correct instant is `23:00 UTC` — **five hours wrong, at creation.**
+	 *
+	 * The old body contradicted itself in three lines: one comment said *"Build
+	 * a date string in the event's timezone context"* and the next said *"Use
+	 * the browser's local timezone (which matches the user's intent)"*. Only the
+	 * second was true, and it is the bug.
+	 *
+	 * `buildZonedInstant` takes the zone as a **required** argument — see
+	 * `$lib/utils/eventTime.ts` for why, and for how the offset is derived
+	 * without shipping a timezone database.
+	 */
 	function buildDateTime(date: Date, timeStr: string): string {
-		const [timePart, meridiem] = timeStr.split(' ');
-		let [hours, minutes] = timePart.split(':').map(Number);
-		if (meridiem === 'PM' && hours !== 12) hours += 12;
-		if (meridiem === 'AM' && hours === 12) hours = 0;
-		// Build a date string in the user's local timezone context
-		const year = date.getFullYear();
-		const month = String(date.getMonth() + 1).padStart(2, '0');
-		const day = String(date.getDate()).padStart(2, '0');
-		const h = String(hours).padStart(2, '0');
-		const m = String(minutes).padStart(2, '0');
-		const d = new Date(`${year}-${month}-${day}T${h}:${m}:00`);
-		return d.toISOString();
+		return buildZonedInstant(date, timeStr, resolveEventTimeZone());
+	}
+
+	/**
+	 * The zone this form is authoring in.
+	 *
+	 * Falls back to the browser zone only when the form has no explicit zone —
+	 * which is the pre-existing behaviour for forms that do not offer a zone
+	 * picker, and is correct for them: an organizer editing a session on their
+	 * own event means their own clock.
+	 */
+	function resolveEventTimeZone(): string {
+		// The event's own zone when the form has loaded one; the browser's
+		// otherwise. H-75 — the point is that the event's zone is CONSULTED,
+		// not that a fallback never happens.
+		const explicit = timezone;
+		if (explicit) return String(explicit);
+		try {
+			return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+		} catch {
+			return 'UTC';
+		}
 	}
 
 	function formatDate(date: Date) {

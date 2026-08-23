@@ -32,7 +32,9 @@
 			collection: collectionName,
 			collectionId: rawEvent.collectionId ?? '',
 			publicUrl: rawEvent.customLinkSlug ?? '',
-			embedCode: `\n<a\n  href="https://rondwell.com/event/${eid}"\n  class="rondwell-checkout--button"\n  data-rondwell-action="checkout"\n  data-rondwell-event-id="${eid}"\n>\n  Register for Event\n</a>\n\n<script id="rondwell-checkout" src="https://embed.rondwell.com/checkout-button.js"><\/script>\n`
+			// csp-ignore-next-line — checkout embed snippet the organizer pastes on
+			// THEIR site; this app never loads embed.rondwell.com itself.
+						embedCode: `\n<a\n  href="https://rondwell.com/event/${eid}"\n  class="rondwell-checkout--button"\n  data-rondwell-action="checkout"\n  data-rondwell-event-id="${eid}"\n>\n  Register for Event\n</a>\n\n<script id="rondwell-checkout" src="https://embed.rondwell.com/checkout-button.js"><\/script>\n`
 		};
 	})() : null;
 	let activeTab = 'event-settings';
@@ -294,6 +296,116 @@
 			toast.error(cleanErrorMessage(e.message || 'Failed to save event page settings'));
 		} finally {
 			pageSettingsSaving = false;
+		}
+	}
+
+	// ── Celebration layer ─────────────────────────────────────────────────
+	// One named sub-document per feature (the convention the event model
+	// already uses). Seeded ONCE from the cached event so a save-then-rerender
+	// doesn't clobber unsaved edits; every bound value is re-clamped
+	// server-side, so these clamps are UX, not the security boundary.
+	let ageEnabled = false;
+	let ageMinimum = 18;
+	let ageVerification: 'SELF_DECLARED' | 'ID_REQUIRED' = 'SELF_DECLARED';
+
+	let giftRegistryEnabled = false;
+	let giftRegistryPublic = true;
+
+	let memoriesEnabled = false;
+	let memoriesVisibility: 'ATTENDEES_ONLY' | 'PUBLIC' = 'ATTENDEES_ONLY';
+	let memoriesRequireApproval = false;
+	let memoriesAllowedFrom: 'ANY_TIME' | 'AFTER_CHECKIN' | 'AFTER_EVENT_START' = 'AFTER_EVENT_START';
+	let memoriesMaxUploads = 20;
+	let memoriesAllowDownload = true;
+
+	let budgetEnabled = false;
+	let budgetCurrency: 'NGN' | 'USD' = 'NGN';
+	let budgetGuestCount: number | null = null;
+
+	let promoterEnabled = false;
+	let promoterCommissionPercent = 10; // shown as %, stored as basis points
+	let promoterAutoApprove = false;
+	let promoterTerms = '';
+
+	let celebrationSeeded = false;
+	let celebrationSaving = false;
+
+	$: if (rawEvent && !celebrationSeeded) {
+		const ar = rawEvent.ageRestriction ?? {};
+		ageEnabled = ar.enabled === true;
+		ageMinimum = ar.minimumAge ?? 18;
+		ageVerification = ar.verificationMethod === 'ID_REQUIRED' ? 'ID_REQUIRED' : 'SELF_DECLARED';
+
+		const gr = rawEvent.giftRegistry ?? {};
+		giftRegistryEnabled = gr.enabled === true;
+		giftRegistryPublic = gr.showOnPublicPage !== false;
+
+		const mem = rawEvent.memories ?? {};
+		memoriesEnabled = mem.enabled === true;
+		memoriesVisibility = mem.visibility === 'PUBLIC' ? 'PUBLIC' : 'ATTENDEES_ONLY';
+		memoriesRequireApproval = mem.requireApproval === true;
+		memoriesAllowedFrom = mem.allowedFrom ?? 'AFTER_EVENT_START';
+		memoriesMaxUploads = mem.maxUploadsPerAttendee ?? 20;
+		memoriesAllowDownload = mem.allowGuestDownload !== false;
+
+		const bg = rawEvent.budget ?? {};
+		budgetEnabled = bg.enabled === true;
+		budgetCurrency = bg.currency === 'USD' ? 'USD' : 'NGN';
+		budgetGuestCount = typeof bg.expectedGuestCount === 'number' ? bg.expectedGuestCount : null;
+
+		const pr = rawEvent.promoter ?? {};
+		promoterEnabled = pr.enabled === true;
+		promoterCommissionPercent = (pr.defaultCommissionPercent ?? 1000) / 100;
+		promoterAutoApprove = pr.autoApprove === true;
+		promoterTerms = pr.terms ?? '';
+
+		celebrationSeeded = true;
+	}
+
+	async function saveCelebrationSettings() {
+		celebrationSaving = true;
+		try {
+			const { updateEvent } = await import('$lib/services/event.services');
+			await updateEvent(eventId!, {
+				ageRestriction: {
+					enabled: ageEnabled,
+					minimumAge: Math.max(13, Math.min(99, Math.round(ageMinimum || 18))),
+					verificationMethod: ageVerification,
+				},
+				giftRegistry: { enabled: giftRegistryEnabled, showOnPublicPage: giftRegistryPublic },
+				memories: {
+					enabled: memoriesEnabled,
+					visibility: memoriesVisibility,
+					requireApproval: memoriesRequireApproval,
+					allowedFrom: memoriesAllowedFrom,
+					maxUploadsPerAttendee: Math.max(1, Math.min(200, Math.round(memoriesMaxUploads || 20))),
+					allowGuestDownload: memoriesAllowDownload,
+				},
+				budget: {
+					enabled: budgetEnabled,
+					currency: budgetCurrency,
+					expectedGuestCount: budgetGuestCount ?? undefined,
+				},
+				promoter: {
+					enabled: promoterEnabled,
+					// Basis points. The server caps at 3000 (30%) regardless of
+					// what is sent — this clamp only keeps the UI honest.
+					defaultCommissionPercent: Math.max(
+						0,
+						Math.min(3000, Math.round((promoterCommissionPercent || 0) * 100))
+					),
+					autoApprove: promoterAutoApprove,
+					terms: promoterTerms.slice(0, 1000),
+				},
+			} as any);
+			// `updateEvent` already calls invalidateEventCache; re-seed so the
+			// next render reflects whatever the server normalised.
+			celebrationSeeded = false;
+			toast.success('Event features saved.');
+		} catch (e: any) {
+			toast.error(cleanErrorMessage(e.message || 'Failed to save event features'));
+		} finally {
+			celebrationSaving = false;
 		}
 	}
 
@@ -634,6 +746,255 @@
 			class="mt-4 flex w-fit items-center justify-center gap-2 rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50 sm:py-2"
 		>
 			{policySaving ? 'Saving…' : 'Save policies'}
+		</button>
+	</div>
+
+	<!-- Celebration layer — age gate, registry, memories, budget, promoters -->
+	<div class="mt-6 mb-6 border-t pt-6 sm:mt-8 sm:mb-8 sm:pt-8">
+		<h2 class="mb-2 text-lg font-semibold sm:text-xl">Event features</h2>
+		<p class="mb-5 text-xs text-gray-600 sm:text-sm lg:max-w-[70%]">
+			Turn on the parts of Rondwell your event actually needs. Everything here is off by default,
+			and turning a feature off hides its tab without deleting anything you have already collected.
+		</p>
+
+		<div class="space-y-3">
+			<!-- Age restriction -->
+			<div class="rounded-xl border border-gray-200 bg-white p-4">
+				<div class="flex items-start justify-between gap-4">
+					<div>
+						<p class="text-sm font-medium text-gray-900">Age restriction</p>
+						<p class="mt-0.5 text-xs text-gray-500">
+							Guests must declare a date of birth before they can register. Age is checked against
+							the event's start date, so someone who turns {ageMinimum} the day before still gets in.
+						</p>
+					</div>
+					<button
+						type="button"
+						on:click={() => (ageEnabled = !ageEnabled)}
+						aria-pressed={ageEnabled}
+						aria-label="Toggle age restriction"
+						class="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors {ageEnabled ? 'bg-pink-600' : 'bg-gray-300'}"
+					>
+						<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {ageEnabled ? 'translate-x-5' : ''}"></span>
+					</button>
+				</div>
+
+				{#if ageEnabled}
+					<div class="mt-4 space-y-3 border-t border-gray-100 pt-4">
+						<div class="flex items-center gap-2">
+							<label class="text-xs font-medium text-gray-700" for="min-age">Minimum age</label>
+							<input
+								id="min-age"
+								type="number"
+								min="13"
+								max="99"
+								bind:value={ageMinimum}
+								class="w-20 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none"
+							/>
+							<span class="text-xs text-gray-500">years (13–99)</span>
+						</div>
+
+						<div class="space-y-2">
+							<label class="flex items-start gap-2 rounded-md border border-gray-200 p-3 text-sm">
+								<input type="radio" name="age-verification" value="SELF_DECLARED" bind:group={ageVerification} class="mt-0.5 h-4 w-4" />
+								<div>
+									<p class="font-medium">Self-declared</p>
+									<p class="text-xs text-gray-500">
+										The guest enters their date of birth. We store the declaration on their
+										registration so you have a record at the door.
+									</p>
+								</div>
+							</label>
+							<label class="flex items-start gap-2 rounded-md border border-gray-200 p-3 text-sm">
+								<input type="radio" name="age-verification" value="ID_REQUIRED" bind:group={ageVerification} class="mt-0.5 h-4 w-4" />
+								<div>
+									<p class="font-medium">Verified ID required</p>
+									<p class="text-xs text-gray-500">
+										The guest must also have completed identity verification on Rondwell. Stricter,
+										and the right choice for alcohol-serving events — but it will turn some guests away.
+									</p>
+								</div>
+							</label>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Gift registry -->
+			<div class="rounded-xl border border-gray-200 bg-white p-4">
+				<div class="flex items-start justify-between gap-4">
+					<div>
+						<p class="text-sm font-medium text-gray-900">Gift registry</p>
+						<p class="mt-0.5 text-xs text-gray-500">
+							A wishlist guests can shop from, or chip in towards in cash. Manage it from the
+							<a href="/events/{eventId}/gifts" class="font-medium text-pink-600 hover:underline">Gifts</a> tab.
+						</p>
+					</div>
+					<button
+						type="button"
+						on:click={() => (giftRegistryEnabled = !giftRegistryEnabled)}
+						aria-pressed={giftRegistryEnabled}
+						aria-label="Toggle gift registry"
+						class="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors {giftRegistryEnabled ? 'bg-pink-600' : 'bg-gray-300'}"
+					>
+						<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {giftRegistryEnabled ? 'translate-x-5' : ''}"></span>
+					</button>
+				</div>
+				{#if giftRegistryEnabled}
+					<label class="mt-4 flex items-center gap-2 border-t border-gray-100 pt-4 text-sm">
+						<input type="checkbox" bind:checked={giftRegistryPublic} class="h-4 w-4 rounded" />
+						Show the registry on the public event page
+					</label>
+				{/if}
+			</div>
+
+			<!-- Memories -->
+			<div class="rounded-xl border border-gray-200 bg-white p-4">
+				<div class="flex items-start justify-between gap-4">
+					<div>
+						<p class="text-sm font-medium text-gray-900">Memories</p>
+						<p class="mt-0.5 text-xs text-gray-500">
+							Let guests upload their own photos and videos. Yours stay in the official gallery —
+							theirs land in a separate, moderatable feed.
+						</p>
+					</div>
+					<button
+						type="button"
+						on:click={() => (memoriesEnabled = !memoriesEnabled)}
+						aria-pressed={memoriesEnabled}
+						aria-label="Toggle memories"
+						class="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors {memoriesEnabled ? 'bg-pink-600' : 'bg-gray-300'}"
+					>
+						<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {memoriesEnabled ? 'translate-x-5' : ''}"></span>
+					</button>
+				</div>
+
+				{#if memoriesEnabled}
+					<div class="mt-4 space-y-3 border-t border-gray-100 pt-4">
+						<div>
+							<label class="mb-1 block text-xs font-medium text-gray-700" for="mem-visibility">Who can see guest uploads</label>
+							<select id="mem-visibility" bind:value={memoriesVisibility} class="w-full max-w-xs rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm focus:outline-none">
+								<option value="ATTENDEES_ONLY">Attendees only (recommended)</option>
+								<option value="PUBLIC">Anyone with the event link</option>
+							</select>
+							{#if memoriesVisibility === 'PUBLIC'}
+								<p class="mt-1.5 rounded-md bg-amber-50 p-2 text-xs text-amber-700">
+									Guest photos will appear on your public event page. Turn on approval below unless you
+									are certain about who is attending.
+								</p>
+							{/if}
+						</div>
+
+						<div>
+							<label class="mb-1 block text-xs font-medium text-gray-700" for="mem-from">Guests can upload</label>
+							<select id="mem-from" bind:value={memoriesAllowedFrom} class="w-full max-w-xs rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm focus:outline-none">
+								<option value="AFTER_EVENT_START">From when the event starts</option>
+								<option value="AFTER_CHECKIN">Only after they check in</option>
+								<option value="ANY_TIME">Any time</option>
+							</select>
+						</div>
+
+						<div class="flex items-center gap-2">
+							<label class="text-xs font-medium text-gray-700" for="mem-max">Uploads per guest</label>
+							<input id="mem-max" type="number" min="1" max="200" bind:value={memoriesMaxUploads} class="w-20 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none" />
+						</div>
+
+						<label class="flex items-center gap-2 text-sm">
+							<input type="checkbox" bind:checked={memoriesRequireApproval} class="h-4 w-4 rounded" />
+							Review guest uploads before they appear
+						</label>
+						<label class="flex items-center gap-2 text-sm">
+							<input type="checkbox" bind:checked={memoriesAllowDownload} class="h-4 w-4 rounded" />
+							Let guests download the photos
+						</label>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Budget -->
+			<div class="rounded-xl border border-gray-200 bg-white p-4">
+				<div class="flex items-start justify-between gap-4">
+					<div>
+						<p class="text-sm font-medium text-gray-900">Budget tracking</p>
+						<p class="mt-0.5 text-xs text-gray-500">
+							Plan your spend by category. Anything you book and pay through Rondwell reconciles
+							itself — no re-typing invoices.
+						</p>
+					</div>
+					<button
+						type="button"
+						on:click={() => (budgetEnabled = !budgetEnabled)}
+						aria-pressed={budgetEnabled}
+						aria-label="Toggle budget"
+						class="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors {budgetEnabled ? 'bg-pink-600' : 'bg-gray-300'}"
+					>
+						<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {budgetEnabled ? 'translate-x-5' : ''}"></span>
+					</button>
+				</div>
+				{#if budgetEnabled}
+					<div class="mt-4 flex flex-wrap items-end gap-4 border-t border-gray-100 pt-4">
+						<div>
+							<label class="mb-1 block text-xs font-medium text-gray-700" for="budget-ccy">Currency</label>
+							<select id="budget-ccy" bind:value={budgetCurrency} class="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm focus:outline-none">
+								<option value="NGN">NGN (₦)</option>
+								<option value="USD">USD ($)</option>
+							</select>
+						</div>
+						<div>
+							<label class="mb-1 block text-xs font-medium text-gray-700" for="budget-guests">Expected guests</label>
+							<input id="budget-guests" type="number" min="1" bind:value={budgetGuestCount} placeholder="—" class="w-28 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm focus:outline-none" />
+							<p class="mt-1 text-xs text-gray-400">Used for cost-per-guest.</p>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Promoters -->
+			<div class="rounded-xl border border-gray-200 bg-white p-4">
+				<div class="flex items-start justify-between gap-4">
+					<div>
+						<p class="text-sm font-medium text-gray-900">Promoters</p>
+						<p class="mt-0.5 text-xs text-gray-500">
+							Let people apply to promote your event with a referral link, and pay them a commission
+							on the sales they bring. Commission is only payable once the refund window has closed.
+						</p>
+					</div>
+					<button
+						type="button"
+						on:click={() => (promoterEnabled = !promoterEnabled)}
+						aria-pressed={promoterEnabled}
+						aria-label="Toggle promoters"
+						class="relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors {promoterEnabled ? 'bg-pink-600' : 'bg-gray-300'}"
+					>
+						<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {promoterEnabled ? 'translate-x-5' : ''}"></span>
+					</button>
+				</div>
+				{#if promoterEnabled}
+					<div class="mt-4 space-y-3 border-t border-gray-100 pt-4">
+						<div class="flex items-center gap-2">
+							<label class="text-xs font-medium text-gray-700" for="promoter-pct">Default commission</label>
+							<input id="promoter-pct" type="number" min="0" max="30" step="0.5" bind:value={promoterCommissionPercent} class="w-20 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm focus:outline-none" />
+							<span class="text-xs text-gray-500">% of ticket sales (max 30%)</span>
+						</div>
+						<label class="flex items-center gap-2 text-sm">
+							<input type="checkbox" bind:checked={promoterAutoApprove} class="h-4 w-4 rounded" />
+							Approve applicants automatically
+						</label>
+						<div>
+							<label class="mb-1 block text-xs font-medium text-gray-700" for="promoter-terms">Terms shown to applicants</label>
+							<textarea id="promoter-terms" rows="3" maxlength="1000" bind:value={promoterTerms} placeholder="e.g. Commission is paid 48 hours after the event." class="w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm focus:outline-none"></textarea>
+						</div>
+					</div>
+				{/if}
+			</div>
+		</div>
+
+		<button
+			on:click={saveCelebrationSettings}
+			disabled={celebrationSaving}
+			class="mt-5 flex w-fit items-center justify-center gap-2 rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50 sm:py-2"
+		>
+			{celebrationSaving ? 'Saving…' : 'Save event features'}
 		</button>
 	</div>
 

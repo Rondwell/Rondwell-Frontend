@@ -221,3 +221,38 @@ button {
 	background-position: bottom 6px right 6px;
 	background-size: 14px 14px;
 }
+
+/* ───────────────────────── Printable reports ─────────────────────────
+ * When the event report is printed we need the entire application chrome
+ * (sidebar, nav, modals, toasts) out of the way and only the report visible.
+ *
+ * `printing-report` is set on <html> for the duration of the print job by the
+ * report component. Scoping to that class means normal Ctrl+P on any other
+ * page is untouched.
+ */
+@media print {
+	html.printing-report,
+	html.printing-report body {
+		background: #fff !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		height: auto !important;
+		overflow: visible !important;
+	}
+
+	/* Hide every direct child of <body> except the wrapper holding the report. */
+	html.printing-report body > *:not(#rondwell-print-root) {
+		display: none !important;
+	}
+
+	html.printing-report #rondwell-print-root {
+		display: block !important;
+		position: static !important;
+	}
+}
+
+/* Page geometry for the printed report: A4 with room for the running footer. */
+@page {
+	size: A4;
+	margin: 14mm 12mm 16mm;
+}

@@ -35,6 +35,23 @@
 	let isSaving = false;
 	let saveError = '';
 
+	/**
+	 * GAP 8 — planner access bridge.
+	 *
+	 * Only meaningful for VENDORS booked through a collaboration: the flag
+	 * lives on the Collaboration row and is applied when the booking is
+	 * CONFIRMED (i.e. paid). It is off by default, and only the ORGANIZER may
+	 * set it — the server 403s anyone else.
+	 */
+	$: collaborationId =
+		speakerData?.applicationDetails?.additionalInfo?.collaborationId ||
+		speakerData?.collaborationId ||
+		'';
+	$: canGrantEventAccess = participant === 'Vendor' && !!collaborationId;
+	let grantEventAccess = false;
+	let grantSaving = false;
+	let grantNote = '';
+
 	// Hydrate on the closed -> open transition only, so editing a field can
 	// never trigger a re-initialisation that discards what was just typed.
 	let wasOpen = false;
@@ -45,6 +62,31 @@
 			editBio = speakerData.bio || '';
 			editIsPublic = speakerData.isPublic ?? true;
 			saveError = '';
+			grantEventAccess =
+				speakerData.grantEventAccess === true ||
+				speakerData?.applicationDetails?.additionalInfo?.grantEventAccess === true;
+			grantNote = '';
+		}
+	}
+
+	async function toggleEventAccess() {
+		if (grantSaving || !collaborationId) return;
+		const next = !grantEventAccess;
+		grantSaving = true;
+		grantNote = '';
+		try {
+			const { setCollaborationEventAccess } = await import('$lib/services/vendor.services');
+			const res = await setCollaborationEventAccess(collaborationId, next);
+			grantEventAccess = res.grantEventAccess;
+			grantNote = res.grantEventAccess
+				? res.appliesOnConfirmation
+					? 'Access will be granted automatically once you pay their invoice.'
+					: 'Access granted. You can revoke it any time from Planning → Team.'
+				: 'This vendor will not be given event access. Any access already granted is removed from Planning → Team.';
+		} catch (e: any) {
+			grantNote = e?.message || 'Could not update event access.';
+		} finally {
+			grantSaving = false;
 		}
 	}
 
@@ -266,6 +308,71 @@
 							</button>
 						</label>
 					</div>
+
+					<!--
+						GAP 8 — planner access.
+
+						Deliberately spells out what the vendor CAN and CANNOT do.
+						"Give them access" with no detail is how an organizer ends up
+						surprised that a contractor could email their whole guest list.
+					-->
+					{#if canGrantEventAccess}
+						<div class="mt-3 rounded-lg border border-gray-200 p-3">
+							<div class="flex items-start justify-between gap-3">
+								<div>
+									<p class="text-sm font-medium text-gray-900">
+										Let this vendor help manage the event
+									</p>
+									<p class="mt-0.5 text-xs text-gray-500">
+										Granted automatically when you pay their invoice, and it expires on its own
+										a week after the engagement ends.
+									</p>
+								</div>
+								<button
+									aria-label="Toggle planner access"
+									aria-pressed={grantEventAccess}
+									disabled={grantSaving}
+									class="relative h-6 w-10 flex-shrink-0 rounded-full transition-colors duration-300 disabled:opacity-50"
+									class:bg-gray-300={!grantEventAccess}
+									class:bg-gray-800={grantEventAccess}
+									on:click={toggleEventAccess}
+								>
+									<span
+										class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300"
+										class:translate-x-4={grantEventAccess}
+									></span>
+								</button>
+							</div>
+
+							{#if grantEventAccess}
+								<div class="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+									<div>
+										<p class="mb-1 font-medium text-green-700">They can</p>
+										<ul class="space-y-0.5 text-gray-600">
+											<li>· Edit the agenda, sessions and rooms</li>
+											<li>· See and manage the guest list, and check people in</li>
+											<li>· Manage tickets, seating and media</li>
+											<li>· Send blasts and see insights</li>
+											<li>· See and edit the budget</li>
+										</ul>
+									</div>
+									<div>
+										<p class="mb-1 font-medium text-red-700">They cannot</p>
+										<ul class="space-y-0.5 text-gray-600">
+											<li>· Touch payout, refund or resale settings</li>
+											<li>· Add or remove other admins</li>
+											<li>· Cancel or delete the event</li>
+											<li>· Withdraw any money</li>
+										</ul>
+									</div>
+								</div>
+							{/if}
+
+							{#if grantNote}
+								<p class="mt-2 rounded bg-[#F6F6F6] p-2 text-xs text-[#5D646F]">{grantNote}</p>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>

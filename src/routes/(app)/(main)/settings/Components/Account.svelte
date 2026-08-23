@@ -656,7 +656,7 @@
 				if (!passkeyNameInput.trim()) { showToast('Please enter a name for this passkey', 'error'); return; }
 				passkeyRegistering = true;
 				try {
-					const options = await beginPasskeyRegistration(userEmail);
+					const options = await beginPasskeyRegistration();
 					// Use WebAuthn browser API
 					const publicKeyOptions = {
 						...options,
@@ -671,9 +671,6 @@
 					if (!credential) throw new Error('Passkey creation cancelled');
 					const cred = credential as PublicKeyCredential;
 					const response = cred.response as AuthenticatorAttestationResponse;
-					const userId = get(authState).user?.id;
-					if (!userId) throw new Error('Not authenticated');
-
 					// Convert ArrayBuffers to base64url for @simplewebauthn/server
 					function bufferToBase64url(buffer: ArrayBuffer): string {
 						const bytes = new Uint8Array(buffer);
@@ -682,8 +679,10 @@
 						return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 					}
 
-					await completePasskeyRegistration(userId, {
-						email: userEmail,
+					// C-01 — no `userId`, no `email`: the server takes both from the
+					// bearer token. Sending them let an anonymous caller attach an
+					// authenticator to somebody else's account.
+					await completePasskeyRegistration({
 						passkeyName: passkeyNameInput.trim(),
 						response: {
 							id: cred.id,

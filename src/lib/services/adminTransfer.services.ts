@@ -60,6 +60,16 @@ export interface WalletSnapshot {
 	currency?: string;
 	walletId?: string;
 	status?: string;
+	/**
+	 * Identity of the wallet owner, resolved by admin-service from the user
+	 * database. Present so the operator can confirm WHOSE money they are about
+	 * to move rather than trusting a pasted ObjectId.
+	 */
+	userName?: string;
+	userEmail?: string;
+	userStatus?: string;
+	/** False when the id resolved to no user row at all. */
+	userFound?: boolean;
 }
 
 export interface Bank {
@@ -107,25 +117,47 @@ async function request(path: string, options: RequestInit = {}): Promise<any> {
 	return res.json();
 }
 
-/** Banks for the destination picker. */
+/**
+ * Banks for the destination picker.
+ *
+ * Shape handling mirrors `PaymentMethods.svelte` (the user-facing bank picker
+ * that has been working in production): the payload has arrived as both a bare
+ * array and a `{ data: [...] }` envelope depending on the layer, and the field
+ * names have appeared as both `name`/`code` and `bankName`/`bankCode`. Being
+ * permissive here is what stops one upstream change emptying the dropdown.
+ */
 export async function getBanks(): Promise<Bank[]> {
-	const data = await request('/banks');
-	const list = data.data ?? [];
+	const payload = await request('/banks');
+	const list = Array.isArray(payload) ? payload : (payload?.data ?? []);
 	return list
-		.map((b: any) => ({ name: String(b.name), code: String(b.code) }))
+		.map((b: any) => ({
+			name: String(b?.name ?? b?.bankName ?? ''),
+			code: String(b?.code ?? b?.bankCode ?? '')
+		}))
+		.filter((b: Bank) => b.name && b.code)
 		.sort((a: Bank, b: Bank) => a.name.localeCompare(b.name));
 }
 
-/** Preview the account holder's name before committing to a transfer. */
+/**
+ * Preview the account holder's name before committing to a transfer.
+ *
+ * Returns the echoed `accountNumber`/`bankCode` alongside the name so the
+ * caller can drop a response that has been overtaken by newer input.
+ */
 export async function resolveAccount(
 	accountNumber: string,
 	bankCode: string
-): Promise<{ accountName: string }> {
-	const data = await request('/resolve-account', {
+): Promise<{ accountName: string; accountNumber: string; bankCode: string }> {
+	const payload = await request('/resolve-account', {
 		method: 'POST',
 		body: JSON.stringify({ accountNumber, bankCode })
 	});
-	return data.data;
+	const d = payload?.data ?? payload;
+	return {
+		accountName: String(d?.accountName ?? d?.account_name ?? ''),
+		accountNumber: String(d?.accountNumber ?? accountNumber),
+		bankCode: String(d?.bankCode ?? bankCode)
+	};
 }
 
 /** Total / reserved / disputed / held / withdrawable for a user's wallet. */

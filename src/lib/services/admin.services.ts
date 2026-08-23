@@ -16,6 +16,22 @@ export function setAdminAuth(token: string, admin: any) {
   if (!browser) return;
   localStorage.setItem('admin_token', token);
   localStorage.setItem('admin_user', JSON.stringify(admin));
+
+  /**
+   * M-84 — mirror the token into an `httpOnly` cookie so
+   * `routes/hq/+layout.server.ts` can guard the console SERVER-side.
+   *
+   * Until this existed the only guard on an 18-section console covering
+   * finance, wallets, AML, KYC and reconciliation was
+   * `$: if (browser && !isAdminAuthenticated()) goto('/hq/login')` — and with
+   * SSR on globally, an unauthenticated `GET /hq/finance` returned **200 with
+   * the rendered admin shell**; the redirect fired only after hydration.
+   */
+  void fetch('/api/hq-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token })
+  }).catch(() => {});
 }
 
 export function getAdminUser(): any | null {
@@ -32,10 +48,42 @@ export function clearAdminAuth() {
   if (!browser) return;
   localStorage.removeItem('admin_token');
   localStorage.removeItem('admin_user');
+  // M-84 — drop the server-side cookie too, or the layout guard keeps letting
+  // this browser through.
+  void fetch('/api/hq-session', { method: 'DELETE' }).catch(() => {});
 }
 
+/**
+ * M-84 — verify the token has not EXPIRED, rather than merely existing.
+ *
+ * This was `return !!getAdminToken()` — a presence check on a localStorage
+ * value, with no signature, expiry or issuer validation. A token from a session
+ * that ended weeks ago passed it, and the console rendered its full navigation
+ * before the first `adminFetch` came back 401.
+ *
+ * The signature is deliberately NOT checked here: the browser does not hold the
+ * signing key, and pretending to validate would be worse than not. The server
+ * is the authority (`adminFetch` bounces on 401/403, and
+ * `routes/hq/+layout.server.ts` verifies with the admin service). What this
+ * removes is the *stale* token case, which is the common one and is decidable
+ * locally.
+ */
 export function isAdminAuthenticated(): boolean {
-  return !!getAdminToken();
+  const token = getAdminToken();
+  if (!token) return false;
+
+  try {
+    const [, payload] = token.split('.');
+    if (!payload) return false;
+    const claims = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    // No `exp` means a token shape this app does not issue; treat as invalid
+    // rather than assuming it lasts forever.
+    if (typeof claims.exp !== 'number') return false;
+    return claims.exp * 1000 > Date.now();
+  } catch {
+    // A malformed token is not a valid one.
+    return false;
+  }
 }
 
 async function adminFetch(path: string, options: RequestInit = {}): Promise<any> {

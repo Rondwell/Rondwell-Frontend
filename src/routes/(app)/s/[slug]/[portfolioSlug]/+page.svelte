@@ -5,6 +5,25 @@
 	import Seo from '$lib/components/Seo.svelte';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
+	/**
+	 * H-72 — every user-supplied URL on this page goes through `safeHref`.
+	 *
+	 * **Svelte does not sanitise URL attributes.** `href={value}` interpolates
+	 * verbatim, so a `javascript:` URL stored in a vendor's website field, a
+	 * social handle, a booth resource link or a portfolio link is one click
+	 * from executing script in a visitor's session — on a PUBLIC page, against
+	 * a visitor who has never interacted with that vendor.
+	 *
+	 * A sweep of every `href={…}` binding found eight such sinks across six
+	 * storefront pages. `safeHref` is the allow-list check that already existed
+	 * at `event-page/[id]/participant/+page.svelte` and was used on exactly one
+	 * page; it now lives in `$lib/security/safeUrl` so there is one copy.
+	 *
+	 * It returns `undefined` for a rejected URL, which drops the `href`
+	 * attribute entirely — the anchor renders as inert text rather than as a
+	 * dead `#` link that still looks clickable.
+	 */
+	import { safeHref } from '$lib/security/safeUrl';
 
 	export let data: any;
 	$: seo = data?.seo;
@@ -94,7 +113,7 @@
 							<h3 class="text-sm font-medium text-gray-900">Video Links</h3>
 							<div class="mt-2 space-y-2">
 								{#each portfolio.videoLinks as link}
-									<a href={link} target="_blank" rel="noopener noreferrer"
+									<a href={safeHref(link)} target="_blank" rel="noopener noreferrer"
 										class="flex items-center gap-2 rounded-lg bg-white p-3 text-sm text-[#513BE2] transition hover:bg-gray-50">
 										<Icon icon="mdi:play-circle-outline" class="h-5 w-5" />
 										{link}

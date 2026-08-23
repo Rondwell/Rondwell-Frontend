@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { openExternal } from '$lib/utils/openExternal';
 	import { updateEvent } from '$lib/services/event.services';
 	import { getEventCache } from '$lib/stores/eventCache.store';
 	import Icon from '@iconify/svelte';
@@ -64,7 +65,8 @@
 	function syncWithCalendar() {
 		// Generate an .ics download link or open Google Calendar
 		const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventTitle)}&details=${encodeURIComponent('Event Agenda')}`;
-		window.open(calUrl, '_blank');
+		// M-138 — `noopener,noreferrer` via the shared helper.
+		openExternal(calUrl);
 	}
 </script>
 

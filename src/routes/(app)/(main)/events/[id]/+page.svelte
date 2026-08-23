@@ -8,6 +8,7 @@ import { getEventCache, invalidateEventCache } from '$lib/stores/eventCache.stor
 import { toast } from '$lib/stores/toast.store';
 import { clickOutside } from '$lib/utils/constant';
 import { cleanErrorMessage } from '$lib/utils/errorMessage';
+import { formatMoney } from '$lib/utils/money';
 import Icon from '@iconify/svelte';
 import InviteGuestsModal from './components/InviteGuestsModal.svelte';
 import SendPostModal from './components/SendPostModal.svelte';
@@ -22,6 +23,36 @@ let fetchedAttendees: any[] = [];
 let earningsTotal = 0;
 let earningsLoading = true;
 
+// ── Celebration-layer Overview tiles ──────────────────────────────────
+// Each tile is additive and degrades to hidden when its feature is off, so
+// an organizer running a plain conference sees the same page as before.
+let contributionsNetKobo = 0;
+let contributionsCount = 0;
+let contributionsCurrency = 'NGN';
+/** Gift registry rollup — loaded lazily, zeroes on failure. */
+let registryRaisedKobo = 0;
+let registryItemCount = 0;
+let registryCurrency = 'NGN';
+/** Budget rollup. */
+let budgetPaidKobo = 0;
+let budgetEstimatedKobo = 0;
+let budgetCurrency = 'NGN';
+/** Promoter rollup. */
+let promoterPendingCount = 0;
+let promoterOwedKobo = 0;
+let promoterCurrency = 'NGN';
+/** Memories rollup — drives the Overview tile and the post-event card. */
+let memoriesPhotoCount = 0;
+let memoriesPendingCount = 0;
+let memoriesContributorCount = 0;
+
+$: giftRegistryOn = rawEvent?.giftRegistry?.enabled === true;
+$: contributionsOn =
+	rawEvent?.donationsEnabled === true && rawEvent?.guestContributions?.enabled === true;
+$: budgetOn = rawEvent?.budget?.enabled === true;
+$: promoterOn = rawEvent?.promoter?.enabled === true;
+$: memoriesOn = rawEvent?.memories?.enabled === true;
+
 // Use cached event data — no re-fetch on tab switch
 $: ({ event: eventStore, collections: collectionsStore, loading: loadingStore, error: errorStore } = getEventCache(eventId!));
 $: rawEvent = $eventStore;
@@ -35,18 +66,101 @@ $: if (eventId) {
 	fetchEarnings(eventId);
 }
 
+// Separate from the block above because it depends on `rawEvent` having
+// loaded (the feature flags decide which rollups are worth fetching at all).
+let rollupsFetchedFor = '';
+$: if (eventId && rawEvent && rollupsFetchedFor !== eventId) {
+	rollupsFetchedFor = eventId;
+	fetchFeatureRollups(eventId);
+}
+
 async function fetchEarnings(eid: string) {
 	earningsLoading = true;
 	try {
 		// Show NET earnings (after platform fee) — what actually lands in the
 		// wallet — not gross ticket sales. The sales summary returns integer
 		// kobo; convert to naira for the pill.
+		//
+		// `totals.net` spans EVERY revenue source (tickets + gifts + guest
+		// contributions). Using the ticket-only `net` here would under-report
+		// the organizer's earnings the moment a single gift lands, and would
+		// disagree with the earnings page's own headline.
 		const summary = await getEventSalesSummary(eid);
-		earningsTotal = (summary?.net ?? 0) / 100;
+		earningsTotal = (summary?.totals?.net ?? summary?.net ?? 0) / 100;
+
+		// The RSVP-contribution slice powers its own Overview tile. Reading it
+		// off the summary we already fetched avoids a second round-trip.
+		const rsvp = summary?.contributions?.bySource?.find(
+			(s: any) => s.source === 'RSVP_CONTRIBUTION'
+		);
+		contributionsNetKobo = rsvp?.net ?? 0;
+		contributionsCount = rsvp?.count ?? 0;
+		contributionsCurrency = summary?.currency ?? 'NGN';
+
+		const wishlist = summary?.contributions?.bySource?.find((s: any) => s.source === 'WISHLIST');
+		registryRaisedKobo = wishlist?.net ?? 0;
+		registryCurrency = summary?.currency ?? 'NGN';
 	} catch {
 		earningsTotal = 0;
 	} finally {
 		earningsLoading = false;
+	}
+}
+
+/**
+ * Feature rollups for the Overview tiles.
+ *
+ * Every one is best-effort and independently caught: a Overview page that
+ * 500s because the budget service hiccuped would be a far worse bug than a
+ * tile that reads zero.
+ */
+async function fetchFeatureRollups(eid: string) {
+	if (giftRegistryOn) {
+		import('$lib/services/wishlist.services')
+			.then(({ getEventWishlist }) => getEventWishlist(eid))
+			.then((w) => {
+				if (!w) return;
+				registryItemCount = w.totals?.itemCount ?? 0;
+				registryRaisedKobo = w.totals?.raisedAmountKobo ?? registryRaisedKobo;
+				registryCurrency = w.currency ?? registryCurrency;
+			})
+			.catch(() => {});
+	}
+	if (budgetOn) {
+		import('$lib/services/budget.services')
+			.then(({ getEventBudget }) => getEventBudget(eid))
+			.then((b) => {
+				if (!b?.budget) return;
+				budgetPaidKobo = b.budget.totals?.paidKobo ?? 0;
+				budgetEstimatedKobo = b.budget.totals?.estimatedKobo ?? 0;
+				budgetCurrency = b.budget.currency ?? 'NGN';
+			})
+			.catch(() => {});
+	}
+	if (promoterOn) {
+		import('$lib/services/promoter.services')
+			.then(({ getPromoters }) => getPromoters(eid, { status: 'PENDING' }))
+			.then((p) => {
+				promoterPendingCount = p?.pagination?.total ?? p?.data?.length ?? 0;
+			})
+			.catch(() => {});
+		import('$lib/services/promoter.services')
+			.then(({ getPromoterPayoutSummary }) => getPromoterPayoutSummary(eid))
+			.then((s) => {
+				promoterOwedKobo = s?.eligibleKobo ?? 0;
+				promoterCurrency = s?.currency ?? 'NGN';
+			})
+			.catch(() => {});
+	}
+	if (memoriesOn) {
+		import('$lib/services/memories.services')
+			.then(({ getMemoriesStats }) => getMemoriesStats(eid))
+			.then((s) => {
+				memoriesPhotoCount = s?.photoCount ?? 0;
+				memoriesPendingCount = s?.pendingCount ?? 0;
+				memoriesContributorCount = s?.contributorCount ?? 0;
+			})
+			.catch(() => {});
 	}
 }
 
@@ -446,6 +560,108 @@ async function handleVisibilityChange(newVisibility: string) {
 						<span class="font-semibold">N{earningsTotal.toLocaleString()}</span>
 					{/if}
 				</button>
+
+				<!--
+					Celebration-layer tiles. Each is hidden when its feature is off,
+					so an organizer who never turned any of them on sees exactly the
+					page they saw before.
+				-->
+				{#if contributionsOn}
+					<button
+						on:click={() => goto(`/events/${eventId}/registration?tab=contributions`)}
+						class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
+					>
+						<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E3F4E1] text-xl">
+							🎁
+						</div>
+						Contributions <span class="text-[#838485]">|</span>
+						{#if earningsLoading}
+							<span class="inline-block h-4 w-16 animate-pulse rounded bg-gray-200"></span>
+						{:else}
+							<span class="font-semibold">{formatMoney(contributionsNetKobo, contributionsCurrency, { minimumFractionDigits: 0 })}</span>
+							<span class="text-xs text-[#83808D]">· {contributionsCount}</span>
+						{/if}
+					</button>
+				{/if}
+
+				{#if giftRegistryOn}
+					<button
+						on:click={() => goto(`/events/${eventId}/gifts`)}
+						class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
+					>
+						<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#F2E4F8] text-xl">
+							🎀
+						</div>
+						Gift Registry <span class="text-[#838485]">|</span>
+						<span class="font-semibold">{formatMoney(registryRaisedKobo, registryCurrency, { minimumFractionDigits: 0 })}</span>
+						<span class="text-xs text-[#83808D]">· {registryItemCount} item{registryItemCount === 1 ? '' : 's'}</span>
+					</button>
+				{/if}
+
+				{#if budgetOn}
+					<button
+						on:click={() => goto(`/events/${eventId}/planning?tab=budget`)}
+						class="flex w-full flex-col gap-1 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
+					>
+						<div class="flex w-full items-center gap-2">
+							<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E2F4F4] text-xl">
+								💰
+							</div>
+							Budget <span class="text-[#838485]">|</span>
+							<span class="font-semibold">{formatMoney(budgetPaidKobo, budgetCurrency, { minimumFractionDigits: 0 })}</span>
+							<span class="text-xs text-[#83808D]">of {formatMoney(budgetEstimatedKobo, budgetCurrency, { minimumFractionDigits: 0 })}</span>
+						</div>
+						<div class="h-1 w-full overflow-hidden rounded-full bg-[#EBECED]">
+							<div
+								class="h-full rounded-full {budgetEstimatedKobo > 0 && budgetPaidKobo > budgetEstimatedKobo ? 'bg-red-500' : 'bg-[#3CBD2C]'}"
+								style="width: {budgetEstimatedKobo > 0 ? Math.min(100, (budgetPaidKobo / budgetEstimatedKobo) * 100) : 0}%"
+							></div>
+						</div>
+					</button>
+				{/if}
+
+				{#if promoterOn}
+					<button
+						on:click={() => goto(`/events/${eventId}/planning?tab=promoters`)}
+						class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
+					>
+						<div class="relative flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#FFF0E0] text-xl">
+							📣
+							{#if promoterPendingCount > 0}
+								<span class="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#F31A7C] px-1 text-[10px] font-semibold text-white">
+									{promoterPendingCount}
+								</span>
+							{/if}
+						</div>
+						Promoters <span class="text-[#838485]">|</span>
+						<span class="font-semibold">{formatMoney(promoterOwedKobo, promoterCurrency, { minimumFractionDigits: 0 })}</span>
+						<span class="text-xs text-[#83808D]">owed</span>
+					</button>
+				{/if}
+
+				{#if memoriesOn}
+					<button
+						on:click={() => goto(`/events/${eventId}/planning?tab=media`)}
+						class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
+					>
+						<div class="relative flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E8F0FE] text-xl">
+							📸
+							<!-- The badge is the whole reason this tile is on Overview:
+							     unreviewed guest photos are the thing that must not sit
+							     unnoticed. -->
+							{#if memoriesPendingCount > 0}
+								<span class="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#F31A7C] px-1 text-[10px] font-semibold text-white">
+									{memoriesPendingCount}
+								</span>
+							{/if}
+						</div>
+						Memories <span class="text-[#838485]">|</span>
+						<span class="font-semibold">{memoriesPhotoCount}</span>
+						<span class="text-xs text-[#83808D]">
+							photo{memoriesPhotoCount === 1 ? '' : 's'} · {memoriesContributorCount} guest{memoriesContributorCount === 1 ? '' : 's'}
+						</span>
+					</button>
+				{/if}
 			</div>
 		{/if}
 
@@ -684,6 +900,64 @@ async function handleVisibilityChange(newVisibility: string) {
 						</button>
 					</div>
 				</div>
+
+				<!--
+					GAP 10 — Memories, after the event.
+
+					This is exactly where an organizer looks once it's over, which is
+					why it sits beside Recap and Feedback rather than being buried in
+					Planning. The pending-moderation badge is the point: guest photos
+					arriving with nobody reviewing them is how unmoderated content
+					reaches a public page.
+				-->
+				{#if memoriesOn}
+					<div class="flex flex-col rounded-xl bg-[#FDFDFD] p-5 shadow-md">
+						<div class="mb-4 flex items-center justify-between gap-2">
+							<div class="flex items-center gap-2">
+								<Icon icon="mdi:camera-outline" class="text-lg text-[#83808D]" />
+								<h3 class="text-xs font-medium uppercase tracking-wide text-[#83808D]">Memories</h3>
+							</div>
+							{#if memoriesPendingCount > 0}
+								<span class="rounded-full bg-[#FFF4E5] px-2 py-0.5 text-[10px] font-medium text-[#B26A00]">
+									{memoriesPendingCount} to review
+								</span>
+							{/if}
+						</div>
+
+						{#if memoriesPhotoCount === 0 && memoriesPendingCount === 0}
+							<div class="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg bg-[#F4F4F4]/40 p-6">
+								<div class="flex h-14 w-14 items-center justify-center rounded-full bg-[#EBECED]">
+									<Icon icon="mdi:image-multiple-outline" class="text-2xl text-[#B9BABA]" />
+								</div>
+								<div class="text-center">
+									<div class="text-sm font-medium text-[#616265]">No guest photos yet</div>
+									<div class="mt-1 text-xs text-[#B9BABA]">
+										Your attendees get a reminder to share theirs a day after the event.
+									</div>
+								</div>
+							</div>
+						{:else}
+							<div class="flex flex-1 flex-col justify-center gap-4 rounded-lg bg-[#F4F4F4]/40 p-6">
+								<div class="grid grid-cols-2 gap-4 text-center">
+									<div>
+										<p class="text-2xl font-semibold text-[#131517]">{memoriesPhotoCount}</p>
+										<p class="text-xs text-[#83808D]">photos shared</p>
+									</div>
+									<div>
+										<p class="text-2xl font-semibold text-[#131517]">{memoriesContributorCount}</p>
+										<p class="text-xs text-[#83808D]">contributors</p>
+									</div>
+								</div>
+								<button
+									on:click={() => goto(`/events/${eventId}/planning?tab=media`)}
+									class="rounded-lg bg-[#F31A7C]/10 px-4 py-2 text-sm font-medium text-[#F31A7C] transition-colors hover:bg-[#F31A7C]/20"
+								>
+									{memoriesPendingCount > 0 ? 'Review photos' : 'View photos'}
+								</button>
+							</div>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 	{/if}

@@ -327,6 +327,18 @@ export interface SalesSummary {
 	gross: number;
 	gatewayFee: number;
 	platformFee: number;
+	/**
+	 * H-83 — how `platformFee` was arrived at.
+	 *
+	 * `LEDGER` is what was actually charged, summed from the immutable
+	 * WalletEntry ledger. `ESTIMATED` means no ledger rows cover the event and
+	 * the figure is the organizer's CURRENT rate applied to gross — a
+	 * present-tense estimate of a past charge, which the UI marks.
+	 *
+	 * Optional because a cached or older API response may omit it; absent is
+	 * treated as not-estimated so the badge never appears spuriously.
+	 */
+	platformFeeBasis?: 'LEDGER' | 'ESTIMATED';
 	refunded: number;
 	net: number;
 	currency: string;
@@ -343,6 +355,49 @@ export interface SalesSummary {
 		currency: string;
 	}>;
 	timeline: Array<{ day: string; gross: number; net: number; count: number }>;
+	/**
+	 * Celebration layer — non-ticket revenue, broken out by source.
+	 *
+	 * Every key above still means TICKET revenue only, exactly as before.
+	 * `contributions` is additive and `totals` is where the two combine, so
+	 * a deploy where the backend is older simply yields zeroes here rather
+	 * than breaking the page.
+	 */
+	contributions: {
+		gross: number;
+		platformFee: number;
+		net: number;
+		refunded: number;
+		count: number;
+		bySource: Array<{
+			source: ContributionSource;
+			gross: number;
+			platformFee: number;
+			net: number;
+			count: number;
+		}>;
+	};
+	/** Tickets + contributions combined. */
+	totals: { gross: number; platformFee: number; net: number; refunded: number };
+}
+
+/** Revenue sources an earnings row can carry. */
+export type ContributionSource = 'WISHLIST' | 'RSVP_CONTRIBUTION' | 'GIFT_LINK';
+export type EarningsSource = 'TICKET' | ContributionSource;
+
+/** Display metadata for each revenue source. Single source of truth for the UI. */
+export const EARNINGS_SOURCE_META: Record<
+	EarningsSource,
+	{ label: string; short: string; bg: string; fg: string; icon: string }
+> = {
+	TICKET: { label: 'Ticket sale', short: 'Ticket', bg: '#F0EFF1', fg: '#5D646F', icon: 'mdi:ticket-confirmation-outline' },
+	WISHLIST: { label: 'Gift (registry)', short: 'Gift', bg: '#F2E4F8', fg: '#AB46DD', icon: 'mdi:gift-outline' },
+	RSVP_CONTRIBUTION: { label: 'Guest contribution', short: 'Contribution', bg: '#E3F4E1', fg: '#3CBD2C', icon: 'mdi:hand-heart-outline' },
+	GIFT_LINK: { label: 'Gift link', short: 'Gift link', bg: '#E2E8FC', fg: '#146AEB', icon: 'mdi:link-variant' }
+};
+
+export function earningsSourceMeta(source?: string) {
+	return EARNINGS_SOURCE_META[(source as EarningsSource) ?? 'TICKET'] ?? EARNINGS_SOURCE_META.TICKET;
 }
 
 export async function getEventSalesSummary(
@@ -359,18 +414,42 @@ export async function getEventSalesSummary(
 	if (!res.ok) await throwApiError(res, 'Failed to fetch sales summary');
 	const data = await res.json();
 	const d = data?.data ?? data ?? {};
+
+	const gross = Number(d.gross ?? 0);
+	const platformFee = Number(d.platformFee ?? 0);
+	const net = Number(d.net ?? 0);
+	const refunded = Number(d.refunded ?? 0);
+
+	const contributions = {
+		gross: Number(d.contributions?.gross ?? 0),
+		platformFee: Number(d.contributions?.platformFee ?? 0),
+		net: Number(d.contributions?.net ?? 0),
+		refunded: Number(d.contributions?.refunded ?? 0),
+		count: Number(d.contributions?.count ?? 0),
+		bySource: Array.isArray(d.contributions?.bySource) ? d.contributions.bySource : []
+	};
+
 	return {
-		gross: Number(d.gross ?? 0),
+		gross,
 		gatewayFee: Number(d.gatewayFee ?? 0),
-		platformFee: Number(d.platformFee ?? 0),
-		refunded: Number(d.refunded ?? 0),
-		net: Number(d.net ?? 0),
+		platformFee,
+		refunded,
+		net,
 		currency: d.currency ?? 'NGN',
 		ticketsSold: Number(d.ticketsSold ?? 0),
 		ticketsRefunded: Number(d.ticketsRefunded ?? 0),
 		ticketsAvailable: Number(d.ticketsAvailable ?? 0),
 		byTicketType: Array.isArray(d.byTicketType) ? d.byTicketType : [],
 		timeline: Array.isArray(d.timeline) ? d.timeline : [],
+		contributions,
+		// Fall back to deriving totals when talking to an older backend, so
+		// the combined cards never read zero against real ticket revenue.
+		totals: {
+			gross: Number(d.totals?.gross ?? gross + contributions.gross),
+			platformFee: Number(d.totals?.platformFee ?? platformFee + contributions.platformFee),
+			net: Number(d.totals?.net ?? net + contributions.net),
+			refunded: Number(d.totals?.refunded ?? refunded + contributions.refunded)
+		}
 	};
 }
 

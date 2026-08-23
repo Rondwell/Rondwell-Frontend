@@ -232,14 +232,37 @@ export async function disable2FA(code: string) {
 /**
  * Generate a fresh set of 2FA backup codes. This invalidates any previously
  * issued codes. Requires 2FA to already be enabled.
+ *
+ * The codes are returned in plaintext exactly once — they are bcrypt-hashed at
+ * rest and cannot be retrieved again. Use `getBackupCodesStatus` for a
+ * non-destructive read.
  */
 export async function regenerateBackupCodes() {
-  const res = await authFetch(`${BASE_URL}/api/v1/profile/2fa/backup-codes`, {
-    method: 'GET',
+  // C-07 — a POST to its own route. This used to GET /2fa/backup-codes, and
+  // that GET regenerated: merely opening the backup-codes screen invalidated
+  // codes the user had already written down.
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/2fa/backup-codes/regenerate`, {
+    method: 'POST',
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Failed to generate backup codes');
   return json.data as { backupCodes: string[] };
+}
+
+/**
+ * C-07 — non-destructive read: how many codes remain, and whether any are still
+ * on the pre-fix 32-bit format. Never returns the codes themselves.
+ */
+export async function getBackupCodesStatus() {
+  const res = await authFetch(`${BASE_URL}/api/v1/profile/2fa/backup-codes`);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message ?? 'Failed to fetch backup code status');
+  return json.data as {
+    remaining: number;
+    total: number;
+    hasLegacyCodes: boolean;
+    lastGeneratedAt?: string;
+  };
 }
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
@@ -267,22 +290,32 @@ export async function invalidateSession(sessionId: string) {
 
 // ─── Passkey Registration (Settings) ──────────────────────────────────────────
 
-export async function beginPasskeyRegistration(email: string) {
+/**
+ * C-01 — both calls now identify the user by the bearer token alone.
+ *
+ * `email` and `userId` used to travel in the body. On the server the challenge
+ * was stored under the email while the credential was written to the `userId`,
+ * and nothing cross-checked them — so an anonymous caller could attach their
+ * own authenticator to any account. Both routes now require a token and read
+ * the identity from it; sending either field would be ignored, and the
+ * parameters are dropped here so no caller believes they still matter.
+ */
+export async function beginPasskeyRegistration() {
   const res = await authFetch(`${BASE_URL}/api/v1/auth/passkeys/register/begin`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({}),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Failed to begin passkey registration');
   return json;
 }
 
-export async function completePasskeyRegistration(userId: string, data: any) {
+export async function completePasskeyRegistration(data: any) {
   const res = await authFetch(`${BASE_URL}/api/v1/auth/passkeys/register/complete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, ...data }),
+    body: JSON.stringify(data),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.message ?? 'Failed to complete passkey registration');

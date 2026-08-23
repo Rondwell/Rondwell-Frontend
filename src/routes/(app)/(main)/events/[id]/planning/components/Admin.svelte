@@ -220,6 +220,27 @@
 						</span>
 					{:else if admin.status === 'DECLINED'}
 						<span class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600">Declined</span>
+					{:else if admin.status === 'REVOKED'}
+						<span class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600">Revoked</span>
+					{/if}
+					<!--
+						GAP 8 — nobody clicked "invite" for these. Saying so, with the
+						expiry date, is what keeps an automatic grant from reading as an
+						account the organizer doesn't remember adding.
+					-->
+					{#if admin.grantSource === 'COLLABORATION'}
+						<span
+							class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700"
+							title="Granted automatically when you booked this vendor"
+						>
+							<Icon icon="mdi:handshake-outline" class="text-sm" />
+							via vendor booking
+						</span>
+						{#if admin.revokesAt && admin.status === 'ACCEPTED'}
+							<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+								Expires {formatDate(admin.revokesAt)}
+							</span>
+						{/if}
 					{/if}
 				</div>
 			</div>

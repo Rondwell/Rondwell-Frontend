@@ -11,7 +11,7 @@
 	<main class="bg-color py-6 md:py-8">
 		<slot />
 
-		<!-- Contact Section -->
+		<!-- Contact Sections -->
 		<div class="flex flex-col items-center gap-3 md:gap-4 py-6 md:py-8 text-center">
 			<p class="text-2xl font-bold">Didn’t find what you are looking for?</p>
 			<a

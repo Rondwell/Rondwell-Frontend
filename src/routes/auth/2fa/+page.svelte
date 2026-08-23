@@ -10,15 +10,27 @@
 
   let code = Array(6).fill('');
   let email = '';
+  /**
+   * C-07 — the signed first-factor receipt. This is what proves a password /
+   * OTP / Google login actually happened; `email` is now only shown to the
+   * user so they know which account they are completing.
+   *
+   * Before this, the page submitted the email as the subject of the request and
+   * the server trusted it — so 2FA stood alone: an address plus one TOTP or
+   * backup code produced a full session with no first factor at all.
+   */
+  let tempToken = '';
   let message = '';
   let loading = false;
   let useBackupCode = false;
   let backupCodeInput = '';
 
   onMount(() => {
-    email = $page.url.searchParams.get('email') || localStorage.getItem('2fa-pending-email') || '';
-    if (!email) {
-      message = 'No email found. Please go back and try again.';
+    email = localStorage.getItem('2fa-pending-email') || '';
+    tempToken = localStorage.getItem('2fa-temp-token') || '';
+    if (!tempToken) {
+      // No receipt → the first factor was never completed in this browser.
+      message = 'Your sign-in session has expired. Please sign in again.';
     }
   });
 
@@ -42,20 +54,21 @@
   }
 
   async function submit() {
+    if (!tempToken) { message = 'Your sign-in session has expired. Please sign in again.'; return; }
     if (!useBackupCode && code.join('').length !== 6) { message = 'Enter a 6-digit code'; return; }
     if (useBackupCode && !backupCodeInput.trim()) { message = 'Enter a backup code'; return; }
     loading = true;
     message = '';
     try {
       const { token } = await verify2FALogin(
-        email,
+        tempToken,
         useBackupCode ? '' : code.join(''),
         useBackupCode ? backupCodeInput.trim() : undefined
       );
       localStorage.removeItem('2fa-pending-email');
+      localStorage.removeItem('2fa-temp-token');
       localStorage.removeItem('pending-email');
       localStorage.removeItem('pending-is-phone');
-      localStorage.removeItem('pending-is-new-user');
 
       const pending = resolvePostAuthRedirect($page.url);
       const redirect = pending || await getPostLoginRedirect(token);

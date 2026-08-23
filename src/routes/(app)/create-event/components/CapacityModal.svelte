@@ -5,9 +5,26 @@
 	export let open = false;
 	export let maxAttendees: number | null = null;
 	export let waitlistEnabled = false;
+	/**
+	 * GAP 5 — expected guests and a rough budget.
+	 *
+	 * Asked HERE, not on a separate screen, because this is already the "how
+	 * big is this?" step and the two numbers answer the same question. They
+	 * seed the budget so the Budget tab opens with a target and a per-guest
+	 * cost instead of an empty form.
+	 *
+	 * Both are optional and independent of the capacity cap: expected guests
+	 * is a planning estimate, `maxAttendees` is an enforcement limit, and
+	 * conflating them would either over-order catering or refuse registrations.
+	 */
+	export let expectedGuestCount: number | null = null;
+	/** Major units in the UI; converted to kobo when the event is created. */
+	export let roughBudget: number | null = null;
 
 	let capacityInput = 50;
 	let overCapacityWaitlist = false;
+	let guestInput: number | null = null;
+	let budgetInput: number | null = null;
 
 	onMount(() => { loadUsage().catch(() => {}); });
 
@@ -24,16 +41,27 @@
 		overCapacityWaitlist = !overCapacityWaitlist;
 	}
 
+	/** Planning estimates are kept on both paths — they are not part of the cap. */
+	function commitPlanningInputs() {
+		expectedGuestCount =
+			guestInput !== null && Number(guestInput) > 0 ? Math.round(Number(guestInput)) : null;
+		roughBudget = budgetInput !== null && Number(budgetInput) > 0 ? Number(budgetInput) : null;
+	}
+
 	function setLimit() {
 		if (overCap) return; // guarded by the disabled button; belt-and-braces
 		maxAttendees = capacityInput;
 		waitlistEnabled = overCapacityWaitlist;
+		commitPlanningInputs();
 		open = false;
 	}
 
 	function removeLimit() {
 		maxAttendees = null;
 		waitlistEnabled = false;
+		// Removing the CAP must not wipe the planning estimates — they mean
+		// different things and an organizer who typed both would lose one.
+		commitPlanningInputs();
 		open = false;
 	}
 </script>
@@ -118,6 +146,42 @@
 						class:translate-x-4={overCapacityWaitlist}
 					></span>
 				</button>
+			</div>
+
+			<!-- GAP 5 — planning estimates. Separate block, separate meaning:
+			     these seed the budget, they don't cap registrations. -->
+			<div class="mt-5 border-t border-gray-200 pt-4">
+				<p class="mb-3 text-xs font-medium tracking-wide text-[#8E8E90] uppercase">
+					Planning (optional)
+				</p>
+
+				<label for="expected-guests" class="mb-1 block text-sm font-medium text-gray-700">
+					Expected guests
+				</label>
+				<input
+					id="expected-guests"
+					type="number"
+					min="1"
+					placeholder="e.g. 150"
+					bind:value={guestInput}
+					class="h-[40px] w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-black focus:ring-2 focus:ring-gray-400 focus:outline-none"
+				/>
+
+				<label for="rough-budget" class="mt-3 mb-1 block text-sm font-medium text-gray-700">
+					Rough budget
+				</label>
+				<input
+					id="rough-budget"
+					type="number"
+					min="0"
+					step="1000"
+					placeholder="e.g. 2,000,000"
+					bind:value={budgetInput}
+					class="h-[40px] w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm text-black focus:ring-2 focus:ring-gray-400 focus:outline-none"
+				/>
+				<p class="mt-1.5 text-xs text-gray-400">
+					Sets up your Budget tab with a target and a per-guest cost. You can change both later.
+				</p>
 			</div>
 
 			<!-- Buttons -->

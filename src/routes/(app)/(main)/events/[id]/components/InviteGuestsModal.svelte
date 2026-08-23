@@ -9,16 +9,23 @@
 	} from '$lib/services/event.services';
 	import { authState } from '$lib/stores/auth.store';
 	import { getEventCache } from '$lib/stores/eventCache.store';
+	import {
+		contactCsvTemplate,
+		downloadCsv,
+		isValidEmail,
+		parseContactCsv,
+		readFileAsText,
+		summariseImport,
+		validateCsvFile,
+		type CsvImportResult
+	} from '$lib/utils/csv';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
 	export let open = false;
 
 	$: eventId = $page.params.id as string;
-	$: ({
-		event: eventStore,
-		collections: collectionsStore
-	} = getEventCache(eventId));
+	$: ({ event: eventStore, collections: collectionsStore } = getEventCache(eventId));
 	$: rawEvent = $eventStore;
 	$: cachedCollections = $collectionsStore;
 
@@ -39,6 +46,17 @@
 	let sending = false;
 	let sendResult: { success: any[]; failed: any[] } | null = null;
 	let csvFileInput: HTMLInputElement;
+
+	// CSV import feedback — previously the import was completely silent, so an
+	// organiser had no way to tell a successful import from a rejected file.
+	let csvImport: CsvImportResult | null = null;
+	let csvError = '';
+	let csvParsing = false;
+	let csvAdded = 0;
+	let csvAlreadyListed = 0;
+	let csvDragActive = false;
+	/** Feedback for the manual email field, which used to fail silently. */
+	let entryError = '';
 
 	/**
 	 * Monthly email allowance for the organizer. Invitations spend the same pool
@@ -86,7 +104,15 @@
 	// Existing attendees (to mark "In Event")
 	let existingAttendeeEmails = new Set<string>();
 
-	const defaultColors = ['#808080', '#22c55e', '#3b82f6', '#a855f7', '#ef4444', '#f59e0b', '#ec4899'];
+	const defaultColors = [
+		'#808080',
+		'#22c55e',
+		'#3b82f6',
+		'#a855f7',
+		'#ef4444',
+		'#f59e0b',
+		'#ec4899'
+	];
 
 	onMount(async () => {
 		await Promise.all([loadEmailUsage(), loadExistingAttendees(), loadCollections()]);
@@ -193,9 +219,7 @@
 
 		// Add collection-sourced subscribers to emailList
 		for (const sub of allSubscribers) {
-			const exists = emailList.some(
-				(e) => e.email === sub.email && e.source === sub.source
-			);
+			const exists = emailList.some((e) => e.email === sub.email && e.source === sub.source);
 			if (!exists) {
 				emailList = [...emailList, sub];
 			}
@@ -205,18 +229,41 @@
 		collections = [...collections];
 	}
 
-	// Add manually entered email
-	function addEmail() {
+	/**
+	 * Add one manually typed address.
+	 *
+	 * Previously this validated with `includes('@')` — which accepts "a@" and
+	 * "@b" — and returned silently on every rejection, so a typo just made the
+	 * input appear to do nothing. It also only checked for duplicates among
+	 * previously-entered rows, letting an address that was already a suggestion
+	 * be added a second time.
+	 */
+	function addEmail(): boolean {
 		const trimmed = email.trim().toLowerCase();
-		if (!trimmed || !trimmed.includes('@')) return;
-		const alreadyExists = emailList.some((e) => e.email === trimmed && e.source === 'entered');
-		if (alreadyExists) {
-			email = '';
-			enteredName = '';
-			return;
+		if (!trimmed) return false;
+
+		if (!isValidEmail(trimmed)) {
+			entryError = `"${email.trim()}" is not a valid email address.`;
+			return false;
 		}
+
+		// Dedupe against the whole list, whatever the source.
+		const existing = emailList.find((e) => e.email === trimmed);
+		if (existing) {
+			if (existing.inEvent) {
+				entryError = 'That person is already registered for this event.';
+			} else {
+				// Select the row they already have rather than duplicating it.
+				emailList = emailList.map((e) => (e.email === trimmed ? { ...e, selected: true } : e));
+				entryError = '';
+				email = '';
+				enteredName = '';
+			}
+			return !existing.inEvent;
+		}
+
 		const isInEvent = existingAttendeeEmails.has(trimmed);
-		const nameParts = enteredName.trim().split(' ');
+		const nameParts = enteredName.trim().split(/\s+/).filter(Boolean);
 		const firstName = nameParts[0] || '';
 		const lastName = nameParts.slice(1).join(' ') || '';
 		emailList = [
@@ -232,8 +279,66 @@
 				source: 'entered'
 			}
 		];
+		entryError = '';
 		email = '';
 		enteredName = '';
+		return true;
+	}
+
+	/**
+	 * Accept a pasted list of addresses in the single email field.
+	 *
+	 * Mail clients and spreadsheets produce comma-, semicolon-, space- or
+	 * newline-separated lists, often as "Name <email@host>".
+	 */
+	function handleEmailPaste(e: ClipboardEvent) {
+		const text = e.clipboardData?.getData('text') ?? '';
+		const tokens = text
+			.split(/[,;\s\n\r]+/)
+			.map((t) => t.trim())
+			.filter(Boolean);
+		if (tokens.length <= 1) return; // single address — let the browser paste it
+
+		e.preventDefault();
+
+		let added = 0;
+		let skipped = 0;
+		for (const raw of tokens) {
+			const angle = raw.match(/<([^>]+)>/);
+			const candidate = (angle ? angle[1] : raw).replace(/^["']|["'],?$/g, '').toLowerCase();
+			if (!isValidEmail(candidate)) {
+				skipped++;
+				continue;
+			}
+			if (emailList.some((x) => x.email === candidate)) {
+				// Already present — make sure it is selected, but don't duplicate.
+				emailList = emailList.map((x) =>
+					x.email === candidate && !x.inEvent ? { ...x, selected: true } : x
+				);
+				continue;
+			}
+			emailList = [
+				...emailList,
+				{
+					email: candidate,
+					name: '',
+					firstName: '',
+					lastName: '',
+					initial: candidate[0].toUpperCase(),
+					selected: !existingAttendeeEmails.has(candidate),
+					inEvent: existingAttendeeEmails.has(candidate),
+					source: 'entered'
+				}
+			];
+			added++;
+		}
+
+		email = '';
+		entryError =
+			skipped > 0
+				? `Added ${added}. Skipped ${skipped} invalid address${skipped === 1 ? '' : 'es'}.`
+				: '';
+		activeTab = 'entered';
 	}
 
 	function handleEmailKeydown(e: KeyboardEvent) {
@@ -245,52 +350,104 @@
 
 	// CSV template download
 	function downloadCsvTemplate() {
-		const csv = 'email,name\njohn@example.com,John Doe\njane@example.com,Jane Smith';
-		const blob = new Blob([csv], { type: 'text/csv' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = 'attendee_invitation_template.csv';
-		a.click();
-		URL.revokeObjectURL(url);
+		downloadCsv('attendee_invitation_template.csv', contactCsvTemplate());
 	}
 
-	// CSV file upload
-	function handleCsvUpload(e: Event) {
-		const file = (e.target as HTMLInputElement).files?.[0];
-		if (!file) return;
-		const reader = new FileReader();
-		reader.onload = () => {
-			const text = reader.result as string;
-			const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-			const start = lines[0]?.toLowerCase().includes('email') ? 1 : 0;
-			const parsed = lines.slice(start).map((line) => {
-				const parts = line.split(',').map((p) => p.trim().replace(/^"|"$/g, ''));
-				return { email: (parts[0] || '').toLowerCase(), name: parts[1] || '' };
-			}).filter((p) => p.email.includes('@'));
+	/**
+	 * Import guests from a CSV.
+	 *
+	 * Uses the shared RFC 4180 parser rather than splitting on commas, which
+	 * previously mangled quoted names ("Doe, John"), dropped the first row of any
+	 * headerless file whose first address contained the word "email", and choked
+	 * on Excel's UTF-8 BOM.
+	 */
+	async function handleCsvUpload(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const file = input.files?.[0];
+		// Reset immediately so the same file can be picked again after an error.
+		input.value = '';
+		if (file) await importCsvFile(file);
+	}
 
-			for (const p of parsed) {
-				const alreadyExists = emailList.some((e) => e.email === p.email && e.source === 'entered');
-				if (alreadyExists) continue;
-				const nameParts = p.name.split(' ');
+	function handleCsvDrop(e: DragEvent) {
+		csvDragActive = false;
+		const file = e.dataTransfer?.files?.[0];
+		if (file) importCsvFile(file);
+	}
+
+	async function importCsvFile(file: File) {
+		csvError = '';
+		csvImport = null;
+
+		const fileError = validateCsvFile(file);
+		if (fileError) {
+			csvError = fileError;
+			return;
+		}
+
+		csvParsing = true;
+		try {
+			const text = await readFileAsText(file);
+			const result = parseContactCsv(text);
+
+			if (result.fatalError) {
+				csvError = result.fatalError;
+				return;
+			}
+			if (result.contacts.length === 0) {
+				csvError =
+					result.stats.totalRows === 0
+						? 'No rows found in that file.'
+						: `No valid email addresses found in ${result.stats.totalRows} row${result.stats.totalRows === 1 ? '' : 's'}. Check that a column contains email addresses.`;
+				csvImport = result;
+				return;
+			}
+
+			let added = 0;
+			let alreadyListed = 0;
+
+			for (const c of result.contacts) {
+				// Dedupe against the WHOLE list, not just previously-entered rows.
+				// Matching only `source === 'entered'` allowed an address that was
+				// already a suggestion to be added a second time — and because the
+				// send path never de-duplicated either, that person received two
+				// invitations and burned two emails from the monthly quota.
+				const existing = emailList.find((x) => x.email === c.email);
+				if (existing) {
+					// Select the row they already have rather than duplicating it.
+					if (!existing.inEvent && !existing.selected) {
+						emailList = emailList.map((x) => (x.email === c.email ? { ...x, selected: true } : x));
+					}
+					alreadyListed++;
+					continue;
+				}
+
 				emailList = [
 					...emailList,
 					{
-						email: p.email,
-						name: p.name,
-						firstName: nameParts[0] || '',
-						lastName: nameParts.slice(1).join(' ') || '',
-						initial: (p.name?.[0] || p.email[0]).toUpperCase(),
+						email: c.email,
+						name: c.name,
+						firstName: c.firstName,
+						lastName: c.lastName,
+						initial: (c.firstName?.[0] || c.name?.[0] || c.email[0]).toUpperCase(),
 						selected: true,
-						inEvent: existingAttendeeEmails.has(p.email),
+						inEvent: existingAttendeeEmails.has(c.email),
 						source: 'entered'
 					}
 				];
+				added++;
 			}
-		};
-		reader.readAsText(file);
-		// Reset input so same file can be re-uploaded
-		if (csvFileInput) csvFileInput.value = '';
+
+			csvImport = result;
+			csvAdded = added;
+			csvAlreadyListed = alreadyListed;
+			// Show the imported rows straight away.
+			activeTab = 'entered';
+		} catch (err: any) {
+			csvError = err?.message ?? 'The file could not be read.';
+		} finally {
+			csvParsing = false;
+		}
 	}
 
 	// Select all visible items for a source
@@ -309,8 +466,25 @@
 		emailList = emailList.map((e) => (e === item ? { ...e, selected: false } : e));
 	}
 
+	/**
+	 * The distinct people who will actually be invited.
+	 *
+	 * The same address can legitimately appear under more than one source (a
+	 * suggestion and a collection, say), so this de-duplicates by email. Counting
+	 * raw selected rows overstated the quota spend and, worse, the send path used
+	 * the same undeduplicated list — so one person could receive two invitations.
+	 */
+	$: selectedRecipients = (() => {
+		const byEmail = new Map<string, EmailItem>();
+		for (const e of emailList) {
+			if (!e.selected || e.inEvent) continue;
+			if (!byEmail.has(e.email)) byEmail.set(e.email, e);
+		}
+		return [...byEmail.values()];
+	})();
+
 	// Counting
-	$: selectedCount = emailList.filter((e) => e.selected).length;
+	$: selectedCount = selectedRecipients.length;
 	// Unknown quota must not block sending — the server is the enforcer, and a
 	// failed quota fetch previously left the Send button permanently disabled.
 	$: canSendMore = !emailQuota || isUnlimited || selectedCount <= remaining;
@@ -321,15 +495,12 @@
 		let list = emailList.filter((e) => e.source === source);
 		if (searchQuery.trim()) {
 			const q = searchQuery.toLowerCase();
-			list = list.filter(
-				(e) => e.email.includes(q) || e.name.toLowerCase().includes(q)
-			);
+			list = list.filter((e) => e.email.includes(q) || e.name.toLowerCase().includes(q));
 		}
 		return list;
 	})();
 
-	$: currentCollectionName =
-		collections.find((c) => c.id === activeTab)?.name ?? activeTab;
+	$: currentCollectionName = collections.find((c) => c.id === activeTab)?.name ?? activeTab;
 
 	// Send invitations
 	async function handleSendInvites() {
@@ -337,8 +508,8 @@
 		sending = true;
 		sendResult = null;
 		try {
-			const selected = emailList.filter((e) => e.selected && !e.inEvent);
-			const attendees = selected.map((e) => ({
+			// De-duplicated by construction, so nobody is invited twice.
+			const attendees = selectedRecipients.map((e) => ({
 				email: e.email,
 				firstName: e.firstName || e.name?.split(' ')[0] || '',
 				lastName: e.lastName || e.name?.split(' ').slice(1).join(' ') || ''
@@ -353,7 +524,10 @@
 			);
 			existingAttendeeEmails = new Set([...existingAttendeeEmails, ...sentEmails]);
 		} catch (err: any) {
-			sendResult = { success: [], failed: [{ email: 'all', reason: err?.message ?? 'Invitation failed' }] };
+			sendResult = {
+				success: [],
+				failed: [{ email: 'all', reason: err?.message ?? 'Invitation failed' }]
+			};
 			// A plan-limit rejection means our cached numbers are stale.
 			await loadEmailUsage();
 		} finally {
@@ -380,12 +554,12 @@
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
-			class="flex h-full max-h-140 w-full max-w-3xl flex-col rounded-lg bg-[#F8F8F9] shadow-lg md:max-h-120"
+			class="max-h-140 md:max-h-120 flex h-full w-full max-w-3xl flex-col rounded-lg bg-[#F8F8F9] shadow-lg"
 			on:click|stopPropagation
 		>
 			<!-- Header -->
 			<div class="flex items-center justify-between border-b border-gray-200 p-3">
-				<div class="flex h-full w-full max-w-85 items-center justify-between">
+				<div class="max-w-85 flex h-full w-full items-center justify-between">
 					<h2 class="font-semibold">Invite Attendee</h2>
 
 					{#if activeTab === 'limit_details'}
@@ -405,10 +579,13 @@
 					{#if step === 1}
 						<button
 							on:click={() => (activeTab = 'limit_details')}
-							class="flex w-[120px] items-center gap-2 rounded-full border-2 px-3 py-1 {activeTab === 'limit_details' ? 'border-black' : 'border-[#E5E6E6]'}"
+							class="flex w-[120px] items-center gap-2 rounded-full border-2 px-3 py-1 {activeTab ===
+							'limit_details'
+								? 'border-black'
+								: 'border-[#E5E6E6]'}"
 						>
 							<span
-								class="h-[22px] w-[22px] rounded-full border-3 {quotaLoading || !emailQuota
+								class="border-3 h-[22px] w-[22px] rounded-full {quotaLoading || !emailQuota
 									? 'border-[#E5E6E6]'
 									: isUnlimited || remainingAfterSelection > 50
 										? 'border-green-400'
@@ -468,13 +645,23 @@
 									{#each collections as col}
 										<button
 											on:click={() => (activeTab = col.id)}
-											class="flex w-full items-center justify-between rounded px-3 py-2 {activeTab === col.id ? 'bg-[#EBEBEB] font-medium' : ''}"
+											class="flex w-full items-center justify-between rounded px-3 py-2 {activeTab ===
+											col.id
+												? 'bg-[#EBEBEB] font-medium'
+												: ''}"
 										>
 											<div class="flex items-center gap-2">
 												{#if col.profilePictureUrl}
-													<img src={col.profilePictureUrl} alt={col.name} class="h-3 w-3 rounded-full object-cover" />
+													<img
+														src={col.profilePictureUrl}
+														alt={col.name}
+														class="h-3 w-3 rounded-full object-cover"
+													/>
 												{:else}
-													<p class="h-3 w-3 rounded-full" style="background-color: {col.color};"></p>
+													<p
+														class="h-3 w-3 rounded-full"
+														style="background-color: {col.color};"
+													></p>
 												{/if}
 												<p class="text-[#3E4041]">{col.name}</p>
 											</div>
@@ -489,7 +676,9 @@
 						</aside>
 
 						<!-- Main Panel -->
-						<main class="custom-scrollbar flex w-full flex-col gap-4 overflow-y-auto border-l px-3 py-3">
+						<main
+							class="custom-scrollbar flex w-full flex-col gap-4 overflow-y-auto border-l px-3 py-3"
+						>
 							<!-- Mobile Tabs -->
 							<div class="custom-scrollbar flex gap-2 overflow-x-auto md:hidden">
 								<div class="flex w-full gap-2">
@@ -514,13 +703,23 @@
 									{#each collections as col}
 										<button
 											on:click={() => (activeTab = col.id)}
-											class="flex flex-shrink-0 items-center justify-between rounded px-3 py-2 {activeTab === col.id ? 'bg-[#EBEBEB] font-medium' : ''}"
+											class="flex flex-shrink-0 items-center justify-between rounded px-3 py-2 {activeTab ===
+											col.id
+												? 'bg-[#EBEBEB] font-medium'
+												: ''}"
 										>
 											<div class="flex items-center gap-2">
 												{#if col.profilePictureUrl}
-													<img src={col.profilePictureUrl} alt={col.name} class="h-3 w-3 rounded-full object-cover" />
+													<img
+														src={col.profilePictureUrl}
+														alt={col.name}
+														class="h-3 w-3 rounded-full object-cover"
+													/>
 												{:else}
-													<p class="h-3 w-3 rounded-full" style="background-color: {col.color};"></p>
+													<p
+														class="h-3 w-3 rounded-full"
+														style="background-color: {col.color};"
+													></p>
 												{/if}
 												<p class="text-[#3E4041]">{col.name}</p>
 											</div>
@@ -532,37 +731,58 @@
 								<!-- TAB: ENTER EMAILS -->
 								{#if activeTab === 'enter'}
 									<div class="space-y-3">
-										<label for="email" class="block text-sm font-medium text-[#666769]">Add Emails</label>
+										<label for="email" class="block text-sm font-medium text-[#666769]"
+											>Add Emails</label
+										>
 										<div class="flex gap-1">
 											<input
 												type="email"
 												placeholder="Paste or enter email here"
 												bind:value={email}
 												on:keydown={handleEmailKeydown}
-												class="flex-1 rounded-md border bg-[#EFF0F0] px-3 py-2 text-sm focus:ring-0 focus:outline-none"
+												on:paste={handleEmailPaste}
+												on:input={() => (entryError = '')}
+												aria-invalid={!!entryError}
+												class="flex-1 rounded-md border bg-[#EFF0F0] px-3 py-2 text-sm focus:outline-none focus:ring-0 {entryError
+													? 'border-red-400'
+													: ''}"
 											/>
 											<input
 												type="text"
 												placeholder="Name (Optional)"
 												bind:value={enteredName}
 												on:keydown={handleEmailKeydown}
-												class="flex-1 rounded-md border bg-[#EFF0F0] px-3 py-2 text-sm focus:ring-0 focus:outline-none"
+												class="flex-1 rounded-md border bg-[#EFF0F0] px-3 py-2 text-sm focus:outline-none focus:ring-0"
 											/>
 											<button
 												disabled={!email.trim()}
 												on:click={addEmail}
-												class="rounded-md {!email.trim() ? 'bg-[#EFF0F0] text-[#666769]' : 'bg-[#666769] text-white'} px-4 py-2 text-sm"
+												class="rounded-md {!email.trim()
+													? 'bg-[#EFF0F0] text-[#666769]'
+													: 'bg-[#666769] text-white'} px-4 py-2 text-sm"
 											>
 												Add
 											</button>
 										</div>
+
+										<!-- Tell the organiser why an address was rejected instead of
+										     appearing to do nothing. -->
+										{#if entryError}
+											<p class="text-xs text-red-600">{entryError}</p>
+										{:else}
+											<p class="text-xs text-gray-400">
+												Tip: paste a whole list at once — commas, spaces or new lines all work.
+											</p>
+										{/if}
 
 										{#if emailList.filter((e) => e.source === 'entered').length > 0}
 											<div class="space-y-2">
 												{#each emailList.filter((e) => e.source === 'entered') as item}
 													<div class="flex items-center justify-between">
 														<div class="flex items-center gap-2">
-															<div class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-sm font-medium text-[#9A9B9B]">
+															<div
+																class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 text-sm font-medium text-[#9A9B9B]"
+															>
 																{item.initial}
 															</div>
 															<div class="flex flex-col">
@@ -573,11 +793,15 @@
 															</div>
 														</div>
 														{#if item.inEvent}
-															<span class="rounded px-2 py-1 text-xs bg-[#F1F1F1] text-[#969798]">In Event</span>
+															<span class="rounded bg-[#F1F1F1] px-2 py-1 text-xs text-[#969798]"
+																>In Event</span
+															>
 														{:else}
 															<button
 																on:click={() => toggleSelect(item)}
-																class="flex h-7 w-7 items-center justify-center rounded-full {item.selected ? 'bg-black text-white' : 'bg-gray-200 text-gray-400'}"
+																class="flex h-7 w-7 items-center justify-center rounded-full {item.selected
+																	? 'bg-black text-white'
+																	: 'bg-gray-200 text-gray-400'}"
 															>
 																<Icon icon="mdi:tick" class="text-xl" />
 															</button>
@@ -590,34 +814,95 @@
 										<!-- CSV Import Section (always visible) -->
 										<div class="mt-3 space-y-2 border-t pt-3">
 											<p class="block text-sm font-medium text-[#666769]">Import CSV</p>
+											<!-- The copy promised drag-and-drop; it now works. -->
 											<button
 												on:click={() => csvFileInput?.click()}
-												class="flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed bg-[#EFF0F0] p-6 text-center"
+												on:dragover|preventDefault={() => (csvDragActive = true)}
+												on:dragleave={() => (csvDragActive = false)}
+												on:drop|preventDefault={handleCsvDrop}
+												disabled={csvParsing}
+												class="flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center transition {csvDragActive
+													? 'border-gray-700 bg-gray-100'
+													: 'bg-[#EFF0F0]'}"
 											>
-												<img src="/csv-icon.svg" alt="" />
-												<p class="text-lg text-[#666769]">Import CSV File</p>
-												<p class="text-sm text-gray-400">Drop file or click here to choose file.</p>
+												{#if csvParsing}
+													<Icon icon="mdi:loading" class="animate-spin text-3xl text-[#666769]" />
+													<p class="mt-2 text-lg text-[#666769]">Reading file…</p>
+												{:else}
+													<img src="/csv-icon.svg" alt="" />
+													<p class="text-lg text-[#666769]">Import CSV File</p>
+													<p class="text-sm text-gray-400">
+														Drop file or click here to choose file.
+													</p>
+												{/if}
 											</button>
-											<input bind:this={csvFileInput} type="file" accept=".csv" class="hidden" on:change={handleCsvUpload} />
-											<button on:click={downloadCsvTemplate} class="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600">
+											<input
+												bind:this={csvFileInput}
+												type="file"
+												accept=".csv,text/csv"
+												class="hidden"
+												on:change={handleCsvUpload}
+											/>
+											<button
+												on:click={downloadCsvTemplate}
+												class="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600"
+											>
 												<img src="/document-download.svg" alt="" />
 												Download CSV Template
 											</button>
+
+											{#if csvError}
+												<p class="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
+													{csvError}
+												</p>
+											{/if}
+
+											<!-- Import summary: what came in, what was skipped and why. -->
+											{#if csvImport && !csvError}
+												<div class="rounded-lg bg-green-50 px-3 py-2">
+													<p class="text-xs font-medium text-green-800">
+														Added {csvAdded} guest{csvAdded === 1 ? '' : 's'} to your list.
+													</p>
+													<p class="mt-0.5 text-xs text-green-700">
+														{summariseImport(csvImport.stats)}
+													</p>
+													{#if csvAlreadyListed > 0}
+														<p class="mt-0.5 text-xs text-green-700">
+															{csvAlreadyListed} already on the list — selected instead of duplicated.
+														</p>
+													{/if}
+													{#if csvImport.issues.length > 0}
+														<ul class="mt-1 list-disc pl-4 text-xs text-green-700/80">
+															{#each csvImport.issues as issue}
+																<li>{issue}</li>
+															{/each}
+														</ul>
+													{/if}
+												</div>
+											{/if}
 										</div>
 									</div>
 
-								<!-- TAB: LIMIT DETAILS -->
+									<!-- TAB: LIMIT DETAILS -->
 								{:else if activeTab === 'limit_details'}
 									<div>
 										<div class="mb-3 flex items-center gap-2">
 											{#if cachedCollections?.[0]?.profilePictureUrl}
-												<img src={cachedCollections[0].profilePictureUrl} class="h-8 w-8 rounded-full object-cover" alt="collection" />
+												<img
+													src={cachedCollections[0].profilePictureUrl}
+													class="h-8 w-8 rounded-full object-cover"
+													alt="collection"
+												/>
 											{:else}
 												<img src="/tech-icon.svg" class="h-full w-8" alt="avatar" />
 											{/if}
 											<div>
-												<div class="text-md font-semibold">{cachedCollections?.[0]?.name ?? 'My Collection'}</div>
-												<div class="text-xs text-[#ABADAD]">{emailQuota?.tier === 'PLUS' ? 'Rondwell Plus' : 'Rondwell Free'}</div>
+												<div class="text-md font-semibold">
+													{cachedCollections?.[0]?.name ?? 'My Collection'}
+												</div>
+												<div class="text-xs text-[#ABADAD]">
+													{emailQuota?.tier === 'PLUS' ? 'Rondwell Plus' : 'Rondwell Free'}
+												</div>
 											</div>
 										</div>
 
@@ -625,12 +910,13 @@
 											{#if quotaLoading}
 												Checking your email allowance…
 											{:else if !emailQuota}
-												We couldn't load your email allowance. Invitations still send; the limit is enforced server-side.
+												We couldn't load your email allowance. Invitations still send; the limit is
+												enforced server-side.
 											{:else if isUnlimited}
 												Your plan includes unlimited invitation emails.
 											{:else}
-												You can send {monthlyLimit.toLocaleString()} emails per month. Invitations, event blasts and
-												collection newsletters all draw from this allowance.
+												You can send {monthlyLimit.toLocaleString()} emails per month. Invitations, event
+												blasts and collection newsletters all draw from this allowance.
 											{/if}
 										</div>
 
@@ -656,22 +942,29 @@
 											<div class="border-t pt-4">
 												<div class="font-medium">How to increase your invite limit</div>
 												<div class="mt-3 space-y-3 rounded-lg bg-[#FDFDFD] p-3">
-													<div class="flex flex-col justify-between gap-2 md:flex-row md:items-center">
+													<div
+														class="flex flex-col justify-between gap-2 md:flex-row md:items-center"
+													>
 														<div class="flex items-center gap-1">
 															<img src="/logo1.svg" alt="" class="h-6 w-6" />
 															<div>
 																<div class="font-medium">Upgrade to Rondwell Plus</div>
-																<div class="text-sm font-light text-[#7F766A]">Get 5,000 to 100,000 sends per month</div>
+																<div class="text-sm font-light text-[#7F766A]">
+																	Get 5,000 to 100,000 sends per month
+																</div>
 															</div>
 														</div>
-														<button class="w-full rounded-md bg-gray-800 px-4 py-2 text-white md:w-fit">Upgrade</button>
+														<button
+															class="w-full rounded-md bg-gray-800 px-4 py-2 text-white md:w-fit"
+															>Upgrade</button
+														>
 													</div>
 												</div>
 											</div>
 										{/if}
 									</div>
 
-								<!-- TAB: SUGGESTIONS / COLLECTION SUBSCRIBERS -->
+									<!-- TAB: SUGGESTIONS / COLLECTION SUBSCRIBERS -->
 								{:else}
 									<div class="space-y-3">
 										<div class="relative mb-4 w-full">
@@ -681,14 +974,16 @@
 												placeholder={activeTab === 'suggestions'
 													? 'Search in Suggestions'
 													: `Search in "${currentCollectionName}"`}
-												class="h-[43px] w-full rounded-lg bg-[#EFF0F0] py-2 pr-4 pl-10 text-[#b5b6b6] focus:ring-0 focus:outline-none"
+												class="h-[43px] w-full rounded-lg bg-[#EFF0F0] py-2 pl-10 pr-4 text-[#b5b6b6] focus:outline-none focus:ring-0"
 											/>
-											<span class="absolute top-2.5 left-3 text-gray-400">
+											<span class="absolute left-3 top-2.5 text-gray-400">
 												<img src="/search-favorite.png" alt="search icon" class="h-5 w-5" />
 											</span>
 										</div>
 
-										<div class="flex items-center justify-between border-b pb-2 text-sm text-gray-500">
+										<div
+											class="flex items-center justify-between border-b pb-2 text-sm text-gray-500"
+										>
 											<span>{filteredList.length} People</span>
 											<button on:click={() => selectAllForSource(activeTab)}>Select All</button>
 										</div>
@@ -703,28 +998,47 @@
 													>
 														<div class="flex items-center gap-2">
 															{#if person.profilePicture}
-																<img src={person.profilePicture} alt="" class="h-7 w-7 rounded-full" />
+																<img
+																	src={person.profilePicture}
+																	alt=""
+																	class="h-7 w-7 rounded-full"
+																/>
 															{:else}
-																<div class="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-[#9A9B9B]">
+																<div
+																	class="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-[#9A9B9B]"
+																>
 																	{person.initial}
 																</div>
 															{/if}
-															<div class="flex flex-col items-start text-sm {person.selected || person.inEvent ? '' : 'text-[#D3D3D3]'}">
+															<div
+																class="flex flex-col items-start text-sm {person.selected ||
+																person.inEvent
+																	? ''
+																	: 'text-[#D3D3D3]'}"
+															>
 																{#if person.name}
 																	<span class="text-sm font-medium">{person.name}</span>
 																{/if}
-																<span class="text-xs {person.selected || person.inEvent ? 'text-[#A9AAAA]' : ''}">{person.email}</span>
+																<span
+																	class="text-xs {person.selected || person.inEvent
+																		? 'text-[#A9AAAA]'
+																		: ''}">{person.email}</span
+																>
 															</div>
 														</div>
 
 														<div class="flex items-center gap-2">
 															{#if person.selected && !person.inEvent}
-																<div class="flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
+																<div
+																	class="flex h-6 w-6 items-center justify-center rounded-full bg-black text-white"
+																>
 																	<Icon icon="mdi:tick" class="text-xl" />
 																</div>
 															{/if}
 															{#if person.inEvent}
-																<span class="rounded px-2 py-1 text-xs bg-[#F1F1F1] text-[#969798]">In Event</span>
+																<span class="rounded bg-[#F1F1F1] px-2 py-1 text-xs text-[#969798]"
+																	>In Event</span
+																>
 															{/if}
 														</div>
 													</button>
@@ -735,7 +1049,10 @@
 												<img src="/profile-2user.svg" alt="" />
 												<p class="text-center text-[#646568]">No Result found.</p>
 												<p class="text-[#BABBBB]">
-													Search for someone else or <button class="text-pink-600" on:click={() => (activeTab = 'enter')}>add people by email.</button>
+													Search for someone else or <button
+														class="text-pink-600"
+														on:click={() => (activeTab = 'enter')}>add people by email.</button
+													>
 												</p>
 											</div>
 										{/if}
@@ -745,28 +1062,33 @@
 						</main>
 					</div>
 
-				<!-- STEP 2: Review & Send -->
+					<!-- STEP 2: Review & Send -->
 				{:else if step === 2}
 					<div class="flex flex-col gap-2 md:flex-row">
 						<aside class="flex w-80 flex-col gap-2 px-3 py-1">
 							<p class="mt-2 text-sm text-gray-500">
 								Inviting {emailList.filter((e) => e.selected && !e.inEvent).length} People
 							</p>
-							<div class="space-y-2 max-h-60 overflow-y-auto">
+							<div class="max-h-60 space-y-2 overflow-y-auto">
 								{#each emailList.filter((e) => e.selected && !e.inEvent) as item}
 									<div class="flex items-center justify-between gap-2">
 										<div class="flex items-center gap-2">
-											<div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-sm font-medium">
+											<div
+												class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-sm font-medium"
+											>
 												{item.initial}
 											</div>
 											<div class="flex flex-col">
 												{#if item.name}
-													<span class="text-sm font-medium truncate">{item.name}</span>
+													<span class="truncate text-sm font-medium">{item.name}</span>
 												{/if}
-												<span class="text-xs text-[#A9AAAA] truncate">{item.email}</span>
+												<span class="truncate text-xs text-[#A9AAAA]">{item.email}</span>
 											</div>
 										</div>
-										<button on:click={() => removeSelected(item)} class="text-gray-400 hover:text-gray-600 flex-shrink-0">
+										<button
+											on:click={() => removeSelected(item)}
+											class="flex-shrink-0 text-gray-400 hover:text-gray-600"
+										>
 											<Icon icon="mdi:close" class="text-sm" />
 										</button>
 									</div>
@@ -774,27 +1096,32 @@
 							</div>
 						</aside>
 
-						<div class="flex flex-col border-l p-4 flex-1">
+						<div class="flex flex-1 flex-col border-l p-4">
 							{#if sendResult}
 								<!-- Send Result -->
 								<div class="space-y-3">
 									{#if sendResult.success.length > 0}
 										<div class="rounded-md bg-green-50 p-3">
 											<p class="text-sm text-green-700">
-												{sendResult.success.length} invitation{sendResult.success.length > 1 ? 's' : ''} sent successfully.
+												{sendResult.success.length} invitation{sendResult.success.length > 1
+													? 's'
+													: ''} sent successfully.
 											</p>
 										</div>
 									{/if}
 									{#if sendResult.failed.length > 0}
 										<div class="rounded-md bg-red-50 p-3">
-											<p class="text-sm text-red-700 font-medium">Failed to invite:</p>
+											<p class="text-sm font-medium text-red-700">Failed to invite:</p>
 											{#each sendResult.failed as fail}
 												<p class="text-xs text-red-600">{fail.email}: {fail.reason}</p>
 											{/each}
 										</div>
 									{/if}
 									<button
-										on:click={() => { sendResult = null; step = 1; }}
+										on:click={() => {
+											sendResult = null;
+											step = 1;
+										}}
 										class="rounded-md bg-gray-800 px-4 py-2 text-sm text-white"
 									>
 										Done
@@ -846,9 +1173,11 @@
 											contenteditable="true"
 											role="textbox"
 											tabindex="0"
-											class="custom-scrollbar h-24 w-full overflow-y-auto bg-[#F5F5F5] px-3 py-2 text-sm focus:ring-0 focus:outline-0"
+											class="custom-scrollbar h-24 w-full overflow-y-auto bg-[#F5F5F5] px-3 py-2 text-sm focus:outline-0 focus:ring-0"
 											placeholder="Add a custom message here..."
-											on:input={(e) => { customMessage = e.currentTarget.innerHTML; }}
+											on:input={(e) => {
+												customMessage = e.currentTarget.innerHTML;
+											}}
 										></div>
 									</div>
 									<p class="text-md p-4 font-medium">RSVP: {eventPageUrl}</p>
@@ -856,27 +1185,56 @@
 
 								<!-- Info note -->
 								<div class="flex items-start gap-1 text-xs">
-									<div class="flex h-[40px] w-[40px] items-center justify-center rounded-full bg-[#EFF0F0]">
-										<svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-											<path opacity="0.4" d="M34.2712 21.6511C34.9125 21.6511 35.4222 21.1249 35.4222 20.4672V19.0203C35.4222 12.5583 33.449 10.6016 27.0035 10.6016H16.6445V14.5972C17.2858 14.5972 17.812 15.1233 17.812 15.7646V20.1713C17.812 20.8125 17.2858 21.3387 16.6445 21.3387V25.4658C17.2858 25.4658 17.812 25.992 17.812 26.6333V31.0399C17.812 31.6812 17.2858 32.2074 16.6445 32.2074V36.1701H27.0035C33.449 36.1701 35.4222 34.1969 35.4222 27.7514C35.4222 27.1101 34.9125 26.5839 34.2712 26.5839C32.89 26.5839 31.7883 25.4823 31.7883 24.1175C31.7883 22.7528 32.89 21.6511 34.2712 21.6511Z" fill="#737577" />
-											<path opacity="0.4" d="M30.0147 11.049H13.418L18.7676 5.6625C23.1313 1.26875 25.3223 1.26875 29.686 5.6625L30.7815 6.76553C29.6313 7.92371 29.3574 9.63341 30.0147 11.049Z" stroke="#737577" stroke-width="2.36776" stroke-linecap="round" stroke-linejoin="round" />
-											<path d="M15.4785 15.7716V20.1783C15.4785 20.8195 16.0047 21.3457 16.6459 21.3457V25.4728C16.0047 25.4728 15.4785 25.999 15.4785 26.6403V31.0469C15.4785 31.6882 16.0047 32.2144 16.6459 32.2144V36.1771H12.4695C6.02391 36.1771 4.05078 34.2039 4.05078 27.7584V27.0513C4.05078 26.3936 4.56051 25.8839 5.20178 25.8839C6.58297 25.8839 7.68463 24.7658 7.68463 23.401C7.68463 22.0363 6.58297 20.9182 5.20178 20.9182C4.56051 20.9182 4.05078 20.4085 4.05078 19.7507V19.0437C4.05078 12.5817 6.02391 10.625 12.4695 10.625H16.6295V14.6206C16.0047 14.6206 15.4785 15.1468 15.4785 15.7716Z" fill="#737577" />
+									<div
+										class="flex h-[40px] w-[40px] items-center justify-center rounded-full bg-[#EFF0F0]"
+									>
+										<svg
+											width="20"
+											height="20"
+											viewBox="0 0 40 40"
+											fill="none"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<path
+												opacity="0.4"
+												d="M34.2712 21.6511C34.9125 21.6511 35.4222 21.1249 35.4222 20.4672V19.0203C35.4222 12.5583 33.449 10.6016 27.0035 10.6016H16.6445V14.5972C17.2858 14.5972 17.812 15.1233 17.812 15.7646V20.1713C17.812 20.8125 17.2858 21.3387 16.6445 21.3387V25.4658C17.2858 25.4658 17.812 25.992 17.812 26.6333V31.0399C17.812 31.6812 17.2858 32.2074 16.6445 32.2074V36.1701H27.0035C33.449 36.1701 35.4222 34.1969 35.4222 27.7514C35.4222 27.1101 34.9125 26.5839 34.2712 26.5839C32.89 26.5839 31.7883 25.4823 31.7883 24.1175C31.7883 22.7528 32.89 21.6511 34.2712 21.6511Z"
+												fill="#737577"
+											/>
+											<path
+												opacity="0.4"
+												d="M30.0147 11.049H13.418L18.7676 5.6625C23.1313 1.26875 25.3223 1.26875 29.686 5.6625L30.7815 6.76553C29.6313 7.92371 29.3574 9.63341 30.0147 11.049Z"
+												stroke="#737577"
+												stroke-width="2.36776"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											/>
+											<path
+												d="M15.4785 15.7716V20.1783C15.4785 20.8195 16.0047 21.3457 16.6459 21.3457V25.4728C16.0047 25.4728 15.4785 25.999 15.4785 26.6403V31.0469C15.4785 31.6882 16.0047 32.2144 16.6459 32.2144V36.1771H12.4695C6.02391 36.1771 4.05078 34.2039 4.05078 27.7584V27.0513C4.05078 26.3936 4.56051 25.8839 5.20178 25.8839C6.58297 25.8839 7.68463 24.7658 7.68463 23.401C7.68463 22.0363 6.58297 20.9182 5.20178 20.9182C4.56051 20.9182 4.05078 20.4085 4.05078 19.7507V19.0437C4.05078 12.5817 6.02391 10.625 12.4695 10.625H16.6295V14.6206C16.0047 14.6206 15.4785 15.1468 15.4785 15.7716Z"
+												fill="#737577"
+											/>
 										</svg>
 									</div>
 									<div>
 										<p>We will send attendees an invite link to register for the event.</p>
-										<p class="text-[#AFB1B1]">Attendees will be automatically approved when they complete their registration.</p>
+										<p class="text-[#AFB1B1]">
+											Attendees will be automatically approved when they complete their
+											registration.
+										</p>
 									</div>
 								</div>
 
 								<p class="mt-4 border-t pt-4 text-xs leading-tight text-gray-500">
-									You can bypass registration and payment by changing attendee status to <span class="font-medium text-gray-700">"Attending"</span>.
+									You can bypass registration and payment by changing attendee status to <span
+										class="font-medium text-gray-700">"Attending"</span
+									>.
 								</p>
 
 								{#if !canSendMore}
 									<div class="mt-3 rounded-md bg-amber-50 p-3 text-xs text-amber-700">
 										You've selected more invites than your remaining limit ({remaining} left).
-										<button on:click={() => (activeTab = 'limit_details')} class="underline">Upgrade</button> or reduce your selection.
+										<button on:click={() => (activeTab = 'limit_details')} class="underline"
+											>Upgrade</button
+										> or reduce your selection.
 									</div>
 								{/if}
 							{/if}
@@ -886,7 +1244,7 @@
 			</div>
 
 			<!-- Bottom Footer -->
-			<div class="flex h-15 items-center justify-between border-t border-gray-200 p-3">
+			<div class="h-15 flex items-center justify-between border-t border-gray-200 p-3">
 				{#if step === 1}
 					<span class="text-[#B9BABA]">{selectedCount} Selected</span>
 				{:else if step === 2 && !sendResult}
@@ -903,14 +1261,19 @@
 
 				{#if overQuota && !sendResult}
 					<span class="mr-2 text-xs font-medium text-red-500">
-						{selectedCount} selected but only {remaining} email{remaining === 1 ? '' : 's'} left this month
+						{selectedCount} selected but only {remaining} email{remaining === 1 ? '' : 's'} left this
+						month
 					</span>
 				{/if}
 
 				{#if !sendResult}
 					<button
 						on:click={handleNextOrSend}
-						class="flex items-center gap-1 rounded-md px-6 py-2 text-white {selectedCount === 0 || sending || (step === 2 && !canSendMore) ? 'bg-[#969798]' : 'bg-gray-800'}"
+						class="flex items-center gap-1 rounded-md px-6 py-2 text-white {selectedCount === 0 ||
+						sending ||
+						(step === 2 && !canSendMore)
+							? 'bg-[#969798]'
+							: 'bg-gray-800'}"
 						disabled={selectedCount === 0 || sending || (step === 2 && !canSendMore)}
 					>
 						{#if sending}
@@ -918,9 +1281,30 @@
 						{:else}
 							{step === 1 ? 'Next' : 'Send Invites'}
 						{/if}
-						<svg width="11" height="12" viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<path d="M0.871094 0.841797C1.5721 0.157615 2.58659 0.00457658 3.45703 0.464844L9.39453 3.58984L9.52832 3.66602C10.1806 4.06709 10.5811 4.77826 10.5811 5.55273C10.5809 6.32719 10.1807 7.0385 9.52832 7.43945L9.39453 7.51465L3.45703 10.6387L3.45801 10.6396C3.12189 10.8189 2.76691 10.9033 2.41211 10.9033C1.84716 10.9033 1.30127 10.6826 0.871094 10.2637V10.2627C0.16927 9.57763 -0.000216478 8.56312 0.4375 7.6875L1.26758 6.02734C1.41356 5.73526 1.41438 5.38069 1.26758 5.08203L0.4375 3.41699C-0.000180173 2.54137 0.169252 1.52684 0.871094 0.841797ZM2.41797 1.36426C2.12646 1.36426 1.86586 1.50002 1.68457 1.67676L1.68359 1.67773C1.41317 1.93952 1.22744 2.3971 1.47754 2.90234L2.30664 4.5625L2.30762 4.56348C2.61652 5.18723 2.61666 5.92317 2.30762 6.54688H2.30664L1.47754 8.20703L1.47656 8.20801C1.22284 8.71154 1.41204 9.16866 1.68359 9.43164C1.95736 9.69658 2.41563 9.87688 2.91504 9.61426L8.85254 6.48926L8.97852 6.41211C9.25687 6.21531 9.41791 5.90557 9.41797 5.55762C9.41797 5.16005 9.20777 4.81236 8.85254 4.62598L8.85156 4.625L2.91406 1.49023V1.48926C2.73942 1.3978 2.57161 1.36433 2.41797 1.36426Z" fill="white" stroke="white" stroke-width="0.394627" />
-							<rect x="5.32622" y="6.17388" width="3.55164" height="1.18388" rx="0.59194" transform="rotate(-180 5.32622 6.17388)" fill="white" stroke="white" stroke-width="0.394627" />
+						<svg
+							width="11"
+							height="12"
+							viewBox="0 0 11 12"
+							fill="none"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path
+								d="M0.871094 0.841797C1.5721 0.157615 2.58659 0.00457658 3.45703 0.464844L9.39453 3.58984L9.52832 3.66602C10.1806 4.06709 10.5811 4.77826 10.5811 5.55273C10.5809 6.32719 10.1807 7.0385 9.52832 7.43945L9.39453 7.51465L3.45703 10.6387L3.45801 10.6396C3.12189 10.8189 2.76691 10.9033 2.41211 10.9033C1.84716 10.9033 1.30127 10.6826 0.871094 10.2637V10.2627C0.16927 9.57763 -0.000216478 8.56312 0.4375 7.6875L1.26758 6.02734C1.41356 5.73526 1.41438 5.38069 1.26758 5.08203L0.4375 3.41699C-0.000180173 2.54137 0.169252 1.52684 0.871094 0.841797ZM2.41797 1.36426C2.12646 1.36426 1.86586 1.50002 1.68457 1.67676L1.68359 1.67773C1.41317 1.93952 1.22744 2.3971 1.47754 2.90234L2.30664 4.5625L2.30762 4.56348C2.61652 5.18723 2.61666 5.92317 2.30762 6.54688H2.30664L1.47754 8.20703L1.47656 8.20801C1.22284 8.71154 1.41204 9.16866 1.68359 9.43164C1.95736 9.69658 2.41563 9.87688 2.91504 9.61426L8.85254 6.48926L8.97852 6.41211C9.25687 6.21531 9.41791 5.90557 9.41797 5.55762C9.41797 5.16005 9.20777 4.81236 8.85254 4.62598L8.85156 4.625L2.91406 1.49023V1.48926C2.73942 1.3978 2.57161 1.36433 2.41797 1.36426Z"
+								fill="white"
+								stroke="white"
+								stroke-width="0.394627"
+							/>
+							<rect
+								x="5.32622"
+								y="6.17388"
+								width="3.55164"
+								height="1.18388"
+								rx="0.59194"
+								transform="rotate(-180 5.32622 6.17388)"
+								fill="white"
+								stroke="white"
+								stroke-width="0.394627"
+							/>
 						</svg>
 					</button>
 				{/if}

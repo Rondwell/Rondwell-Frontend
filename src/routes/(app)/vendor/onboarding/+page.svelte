@@ -68,6 +68,10 @@
 	// CONSTANTS
 	// ============================================
 	const businessTypes: BusinessType[] = [
+		// GAP 8 — planners must be able to identify themselves at signup, or
+		// they never appear under the "Planning & Coordination" discover filter
+		// that organizers use to find them.
+		{ label: 'Event Planning', icon: '/professional-service.svg' },
 		{ label: 'Catering', icon: '/food.svg' },
 		{ label: 'Photography', icon: '/entertainment.svg' },
 		{ label: 'Event Venue', icon: '/professional-service.svg' },

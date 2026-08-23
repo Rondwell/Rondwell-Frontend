@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { openExternal } from '$lib/utils/openExternal';
 	import { deleteEventMedia } from '$lib/services/event.services';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher, onMount, tick } from 'svelte';
@@ -24,7 +25,11 @@
 	];
 
 	async function handleAction(action: string) {
-		if (action === 'view') { window.open(media?.url, '_blank'); open = false; }
+		// M-138 + M-137 — one edit covers both: `noopener,noreferrer`, AND a
+		// scheme check. `media.url` is organizer-supplied and `createEventMedia`
+		// accepts any string, so `javascript:` here would be stored XSS with a
+		// click as the trigger.
+		if (action === 'view') { openExternal(media?.url); open = false; }
 		else if (action === 'download') {
 			const a = document.createElement('a'); a.href = media?.url; a.download = media?.title || 'download'; a.click();
 			open = false;

@@ -171,6 +171,29 @@ export async function sendCollaborationQuote(collaborationId: string, quote: { q
   return data.data;
 }
 
+/**
+ * GAP 8 — planner access bridge.
+ *
+ * Opts a booking into granting the vendor a time-boxed `EVENT_PLANNER` admin
+ * record on the event, applied when the booking is CONFIRMED (i.e. paid).
+ * ORGANIZER-ONLY server-side: a vendor calling this on their own booking gets
+ * a 403, which is what stops any vendor granting themselves access to a
+ * client's guest list.
+ */
+export async function setCollaborationEventAccess(
+  collaborationId: string,
+  grantEventAccess: boolean
+): Promise<{ grantEventAccess: boolean; grantedAccessRole: string; appliesOnConfirmation: boolean }> {
+  const res = await authFetch(`${PRODUCTS_API}/vendor/collaborations/${collaborationId}/event-access`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grantEventAccess })
+  });
+  if (!res.ok) await throwApiError(res, 'Failed to update event access');
+  const data = await res.json();
+  return data.data;
+}
+
 export async function sendOutboundCollaboration(requestData: Record<string, unknown>) {
   const res = await authFetch(`${PRODUCTS_API}/vendor/collaborations/send`, {
     method: 'POST',

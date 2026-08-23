@@ -87,9 +87,18 @@ export interface BlastPayload {
 }
 
 export interface AudienceCounts {
+	/** Accounts matching the segment. */
 	total: number;
+	/** Of those, how many have a usable email address. */
 	withEmail: number;
+	/** Of those with an address, how many opted out of marketing. */
 	optedOut: number;
+	/**
+	 * What will actually be sent — `withEmail` minus `optedOut`. Optional so a
+	 * frontend deployed ahead of the API still renders (falling back to
+	 * `withEmail`), which is the number the composer used to show.
+	 */
+	deliverable?: number;
 }
 
 function authHeaders(): Headers {

@@ -34,6 +34,9 @@
 		type WalletSnapshot
 	} from '$lib/services/adminTransfer.services';
 	import { getAdminUser } from '$lib/services/admin.services';
+	import { clickOutside } from '$lib/utils/constant';
+	import { page } from '$app/stores';
+	import { replaceState } from '$app/navigation';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 
@@ -60,6 +63,15 @@
 	let banks: Bank[] = [];
 	let bankQuery = '';
 	let showBankList = false;
+	let banksLoading = false;
+	let banksError = '';
+	/**
+	 * Discards a resolve response that has been overtaken by newer input.
+	 * Without it, a slow lookup for an old account number can land after the
+	 * operator has typed a new one and stamp the WRONG account holder's name
+	 * onto the form they are about to authorise.
+	 */
+	let resolveSeq = 0;
 
 	let snapshot: WalletSnapshot | null = null;
 	let snapshotLoading = false;
@@ -105,10 +117,39 @@
 
 	onMount(() => {
 		load();
-		getBanks()
-			.then((b) => (banks = b))
-			.catch(() => (banks = []));
+		loadBanks();
+
+		// Deep link from User Management ("Transfer funds from this wallet").
+		// The composer opens with the id already filled and the wallet loading,
+		// so the operator never copy-pastes an ObjectId between screens.
+		const deepLinkUserId = $page.url.searchParams.get('userId');
+		if (deepLinkUserId && isSuperAdmin) {
+			openComposer();
+			userId = deepLinkUserId;
+			loadSnapshot();
+			// Consume the parameter so a later refresh doesn't silently reopen
+			// the composer for a user the operator has moved on from.
+			const url = new URL($page.url);
+			url.searchParams.delete('userId');
+			replaceState(url, {});
+		}
 	});
+
+	async function loadBanks() {
+		banksLoading = true;
+		banksError = '';
+		try {
+			banks = await getBanks();
+			if (banks.length === 0) banksError = 'No banks were returned. Try again shortly.';
+		} catch (e: any) {
+			// Swallowing this is what made the picker look like "your bank isn't
+			// supported" instead of "we couldn't reach the bank directory".
+			banks = [];
+			banksError = e?.message || 'Could not load the bank list';
+		} finally {
+			banksLoading = false;
+		}
+	}
 
 	async function load() {
 		loading = true;
@@ -173,26 +214,62 @@
 		}
 	}
 
+	/**
+	 * Look the account up with the bank. Fires automatically once there is a
+	 * selected bank and a complete 10-digit NUBAN — the same trigger the
+	 * user-facing bank picker uses. The previous blur-based version meant the
+	 * name only appeared if the operator happened to tab out of the field.
+	 */
 	async function handleResolve() {
+		const acct = accountNumber.trim();
 		resolvedName = '';
 		resolveError = '';
-		if (!/^\d{6,20}$/.test(accountNumber.trim()) || !bankCode) return;
+		if (acct.length !== 10 || !bankCode) return;
+
+		const seq = ++resolveSeq;
 		resolving = true;
 		try {
-			const r = await resolveAccount(accountNumber.trim(), bankCode);
+			const r = await resolveAccount(acct, bankCode);
+			// Ignore anything the operator has already typed past.
+			if (seq !== resolveSeq) return;
+			if (r.accountNumber !== acct || r.bankCode !== bankCode) return;
+			if (!r.accountName) {
+				resolveError = 'The bank did not return an account name for those details.';
+				return;
+			}
 			resolvedName = r.accountName;
 		} catch (e: any) {
+			if (seq !== resolveSeq) return;
 			resolveError = e?.message || 'Could not verify those bank details';
 		} finally {
-			resolving = false;
+			if (seq === resolveSeq) resolving = false;
 		}
 	}
 
-	// Any change to the destination invalidates a previously resolved name, so
-	// the review step can never show a name that belongs to a different account.
+	/**
+	 * Any change to the destination invalidates a previously resolved name, so
+	 * the review step can never show a name belonging to a different account.
+	 * Bumping the sequence also voids an in-flight lookup.
+	 */
 	function invalidateResolution() {
+		resolveSeq++;
 		resolvedName = '';
 		resolveError = '';
+		resolving = false;
+	}
+
+	function onAccountNumberInput() {
+		invalidateResolution();
+		if (accountNumber.trim().length === 10 && bankCode) handleResolve();
+	}
+
+	function selectBank(bank: Bank) {
+		bankCode = bank.code;
+		bankQuery = bank.name;
+		showBankList = false;
+		invalidateResolution();
+		// The operator may have filled the account number first.
+		if (accountNumber.trim().length === 10) handleResolve();
 	}
 
 	async function handleInitiate() {
@@ -414,7 +491,7 @@
 							{t.destination.accountNumberMasked}
 						</p>
 						<p class="mt-0.5 truncate text-[11px] text-gray-400">
-							From {t.userEmail || t.userId} · by {t.initiatedByAdminEmail}
+							From {t.userName || t.userEmail || t.userId} · by {t.initiatedByAdminEmail}
 						</p>
 					</div>
 					<div class="shrink-0 text-right">
@@ -474,9 +551,12 @@
 					</dd>
 				</div>
 				<div>
-					<dt class="text-xs text-gray-400">From wallet</dt>
-					<dd class="text-gray-900">{detail.userEmail || '—'}</dd>
-					<dd class="font-mono text-[11px] text-gray-400">{detail.userId}</dd>
+					<dt class="text-xs text-gray-400">Debited from</dt>
+					<dd class="text-gray-900">{detail.userName || detail.userEmail || '—'}</dd>
+					{#if detail.userName && detail.userEmail}
+						<dd class="text-xs text-gray-500">{detail.userEmail}</dd>
+					{/if}
+					<dd class="font-mono text-[11px] break-all text-gray-400">{detail.userId}</dd>
 				</div>
 				<div>
 					<dt class="text-xs text-gray-400">Reason</dt>
@@ -587,6 +667,47 @@
 					</div>
 
 					{#if snapshot}
+						<!--
+							Who is being debited. The destination account holder is shown
+							in full further down, so without this the person LOSING the
+							money was the only party identified by a raw id — and a
+							mis-pasted id looks exactly like a correct one.
+						-->
+						<div class="mb-3 flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3">
+							<div
+								class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F2E4F8] text-sm font-semibold text-[#AB46DD]"
+							>
+								{(snapshot.userName || snapshot.userEmail || '?').charAt(0).toUpperCase()}
+							</div>
+							<div class="min-w-0 flex-1">
+								<p class="truncate text-sm font-medium text-gray-900">
+									{snapshot.userName || 'Name not on file'}
+								</p>
+								<p class="truncate text-xs text-gray-500">
+									{snapshot.userEmail || 'No email on file'}
+								</p>
+							</div>
+							{#if snapshot.userStatus && snapshot.userStatus !== 'ACTIVE'}
+								<span
+									class="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200 ring-inset"
+								>
+									{snapshot.userStatus}
+								</span>
+							{/if}
+						</div>
+
+						{#if !snapshot.userEmail}
+							<!-- The debit notification has nowhere to go. Not a blocker for
+							     a support transfer, but the operator must know. -->
+							<div class="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+								<Icon icon="mdi:email-off-outline" class="mt-0.5 shrink-0 text-base text-amber-600" />
+								<p class="text-xs text-amber-900">
+									This account has no email on file, so the user will
+									<span class="font-semibold">not be notified</span> that money left their wallet.
+								</p>
+							</div>
+						{/if}
+
 						<div class="mb-4 rounded-lg border border-gray-100 bg-[#F8F8F9] p-3">
 							<div class="flex items-baseline justify-between">
 								<span class="text-xs text-gray-500">Withdrawable now</span>
@@ -651,40 +772,66 @@
 						<label for="tx-bank" class="mb-1.5 block text-xs font-medium text-[#666769]">
 							Destination bank
 						</label>
-						<div class="relative">
+						<div class="relative" use:clickOutside={() => (showBankList = false)}>
 							<input
 								id="tx-bank"
 								type="text"
+								autocomplete="off"
 								bind:value={bankQuery}
 								on:focus={() => (showBankList = true)}
 								on:input={() => {
 									showBankList = true;
+									// Typing after a selection means the operator is picking
+									// again — the old code must not survive into review.
 									bankCode = '';
 									invalidateResolution();
 								}}
-								placeholder={selectedBank?.name ?? 'Search for a bank…'}
-								class="h-[38px] w-full rounded-lg border border-gray-200 bg-[#F8F8F9] px-3 text-sm focus:border-gray-400 focus:outline-none"
+								placeholder={banksLoading ? 'Loading banks…' : 'Search for a bank…'}
+								disabled={banksLoading}
+								class="h-[38px] w-full rounded-lg border border-gray-200 bg-[#F8F8F9] px-3 pr-9 text-sm focus:border-gray-400 focus:outline-none disabled:opacity-60"
 							/>
-							{#if showBankList && filteredBanks.length > 0 && !bankCode}
+							<div class="absolute top-1/2 right-3 -translate-y-1/2">
+								{#if banksLoading}
+									<Icon icon="mdi:loading" class="animate-spin text-base text-gray-400" />
+								{:else if bankCode}
+									<Icon icon="mdi:check-circle" class="text-base text-green-600" />
+								{:else}
+									<Icon icon="mdi:chevron-down" class="text-base text-gray-400" />
+								{/if}
+							</div>
+
+							{#if showBankList && !bankCode && !banksLoading}
 								<div
-									class="absolute top-full left-0 z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-gray-100 bg-white py-1 shadow-lg"
+									class="absolute top-full left-0 z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-gray-100 bg-white py-1 shadow-lg"
 								>
-									{#each filteredBanks.slice(0, 40) as bank (bank.code)}
-										<button
-											class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
-											on:click={() => {
-												bankCode = bank.code;
-												bankQuery = bank.name;
-												showBankList = false;
-												handleResolve();
-											}}
-										>
-											{bank.name}
-										</button>
-									{/each}
+									{#if filteredBanks.length === 0}
+										<p class="px-3 py-2 text-xs text-gray-400">
+											No bank matches “{bankQuery}”.
+										</p>
+									{:else}
+										{#each filteredBanks.slice(0, 60) as bank (bank.code)}
+											<button
+												class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+												on:click={() => selectBank(bank)}
+											>
+												{bank.name}
+											</button>
+										{/each}
+									{/if}
 								</div>
 							{/if}
 						</div>
+
+						{#if banksError}
+							<p class="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-red-500">
+								{banksError}
+								<button on:click={loadBanks} class="text-[#513BE2] underline">Retry</button>
+							</p>
+						{:else if !banksLoading && banks.length > 0}
+							<p class="mt-1 text-[11px] text-gray-400">
+								{banks.length} banks and fintechs available
+							</p>
+						{/if}
 					</div>
 
 					<div class="mb-4">
@@ -695,9 +842,10 @@
 							id="tx-acct"
 							type="text"
 							inputmode="numeric"
+							maxlength="10"
+							autocomplete="off"
 							bind:value={accountNumber}
-							on:input={invalidateResolution}
-							on:blur={handleResolve}
+							on:input={onAccountNumberInput}
 							placeholder="0123456789"
 							class="h-[38px] w-full rounded-lg border border-gray-200 bg-[#F8F8F9] px-3 text-sm focus:border-gray-400 focus:outline-none"
 						/>
@@ -719,10 +867,17 @@
 								</div>
 							</div>
 						{:else if resolveError}
-							<p class="mt-1.5 text-xs text-red-500">{resolveError}</p>
-						{:else if accountNumber && bankCode}
+							<p class="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-red-500">
+								{resolveError}
+								<button on:click={handleResolve} class="text-[#513BE2] underline">Retry</button>
+							</p>
+						{:else if !bankCode}
+							<p class="mt-1.5 text-xs text-gray-400">Choose a bank first.</p>
+						{:else if accountNumber.trim().length > 0 && accountNumber.trim().length < 10}
 							<p class="mt-1.5 text-xs text-gray-400">
-								Tab out of this field to verify the account holder.
+								{10 - accountNumber.trim().length} more digit{10 - accountNumber.trim().length === 1
+									? ''
+									: 's'} — we'll check the account holder automatically.
 							</p>
 						{/if}
 					</div>
@@ -752,8 +907,12 @@
 					<div class="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
 						<Icon icon="mdi:alert-outline" class="mt-0.5 shrink-0 text-lg text-amber-600" />
 						<p class="text-xs text-amber-900">
-							You are about to move money out of someone else's wallet. Once the bank accepts
-							it, this cannot be recalled. Check the account holder's name carefully.
+							You are about to move {formatKobo(amountKobo)} out of
+							<span class="font-semibold"
+								>{snapshot?.userName || snapshot?.userEmail || 'this user'}</span
+							>'s wallet and into an account belonging to
+							<span class="font-semibold">{resolvedName}</span>. Once the bank accepts it, this
+							cannot be recalled.
 						</p>
 					</div>
 
@@ -768,10 +927,18 @@
 							<p class="text-xs text-gray-500">{selectedBank?.name} · {accountNumber}</p>
 						</div>
 						<div class="border-b border-gray-100 px-4 py-3">
-							<p class="text-xs text-gray-400">From wallet</p>
-							<p class="font-mono text-xs break-all text-gray-700">{userId}</p>
+							<p class="text-xs text-gray-400">Debited from</p>
+							{#if snapshot?.userName || snapshot?.userEmail}
+								<p class="text-sm font-medium text-gray-900">
+									{snapshot.userName || 'Name not on file'}
+								</p>
+								<p class="text-xs text-gray-500">{snapshot.userEmail || 'No email on file'}</p>
+							{:else}
+								<p class="text-sm font-medium text-amber-700">Wallet owner not identified</p>
+							{/if}
+							<p class="mt-1 font-mono text-[11px] break-all text-gray-400">{userId}</p>
 							{#if snapshot}
-								<p class="mt-0.5 text-[11px] text-gray-500">
+								<p class="mt-1 text-[11px] text-gray-500">
 									{formatKobo(snapshot.withdrawableKobo)} withdrawable →
 									{formatKobo(snapshot.withdrawableKobo - amountKobo)} after
 								</p>
@@ -806,6 +973,9 @@
 					<div class="mt-5 rounded-lg bg-gray-50 p-3 text-center">
 						<p class="text-lg font-semibold text-gray-900">
 							{formatKobo(activeTransfer.amountKobo, activeTransfer.currency)}
+						</p>
+						<p class="text-xs text-gray-500">
+							from {activeTransfer.userName || activeTransfer.userEmail || 'this user'}
 						</p>
 						<p class="text-xs text-gray-500">
 							to {activeTransfer.destination.accountName} ·

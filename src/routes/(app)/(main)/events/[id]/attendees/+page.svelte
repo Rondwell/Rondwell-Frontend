@@ -8,6 +8,7 @@
 	} from '$lib/services/event.services';
 	import { getEventCache } from '$lib/stores/eventCache.store';
 	import { clickOutside } from '$lib/utils/constant';
+	import { downloadCsv, exportFilename, toCsv, type CsvColumn } from '$lib/utils/csv';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import AttendeeDetailModal from '../components/AttendeeDetailModal.svelte';
@@ -17,15 +18,21 @@
 	$: eventId = $page.params.id as string;
 
 	// Use cached event data
-	$: ({ event: eventStore, collections: collectionsStore, loading: loadingStore, error: errorStore } = getEventCache(eventId));
+	$: ({
+		event: eventStore,
+		collections: collectionsStore,
+		loading: loadingStore,
+		error: errorStore
+	} = getEventCache(eventId));
 	$: rawEvent = $eventStore;
 	$: cachedCollections = $collectionsStore;
 	$: loading = $loadingStore;
 	$: error = $errorStore;
 
-	$: collectionName = cachedCollections.find(
-		(c: any) => c._id === rawEvent?.collectionId || c.id === rawEvent?.collectionId
-	)?.name ?? 'My Collection';
+	$: collectionName =
+		cachedCollections.find(
+			(c: any) => c._id === rawEvent?.collectionId || c.id === rawEvent?.collectionId
+		)?.name ?? 'My Collection';
 	$: collectionId = rawEvent?.collectionId ?? '';
 	$: maxAttendees = rawEvent?.maxAttendees ?? 0;
 	$: eventData = rawEvent;
@@ -74,8 +81,14 @@
 		{ label: 'Status', value: 'attendeeStatus' }
 	];
 
-	$: progressValue = maxAttendees > 0 ? Math.min((attendingCount / maxAttendees) * 100, 100) : (attendingCount > 0 ? 100 : 0);
-	$: selectedStatusLabel = statusOptions.find((s) => s.value === statusFilter)?.label ?? 'All Attendees';
+	$: progressValue =
+		maxAttendees > 0
+			? Math.min((attendingCount / maxAttendees) * 100, 100)
+			: attendingCount > 0
+				? 100
+				: 0;
+	$: selectedStatusLabel =
+		statusOptions.find((s) => s.value === statusFilter)?.label ?? 'All Attendees';
 	$: selectedSortLabel = sortOptions.find((s) => s.value === sortBy)?.label ?? 'Register Time';
 
 	onMount(async () => {
@@ -102,6 +115,142 @@
 			totalGuests = 0;
 		} finally {
 			guestsLoading = false;
+		}
+	}
+
+	/* ───────────────────────── CSV export ─────────────────────────
+	 * The list is paginated at 20 rows, so an export has to walk every page
+	 * rather than dumping what happens to be on screen. Both toolbar icons
+	 * previously rendered as inert <div>s with no handler at all — clicking
+	 * them did nothing.
+	 */
+
+	let exporting = false;
+	let exportError = '';
+	/** Progress for large exports, so a 5,000-attendee pull doesn't look frozen. */
+	let exportFetched = 0;
+	let exportTotal = 0;
+
+	const EXPORT_PAGE_SIZE = 200;
+	/** Stop runaway pagination if the API ever misreports totalPages. */
+	const EXPORT_MAX_PAGES = 500;
+
+	const attendeeColumns: CsvColumn<any>[] = [
+		{ header: 'First Name', value: (a) => a.firstName ?? '' },
+		{ header: 'Last Name', value: (a) => a.lastName ?? '' },
+		{ header: 'Email', value: (a) => a.email ?? '' },
+		{ header: 'Phone', value: (a) => a.phone ?? a.phoneNumber ?? '' },
+		{ header: 'Status', value: (a) => a.attendeeStatus ?? '' },
+		{ header: 'Invitation Status', value: (a) => a.invitationStatus ?? '' },
+		{ header: 'Source', value: (a) => a.source ?? '' },
+		{ header: 'Ticket Type', value: (a) => a.ticketTypeName ?? a.ticketType?.name ?? '' },
+		{ header: 'Ticket ID', value: (a) => a.ticketId ?? a.ticket?._id ?? '' },
+		{ header: 'Seat', value: (a) => a.seatLabel ?? a.seat?.label ?? '' },
+		{ header: 'Group', value: (a) => a.groupName ?? a.groupRegistrationId ?? '' },
+		{ header: 'Checked In', value: (a) => (a.attendeeStatus === 'CHECKED_IN' ? 'Yes' : 'No') },
+		{ header: 'Checked In At', value: (a) => fmtDate(a.checkedInAt) },
+		{ header: 'Registered At', value: (a) => fmtDate(a.createdAt) },
+		{ header: 'Tags', value: (a) => (Array.isArray(a.tags) ? a.tags.join('; ') : '') },
+		{ header: 'Notes', value: (a) => a.notes ?? '' },
+		{ header: 'Attendee ID', value: (a) => a._id ?? a.id ?? '' }
+	];
+
+	function fmtDate(v: any): string {
+		if (!v) return '';
+		const d = new Date(v);
+		return isNaN(d.getTime()) ? '' : d.toISOString();
+	}
+
+	/**
+	 * Flatten custom registration answers into columns.
+	 *
+	 * Organisers build their own registration questions, and an export without
+	 * those answers is useless for check-in desks and catering counts. Columns
+	 * are derived from the union of every row's answers so the header is stable.
+	 */
+	function customAnswerColumns(rows: any[]): CsvColumn<any>[] {
+		const keys = new Map<string, string>();
+		for (const r of rows) {
+			const answers = r.customFormAnswers ?? r.registrationAnswers ?? r.customAnswers;
+			if (!answers) continue;
+			if (Array.isArray(answers)) {
+				for (const a of answers) {
+					const label = a?.label ?? a?.fieldLabel ?? a?.question ?? a?.fieldId;
+					if (label) keys.set(String(label), String(label));
+				}
+			} else if (typeof answers === 'object') {
+				for (const k of Object.keys(answers)) keys.set(k, k);
+			}
+		}
+
+		return [...keys.values()].map((label) => ({
+			header: label,
+			value: (r: any) => {
+				const answers = r.customFormAnswers ?? r.registrationAnswers ?? r.customAnswers;
+				if (!answers) return '';
+				if (Array.isArray(answers)) {
+					const hit = answers.find(
+						(a: any) => (a?.label ?? a?.fieldLabel ?? a?.question ?? a?.fieldId) === label
+					);
+					const v = hit?.value ?? hit?.answer ?? '';
+					return Array.isArray(v) ? v.join('; ') : v;
+				}
+				const v = answers[label];
+				return Array.isArray(v) ? v.join('; ') : v ?? '';
+			}
+		}));
+	}
+
+	/** Pull every page of attendees, honouring the current filters when asked. */
+	async function fetchAllAttendees(useFilters: boolean): Promise<any[]> {
+		const all: any[] = [];
+		exportFetched = 0;
+		exportTotal = 0;
+
+		for (let p = 1; p <= EXPORT_MAX_PAGES; p++) {
+			const result: PaginatedAttendeesResponse = await getEventAttendeesPaginated(eventId, {
+				page: p,
+				limit: EXPORT_PAGE_SIZE,
+				search: useFilters ? searchQuery || undefined : undefined,
+				attendeeStatus: useFilters && statusFilter !== 'ALL' ? statusFilter : undefined,
+				sortBy,
+				sortOrder
+			});
+
+			all.push(...(result.attendees ?? []));
+			exportTotal = result.total ?? all.length;
+			exportFetched = all.length;
+
+			if (!result.attendees?.length || p >= (result.totalPages ?? 1)) break;
+		}
+		return all;
+	}
+
+	async function exportAttendees(useFilters: boolean) {
+		if (exporting) return;
+		exporting = true;
+		exportError = '';
+
+		try {
+			const rows = await fetchAllAttendees(useFilters);
+			if (rows.length === 0) {
+				exportError = useFilters
+					? 'No attendees match the current filters.'
+					: 'There are no attendees to export yet.';
+				return;
+			}
+
+			const columns = [...attendeeColumns, ...customAnswerColumns(rows)];
+			const csv = toCsv(rows, columns);
+			const suffix =
+				useFilters && (statusFilter !== 'ALL' || searchQuery) ? 'attendees-filtered' : 'attendees';
+			downloadCsv(exportFilename(rawEvent?.title ?? 'event', suffix), csv);
+		} catch (err: any) {
+			exportError = err?.message ?? 'Export failed. Please try again.';
+		} finally {
+			exporting = false;
+			exportFetched = 0;
+			exportTotal = 0;
 		}
 	}
 
@@ -200,307 +349,458 @@
 </script>
 
 <div class="max-w-6xl">
-		<!-- Header: Collection Name + Event Page -->
-		<div class="flex items-center justify-between">
-			{#if loading}
-				<div class="h-4 w-32 animate-pulse rounded bg-gray-200"></div>
-			{:else}
-				<a href="/collection/{collectionId}/events" class="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-[#83808D] transition-colors hover:bg-[#F0EFF1]">
-					<span class="flex-shrink-0">In</span>
-					<span class="hidden sm:inline">{collectionName}</span>
-					<span class="inline sm:hidden">{collectionName.length > 20 ? collectionName.slice(0, 20) + '...' : collectionName}</span>
-				</a>
-			{/if}
+	<!-- Header: Collection Name + Event Page -->
+	<div class="flex items-center justify-between">
+		{#if loading}
+			<div class="h-4 w-32 animate-pulse rounded bg-gray-200"></div>
+		{:else}
 			<a
-				href={rawEvent?.customLinkSlug ? `/e/${rawEvent.customLinkSlug}` : `/event-page/${eventId}`}
-				target="_blank"
-				rel="noopener noreferrer"
-				class="flex items-center gap-1.5 rounded-md bg-[#F0EFF1] px-3 py-1.5 text-sm font-medium text-[#5D646F] transition-colors hover:bg-[#E4E3E6]"
+				href="/collection/{collectionId}/events"
+				class="flex items-center gap-1 rounded-md px-2 py-1 text-sm text-[#83808D] transition-colors hover:bg-[#F0EFF1]"
 			>
-				Event Page
-				<Icon icon="mdi:open-in-new" class="h-3.5 w-3.5 text-[#8A8D90]" />
+				<span class="flex-shrink-0">In</span>
+				<span class="hidden sm:inline">{collectionName}</span>
+				<span class="inline sm:hidden"
+					>{collectionName.length > 20 ? collectionName.slice(0, 20) + '...' : collectionName}</span
+				>
 			</a>
-		</div>
-
-		{#if error}
-			<div class="mb-4 flex items-center justify-between rounded-lg bg-red-50 px-4 py-3">
-				<p class="text-sm text-red-600">{error}</p>
-				<button on:click={() => (error = '')} class="text-red-400 hover:text-red-600">✕</button>
-			</div>
 		{/if}
+		<a
+			href={rawEvent?.customLinkSlug ? `/e/${rawEvent.customLinkSlug}` : `/event-page/${eventId}`}
+			target="_blank"
+			rel="noopener noreferrer"
+			class="flex items-center gap-1.5 rounded-md bg-[#F0EFF1] px-3 py-1.5 text-sm font-medium text-[#5D646F] transition-colors hover:bg-[#E4E3E6]"
+		>
+			Event Page
+			<Icon icon="mdi:open-in-new" class="h-3.5 w-3.5 text-[#8A8D90]" />
+		</a>
+	</div>
 
-		<!-- At a Glance Section -->
-		<div class="mb-12">
-			{#if loading}
-				<div class="mt-2 mb-5 h-8 w-48 animate-pulse rounded bg-gray-200"></div>
-				<div class="mb-1 h-3 w-16 animate-pulse rounded bg-gray-200"></div>
-				<div class="mb-2 h-2 w-full max-w-2xl animate-pulse rounded-full bg-gray-200"></div>
-				<div class="mb-6 h-3 w-28 animate-pulse rounded bg-gray-200"></div>
-				<!-- Action button skeletons -->
-				<div class="mb-4 flex w-full flex-wrap gap-3">
-					<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
-					<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
-					<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
+	{#if error}
+		<div class="mb-4 flex items-center justify-between rounded-lg bg-red-50 px-4 py-3">
+			<p class="text-sm text-red-600">{error}</p>
+			<button on:click={() => (error = '')} class="text-red-400 hover:text-red-600">✕</button>
+		</div>
+	{/if}
+
+	<!-- At a Glance Section -->
+	<div class="mb-12">
+		{#if loading}
+			<div class="mb-5 mt-2 h-8 w-48 animate-pulse rounded bg-gray-200"></div>
+			<div class="mb-1 h-3 w-16 animate-pulse rounded bg-gray-200"></div>
+			<div class="mb-2 h-2 w-full max-w-2xl animate-pulse rounded-full bg-gray-200"></div>
+			<div class="mb-6 h-3 w-28 animate-pulse rounded bg-gray-200"></div>
+			<!-- Action button skeletons -->
+			<div class="mb-4 flex w-full flex-wrap gap-3">
+				<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
+				<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
+				<div class="h-[60px] w-full animate-pulse rounded-[12.75px] bg-gray-200 sm:w-[220px]"></div>
+			</div>
+		{:else}
+			<h1 class="mb-5 mt-2 text-2xl font-semibold">At a Glance</h1>
+
+			<!-- Attendee Progress Bar -->
+			<div class="mb-6 w-full max-w-2xl text-xs font-medium text-green-600">
+				<p class="mb-1">Attendee</p>
+				<div class="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+					<div
+						class="h-full rounded-full bg-green-500 transition-all duration-500"
+						style="width: {progressValue}%;"
+					></div>
 				</div>
-			{:else}
-				<h1 class="mt-2 mb-5 text-2xl font-semibold">At a Glance</h1>
-
-				<!-- Attendee Progress Bar -->
-				<div class="mb-6 w-full max-w-2xl text-xs font-medium text-green-600">
-					<p class="mb-1">Attendee</p>
-					<div class="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-						<div
-							class="h-full rounded-full bg-green-500 transition-all duration-500"
-							style="width: {progressValue}%;"
-						></div>
-					</div>
-					<div class="flex gap-1">
-						<div class="flex items-center space-x-1 text-green-600">
-							<span class="h-2 w-2 rounded-full bg-green-500"></span>
-							<span>{attendingCount} Attending{maxAttendees > 0 ? ` / ${maxAttendees}` : ''}</span>
-						</div>
+				<div class="flex gap-1">
+					<div class="flex items-center space-x-1 text-green-600">
+						<span class="h-2 w-2 rounded-full bg-green-500"></span>
+						<span>{attendingCount} Attending{maxAttendees > 0 ? ` / ${maxAttendees}` : ''}</span>
 					</div>
 				</div>
+			</div>
 
-				<!-- Action Buttons -->
-				<div class="mb-4 flex w-full flex-wrap gap-3">
-					<!-- Invite Attendee -->
-					<div class="relative w-full md:w-fit" use:clickOutside={() => { showInviteGuestsModal = false; }}>
-						<button
-							on:click={() => (showInviteGuestsModal = !showInviteGuestsModal)}
-							class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
-						>
-							<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E2E8FC]">
-								<svg width="20" height="22" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-									<path d="M17.2196 10.4232C16.5968 10.2593 15.8647 10.1719 14.9906 10.1719C13.7778 10.1719 13.3299 10.4669 12.7071 10.9367C12.6743 10.9586 12.6415 10.9913 12.6087 11.0241L11.5708 12.1277C10.6967 13.0454 9.12331 13.0564 8.24922 12.1167L7.21124 11.0241C7.17846 10.9913 7.14568 10.9586 7.1129 10.9367C6.49011 10.4669 6.04214 10.1719 4.82934 10.1719C3.95526 10.1719 3.22321 10.2593 2.60042 10.4232C-2.60499e-07 11.1224 0 13.1875 0 15.0012V16.0173C0 18.7598 -5.20998e-07 21.8628 5.84547 21.8628H13.9745C17.8533 21.8628 19.82 19.8961 19.82 16.0173V15.0012C19.82 13.1875 19.82 11.1224 17.2196 10.4232ZM12.4558 17.9294H7.3642C6.94901 17.9294 6.6103 17.5907 6.6103 17.1646C6.6103 16.7385 6.94901 16.3998 7.3642 16.3998H12.4558C12.871 16.3998 13.2097 16.7385 13.2097 17.1646C13.2097 17.5907 12.871 17.9294 12.4558 17.9294Z" fill="#146AEB" />
-									<path d="M17.7867 4.82934V8.87201C17.743 8.85016 17.6884 8.83923 17.6447 8.8283C16.8798 8.62071 16.0167 8.52237 14.9896 8.52237C13.307 8.52237 12.5203 9.01405 11.7118 9.62591C11.6025 9.70239 11.5042 9.80073 11.4168 9.88814L10.3679 10.9917C10.2695 11.1009 10.0947 11.1665 9.90898 11.1665C9.72324 11.1665 9.54842 11.1009 9.43916 10.9808L8.4121 9.89906C8.31377 9.7898 8.20451 9.69147 8.09525 9.61499C7.30857 9.01405 6.51096 8.52237 4.82834 8.52237C3.80128 8.52237 2.93812 8.62071 2.17329 8.8283C2.12959 8.83923 2.07495 8.85016 2.03125 8.87201V4.82934C2.03125 2.56764 2.03125 0 6.86059 0H12.9574C17.7867 0 17.7867 2.56764 17.7867 4.82934Z" fill="#146AEB" />
-								</svg>
-							</div>
-							Invite Attendee
-						</button>
-						<InviteGuestsModal bind:open={showInviteGuestsModal} />
-					</div>
-
-					<!-- Check In Attendee -->
+			<!-- Action Buttons -->
+			<div class="mb-4 flex w-full flex-wrap gap-3">
+				<!-- Invite Attendee -->
+				<div
+					class="relative w-full md:w-fit"
+					use:clickOutside={() => {
+						showInviteGuestsModal = false;
+					}}
+				>
 					<button
-						on:click={() => goto(`/events/${eventId}/check-in`)}
-						class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium sm:min-w-70 md:w-fit"
+						on:click={() => (showInviteGuestsModal = !showInviteGuestsModal)}
+						class="sm:min-w-70 flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm md:w-fit"
 					>
-						<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E3F4E1]">
-							<svg width="27" height="27" viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">
-								<path opacity="0.4" d="M20.398 2.1875H18.322C15.9401 2.1875 14.6836 3.444 14.6836 5.8259V7.90186C14.6836 10.2838 15.9401 11.5403 18.322 11.5403H20.398C22.7798 11.5403 24.0364 10.2838 24.0364 7.90186V5.8259C24.0364 3.444 22.7798 2.1875 20.398 2.1875Z" fill="#3CBD2C" />
-								<path opacity="0.4" d="M7.90888 14.6719H5.83292C3.4401 14.6719 2.18359 15.9284 2.18359 18.3103V20.3862C2.18359 22.7791 3.4401 24.0356 5.82199 24.0356H7.89795C10.2798 24.0356 11.5364 22.7791 11.5364 20.3972V18.3212C11.5473 15.9284 10.2908 14.6719 7.90888 14.6719Z" fill="#3CBD2C" />
-								<path d="M6.8709 11.5621C9.45963 11.5621 11.5582 9.46353 11.5582 6.8748C11.5582 4.28608 9.45963 2.1875 6.8709 2.1875C4.28217 2.1875 2.18359 4.28608 2.18359 6.8748C2.18359 9.46353 4.28217 11.5621 6.8709 11.5621Z" fill="#3CBD2C" />
-								<path d="M19.3494 24.0387C21.9381 24.0387 24.0367 21.9401 24.0367 19.3514C24.0367 16.7626 21.9381 14.6641 19.3494 14.6641C16.7607 14.6641 14.6621 16.7626 14.6621 19.3514C14.6621 21.9401 16.7607 24.0387 19.3494 24.0387Z" fill="#3CBD2C" />
+						<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E2E8FC]">
+							<svg
+								width="20"
+								height="22"
+								viewBox="0 0 20 22"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									d="M17.2196 10.4232C16.5968 10.2593 15.8647 10.1719 14.9906 10.1719C13.7778 10.1719 13.3299 10.4669 12.7071 10.9367C12.6743 10.9586 12.6415 10.9913 12.6087 11.0241L11.5708 12.1277C10.6967 13.0454 9.12331 13.0564 8.24922 12.1167L7.21124 11.0241C7.17846 10.9913 7.14568 10.9586 7.1129 10.9367C6.49011 10.4669 6.04214 10.1719 4.82934 10.1719C3.95526 10.1719 3.22321 10.2593 2.60042 10.4232C-2.60499e-07 11.1224 0 13.1875 0 15.0012V16.0173C0 18.7598 -5.20998e-07 21.8628 5.84547 21.8628H13.9745C17.8533 21.8628 19.82 19.8961 19.82 16.0173V15.0012C19.82 13.1875 19.82 11.1224 17.2196 10.4232ZM12.4558 17.9294H7.3642C6.94901 17.9294 6.6103 17.5907 6.6103 17.1646C6.6103 16.7385 6.94901 16.3998 7.3642 16.3998H12.4558C12.871 16.3998 13.2097 16.7385 13.2097 17.1646C13.2097 17.5907 12.871 17.9294 12.4558 17.9294Z"
+									fill="#146AEB"
+								/>
+								<path
+									d="M17.7867 4.82934V8.87201C17.743 8.85016 17.6884 8.83923 17.6447 8.8283C16.8798 8.62071 16.0167 8.52237 14.9896 8.52237C13.307 8.52237 12.5203 9.01405 11.7118 9.62591C11.6025 9.70239 11.5042 9.80073 11.4168 9.88814L10.3679 10.9917C10.2695 11.1009 10.0947 11.1665 9.90898 11.1665C9.72324 11.1665 9.54842 11.1009 9.43916 10.9808L8.4121 9.89906C8.31377 9.7898 8.20451 9.69147 8.09525 9.61499C7.30857 9.01405 6.51096 8.52237 4.82834 8.52237C3.80128 8.52237 2.93812 8.62071 2.17329 8.8283C2.12959 8.83923 2.07495 8.85016 2.03125 8.87201V4.82934C2.03125 2.56764 2.03125 0 6.86059 0H12.9574C17.7867 0 17.7867 2.56764 17.7867 4.82934Z"
+									fill="#146AEB"
+								/>
 							</svg>
 						</div>
-						Check In Attendee
+						Invite Attendee
 					</button>
-
-					<!-- Attendees List Toggle -->
-					<div class="relative w-full md:w-fit" use:clickOutside={() => { openShowAttendeeList = false; }}>
-						<button
-							class="flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm sm:min-w-70 md:w-fit"
-							on:click={() => { openShowAttendeeList = !openShowAttendeeList; }}
-						>
-							<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#F8EFDD]">
-								<svg width="27" height="27" viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">
-									<path opacity="0.4" d="M9.83444 4.36719C6.97179 4.36719 4.64453 6.69445 4.64453 9.55709C4.64453 12.3651 6.84068 14.6377 9.70332 14.7361C9.79073 14.7251 9.87814 14.7251 9.9437 14.7361C9.96555 14.7361 9.97648 14.7361 9.99833 14.7361C10.0093 14.7361 10.0093 14.7361 10.0202 14.7361C12.8173 14.6377 15.0134 12.3651 15.0243 9.55709C15.0243 6.69445 12.6971 4.36719 9.83444 4.36719Z" fill="#EAAB26" />
-									<path d="M15.385 15.4617C12.3366 13.4294 7.36526 13.4294 4.29502 15.4617C2.90741 16.3904 2.14258 17.6469 2.14258 18.9908C2.14258 20.3347 2.90741 21.5803 4.2841 22.4981C5.81375 23.5252 7.82416 24.0387 9.83457 24.0387C11.845 24.0387 13.8554 23.5252 15.385 22.4981C16.7617 21.5694 17.5266 20.3238 17.5266 18.969C17.5156 17.6251 16.7617 16.3795 15.385 15.4617Z" fill="#EAAB26" />
-									<path opacity="0.4" d="M21.8413 10.3454C22.0161 12.465 20.5083 14.3225 18.4214 14.5738C18.4105 14.5738 18.4105 14.5738 18.3995 14.5738H18.3668C18.3012 14.5738 18.2356 14.5738 18.181 14.5956C17.1212 14.6502 14.4605 14.5446 15.4167 13.6888C16.5421 12.6835 17.1867 11.1757 17.0556 9.53683C16.9791 8.65181 16.6732 7.84328 16.2143 7.15493C16.6295 6.94734 17.1103 6.81622 17.6019 6.77252C19.7434 6.58677 21.6555 8.18199 21.8413 10.3454Z" fill="#EAAB26" />
-									<path d="M23.9733 18.227C23.8859 19.2869 23.2085 20.2047 22.0722 20.8274C20.9796 21.4284 19.6029 21.7125 18.2371 21.6797C19.0238 20.9695 19.4827 20.0845 19.5701 19.1448C19.6794 17.79 19.0347 16.4898 17.7454 15.4518C17.0134 14.8727 15.8427 14.7523 15.2324 14.0751C17.6471 13.3758 20.6846 13.8457 22.5529 15.3535C23.5581 16.162 24.0717 17.1781 23.9733 18.227Z" fill="#EAAB26" />
-								</svg>
-							</div>
-							<div>
-								<p>Attendees List</p>
-								<p class="text-xs text-[#B8BABA]">{eventData?.publicGuestListEnabled ? 'Shown to Attendees' : 'Hidden from Attendees'}</p>
-							</div>
-						</button>
-						<ShowAttendeeList
-							bind:open={openShowAttendeeList}
-							isPublic={eventData?.publicGuestListEnabled ?? false}
-							onToggle={handleToggleGuestList}
-						/>
-					</div>
+					<InviteGuestsModal bind:open={showInviteGuestsModal} />
 				</div>
-			{/if}
+
+				<!-- Check In Attendee -->
+				<button
+					on:click={() => goto(`/events/${eventId}/check-in`)}
+					class="sm:min-w-70 flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium md:w-fit"
+				>
+					<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#E3F4E1]">
+						<svg
+							width="27"
+							height="27"
+							viewBox="0 0 27 27"
+							fill="none"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path
+								opacity="0.4"
+								d="M20.398 2.1875H18.322C15.9401 2.1875 14.6836 3.444 14.6836 5.8259V7.90186C14.6836 10.2838 15.9401 11.5403 18.322 11.5403H20.398C22.7798 11.5403 24.0364 10.2838 24.0364 7.90186V5.8259C24.0364 3.444 22.7798 2.1875 20.398 2.1875Z"
+								fill="#3CBD2C"
+							/>
+							<path
+								opacity="0.4"
+								d="M7.90888 14.6719H5.83292C3.4401 14.6719 2.18359 15.9284 2.18359 18.3103V20.3862C2.18359 22.7791 3.4401 24.0356 5.82199 24.0356H7.89795C10.2798 24.0356 11.5364 22.7791 11.5364 20.3972V18.3212C11.5473 15.9284 10.2908 14.6719 7.90888 14.6719Z"
+								fill="#3CBD2C"
+							/>
+							<path
+								d="M6.8709 11.5621C9.45963 11.5621 11.5582 9.46353 11.5582 6.8748C11.5582 4.28608 9.45963 2.1875 6.8709 2.1875C4.28217 2.1875 2.18359 4.28608 2.18359 6.8748C2.18359 9.46353 4.28217 11.5621 6.8709 11.5621Z"
+								fill="#3CBD2C"
+							/>
+							<path
+								d="M19.3494 24.0387C21.9381 24.0387 24.0367 21.9401 24.0367 19.3514C24.0367 16.7626 21.9381 14.6641 19.3494 14.6641C16.7607 14.6641 14.6621 16.7626 14.6621 19.3514C14.6621 21.9401 16.7607 24.0387 19.3494 24.0387Z"
+								fill="#3CBD2C"
+							/>
+						</svg>
+					</div>
+					Check In Attendee
+				</button>
+
+				<!-- Attendees List Toggle -->
+				<div
+					class="relative w-full md:w-fit"
+					use:clickOutside={() => {
+						openShowAttendeeList = false;
+					}}
+				>
+					<button
+						class="sm:min-w-70 flex w-full items-center gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2 text-sm font-medium shadow-sm md:w-fit"
+						on:click={() => {
+							openShowAttendeeList = !openShowAttendeeList;
+						}}
+					>
+						<div class="flex h-[44px] w-[44px] items-center justify-center rounded-sm bg-[#F8EFDD]">
+							<svg
+								width="27"
+								height="27"
+								viewBox="0 0 27 27"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									opacity="0.4"
+									d="M9.83444 4.36719C6.97179 4.36719 4.64453 6.69445 4.64453 9.55709C4.64453 12.3651 6.84068 14.6377 9.70332 14.7361C9.79073 14.7251 9.87814 14.7251 9.9437 14.7361C9.96555 14.7361 9.97648 14.7361 9.99833 14.7361C10.0093 14.7361 10.0093 14.7361 10.0202 14.7361C12.8173 14.6377 15.0134 12.3651 15.0243 9.55709C15.0243 6.69445 12.6971 4.36719 9.83444 4.36719Z"
+									fill="#EAAB26"
+								/>
+								<path
+									d="M15.385 15.4617C12.3366 13.4294 7.36526 13.4294 4.29502 15.4617C2.90741 16.3904 2.14258 17.6469 2.14258 18.9908C2.14258 20.3347 2.90741 21.5803 4.2841 22.4981C5.81375 23.5252 7.82416 24.0387 9.83457 24.0387C11.845 24.0387 13.8554 23.5252 15.385 22.4981C16.7617 21.5694 17.5266 20.3238 17.5266 18.969C17.5156 17.6251 16.7617 16.3795 15.385 15.4617Z"
+									fill="#EAAB26"
+								/>
+								<path
+									opacity="0.4"
+									d="M21.8413 10.3454C22.0161 12.465 20.5083 14.3225 18.4214 14.5738C18.4105 14.5738 18.4105 14.5738 18.3995 14.5738H18.3668C18.3012 14.5738 18.2356 14.5738 18.181 14.5956C17.1212 14.6502 14.4605 14.5446 15.4167 13.6888C16.5421 12.6835 17.1867 11.1757 17.0556 9.53683C16.9791 8.65181 16.6732 7.84328 16.2143 7.15493C16.6295 6.94734 17.1103 6.81622 17.6019 6.77252C19.7434 6.58677 21.6555 8.18199 21.8413 10.3454Z"
+									fill="#EAAB26"
+								/>
+								<path
+									d="M23.9733 18.227C23.8859 19.2869 23.2085 20.2047 22.0722 20.8274C20.9796 21.4284 19.6029 21.7125 18.2371 21.6797C19.0238 20.9695 19.4827 20.0845 19.5701 19.1448C19.6794 17.79 19.0347 16.4898 17.7454 15.4518C17.0134 14.8727 15.8427 14.7523 15.2324 14.0751C17.6471 13.3758 20.6846 13.8457 22.5529 15.3535C23.5581 16.162 24.0717 17.1781 23.9733 18.227Z"
+									fill="#EAAB26"
+								/>
+							</svg>
+						</div>
+						<div>
+							<p>Attendees List</p>
+							<p class="text-xs text-[#B8BABA]">
+								{eventData?.publicGuestListEnabled ? 'Shown to Attendees' : 'Hidden from Attendees'}
+							</p>
+						</div>
+					</button>
+					<ShowAttendeeList
+						bind:open={openShowAttendeeList}
+						isPublic={eventData?.publicGuestListEnabled ?? false}
+						onToggle={handleToggleGuestList}
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Attendee List Section -->
+	<div class="mb-12 border-t {totalGuests > 0 || !guestsLoading ? 'pt-12' : 'pt-6'}">
+		<div class="mb-4 flex items-center justify-between gap-1">
+			<h1 class="text-xl font-semibold">Attendee List</h1>
+			<div class="flex items-center gap-1">
+				<!-- Download the current view: whatever the search + status filter show. -->
+				<button
+					type="button"
+					class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED] transition hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+					title="Download CSV — current view (search and filters applied)"
+					aria-label="Download CSV of the current view"
+					disabled={exporting || totalGuests === 0}
+					on:click={() => exportAttendees(true)}
+				>
+					{#if exporting}
+						<Icon icon="mdi:loading" class="animate-spin text-base text-gray-600" />
+					{:else}
+						<img src="/download-icon.svg" alt="" />
+					{/if}
+				</button>
+
+				<!-- Download every attendee, ignoring the on-screen filters. -->
+				<button
+					type="button"
+					class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED] transition hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+					title="Export all attendees (ignores filters)"
+					aria-label="Export all attendees"
+					disabled={exporting || totalGuests === 0}
+					on:click={() => exportAttendees(false)}
+				>
+					<img src="/export.svg" alt="" />
+				</button>
+			</div>
 		</div>
 
-		<!-- Attendee List Section -->
-		<div class="mb-12 border-t {totalGuests > 0 || !guestsLoading ? 'pt-12' : 'pt-6'}">
-			<div class="mb-4 flex items-center justify-between gap-1">
-				<h1 class="text-xl font-semibold">Attendee List</h1>
-				<div class="flex items-center gap-1">
-					<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
-						<img src="/download-icon.svg" alt="download icon" />
-					</div>
-					<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]">
-						<img src="/export.svg" alt="export icon" />
-					</div>
-				</div>
-			</div>
+		<!-- Export status: progress while paging through a large list, and a
+			     real error message if it fails, instead of silence. -->
+		{#if exporting && exportTotal > 0}
+			<p class="mb-3 text-xs text-gray-500">
+				Preparing export… {exportFetched} of {exportTotal}
+			</p>
+		{/if}
+		{#if exportError}
+			<p class="mb-3 rounded-md bg-red-50 px-3 py-2 text-xs text-red-600">{exportError}</p>
+		{/if}
+		<!-- Search -->
+		<div class="relative mb-4 w-full">
+			<input
+				type="text"
+				bind:value={searchQuery}
+				on:input={handleSearch}
+				placeholder="Search"
+				class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pl-10 pr-4 text-[#C5C6C6] focus:outline-none focus:ring-0"
+			/>
+			<span class="absolute left-3 top-2.5 text-gray-400">
+				<img src="/search-favorite.svg" alt="search icon" class="h-5 w-5" />
+			</span>
+		</div>
 
-			<!-- Search -->
-			<div class="relative mb-4 w-full">
-				<input
-					type="text"
-					bind:value={searchQuery}
-					on:input={handleSearch}
-					placeholder="Search"
-					class="h-[43px] w-full rounded-lg bg-[#FFFFFF] py-2 pr-4 pl-10 text-[#C5C6C6] focus:ring-0 focus:outline-none"
-				/>
-				<span class="absolute top-2.5 left-3 text-gray-400">
-					<img src="/search-favorite.svg" alt="search icon" class="h-5 w-5" />
-				</span>
-			</div>
-
-			<!-- Filters -->
-			<div class="mb-3 flex items-center justify-between">
-				<!-- Status Filter Dropdown -->
-				<div class="relative" use:clickOutside={() => { showStatusDropdown = false; }}>
-					<button
-						on:click={() => { showStatusDropdown = !showStatusDropdown; }}
-						class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
+		<!-- Filters -->
+		<div class="mb-3 flex items-center justify-between">
+			<!-- Status Filter Dropdown -->
+			<div
+				class="relative"
+				use:clickOutside={() => {
+					showStatusDropdown = false;
+				}}
+			>
+				<button
+					on:click={() => {
+						showStatusDropdown = !showStatusDropdown;
+					}}
+					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
+				>
+					<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
+					{selectedStatusLabel}
+					<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
+				</button>
+				{#if showStatusDropdown}
+					<div
+						class="glass-dropdown absolute left-0 z-50 mt-2 w-48 rounded-xl border border-white/20 bg-white/70 p-1 shadow-xl backdrop-blur-xl"
 					>
-						<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
-						{selectedStatusLabel}
-						<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
-					</button>
-					{#if showStatusDropdown}
-						<div class="glass-dropdown absolute left-0 z-50 mt-2 w-48 rounded-xl border border-white/20 bg-white/70 p-1 shadow-xl backdrop-blur-xl">
-							{#each statusOptions as option}
-								<button
-									on:click={() => selectStatus(option.value)}
-									class="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/50 {statusFilter === option.value ? 'font-medium text-[#7C3AED]' : 'text-[#616265]'}"
-								>
-									{option.label}
-								</button>
-							{/each}
-						</div>
-					{/if}
-				</div>
-
-				<!-- Sort Dropdown -->
-				<div class="relative" use:clickOutside={() => { showSortDropdown = false; }}>
-					<button
-						on:click={() => { showSortDropdown = !showSortDropdown; }}
-						class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
-					>
-						<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
-						{selectedSortLabel}
-						{#if sortOrder === 'asc'}
-							<span class="text-[10px]">↑</span>
-						{:else}
-							<span class="text-[10px]">↓</span>
-						{/if}
-						<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
-					</button>
-					{#if showSortDropdown}
-						<div class="glass-dropdown absolute right-0 z-50 mt-2 w-48 rounded-xl border border-white/20 bg-white/70 p-1 shadow-xl backdrop-blur-xl">
-							{#each sortOptions as option}
-								<button
-									on:click={() => selectSort(option.value)}
-									class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/50 {sortBy === option.value ? 'font-medium text-[#7C3AED]' : 'text-[#616265]'}"
-								>
-									{option.label}
-									{#if sortBy === option.value}
-										<span class="text-xs">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-									{/if}
-								</button>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			</div>
-
-			<!-- Table Content -->
-			{#if guestsLoading}
-				<!-- Skeleton Loader -->
-				<div class="flex flex-col rounded-md bg-[#FDFDFD] px-3">
-					{#each Array(5) as _}
-						<div class="flex animate-pulse items-center justify-between border-b py-3 last:border-b-0">
-							<div class="flex items-center gap-2">
-								<div class="h-6 w-6 rounded-full bg-gray-200"></div>
-								<div class="flex flex-col gap-1">
-									<div class="h-4 w-32 rounded bg-gray-200"></div>
-									<div class="h-3 w-44 rounded bg-gray-200"></div>
-								</div>
-							</div>
-							<div class="flex items-center gap-4">
-								<div class="h-6 w-20 rounded-full bg-gray-200"></div>
-								<div class="h-3 w-24 rounded bg-gray-200"></div>
-							</div>
-						</div>
-					{/each}
-				</div>
-			{:else if guests.length > 0}
-				<div use:clickOutside={() => (showModal = false)}>
-					<div class="flex flex-col rounded-md bg-[#FDFDFD] px-3">
-						{#each guests as guest}
+						{#each statusOptions as option}
 							<button
-								class="flex items-center justify-between rounded-md border-b py-3 last:border-b-0"
-								on:click={() => { selectedAttendeeId = guest._id || guest.id; selectedAttendeeData = guest; showModal = true; }}
+								on:click={() => selectStatus(option.value)}
+								class="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/50 {statusFilter ===
+								option.value
+									? 'font-medium text-[#7C3AED]'
+									: 'text-[#616265]'}"
 							>
-								<div class="flex items-start gap-2">
-									<img src={guest.profilePictureUrl || '/rondwell-attendee.png'} alt="" class="h-6 w-6 rounded-full object-cover" on:error={(e) => { (e.currentTarget as HTMLImageElement).src = '/rondwell-attendee.png'; }} />
-									<div class="flex flex-col items-start gap-1 lg:flex-row lg:items-center">
-										<span class="flex items-center gap-1">
-											<p class="font-medium">{getAttendeeDisplayName(guest)}</p>
-											<span class="h-2 w-2 rounded-full bg-[#EAAB26]"></span>
-										</span>
-										<p class="text-xs text-gray-500 md:text-sm">{guest.email}</p>
-									</div>
-								</div>
-								<div class="flex flex-col items-center gap-1 lg:flex-row lg:gap-4">
-									<div class="flex items-center justify-center rounded-full px-2 py-1 text-xs {getStatusClass(guest.attendeeStatus)}">
-										{getStatusLabel(guest.attendeeStatus)}
-									</div>
-									<div class="text-xs text-gray-500">{timeAgo(guest.createdAt)}</div>
-								</div>
+								{option.label}
 							</button>
 						{/each}
-					</div>
-					<AttendeeDetailModal bind:open={showModal} attendeeId={selectedAttendeeId} {eventId} attendeeData={selectedAttendeeData} />
-				</div>
-
-				<!-- Pagination -->
-				{#if totalPages > 1}
-					<div class="mt-4 flex items-center justify-center gap-2">
-						<button
-							on:click={() => goToPage(currentPage - 1)}
-							disabled={currentPage === 1}
-							class="rounded-md px-3 py-1 text-sm text-[#616265] transition-colors hover:bg-[#EBECED] disabled:opacity-40"
-						>
-							Previous
-						</button>
-						{#each Array(Math.min(totalPages, 5)) as _, i}
-							{@const pageNum = totalPages <= 5 ? i + 1 : Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + i}
-							<button
-								on:click={() => goToPage(pageNum)}
-								class="h-8 w-8 rounded-md text-sm transition-colors {currentPage === pageNum ? 'bg-[#7C3AED] text-white' : 'text-[#616265] hover:bg-[#EBECED]'}"
-							>
-								{pageNum}
-							</button>
-						{/each}
-						<button
-							on:click={() => goToPage(currentPage + 1)}
-							disabled={currentPage === totalPages}
-							class="rounded-md px-3 py-1 text-sm text-[#616265] transition-colors hover:bg-[#EBECED] disabled:opacity-40"
-						>
-							Next
-						</button>
 					</div>
 				{/if}
-			{:else}
-				<!-- Empty State -->
-				<div class="flex h-64 flex-col items-center justify-center gap-2">
-					<img src="/attendee-icon.svg" alt="No attendees" class="h-20 w-20 opacity-60" />
-					<p class="text-lg font-medium text-[#646568]">No Attendee Found</p>
-					<p class="text-sm text-gray-400">You Can Try Inviting or Share your event link</p>
+			</div>
+
+			<!-- Sort Dropdown -->
+			<div
+				class="relative"
+				use:clickOutside={() => {
+					showSortDropdown = false;
+				}}
+			>
+				<button
+					on:click={() => {
+						showSortDropdown = !showSortDropdown;
+					}}
+					class="flex flex-shrink-0 cursor-pointer items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm"
+				>
+					<img src="/filter-edit.svg" alt="filter icon" class="h-5 w-5" />
+					{selectedSortLabel}
+					{#if sortOrder === 'asc'}
+						<span class="text-[10px]">↑</span>
+					{:else}
+						<span class="text-[10px]">↓</span>
+					{/if}
+					<img src="/arrow-down.svg" alt="Arrow Down" class="h-2 w-3" />
+				</button>
+				{#if showSortDropdown}
+					<div
+						class="glass-dropdown absolute right-0 z-50 mt-2 w-48 rounded-xl border border-white/20 bg-white/70 p-1 shadow-xl backdrop-blur-xl"
+					>
+						{#each sortOptions as option}
+							<button
+								on:click={() => selectSort(option.value)}
+								class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/50 {sortBy ===
+								option.value
+									? 'font-medium text-[#7C3AED]'
+									: 'text-[#616265]'}"
+							>
+								{option.label}
+								{#if sortBy === option.value}
+									<span class="text-xs">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+								{/if}
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Table Content -->
+		{#if guestsLoading}
+			<!-- Skeleton Loader -->
+			<div class="flex flex-col rounded-md bg-[#FDFDFD] px-3">
+				{#each Array(5) as _}
+					<div
+						class="flex animate-pulse items-center justify-between border-b py-3 last:border-b-0"
+					>
+						<div class="flex items-center gap-2">
+							<div class="h-6 w-6 rounded-full bg-gray-200"></div>
+							<div class="flex flex-col gap-1">
+								<div class="h-4 w-32 rounded bg-gray-200"></div>
+								<div class="h-3 w-44 rounded bg-gray-200"></div>
+							</div>
+						</div>
+						<div class="flex items-center gap-4">
+							<div class="h-6 w-20 rounded-full bg-gray-200"></div>
+							<div class="h-3 w-24 rounded bg-gray-200"></div>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{:else if guests.length > 0}
+			<div use:clickOutside={() => (showModal = false)}>
+				<div class="flex flex-col rounded-md bg-[#FDFDFD] px-3">
+					{#each guests as guest}
+						<button
+							class="flex items-center justify-between rounded-md border-b py-3 last:border-b-0"
+							on:click={() => {
+								selectedAttendeeId = guest._id || guest.id;
+								selectedAttendeeData = guest;
+								showModal = true;
+							}}
+						>
+							<div class="flex items-start gap-2">
+								<img
+									src={guest.profilePictureUrl || '/rondwell-attendee.png'}
+									alt=""
+									class="h-6 w-6 rounded-full object-cover"
+									on:error={(e) => {
+										(e.currentTarget as HTMLImageElement).src = '/rondwell-attendee.png';
+									}}
+								/>
+								<div class="flex flex-col items-start gap-1 lg:flex-row lg:items-center">
+									<span class="flex items-center gap-1">
+										<p class="font-medium">{getAttendeeDisplayName(guest)}</p>
+										<span class="h-2 w-2 rounded-full bg-[#EAAB26]"></span>
+									</span>
+									<p class="text-xs text-gray-500 md:text-sm">{guest.email}</p>
+								</div>
+							</div>
+							<div class="flex flex-col items-center gap-1 lg:flex-row lg:gap-4">
+								<div
+									class="flex items-center justify-center rounded-full px-2 py-1 text-xs {getStatusClass(
+										guest.attendeeStatus
+									)}"
+								>
+									{getStatusLabel(guest.attendeeStatus)}
+								</div>
+								<div class="text-xs text-gray-500">{timeAgo(guest.createdAt)}</div>
+							</div>
+						</button>
+					{/each}
+				</div>
+				<AttendeeDetailModal
+					bind:open={showModal}
+					attendeeId={selectedAttendeeId}
+					{eventId}
+					attendeeData={selectedAttendeeData}
+				/>
+			</div>
+
+			<!-- Pagination -->
+			{#if totalPages > 1}
+				<div class="mt-4 flex items-center justify-center gap-2">
+					<button
+						on:click={() => goToPage(currentPage - 1)}
+						disabled={currentPage === 1}
+						class="rounded-md px-3 py-1 text-sm text-[#616265] transition-colors hover:bg-[#EBECED] disabled:opacity-40"
+					>
+						Previous
+					</button>
+					{#each Array(Math.min(totalPages, 5)) as _, i}
+						{@const pageNum =
+							totalPages <= 5 ? i + 1 : Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + i}
+						<button
+							on:click={() => goToPage(pageNum)}
+							class="h-8 w-8 rounded-md text-sm transition-colors {currentPage === pageNum
+								? 'bg-[#7C3AED] text-white'
+								: 'text-[#616265] hover:bg-[#EBECED]'}"
+						>
+							{pageNum}
+						</button>
+					{/each}
+					<button
+						on:click={() => goToPage(currentPage + 1)}
+						disabled={currentPage === totalPages}
+						class="rounded-md px-3 py-1 text-sm text-[#616265] transition-colors hover:bg-[#EBECED] disabled:opacity-40"
+					>
+						Next
+					</button>
 				</div>
 			{/if}
-		</div>
+		{:else}
+			<!-- Empty State -->
+			<div class="flex h-64 flex-col items-center justify-center gap-2">
+				<img src="/attendee-icon.svg" alt="No attendees" class="h-20 w-20 opacity-60" />
+				<p class="text-lg font-medium text-[#646568]">No Attendee Found</p>
+				<p class="text-sm text-gray-400">You Can Try Inviting or Share your event link</p>
+			</div>
+		{/if}
 	</div>
+</div>
 
 <style>
 	.glass-dropdown {

@@ -1,9 +1,15 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { cancelEventBlast, getBlastQuota, getEventBlasts, sendBlastNow, type EmailQuota } from '$lib/services/event.services';
+	import { cancelEventBlast, getBlastQuota, getEventBlasts, sendBlastNow, updateEvent, type EmailQuota } from '$lib/services/event.services';
+	import {
+		getEventEmailSettings,
+		type EventEmailSettings,
+		type FeedbackSummary
+	} from '$lib/services/eventEmailSettings.services';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import SendPostModal from '../../components/SendPostModal.svelte';
+	import EventEmailsModal from './modal/EventEmailsModal.svelte';
+	import PostEventFeedbackModal from './modal/PostEventFeedbackModal.svelte';
 
 	export let eventId = '';
 	export let eventData: any = null;
@@ -33,7 +39,7 @@
 	$: sendingBlasts = blasts.filter((b) => b.status === 'SENDING');
 	$: failedBlasts = blasts.filter((b) => b.status === 'FAILED');
 
-	onMount(() => { loadData(); });
+	onMount(() => { loadData(); loadEmailSettings(); });
 
 	async function loadData() {
 		blastsLoading = true;
@@ -79,14 +85,80 @@
 		return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 	}
 
-	// Registration notification toggle
-	let notifyOnRegistration = true;
+	// ── System messages ──────────────────────────────────────────────────
+	//
+	// The registration toggle previously flipped a local variable and nothing
+	// else — the switch moved, the setting did not. It now writes through to
+	// the event like the identical control on the Tickets tab.
+	// Seeded once from the prop, not derived from it: a reactive binding would
+	// snap the switch back the moment the parent refetched, undoing the
+	// organizer's click before the save landed. Same idiom as the Tickets tab.
+	let notifyOnRegistration = eventData?.notifyOrganizerOnRegistration ?? true;
+	let notifySaving = false;
 
-	const systemMessages = [
-		{ id: 'registration', title: 'Attendee Registration Notification', description: 'Email sent to you when an attendee registers.', icon: 'mdi:email-check-outline', iconBg: '#E2E8FC', iconColor: '#146AEB', action: 'toggle', enabled: true },
-		{ id: 'reminders', title: 'Event Reminders', description: 'Automatic reminders via email, SMS, and push.', icon: 'mdi:bell-ring-outline', iconBg: '#F2E4F8', iconColor: '#AB46DD', action: 'manage' },
-		{ id: 'feedback', title: 'Post-Event Feedback', description: 'Schedule a feedback email after the event.', icon: 'mdi:message-star-outline', iconBg: '#FFF7D8', iconColor: '#D79917', action: 'schedule' },
-	];
+	async function toggleRegistrationNotice() {
+		if (notifySaving) return;
+		const next = !notifyOnRegistration;
+		notifyOnRegistration = next;
+		notifySaving = true;
+		try {
+			await updateEvent(eventId, { notifyOrganizerOnRegistration: next } as any);
+			if (eventData) eventData.notifyOrganizerOnRegistration = next;
+		} catch {
+			// Put the switch back where it was rather than lie about the state.
+			notifyOnRegistration = !next;
+		} finally {
+			notifySaving = false;
+		}
+	}
+
+	// Automated email settings — loaded lazily so this tab stays cheap for the
+	// organizers who never open either panel.
+	let showEventEmailsModal = false;
+	let showFeedbackModal = false;
+	let emailSettings: EventEmailSettings | null = null;
+	let feedbackSummary: FeedbackSummary | null = null;
+
+	async function loadEmailSettings() {
+		try {
+			const data = await getEventEmailSettings(eventId);
+			emailSettings = data.settings;
+			feedbackSummary = data.feedbackSummary;
+		} catch {
+			/* The summary lines fall back to generic copy — never block the tab. */
+		}
+	}
+
+	/** "3 reminders on · thank-you on" — the state, not a restatement of the title. */
+	$: reminderSummary = (() => {
+		if (!emailSettings) return 'Reminders before the event and a thank-you after it.';
+		const active = emailSettings.remindersEnabled
+			? emailSettings.reminders.filter((r) => r.enabled).length
+			: 0;
+		const parts = [
+			active === 0 ? 'No reminders' : `${active} reminder${active === 1 ? '' : 's'} on`,
+			emailSettings.thankYou?.enabled ? 'thank-you on' : 'thank-you off'
+		];
+		return parts.join(' · ');
+	})();
+
+	$: feedbackStatus = (() => {
+		if (feedbackSummary && feedbackSummary.total > 0) {
+			const avg = feedbackSummary.averageRating?.toFixed(1) ?? '—';
+			return `${feedbackSummary.total} response${feedbackSummary.total === 1 ? '' : 's'} · ${avg}/5 average`;
+		}
+		if (emailSettings?.feedback?.sentAt) return 'Sent — waiting on responses.';
+		if (emailSettings?.feedback?.enabled && emailSettings.feedback.scheduledAt) {
+			return `Scheduled for ${formatDate(emailSettings.feedback.scheduledAt)}`;
+		}
+		return 'Schedule a feedback email after the event.';
+	})();
+
+	$: feedbackActionLabel = emailSettings?.feedback?.sentAt
+		? 'View'
+		: emailSettings?.feedback?.enabled
+			? 'Edit'
+			: 'Schedule';
 </script>
 
 <div class="max-w-4xl">
@@ -242,34 +314,89 @@
 
 	<!-- System Messages -->
 	<div class="mt-8 border-t border-gray-200 pt-6">
-		<h2 class="mb-4 text-xl font-medium text-gray-900">System Messages</h2>
+		<h2 class="mb-1 text-xl font-medium text-gray-900">System Messages</h2>
+		<p class="mb-4 text-xs text-[#B9BABA]">
+			Emails Rondwell sends for you, automatically. Nothing here needs you to press send.
+		</p>
 		<div class="space-y-3">
-			{#each systemMessages as msg}
-				<div class="flex items-center gap-4 rounded-xl bg-[#FDFDFD] px-4 py-3.5 shadow-sm">
-					<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full" style="background-color: {msg.iconBg}">
-						<Icon icon={msg.icon} class="h-5 w-5" style="color: {msg.iconColor}" />
-					</div>
-					<div class="min-w-0 flex-1">
-						<p class="text-sm font-medium text-gray-800">{msg.title}</p>
-						<p class="text-xs text-[#B9BABA]">{msg.description}</p>
-					</div>
-					{#if msg.action === 'toggle'}
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<div on:click={() => { msg.enabled = !msg.enabled; notifyOnRegistration = msg.enabled; }}
-							class="relative h-6 w-10 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-300"
-							class:bg-gray-300={!msg.enabled} class:bg-[#131517]={msg.enabled}>
-							<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" class:translate-x-4={msg.enabled}></span>
-						</div>
-					{:else}
-						<button class="flex-shrink-0 rounded-lg bg-[#F0EFF1] px-3 py-1.5 text-xs font-medium text-[#616265] transition hover:bg-[#E4E3E6]">
-							{msg.action === 'manage' ? 'Manage' : 'Schedule'}
-						</button>
-					{/if}
+			<!-- Registration notification -->
+			<div class="flex items-center gap-3 rounded-xl bg-[#FDFDFD] px-4 py-3.5 shadow-sm sm:gap-4">
+				<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#E2E8FC]">
+					<Icon icon="mdi:email-check-outline" class="h-5 w-5 text-[#146AEB]" />
 				</div>
-			{/each}
+				<div class="min-w-0 flex-1">
+					<p class="text-sm font-medium text-gray-800">Attendee Registration Notification</p>
+					<p class="text-xs text-[#B9BABA]">Email sent to you when an attendee registers.</p>
+				</div>
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<div
+					role="switch"
+					aria-checked={notifyOnRegistration}
+					aria-label="Attendee registration notification"
+					on:click={toggleRegistrationNotice}
+					class="relative h-6 w-10 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-300 {notifySaving ? 'opacity-60' : ''}"
+					class:bg-gray-300={!notifyOnRegistration}
+					class:bg-[#131517]={notifyOnRegistration}
+				>
+					<span class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-300" class:translate-x-4={notifyOnRegistration}></span>
+				</div>
+			</div>
+
+			<!-- Event emails: countdown reminders + post-event thank-you -->
+			<div class="flex items-center gap-3 rounded-xl bg-[#FDFDFD] px-4 py-3.5 shadow-sm sm:gap-4">
+				<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#F2E4F8]">
+					<Icon icon="mdi:bell-ring-outline" class="h-5 w-5 text-[#AB46DD]" />
+				</div>
+				<div class="min-w-0 flex-1">
+					<p class="text-sm font-medium text-gray-800">Event Emails</p>
+					<p class="truncate text-xs text-[#B9BABA]">{reminderSummary}</p>
+				</div>
+				<button
+					on:click={() => (showEventEmailsModal = true)}
+					class="flex-shrink-0 rounded-lg bg-[#F0EFF1] px-3 py-1.5 text-xs font-medium text-[#616265] transition hover:bg-[#E4E3E6]"
+				>
+					Manage
+				</button>
+			</div>
+
+			<!-- Post-event feedback -->
+			<div class="flex items-center gap-3 rounded-xl bg-[#FDFDFD] px-4 py-3.5 shadow-sm sm:gap-4">
+				<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#FFF7D8]">
+					<Icon icon="mdi:message-star-outline" class="h-5 w-5 text-[#D79917]" />
+				</div>
+				<div class="min-w-0 flex-1">
+					<p class="text-sm font-medium text-gray-800">Post-Event Feedback</p>
+					<p class="truncate text-xs text-[#B9BABA]">{feedbackStatus}</p>
+				</div>
+				<button
+					on:click={() => (showFeedbackModal = true)}
+					class="flex-shrink-0 rounded-lg bg-[#F0EFF1] px-3 py-1.5 text-xs font-medium text-[#616265] transition hover:bg-[#E4E3E6]"
+				>
+					{feedbackActionLabel}
+				</button>
+			</div>
 		</div>
 	</div>
 </div>
 
 <SendPostModal bind:open={showSendPostModal} eventTitle={eventTitle} {quota} onBlastSent={loadData} />
+
+<EventEmailsModal
+	bind:open={showEventEmailsModal}
+	{eventId}
+	{eventTitle}
+	eventStart={eventData?.startDateTime ?? null}
+	on:saved={(e) => (emailSettings = e.detail)}
+/>
+
+<PostEventFeedbackModal
+	bind:open={showFeedbackModal}
+	{eventId}
+	{eventTitle}
+	eventEnd={eventData?.endDateTime ?? null}
+	on:saved={(e) => {
+		emailSettings = e.detail;
+		loadEmailSettings();
+	}}
+/>

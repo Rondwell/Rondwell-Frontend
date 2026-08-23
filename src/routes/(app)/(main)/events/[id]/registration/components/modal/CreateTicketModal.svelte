@@ -10,6 +10,7 @@
 	import type { Readable } from 'svelte/store';
 	import DatePickerModal from '../../../../../../create-event/components/DatePickerModal.svelte';
 	import TimeModal from '../../../../../../create-event/components/TimeModal.svelte';
+	import { buildZonedInstant } from '$lib/utils/eventTime';
 
 	export let open = false;
 	export let eventId: string;
@@ -17,6 +18,16 @@
 	export let eventTitle = '';
 	export let onSuccess: () => void = () => {};
 	export let eventCapacity: number = 0;
+	/**
+	 * H-75 — the event's IANA zone.
+	 *
+	 * A ticket's sales window belongs to the event's zone: an organizer setting
+	 * a 5:00 PM cutoff means 5:00 PM where the event is, not where they are
+	 * sitting. Defaulted to the browser zone so an existing caller that does not
+	 * pass it keeps working — which is the pre-existing behaviour, not a
+	 * regression.
+	 */
+	export let eventTimeZone: string = '';
 	export let waitlistEnabled: boolean = false;
 	export let existingTickets: any[] = [];
 	export let isMultiDay: boolean = false;
@@ -170,14 +181,39 @@
 		}
 	}
 
+	/**
+	 * H-75 — the event's timezone is now USED, not just stored.
+	 *
+	 * `d.setHours(...)` sets the hour in the **browser's** zone, so a ticket
+	 * sales window or a payment deadline was stored at whatever instant that
+	 * wall-clock time happened to name where the organizer was sitting — not
+	 * where the event is. An organizer in Lagos scheduling a New York event's
+	 * sales cutoff for 5:00 PM stored 16:00 UTC; the intended instant is
+	 * 22:00 UTC.
+	 *
+	 * The return type is unchanged (`Date`) so callers are unaffected.
+	 */
 	function buildDateTime(date: Date, timeStr: string): Date {
-		const [timePart, meridiem] = timeStr.split(' ');
-		let [hours, minutes] = timePart.split(':').map(Number);
-		if (meridiem === 'PM' && hours !== 12) hours += 12;
-		if (meridiem === 'AM' && hours === 12) hours = 0;
-		const d = new Date(date);
-		d.setHours(hours, minutes, 0, 0);
-		return d;
+		return new Date(buildZonedInstant(date, timeStr, resolveEventTimeZone()));
+	}
+
+	/**
+	 * The zone this form authors in. These two forms carry no zone picker of
+	 * their own, so they inherit the event's when one is in scope and otherwise
+	 * fall back to the browser — which is the pre-existing behaviour, and
+	 * correct for an organizer editing their own event on their own clock.
+	 */
+	function resolveEventTimeZone(): string {
+		// H-75 — the ticket sales window belongs to the EVENT's zone: an
+		// organizer setting a 5:00 PM cutoff means 5:00 PM where the event is.
+		// `eventTimeZone` is passed in by the registration page.
+		const explicit = eventTimeZone;
+		if (explicit) return String(explicit);
+		try {
+			return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+		} catch {
+			return 'UTC';
+		}
 	}
 
 	function formatDate(date: Date): string {

@@ -80,22 +80,32 @@
 		await stopScanner();
 
 		try {
-			let token = rawValue;
-			try {
-				const parsed = JSON.parse(rawValue);
-				// Encode as base64 for the backend decodeCheckinToken. Forward
-				// registrationId (present on every QR — single uses registration_id,
-				// group lead/members use registrationId) so group tickets, which
-				// carry no attendeeId, can still be resolved server-side.
-				token = btoa(
-					JSON.stringify({
-						attendeeId: parsed.attendeeId,
-						registrationId: parsed.registrationId ?? parsed.registration_id,
-						eventId: parsed.eventId
-					})
-				);
-			} catch {
-				// If it's not JSON, try using raw value as token directly
+			/**
+			 * H-29 — the QR's raw value is passed through **untouched**.
+			 *
+			 * This used to parse the QR, keep three identifier fields
+			 * (`attendeeId`, `registrationId`, `eventId`), and base64-encode
+			 * them into a token it built itself. **Any HMAC, nonce or expiry
+			 * the original QR carried was discarded** — which implied the
+			 * server could not be verifying one, and C-15 confirmed it: there
+			 * never was a signature.
+			 *
+			 * C-15 added signed tokens (`rw1.<payload>.<sig>`, verified by
+			 * `verifyCheckinToken` against `eventId` with an expiry). Re-minting
+			 * here would strip that signature on every scan and force the
+			 * server down the legacy path — so the fix and the client are only
+			 * complete together.
+			 *
+			 * There is nothing to normalise. A signed token is already a
+			 * string; a legacy JSON QR is handled server-side by
+			 * `decodeCheckinToken`, which is where the compatibility window
+			 * belongs (`CHECKIN_ACCEPT_LEGACY_TOKENS`, closed by the
+			 * `backfill-signed-qr` migration). Doing it in the browser meant a
+			 * hand-built payload was indistinguishable from a scanned one.
+			 */
+			const token = String(rawValue ?? '').trim();
+			if (!token) {
+				throw new Error('The scanned code was empty.');
 			}
 
 			const result = await verifyCheckinQr(eventId, token);

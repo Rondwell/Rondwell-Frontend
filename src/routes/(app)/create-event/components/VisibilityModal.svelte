@@ -1,5 +1,7 @@
 <script>
 	import Icon from '@iconify/svelte';
+	import { VISIBILITY_OPTIONS, visibilityIcon } from '$lib/constants/event-visibility';
+
 	export let open = false;
 	let buttonOpen = false;
 
@@ -7,36 +9,38 @@
 		buttonOpen = false;
 	}
 
-	const options = [
-		{
-			label: 'Public',
-			icon: 'mdi:web',
-			description: 'Shown on your collection and eligible to be featured.'
-		},
-		{
-			label: 'Private',
-			icon: 'mdi:sparkles',
-			description: 'Unlisted. Only people with the link can register.'
-		}
-	];
+	/**
+	 * C-13 — this modal used to hold its own `options` array keyed on a
+	 * CAPITALISED DISPLAY LABEL ('Public' / 'Private') and assign that label
+	 * straight into the bound `visibility` prop. The create-event payload then
+	 * compared `visibility === 'public'` — lowercase — so an organizer who
+	 * opened this picker and clicked **Public** created a **PRIVATE** event:
+	 * absent from /discover, excluded from collection listings, ineligible to
+	 * be featured. The pill still read "Public". No error, no signal.
+	 *
+	 * It survived testing because the two other writers of `visibility` (the
+	 * initial value and the AI prefill) were lowercase and correct — the ONLY
+	 * way to reach the bug was to open the picker and click, so the one
+	 * organizer guaranteed to get Private was the one who deliberately chose
+	 * Public. The same mismatch broke the icon lookup.
+	 *
+	 * The fix is not `.toLowerCase()` — that patches this instance and leaves
+	 * the class intact. The modal now emits the WIRE ENUM ('PUBLIC' /
+	 * 'PRIVATE'), and the display label and icon are both derived from that
+	 * one value through a shared lookup, so what is shown and what is
+	 * transported cannot drift apart again.
+	 */
+	const options = VISIBILITY_OPTIONS;
 
-	export let visibility = options[0].label;
+	/** @type {'PUBLIC' | 'PRIVATE'} */
+	export let visibility = options[0].value;
 	export let visibility_icon = options[0].icon;
 
-	$: {
-		const current = options.find((o) => o.label === visibility);
-		visibility_icon = current ? current.icon : options[0].icon;
-	}
+	$: visibility_icon = visibilityIcon(visibility);
 
 	function updateVisibility() {
-		console.log(`Visibility updated to: ${visibility}`);
 		open = false;
 		buttonOpen = false;
-	}
-
-	function getCurrentIcon() {
-		const current = options.find((o) => o.label === visibility);
-		return current ? current.icon : options[0].icon;
 	}
 </script>
 
@@ -67,8 +71,11 @@
 					on:click={() => (buttonOpen = !buttonOpen)}
 				>
 					<span class="flex items-center gap-2">
-						<Icon icon={getCurrentIcon()} class="text-lg" />
-						{visibility}
+						<!-- C-13 — both the icon and the text are DERIVED from the wire
+						     value, so the control cannot display one thing and transport
+						     another. -->
+						<Icon icon={visibilityIcon(visibility)} class="text-lg" />
+						{options.find((o) => o.value === visibility)?.label ?? options[0].label}
 					</span>
 
 					<Icon icon="mdi:menu-down" class="h-6 w-6" />
@@ -82,7 +89,9 @@
 							<button
 								class="w-full px-3 py-2 text-left text-sm transition hover:bg-gray-50"
 								on:click={() => {
-									visibility = option.label;
+									// C-13 — emit the WIRE VALUE, not the display label.
+									// `visibility = option.label` here is the entire bug.
+									visibility = option.value;
 									buttonOpen = false;
 								}}
 							>
@@ -94,7 +103,7 @@
 											<p class="text-xs text-gray-500">{option.description}</p>
 										</div>
 									</div>
-									{#if visibility === option.label}
+									{#if visibility === option.value}
 										<Icon icon="mdi:tick" class="text-3xl text-black" />
 									{/if}
 								</div>

@@ -11,8 +11,11 @@
  */
 
 export const Permission = {
+	// H-50 — `EVENT_PUBLISH` removed (2026-08-17). Draft is out, so there is no
+	// publish step to gate. Kept in step with the backend's matrix in
+	// `services/event/src/constants/event-admin-roles.ts`; the two must agree or
+	// the UI offers a control the API refuses.
 	EVENT_MANAGE: 'EVENT_MANAGE',
-	EVENT_PUBLISH: 'EVENT_PUBLISH',
 	EVENT_DELETE: 'EVENT_DELETE',
 	EVENT_CANCEL: 'EVENT_CANCEL',
 	EVENT_DAYS_MANAGE: 'EVENT_DAYS_MANAGE',
@@ -26,6 +29,13 @@ export const Permission = {
 	TICKETS_MANAGE: 'TICKETS_MANAGE',
 	SEATING_MANAGE: 'SEATING_MANAGE',
 	MEDIA_MANAGE: 'MEDIA_MANAGE',
+	/** Approve / hide guest-uploaded Memories. */
+	MEDIA_MODERATE: 'MEDIA_MODERATE',
+	/**
+	 * Guest upload capability. Granted to verified ATTENDEES by the backend,
+	 * never by an admin role — listed here only so UI code can name it.
+	 */
+	MEDIA_CONTRIBUTE: 'MEDIA_CONTRIBUTE',
 	FAQS_MANAGE: 'FAQS_MANAGE',
 	CHECKLIST_MANAGE: 'CHECKLIST_MANAGE',
 	COMMUNITY_MANAGE: 'COMMUNITY_MANAGE',
@@ -33,13 +43,18 @@ export const Permission = {
 	INSIGHTS_VIEW: 'INSIGHTS_VIEW',
 	SETTINGS_MANAGE: 'SETTINGS_MANAGE',
 	ADMINS_MANAGE: 'ADMINS_MANAGE',
-	PARTICIPANTS_MANAGE: 'PARTICIPANTS_MANAGE'
+	PARTICIPANTS_MANAGE: 'PARTICIPANTS_MANAGE',
+	BUDGET_VIEW: 'BUDGET_VIEW',
+	BUDGET_MANAGE: 'BUDGET_MANAGE',
+	PROMOTERS_MANAGE: 'PROMOTERS_MANAGE',
+	GIFTS_MANAGE: 'GIFTS_MANAGE'
 } as const;
 
 export type PermissionValue = (typeof Permission)[keyof typeof Permission];
 
 export type EventAdminRoleValue =
 	| 'EVENT_MANAGER'
+	| 'EVENT_PLANNER'
 	| 'COMMUNITY_MANAGER'
 	| 'REGISTRATION_MANAGER'
 	| 'SUPPORT_MANAGER';
@@ -57,7 +72,6 @@ export interface EventAdminRoleDefinition {
 const ROLE_PERMISSIONS: Record<EventAdminRoleValue, PermissionValue[]> = {
 	EVENT_MANAGER: [
 		Permission.EVENT_MANAGE,
-		Permission.EVENT_PUBLISH,
 		Permission.EVENT_CANCEL,
 		Permission.EVENT_DAYS_MANAGE,
 		Permission.AGENDA_MANAGE,
@@ -76,10 +90,46 @@ const ROLE_PERMISSIONS: Record<EventAdminRoleValue, PermissionValue[]> = {
 		Permission.BLAST_SEND,
 		Permission.INSIGHTS_VIEW,
 		Permission.SETTINGS_MANAGE,
-		Permission.PARTICIPANTS_MANAGE
+		Permission.PARTICIPANTS_MANAGE,
+		Permission.MEDIA_MODERATE,
+		Permission.BUDGET_VIEW,
+		Permission.BUDGET_MANAGE,
+		Permission.PROMOTERS_MANAGE,
+		Permission.GIFTS_MANAGE
+	],
+	// EVENT_MANAGER minus SETTINGS_MANAGE / ADMINS_MANAGE / EVENT_CANCEL —
+	// a hired contractor runs the event but never touches payout settings,
+	// the team list, or the event's existence.
+	EVENT_PLANNER: [
+		Permission.EVENT_MANAGE,
+		Permission.EVENT_DAYS_MANAGE,
+		Permission.AGENDA_MANAGE,
+		Permission.SESSIONS_MANAGE,
+		Permission.ROOMS_MANAGE,
+		Permission.ATTENDEES_VIEW,
+		Permission.ATTENDEES_MANAGE,
+		Permission.REGISTRATION_MANAGE,
+		Permission.CHECKIN_MANAGE,
+		Permission.TICKETS_MANAGE,
+		Permission.SEATING_MANAGE,
+		Permission.MEDIA_MANAGE,
+		Permission.MEDIA_MODERATE,
+		Permission.FAQS_MANAGE,
+		Permission.CHECKLIST_MANAGE,
+		Permission.COMMUNITY_MANAGE,
+		Permission.BLAST_SEND,
+		Permission.INSIGHTS_VIEW,
+		Permission.PARTICIPANTS_MANAGE,
+		Permission.BUDGET_VIEW,
+		Permission.BUDGET_MANAGE,
+		Permission.GIFTS_MANAGE,
+		// Mirrors the backend. Approving promoters is planning work; PAYING
+		// them is not granted by this — the payout endpoint checks event
+		// ownership by RPC, so a planner can never move money out of the wallet.
+		Permission.PROMOTERS_MANAGE
 	],
 	REGISTRATION_MANAGER: [Permission.ATTENDEES_VIEW, Permission.CHECKIN_MANAGE],
-	COMMUNITY_MANAGER: [Permission.COMMUNITY_MANAGE],
+	COMMUNITY_MANAGER: [Permission.COMMUNITY_MANAGE, Permission.MEDIA_MODERATE],
 	SUPPORT_MANAGER: [Permission.ATTENDEES_VIEW, Permission.INSIGHTS_VIEW]
 };
 
@@ -91,6 +141,14 @@ export const EVENT_ADMIN_ROLES: EventAdminRoleDefinition[] = [
 		icon: 'mdi:account-cog-outline',
 		permissions: ROLE_PERMISSIONS.EVENT_MANAGER,
 		color: { bg: 'bg-yellow-100', text: 'text-yellow-700', chip: 'bg-yellow-50' }
+	},
+	{
+		value: 'EVENT_PLANNER',
+		label: 'Event Planner',
+		description: 'Runs the event end-to-end, except settings and team',
+		icon: 'mdi:clipboard-account-outline',
+		permissions: ROLE_PERMISSIONS.EVENT_PLANNER,
+		color: { bg: 'bg-teal-100', text: 'text-teal-700', chip: 'bg-teal-50' }
 	},
 	{
 		value: 'REGISTRATION_MANAGER',

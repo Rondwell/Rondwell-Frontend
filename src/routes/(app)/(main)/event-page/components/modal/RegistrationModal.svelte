@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { sanitizeHtml } from '$lib/security/sanitizeHtml';
+	import { safeHref } from '$lib/security/safeUrl';
 	import { page } from '$app/stores';
 	import { getPublicEventPage, getPublicSeats, getGroupRegistrationMembers } from '$lib/services/event.services';
 	import {
@@ -7,6 +9,11 @@
 		verifyAndSettleTicketPayment,
 	} from '$lib/services/payment.services';
 	import { applyCouponPreview, type CouponPreview } from '$lib/services/coupon.services';
+	import {
+		initiateContribution,
+		verifyAndSettleContribution,
+		contributionErrorCopy,
+	} from '$lib/services/contribution.services';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { getEventTheme } from '$lib/stores/eventTheme';
 	import type { Color } from '$lib/utils/colors';
@@ -24,9 +31,39 @@
 	export let registrationFields: any[] = [];
 	export let ticketQuantity: number = 1;
 	export let isGroupRegistration: boolean = false;
+	/**
+	 * Celebration-layer flags RESOLVED by the server (`/public` → `features`).
+	 *
+	 * Passed in rather than re-derived here: `guestContributions.enabled` is the
+	 * AND of the legacy `donationsEnabled` master switch and the config block,
+	 * and getting that wrong in either direction is a money bug.
+	 */
+	export let features: any = null;
 
 	$: eventId = $page.params.id ?? '';
 	$: themeColor = eventId ? getEventTheme(eventId) : colors[0];
+
+	/**
+	 * GAP 9 — the promoter code this visitor arrived with, if any.
+	 *
+	 * Read from sessionStorage (written by the event page when it saw `?ref=`)
+	 * rather than from the URL: the code has to survive the modal being opened
+	 * after a navigation that dropped the query string. Session-scoped and
+	 * keyed per event so a code never bleeds into a different event's sale.
+	 *
+	 * Returns `undefined` rather than an empty string — an empty `refCode` in
+	 * the body is a field the server would have to defend against, and there
+	 * is no reason to send one.
+	 */
+	function promoterRefCode(): string | undefined {
+		try {
+			return sessionStorage.getItem(`rondwell_ref_${eventId}`) || undefined;
+		} catch {
+			// Private-browsing modes can throw on storage access. A missing
+			// referral must never block somebody's registration.
+			return undefined;
+		}
+	}
 	$: selectedTicket = ticketTypes.find((t: any) => t._id === selectedTicketId) ?? null;
 
 	// Filter registration fields for the selected ticket type
@@ -103,8 +140,48 @@
 	$: ethAddressEnabled = eventData?.registrationFormSettings?.ethAddressEnabled ?? 'OFF';
 	$: solAddressEnabled = eventData?.registrationFormSettings?.solAddressEnabled ?? 'OFF';
 
-	// Steps: 'form' | 'group-members' | 'seats' | 'payment' | 'confirmation'
-	let step: 'form' | 'group-members' | 'seats' | 'payment' | 'confirmation' = 'form';
+	// ── GAP 7 — age restriction ───────────────────────────────────────────
+	//
+	// The server is the authority: it recomputes the age against the event's
+	// START (not "now"), and for ID_REQUIRED events it also demands verified
+	// KYC. Everything here is UX — catching an obvious problem before the
+	// round-trip and rendering the right recovery action afterwards.
+	$: ageRestriction = features?.ageRestriction ?? eventData?.ageRestriction ?? null;
+	$: ageGateOn = ageRestriction?.enabled === true;
+	$: minimumAge = ageRestriction?.minimumAge ?? 18;
+	$: idVerificationRequired = ageRestriction?.verificationMethod === 'ID_REQUIRED';
+	let dateOfBirth = '';
+	/** Set when the failure was specifically the age gate, so we can show a CTA. */
+	let ageErrorCode = '';
+
+	/** Latest date of birth that satisfies the gate, for the input's `max`. */
+	$: maxDobForAge = (() => {
+		const start = eventData?.startDateTime ? new Date(eventData.startDateTime) : new Date();
+		const d = new Date(start);
+		d.setFullYear(d.getFullYear() - minimumAge);
+		return d.toISOString().slice(0, 10);
+	})();
+
+	// ── GAP 6 — guest cash contributions ──────────────────────────────────
+	//
+	// The contribution is a SEPARATE Paystack charge from the ticket. Bundling
+	// them into one would break TicketPayment reconciliation, the payout-reserve
+	// maths and per-ticket refunds — so this step runs only once the
+	// registration itself is already complete.
+	$: contributionConfig = contributionPrompt ?? features?.guestContributions ?? null;
+	$: contributionsOn = contributionConfig?.enabled === true;
+	/** Echoed by the registration response, so it reflects the event at RSVP time. */
+	let contributionPrompt: any = null;
+	let contributionAmountKobo = 0;
+	let contributionCustomMajor = '';
+	let contributionMessage = '';
+	let contributionAnonymous = false;
+	let contributionSubmitting = false;
+	let contributionError = '';
+	let contributionDone = false;
+
+	// Steps: 'form' | 'group-members' | 'seats' | 'payment' | 'contribute' | 'confirmation'
+	let step: 'form' | 'group-members' | 'seats' | 'payment' | 'contribute' | 'confirmation' = 'form';
 	let registrationResult: any = null;
 	let selectedSeatId = '';
 	let selectedSeatNumber = '';
@@ -174,6 +251,16 @@
 		errors = {};
 		submitting = false;
 		submitError = '';
+		dateOfBirth = '';
+		ageErrorCode = '';
+		contributionPrompt = null;
+		contributionAmountKobo = 0;
+		contributionCustomMajor = '';
+		contributionMessage = '';
+		contributionAnonymous = false;
+		contributionSubmitting = false;
+		contributionError = '';
+		contributionDone = false;
 		step = 'form';
 		registrationResult = null;
 		selectedSeatId = '';
@@ -234,11 +321,42 @@
 		return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 	}
 
+	/**
+	 * Whole years old at the event's START, not today.
+	 *
+	 * Mirrors `computeAgeAt` on the server. Measuring "now" would wrongly turn
+	 * away a guest who turns {minimumAge} the day before the event — the exact
+	 * case organizers complain about.
+	 */
+	function computeAgeAtEventStart(dob: Date): number {
+		const asOf = eventData?.startDateTime ? new Date(eventData.startDateTime) : new Date();
+		let age = asOf.getUTCFullYear() - dob.getUTCFullYear();
+		const monthDelta = asOf.getUTCMonth() - dob.getUTCMonth();
+		if (monthDelta < 0 || (monthDelta === 0 && asOf.getUTCDate() < dob.getUTCDate())) age -= 1;
+		return age;
+	}
+
 	function validate(): boolean {
 		errors = {};
 		if (!firstName.trim()) errors['firstName'] = 'First name is required.';
 		if (!email.trim()) errors['email'] = 'Email is required.';
 		else if (!isValidEmail(email)) errors['email'] = 'Please enter a valid email.';
+
+		// GAP 7 — date of birth. Client-side is a courtesy only: the server
+		// recomputes the age against the event's START and re-runs the KYC check,
+		// so a tampered payload gains nothing.
+		if (ageGateOn) {
+			if (!dateOfBirth) {
+				errors['dateOfBirth'] = 'Please enter your date of birth.';
+			} else {
+				const dob = new Date(dateOfBirth);
+				if (Number.isNaN(dob.getTime()) || dob.getTime() > Date.now()) {
+					errors['dateOfBirth'] = 'Please enter a valid date of birth.';
+				} else if (computeAgeAtEventStart(dob) < minimumAge) {
+					errors['dateOfBirth'] = `You must be at least ${minimumAge} to attend this event.`;
+				}
+			}
+		}
 
 		if (phoneEnabled === 'REQUIRED' && !phone.trim()) errors['phone'] = 'Phone number is required.';
 		if (ethAddressEnabled === 'REQUIRED' && !ethAddress.trim()) errors['ethAddress'] = 'Ethereum address is required.';
@@ -444,6 +562,15 @@
 						},
 						members: groupMembers,
 						form_answers: formAnswers,
+						// GAP 7 — the LEAD declares for themselves only. Each member
+						// declares their own DOB when they complete their profile;
+						// a lead cannot vouch for a friend's age, and one shared
+						// declaration would make the door audit trail worthless.
+						dateOfBirth: ageGateOn && dateOfBirth ? dateOfBirth : undefined,
+						// GAP 9 — the group LEAD carries the referral. One attribution
+						// per registration is enforced by a unique index server-side,
+						// so a group of six credits the promoter once, not six times.
+						refCode: promoterRefCode(),
 					}),
 				});
 				const groupRegData = await groupRegRes.json();
@@ -459,11 +586,26 @@
 					...groupRegData,
 					attendeeId
 				};
+				// GAP 6 — the server echoes the contribution config it actually has,
+				// with enablement already resolved. Never re-derive it here.
+				if (groupRegData.contributionPrompt) contributionPrompt = groupRegData.contributionPrompt;
+				// C-05 — the "defensive fallback for an older backend build" that
+				// used to sit here has been REMOVED. It called
+				// `GET /registrations/event/:eventId/attendee/:attendeeId`
+				// anonymously, and that route was an unauthenticated dump of a
+				// full registration document — name, email, custom answers and
+				// both door credentials (`event_passcode`, `qr_code_data`) — for
+				// any (eventId, attendeeId) pair. The route now requires
+				// `ATTENDEES_VIEW` on the event, so a guest cannot call it at all.
+				//
+				// Nothing is lost: `register/group` has returned `registration_id`
+				// (and `group_id`, and `member_registration_ids`) since the group
+				// cascade fix, so this branch was already dead against any current
+				// backend.
 				if (!registrationResult.registration_id) {
-					// Defensive fallback for an older backend build.
-					const leadRegRes = await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/event/${eventId}/attendee/${attendeeId}`);
-					const leadRegData = await leadRegRes.json();
-					registrationResult = { ...(leadRegData ?? {}), ...registrationResult, ...(leadRegData ?? {}) };
+					throw new Error(
+						'Group registration did not return a registration id. Please try again.'
+					);
 				}
 
 				// P1-15: attach the registrationToken so the payment step can
@@ -480,7 +622,7 @@
 					// (every seat finalized, invites sent) inside register/group, so
 					// there is nothing to finalize from here. Just show the ticket.
 					registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
-					step = 'confirmation';
+					step = nextStepAfterRegistration();
 				}
 				return;
 			}
@@ -500,6 +642,12 @@
 					ticketTypeId: selectedTicketId || undefined,
 					form_answers: formAnswers,
 					linked_seat_id: selectedSeatId || undefined,
+					// GAP 7 — persisted on the registration as the door audit trail.
+					dateOfBirth: ageGateOn && dateOfBirth ? dateOfBirth : undefined,
+					// GAP 9 — echo the promoter code this visitor arrived with. The
+					// server validates it belongs to THIS event and is APPROVED, and
+					// refuses self-referrals, so a hand-typed code buys nothing.
+					refCode: promoterRefCode(),
 				}),
 			});
 			const regData = await regRes.json();
@@ -517,6 +665,7 @@
 			}
 
 			registrationResult = regData.registration;
+			if (regData.contributionPrompt) contributionPrompt = regData.contributionPrompt;
 			// P1-15: prefer the registration-time token (binds the chosen
 			// ticketTypeId), fall back to the attendee-create token.
 			if (regData.registrationToken) {
@@ -536,15 +685,39 @@
 				if (finalizeRes.ok) {
 					registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
 				}
-				step = 'confirmation';
+				step = nextStepAfterRegistration();
 			}
 		} catch (e: any) {
 			const msg = e.message ?? '';
 			const code = (e.code ?? e.data?.code ?? '').toUpperCase();
 			const meta = e.meta ?? e.data?.meta ?? {};
+			ageErrorCode = '';
 
+			// GAP 7 — the age gate. These need their own branch because the
+			// recovery action differs per code: fix the date, verify ID, or
+			// nothing at all (genuinely too young).
+			if (code.startsWith('AGE_')) {
+				ageErrorCode = code;
+				if (code === 'AGE_RESTRICTED') {
+					submitError = meta.minimumAge
+						? `You must be at least ${meta.minimumAge} years old to attend this event.`
+						: msg;
+				} else if (code === 'AGE_ID_REQUIRED') {
+					submitError =
+						'This event requires a verified ID. Sign in and complete identity verification, then try again.';
+				} else if (code === 'AGE_ID_CHECK_UNAVAILABLE') {
+					submitError = 'We could not verify your identity right now. Please try again in a moment.';
+				} else if (code === 'AGE_DOB_REQUIRED') {
+					submitError = meta.minimumAge
+						? `This event is ${meta.minimumAge}+. Please provide your date of birth to continue.`
+						: msg;
+					errors = { ...errors, dateOfBirth: 'Please enter your date of birth.' };
+				} else {
+					submitError = msg || 'Please enter a valid date of birth.';
+				}
+			}
 			// FE-P2-11-A: server-side sales-window enforcement.
-			if (code === 'SALES_NOT_OPEN') {
+			else if (code === 'SALES_NOT_OPEN') {
 				const dt = meta.salesStartDate ? new Date(meta.salesStartDate).toLocaleString() : '';
 				submitError = dt
 					? `Sales open on ${dt}. Set a reminder?`
@@ -594,6 +767,110 @@
 			if (step === 'seats' || step === 'group-members') step = 'form';
 		} finally {
 			submitting = false;
+		}
+	}
+
+	/**
+	 * Where to go once the registration itself is complete.
+	 *
+	 * The contribution step runs AFTER registration, never bundled into it —
+	 * the guest is already registered by the time we ask, so declining costs
+	 * them nothing and a failed gift can never un-register them. That
+	 * separation is also what keeps TicketPayment reconciliation, the payout
+	 * reserve maths and per-ticket refunds intact.
+	 */
+	function nextStepAfterRegistration(): 'contribute' | 'confirmation' {
+		return contributionsOn && !contributionDone ? 'contribute' : 'confirmation';
+	}
+
+	/** Suggested chips + a custom box; `0` means nothing chosen yet. */
+	$: contributionCurrency = contributionConfig?.currency ?? 'NGN';
+	$: contributionMinKobo = contributionConfig?.minKobo ?? 50000;
+	$: contributionMaxKobo = contributionConfig?.maxKobo ?? null;
+	$: contributionSuggestions = Array.isArray(contributionConfig?.suggestedAmountsKobo)
+		? contributionConfig.suggestedAmountsKobo
+		: [];
+
+	function chooseContribution(kobo: number) {
+		contributionAmountKobo = kobo;
+		contributionCustomMajor = '';
+		contributionError = '';
+	}
+
+	function onCustomContribution() {
+		contributionAmountKobo = majorToKobo(contributionCustomMajor, contributionCurrency);
+		contributionError = '';
+	}
+
+	/**
+	 * Start the contribution checkout.
+	 *
+	 * The amount is payer-chosen (that is the whole point of a gift), so it is
+	 * clamped SERVER-SIDE against RPC-resolved bounds at initiate and asserted
+	 * again at settlement. The checks here are only to avoid a pointless
+	 * round-trip and to show a precise message.
+	 */
+	async function submitContribution() {
+		contributionError = '';
+		if (!contributionAmountKobo || contributionAmountKobo <= 0) {
+			contributionError = 'Choose or enter an amount first.';
+			return;
+		}
+		if (contributionAmountKobo < contributionMinKobo) {
+			contributionError = `The minimum is ${formatMoney(contributionMinKobo, contributionCurrency)}.`;
+			return;
+		}
+		if (contributionMaxKobo && contributionAmountKobo > contributionMaxKobo) {
+			contributionError = `The maximum is ${formatMoney(contributionMaxKobo, contributionCurrency)}.`;
+			return;
+		}
+
+		contributionSubmitting = true;
+		try {
+			const res = await initiateContribution({
+				kind: 'RSVP_CONTRIBUTION',
+				eventId,
+				// Links the gift to this guest's registration so the organizer's
+				// attendee detail can show "contributed ₦5,000".
+				registrationId: registrationResult?.registration_id ?? undefined,
+				amountKobo: contributionAmountKobo,
+				contributorName: `${firstName.trim()} ${lastName.trim()}`.trim() || 'A well-wisher',
+				contributorEmail: email.trim().toLowerCase(),
+				isAnonymous: contributionAnonymous,
+				message: contributionMessage.trim() || undefined,
+				successCallbackUrl: `${window.location.origin}/event-page/${eventId}?gift=success`,
+				failureCallbackUrl: `${window.location.origin}/event-page/${eventId}?gift=failed`,
+			});
+
+			await loadPaystackScript();
+			const handler = (window as any).PaystackPop.setup({
+				key: res.paystackPublicKey || import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
+				email: email.trim().toLowerCase(),
+				amount: res.totalAmount,
+				currency: res.currency || contributionCurrency,
+				ref: res.reference || '',
+				channels: ['card', 'bank', 'ussd', 'bank_transfer'],
+				callback: () => {
+					// The webhook is the canonical settlement and is idempotent;
+					// this call only makes the thank-you appear immediately, so a
+					// failure here is NOT a payment failure and must not be shown
+					// as one.
+					verifyAndSettleContribution(res.reference, res.verificationToken).finally(() => {
+						contributionDone = true;
+						contributionSubmitting = false;
+						step = 'confirmation';
+						toast.success('Thank you — your gift is on its way!');
+					});
+				},
+				onClose: () => {
+					contributionError = 'Payment window was closed. You can try again, or skip.';
+					contributionSubmitting = false;
+				},
+			});
+			handler.openIframe();
+		} catch (e: any) {
+			contributionError = contributionErrorCopy(e, 'Could not start the gift payment.');
+			contributionSubmitting = false;
 		}
 	}
 
@@ -745,12 +1022,18 @@
 									}
 								}).then(() => {
 									registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
-									step = 'confirmation';
+									// GAP 6 — offer the gift AFTER the ticket has settled.
+									// Bundling it into the ticket charge would break
+									// TicketPayment reconciliation and per-ticket refunds.
+									step = nextStepAfterRegistration();
 									submitting = false;
 								}).catch(() => {
 									// Settlement or finalize might be handled by webhook — still show confirmation
 									registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
-									step = 'confirmation';
+									// GAP 6 — offer the gift AFTER the ticket has settled.
+									// Bundling it into the ticket charge would break
+									// TicketPayment reconciliation and per-ticket refunds.
+									step = nextStepAfterRegistration();
 									submitting = false;
 								});
 						},
@@ -861,7 +1144,21 @@
 					<svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
 					</svg>
-					<span style="color: #991b1b;">{submitError}</span>
+					<div>
+						<span style="color: #991b1b;">{submitError}</span>
+						<!-- GAP 7 — the only age failure with a recovery action the
+						     guest can actually take from here. -->
+						{#if ageErrorCode === 'AGE_ID_REQUIRED'}
+							<a
+								href={$isAuthenticated ? '/settings?tab=verification' : '/auth'}
+								class="mt-2 inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium"
+								style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+							>
+								{$isAuthenticated ? 'Verify my ID' : 'Sign in to verify'}
+								<Icon icon="mdi:arrow-right" class="text-sm" />
+							</a>
+						{/if}
+					</div>
 				</div>
 				{/if}
 
@@ -891,6 +1188,31 @@
 							style="background-color: {themeColor.cover}; border-color: {errors.email ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
 						{#if errors.email}<p class="mt-1 text-xs text-red-500">{errors.email}</p>{/if}
 					</div>
+
+					<!-- GAP 7 — Date of birth (age-restricted events only) -->
+					{#if ageGateOn}
+					<div class="w-full">
+						<label class="text-sm" style="color: {themeColor.lightText};" for="reg-dob">
+							Date of Birth *
+						</label>
+						<input
+							id="reg-dob"
+							bind:value={dateOfBirth}
+							type="date"
+							max={maxDobForAge}
+							class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+							style="background-color: {themeColor.cover}; border-color: {errors.dateOfBirth ? '#ef4444' : themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+						<p class="mt-1.5 text-xs" style="color: {themeColor.lightText};">
+							This event is {minimumAge}+.
+							{#if idVerificationRequired}
+								You'll also need a verified ID on your Rondwell account.
+							{:else}
+								We check your age against the event date, not today.
+							{/if}
+						</p>
+						{#if errors.dateOfBirth}<p class="mt-1 text-xs text-red-500">{errors.dateOfBirth}</p>{/if}
+					</div>
+					{/if}
 
 					<!-- Phone (from registrationFormSettings) -->
 					{#if phoneEnabled !== 'OFF'}
@@ -959,13 +1281,35 @@
 							</label>
 
 						{:else if field.fieldType === 'TERMS_CHECKBOX'}
-							{@const termsText = field.termsContent || ''}
+							<!--
+								H-24 — organizer-authored terms are sanitised before `{@html}`.
+
+								`termsContent` is written through `createRegistrationField` and was
+								sanitised on **neither write nor read**. It renders inside the
+								registration modal — the highest-intent moment in the funnel,
+								immediately before payment — so a payload here can overlay a fake
+								card form, or rewrite the `email` field before submit, on a page
+								the attendee has every reason to trust.
+
+								Unlike C-14 this sink has **no plain-text fallback**: terms
+								legitimately need formatting (lists, emphasis, links), so escaping
+								everything would break the feature. It needs a real allow-list
+								sanitiser, which is what `sanitizeHtml` is — the same shared
+								DOMPurify wrapper C-09 introduced, configured to strip `on*`
+								handlers and every scheme except http/https/mailto.
+
+								The event service sanitises on write as well. Both halves are
+								needed: the write-side guard stops the payload being stored, and
+								this one covers every row already in the database.
+							-->
+							{@const termsText = sanitizeHtml(field.termsContent || '')}
 							{@const isLong = termsText.replace(/<[^>]*>/g, '').split(/\s+/).length > 200}
 							{@const isExpanded = termsExpanded[fid] ?? false}
 							<div class="mt-2 space-y-3">
 								{#if field.contentType === 'link' && field.termsLink}
 									<div class="rounded-lg p-3" style="background-color: {themeColor.cover};">
-										<a href={field.termsLink} target="_blank" rel="noopener" class="text-sm underline" style="color: {themeColor.button};">
+										<!-- H-72 — `termsLink` is organizer-supplied and reaches a raw href. -->
+										<a href={safeHref(field.termsLink)} target="_blank" rel="noopener" class="text-sm underline" style="color: {themeColor.button};">
 											View Terms and Conditions
 										</a>
 									</div>
@@ -1381,6 +1725,122 @@
 					</button>
 				</div>
 
+			{:else if step === 'contribute'}
+				<!--
+					GAP 6 — the guest cash contribution step.
+
+					Reached only AFTER the registration (and any ticket payment) is
+					already complete, so "Skip" is genuinely free and a failed gift
+					can never cost someone their place. The charge is a SEPARATE
+					Paystack transaction linked by registrationId — deliberately not
+					bundled into the ticket.
+				-->
+				<div class="flex flex-col gap-5">
+					<div class="text-center">
+						<div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full" style="background-color: {themeColor.smallCover};">
+							<Icon icon="mdi:gift-outline" class="text-2xl" style="color: {themeColor.button};" />
+						</div>
+						<h3 class="text-2xl font-normal" style="color: {themeColor.text};">You're in! Add a gift?</h3>
+						<p class="mt-2 text-sm" style="color: {themeColor.lightText};">
+							{contributionConfig?.message
+								? contributionConfig.message
+								: `Completely optional — ${eventData?.title ?? 'the host'} will see your name and note.`}
+						</p>
+					</div>
+
+					{#if contributionError}
+						<div class="flex items-start gap-3 rounded-xl p-4 text-sm" style="background-color: #fef2f2; border: 1px solid #fecaca;">
+							<svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+							</svg>
+							<span style="color: #991b1b;">{contributionError}</span>
+						</div>
+					{/if}
+
+					{#if contributionSuggestions.length > 0}
+						<div class="grid grid-cols-3 gap-2">
+							{#each contributionSuggestions as amt}
+								<button
+									type="button"
+									on:click={() => chooseContribution(amt)}
+									class="rounded-lg border-2 py-3 text-sm font-medium transition-all"
+									style="border-color: {contributionAmountKobo === amt ? themeColor.button : themeColor.toggle}; background-color: {contributionAmountKobo === amt ? themeColor.button : themeColor.cover}; color: {contributionAmountKobo === amt ? themeColor.buttonText : themeColor.text};"
+								>
+									{formatMoney(amt, contributionCurrency, { minimumFractionDigits: 0 })}
+								</button>
+							{/each}
+						</div>
+					{/if}
+
+					{#if contributionConfig?.allowCustom !== false}
+						<div class="w-full">
+							<label class="text-sm" style="color: {themeColor.lightText};" for="gift-custom">Or enter an amount</label>
+							<input
+								id="gift-custom"
+								type="number"
+								min="0"
+								step="any"
+								inputmode="decimal"
+								bind:value={contributionCustomMajor}
+								on:input={onCustomContribution}
+								placeholder={String(Math.round(contributionMinKobo / 100))}
+								class="mt-2 w-full rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+								style="background-color: {themeColor.cover}; border-color: {themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;" />
+							<p class="mt-1 text-xs" style="color: {themeColor.lightText};">
+								Minimum {formatMoney(contributionMinKobo, contributionCurrency, { minimumFractionDigits: 0 })}{#if contributionMaxKobo} · maximum {formatMoney(contributionMaxKobo, contributionCurrency, { minimumFractionDigits: 0 })}{/if}
+							</p>
+						</div>
+					{/if}
+
+					<div class="w-full">
+						<label class="text-sm" style="color: {themeColor.lightText};" for="gift-note">Add a note (optional)</label>
+						<textarea
+							id="gift-note"
+							rows="2"
+							maxlength="500"
+							bind:value={contributionMessage}
+							placeholder="Congratulations! 🎉"
+							class="mt-2 w-full resize-none rounded-[9px] border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2"
+							style="background-color: {themeColor.cover}; border-color: {themeColor.toggle}; color: {themeColor.text}; --tw-ring-color: {themeColor.button}40;"
+						></textarea>
+					</div>
+
+					<label class="flex items-start gap-3 cursor-pointer select-none rounded-lg px-3 py-2.5" style="background-color: {themeColor.cover};">
+						<input type="checkbox" bind:checked={contributionAnonymous} class="mt-0.5 h-5 w-5 rounded" style="accent-color: {themeColor.button};" />
+						<span class="text-sm" style="color: {themeColor.text};">
+							Hide my name publicly
+							<span class="mt-0.5 block text-xs" style="color: {themeColor.lightText};">
+								Your name still reaches the host, so they can thank you — it just won't appear on the public page.
+							</span>
+						</span>
+					</label>
+
+					<button
+						type="button"
+						on:click={submitContribution}
+						disabled={contributionSubmitting || !contributionAmountKobo}
+						class="w-full rounded-lg py-3 text-base font-medium transition-all disabled:opacity-60"
+						style="background-color: {themeColor.button}; color: {themeColor.buttonText};"
+					>
+						{#if contributionSubmitting}
+							Opening payment…
+						{:else if contributionAmountKobo}
+							Send {formatMoney(contributionAmountKobo, contributionCurrency, { minimumFractionDigits: 0 })}
+						{:else}
+							Choose an amount
+						{/if}
+					</button>
+
+					<button
+						type="button"
+						on:click={() => (step = 'confirmation')}
+						class="w-full py-1 text-center text-sm underline"
+						style="color: {themeColor.lightText};"
+					>
+						Skip — just show my ticket
+					</button>
+				</div>
+
 			{:else if step === 'confirmation'}
 				<!-- Confirmation Page -->
 				<div class="flex flex-col items-center text-center gap-6">
@@ -1403,6 +1863,23 @@
 						{/if}
 					</p>
 
+					<!-- GAP 6 — a second chance to gift, for anyone who skipped. -->
+					{#if contributionsOn && !contributionDone}
+						<button
+							type="button"
+							on:click={() => (step = 'contribute')}
+							class="flex w-full items-center justify-center gap-2 rounded-lg border-2 py-2.5 text-sm font-medium transition-all"
+							style="border-color: {themeColor.toggle}; color: {themeColor.text};"
+						>
+							<Icon icon="mdi:gift-outline" class="text-base" />
+							Add a gift
+						</button>
+					{:else if contributionDone}
+						<div class="w-full rounded-lg px-3 py-2.5 text-sm" style="background-color: {themeColor.smallCover}; color: {themeColor.text};">
+							🎁 Your gift is on its way — thank you!
+						</div>
+					{/if}
+
 					<!-- FE-P3-05 — multi-QR carousel for group purchases. -->
 					{#if isGroupRegistration && (groupMemberRegistrations.length > 0 || loadingGroupMembers)}
 						<div class="w-full rounded-xl border p-4 text-left" style="border-color: {themeColor.toggle}; background-color: {themeColor.cover};">
@@ -1417,6 +1894,7 @@
 								{@const memberName = (current.firstName || current.attendee_details?.firstName || current.metaData?.firstName || `Attendee ${idx + 1}`).toString()}
 								{@const memberEmailAddr = (current.email || current.attendee_details?.email || current.metaData?.email || '').toString()}
 								{@const passcode = current.passcode || current.qrPasscode || current.checkInPasscode || current.registration_id || ''}
+								{@const memberQr = current.qr_code_data || current.qr_code_url || ''}
 								<div class="flex items-center justify-between">
 									<button
 										type="button"
@@ -1446,17 +1924,40 @@
 										<Icon icon="mdi:chevron-right" class="text-lg" />
 									</button>
 								</div>
-								{#if passcode}
+								<!--
+									H-23 — the QR is the server-rendered data URI. The external
+									call is gone.
+
+									This used to be:
+
+									  src={`https://api.qrserver.com/v1/create-qr-code/?…&data=${encodeURIComponent(passcode)}`}
+
+									`passcode` is a BEARER CREDENTIAL — `event.services.ts` posts
+									`{eventId, passcode}` to `/api/v1/checkin/passcode` and that
+									checks the holder in. So a group lead buying six tickets caused
+									six GET requests to `api.qrserver.com`, each carrying a live
+									door credential in the query string, plus a `Referer` naming the
+									event (no `referrerpolicy` was set). Those passcodes landed in a
+									third party's access logs, in any TLS-terminating corporate
+									proxy on the path, and in browser history.
+
+									`qr_code_data` is a data: URI the event service already returns
+									for CONFIRMED members — the same field the single-registration
+									branch below has always used. Nothing leaves the browser.
+
+									The passcode text is still shown: it is the manual fallback when
+									a scanner fails, and it is already on this screen for the person
+									it belongs to. What changed is that it is no longer transmitted
+									to anyone else.
+								-->
+								{#if memberQr}
 									<div class="mt-3 flex items-center justify-center">
 										<div class="rounded-lg bg-white p-3" style="border: 1px solid {themeColor.toggle};">
-											<img
-												alt="Ticket QR"
-												src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=2&data=${encodeURIComponent(passcode)}`}
-												width="180"
-												height="180"
-											/>
+											<img alt="Ticket QR" src={memberQr} width="180" height="180" />
 										</div>
 									</div>
+								{/if}
+								{#if passcode}
 									<p class="mt-2 text-center text-[11px]" style="color: {themeColor.lightText};">Passcode · <span class="font-mono">{passcode}</span></p>
 								{/if}
 							{/if}

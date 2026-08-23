@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Revenue Chart</title>
+    <!-- csp-ignore-next-line — DEAD FILE: a standalone HTML prototype saved with
+         a .svelte extension. Nothing imports it, so it never renders, and d3 is
+         already an npm dependency. It should be deleted. -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         * {

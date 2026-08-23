@@ -13,6 +13,16 @@
 		chatWithAnalytics
 	} from '$lib/services/analytics.services';
 	import InsightsSkeleton from '$lib/components/analytics/InsightsSkeleton.svelte';
+	import { tick } from 'svelte';
+	import { downloadCsv, exportFilename } from '$lib/utils/csv';
+	import {
+		buildEventReportSections,
+		loadEventReportData,
+		renderReport,
+		type EventReportSources
+	} from '$lib/utils/eventReport';
+	import EventReportDocument from '$lib/components/report/EventReportDocument.svelte';
+	import ReportFormatModal from '$lib/components/report/ReportFormatModal.svelte';
 
 	$: eventId = $page.params.id ?? '';
 
@@ -34,7 +44,7 @@
 		},
 		{
 			id: 'ai',
-			label: 'AI Insights',
+			label: 'AI Reports',
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 1.66406L12.575 6.88073L18.3333 7.72573L14.1667 11.7841L15.15 17.5174L10 14.8091L4.85 17.5174L5.83333 11.7841L1.66667 7.72573L7.425 6.88073L10 1.66406Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 		},
 		{
@@ -57,10 +67,14 @@
 		curve: 'curveMonotoneX',
 		legend: { enabled: true, position: 'bottom' },
 		height: '330px',
-		color: { scale: { 'Registrations': '#3b82f6', 'Check-ins': '#22c55e', 'Cancellations': '#ef4444' } }
+		color: { scale: { Registrations: '#3b82f6', 'Check-ins': '#22c55e', Cancellations: '#ef4444' } }
 	};
 
-	const donutOptions = { title: 'Attendee Status', height: '330px', legend: { position: 'bottom' } };
+	const donutOptions = {
+		title: 'Attendee Status',
+		height: '330px',
+		legend: { position: 'bottom' }
+	};
 
 	onMount(async () => {
 		loading = true;
@@ -71,7 +85,7 @@
 			const snapshots = analytics.dailySnapshots || [];
 			chartData = snapshots.flatMap((s: any) => [
 				{ group: 'Registrations', date: s.date, value: s.registrations || 0 },
-				{ group: 'Check-ins', date: s.date, value: s.checkIns || 0 },
+				{ group: 'Check-ins', date: s.date, value: s.checkIns || 0 }
 			]);
 
 			// Build donut from registration status
@@ -81,13 +95,64 @@
 				{ group: 'Pending', value: reg.pending || 0 },
 				{ group: 'Checked In', value: reg.checkedIn || 0 },
 				{ group: 'Waitlisted', value: reg.waitlisted || 0 },
-				{ group: 'Declined', value: reg.declined || 0 },
-			].filter(d => d.value > 0);
+				{ group: 'Declined', value: reg.declined || 0 }
+			].filter((d) => d.value > 0);
 
 			if (donutData.length === 0) donutData = [{ group: 'No Data', value: 1 }];
 		}
 		loading = false;
 	});
+
+	/* ─────────────────── Full event report download ───────────────────
+	 * Pulls every section of the event record and assembles a single
+	 * multi-section CSV. Each source is fetched independently and a failure is
+	 * recorded inside the file rather than aborting the download.
+	 */
+
+	let reportOpen = false;
+	let reportBusy = false;
+	let reportStep = '';
+	let reportError = '';
+	/** Cached sources so switching format doesn't refetch everything. */
+	let reportData: EventReportSources | null = null;
+	let reportDoc: EventReportDocument | null = null;
+
+	async function ensureReportData(): Promise<EventReportSources> {
+		if (reportData) return reportData;
+		reportData = await loadEventReportData(eventId, analytics, (s) => (reportStep = s));
+		return reportData;
+	}
+
+	async function handleReportSelect(e: CustomEvent<{ format: 'csv' | 'pdf' }>) {
+		if (reportBusy) return;
+		reportBusy = true;
+		reportError = '';
+		reportStep = 'Starting…';
+
+		try {
+			const data = await ensureReportData();
+			const title = data.event?.title ?? analytics?.eventTitle ?? 'event';
+
+			if (e.detail.format === 'csv') {
+				reportStep = 'Building CSV…';
+				const sections = buildEventReportSections(data);
+				downloadCsv(exportFilename(title, 'full-report'), renderReport(sections, title));
+				reportOpen = false;
+			} else {
+				reportStep = 'Laying out the document…';
+				// Let the report component render the freshly loaded data before
+				// handing the page to the print engine.
+				await tick();
+				await reportDoc?.print();
+				reportOpen = false;
+			}
+		} catch (err: any) {
+			reportError = err?.message ?? 'Could not generate the report. Please try again.';
+		} finally {
+			reportBusy = false;
+			reportStep = '';
+		}
+	}
 
 	async function loadAISummary() {
 		aiLoading = true;
@@ -114,7 +179,11 @@
 	function fmtCurrency(n: number | undefined, currency?: string): string {
 		const code = (currency || analytics?.tickets?.currency || 'NGN').toUpperCase();
 		try {
-			return new Intl.NumberFormat('en-US', { style: 'currency', currency: code, minimumFractionDigits: 0 }).format(n || 0);
+			return new Intl.NumberFormat('en-US', {
+				style: 'currency',
+				currency: code,
+				minimumFractionDigits: 0
+			}).format(n || 0);
 		} catch {
 			return `${code} ${(n || 0).toLocaleString()}`;
 		}
@@ -131,12 +200,17 @@
 	<div class="mb-6">
 		<div class="mb-2 flex items-center justify-between">
 			<span class="text-sm text-[#83808D]">{analytics?.collectionId ? 'Collection' : ''}</span>
-			<a href="/event-page/{eventId}" target="_blank" rel="noopener noreferrer"
-				class="flex items-center gap-1.5 rounded-md bg-[#F0EFF1] px-3 py-1.5 text-sm font-medium text-[#5D646F] transition-colors hover:bg-[#E4E3E6]">
+			<a
+				href="/event-page/{eventId}"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="flex items-center gap-1.5 rounded-md bg-[#F0EFF1] px-3 py-1.5 text-sm font-medium text-[#5D646F] transition-colors hover:bg-[#E4E3E6]"
+			>
 				Event Page
 				<Icon icon="mdi:open-in-new" class="h-3.5 w-3.5 text-[#8A8D90]" />
 			</a>
 		</div>
+
 		<h1 class="mb-4 text-3xl font-bold md:text-4xl">{analytics?.eventTitle || 'Event Insights'}</h1>
 		<Nav {tabs} bind:activeTab />
 	</div>
@@ -144,243 +218,366 @@
 	{#if loading}
 		<InsightsSkeleton variant="event" />
 	{:else if activeTab === 'analytics'}
-
-	<!-- Stats Cards -->
-	<div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-		<div class="rounded-xl bg-white p-4 shadow-sm">
-			<p class="text-xs uppercase text-gray-500">Total Registrations</p>
-			<p class="mt-1 text-2xl font-bold">{fmt(analytics?.registrations?.total)}</p>
-			<p class="mt-1 text-xs text-gray-400">Conversion: {fmtPercent(analytics?.registrations?.conversionRate)}</p>
-		</div>
-		<div class="rounded-xl bg-white p-4 shadow-sm">
-			<p class="text-xs uppercase text-gray-500">Attending</p>
-			<p class="mt-1 text-2xl font-bold text-green-600">{fmt(analytics?.registrations?.attending)}</p>
-			<p class="mt-1 text-xs text-gray-400">Check-in rate: {fmtPercent(analytics?.registrations?.checkInRate)}</p>
-		</div>
-		<div class="rounded-xl bg-white p-4 shadow-sm">
-			<p class="text-xs uppercase text-gray-500">Tickets Sold</p>
-			<p class="mt-1 text-2xl font-bold">{fmt(analytics?.tickets?.totalSold)}</p>
-			<p class="mt-1 text-xs text-gray-400">Avg price: {fmtCurrency(analytics?.tickets?.averageTicketPrice)}</p>
-		</div>
-		<div class="rounded-xl bg-white p-4 shadow-sm">
-			<p class="text-xs uppercase text-gray-500">Total Revenue</p>
-			<p class="mt-1 text-2xl font-bold text-blue-600">{fmtCurrency(analytics?.tickets?.totalRevenue, analytics?.tickets?.currency)}</p>
-			<p class="mt-1 text-xs text-gray-400">Refunds: {fmtCurrency(analytics?.tickets?.refunds?.amount)}</p>
-		</div>
-	</div>
-
-	<!-- Charts -->
-	<div class="mb-6 grid gap-4 rounded-2xl bg-[#FDFDFD] p-1">
-		<div class="flex w-full flex-col gap-10 p-4 lg:flex-row">
-			<div class="w-full">
-				{#if chartData.length > 0}
-					<StackedAreaChart data={chartData} options={areaOptions} />
-				{:else}
-					<div class="flex h-80 items-center justify-center text-gray-400">No trend data yet</div>
-				{/if}
+		<!-- Stats Cards -->
+		<div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+			<div class="rounded-xl bg-white p-4 shadow-sm">
+				<p class="text-xs uppercase text-gray-500">Total Registrations</p>
+				<p class="mt-1 text-2xl font-bold">{fmt(analytics?.registrations?.total)}</p>
+				<p class="mt-1 text-xs text-gray-400">
+					Conversion: {fmtPercent(analytics?.registrations?.conversionRate)}
+				</p>
 			</div>
-			<div class="flex w-full max-w-100 items-center justify-center">
-				<DonutChart data={donutData} options={donutOptions} />
+			<div class="rounded-xl bg-white p-4 shadow-sm">
+				<p class="text-xs uppercase text-gray-500">Attending</p>
+				<p class="mt-1 text-2xl font-bold text-green-600">
+					{fmt(analytics?.registrations?.attending)}
+				</p>
+				<p class="mt-1 text-xs text-gray-400">
+					Check-in rate: {fmtPercent(analytics?.registrations?.checkInRate)}
+				</p>
+			</div>
+			<div class="rounded-xl bg-white p-4 shadow-sm">
+				<p class="text-xs uppercase text-gray-500">Tickets Sold</p>
+				<p class="mt-1 text-2xl font-bold">{fmt(analytics?.tickets?.totalSold)}</p>
+				<p class="mt-1 text-xs text-gray-400">
+					Avg price: {fmtCurrency(analytics?.tickets?.averageTicketPrice)}
+				</p>
+			</div>
+			<div class="rounded-xl bg-white p-4 shadow-sm">
+				<p class="text-xs uppercase text-gray-500">Total Revenue</p>
+				<p class="mt-1 text-2xl font-bold text-blue-600">
+					{fmtCurrency(analytics?.tickets?.totalRevenue, analytics?.tickets?.currency)}
+				</p>
+				<p class="mt-1 text-xs text-gray-400">
+					Refunds: {fmtCurrency(analytics?.tickets?.refunds?.amount)}
+				</p>
 			</div>
 		</div>
 
-		<!-- Stats + Lists -->
-		<div class="flex w-full flex-col items-start gap-6 rounded-b-2xl bg-[#F4F4F4] p-4 lg:flex-row">
-			<div class="w-full space-y-4 text-sm text-gray-700">
-				<div>
-					<h3 class="mb-2 font-semibold text-black">Registration Sources</h3>
-					<div class="flex items-center gap-4">
-						<div>
-							<div class="mb-1 text-[#BABABA]">Self-Registered</div>
-							<div class="text-xl font-semibold text-gray-900">{fmt(analytics?.demographics?.bySource?.selfRegistered)}</div>
-						</div>
-						<div>
-							<div class="mb-1 text-[#BABABA]">Manual Invite</div>
-							<div class="text-xl font-semibold text-gray-900">{fmt(analytics?.demographics?.bySource?.manualInvite)}</div>
-						</div>
-						<div>
-							<div class="mb-1 text-[#BABABA]">Bulk Invite</div>
-							<div class="text-xl font-semibold text-gray-900">{fmt(analytics?.demographics?.bySource?.bulkInvite)}</div>
-						</div>
-					</div>
+		<!-- Charts -->
+		<div class="mb-6 grid gap-4 rounded-2xl bg-[#FDFDFD] p-1">
+			<div class="flex w-full flex-col gap-10 p-4 lg:flex-row">
+				<div class="w-full">
+					{#if chartData.length > 0}
+						<StackedAreaChart data={chartData} options={areaOptions} />
+					{:else}
+						<div class="flex h-80 items-center justify-center text-gray-400">No trend data yet</div>
+					{/if}
 				</div>
-
-				<!-- Engagement -->
-				<div>
-					<h3 class="mb-2 font-semibold text-black">Check-in Methods</h3>
-					<div class="flex flex-wrap gap-3">
-						<span class="rounded-full bg-white px-3 py-1 text-xs">QR Code: {fmt(analytics?.engagement?.checkInsByMethod?.qrCode)}</span>
-						<span class="rounded-full bg-white px-3 py-1 text-xs">Passcode: {fmt(analytics?.engagement?.checkInsByMethod?.passcode)}</span>
-						<span class="rounded-full bg-white px-3 py-1 text-xs">Manual: {fmt(analytics?.engagement?.checkInsByMethod?.manual)}</span>
-					</div>
+				<div class="max-w-100 flex w-full items-center justify-center">
+					<DonutChart data={donutData} options={donutOptions} />
 				</div>
-
-				<!-- Waitlist -->
-				{#if analytics?.waitlist?.totalJoined > 0}
-				<div>
-					<h3 class="mb-2 font-semibold text-black">Waitlist</h3>
-					<div class="flex items-center gap-4">
-						<div>
-							<div class="mb-1 text-[#BABABA]">Joined</div>
-							<div class="text-xl font-semibold">{fmt(analytics?.waitlist?.totalJoined)}</div>
-						</div>
-						<div>
-							<div class="mb-1 text-[#BABABA]">Promoted</div>
-							<div class="text-xl font-semibold">{fmt(analytics?.waitlist?.promoted)}</div>
-						</div>
-						<div>
-							<div class="mb-1 text-[#BABABA]">Rate</div>
-							<div class="text-xl font-semibold">{fmtPercent(analytics?.waitlist?.promotionRate)}</div>
-						</div>
-					</div>
-				</div>
-				{/if}
 			</div>
 
-			<div class="h-0 w-full border lg:h-full lg:w-0"></div>
-
-			<!-- Ticket Breakdown -->
-			<div class="flex w-full flex-col gap-3">
-				<h3 class="font-semibold text-black">Ticket Types</h3>
-				{#if analytics?.tickets?.byType?.length > 0}
-					{#each analytics.tickets.byType as tt}
-						<div class="flex items-center justify-between text-sm">
-							<span class="text-gray-600">{tt.name}</span>
-							<div class="flex items-center gap-3">
-								<span class="text-gray-400">{tt.sold} sold</span>
-								<span class="font-medium">{fmtCurrency(tt.revenue)}</span>
-								{#if tt.available > 0}
-									<span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600">{tt.percentSold}%</span>
-								{/if}
+			<!-- Stats + Lists -->
+			<div
+				class="flex w-full flex-col items-start gap-6 rounded-b-2xl bg-[#F4F4F4] p-4 lg:flex-row"
+			>
+				<div class="w-full space-y-4 text-sm text-gray-700">
+					<div>
+						<h3 class="mb-2 font-semibold text-black">Registration Sources</h3>
+						<div class="flex items-center gap-4">
+							<div>
+								<div class="mb-1 text-[#BABABA]">Self-Registered</div>
+								<div class="text-xl font-semibold text-gray-900">
+									{fmt(analytics?.demographics?.bySource?.selfRegistered)}
+								</div>
+							</div>
+							<div>
+								<div class="mb-1 text-[#BABABA]">Manual Invite</div>
+								<div class="text-xl font-semibold text-gray-900">
+									{fmt(analytics?.demographics?.bySource?.manualInvite)}
+								</div>
+							</div>
+							<div>
+								<div class="mb-1 text-[#BABABA]">Bulk Invite</div>
+								<div class="text-xl font-semibold text-gray-900">
+									{fmt(analytics?.demographics?.bySource?.bulkInvite)}
+								</div>
 							</div>
 						</div>
-					{/each}
-				{:else}
-					<p class="text-sm text-gray-400">No ticket types configured</p>
-				{/if}
+					</div>
 
-				<!-- Predictions -->
-				{#if analytics?.predictions?.confidence > 0}
-				<div class="mt-4">
-					<h3 class="font-semibold text-black">Predictions</h3>
-					<div class="mt-2 rounded-lg bg-white p-3 text-sm">
-						<div class="flex justify-between">
-							<span class="text-gray-500">Est. Final Attendance</span>
-							<span class="font-medium">{fmt(analytics.predictions.estimatedFinalAttendance)}</span>
-						</div>
-						<div class="mt-1 flex justify-between">
-							<span class="text-gray-500">Est. Final Revenue</span>
-							<span class="font-medium">{fmtCurrency(analytics.predictions.estimatedFinalRevenue)}</span>
-						</div>
-						<div class="mt-1 flex justify-between">
-							<span class="text-gray-500">Trend</span>
-							<span class="font-medium capitalize {analytics.predictions.attendanceTrend === 'growing' ? 'text-green-600' : analytics.predictions.attendanceTrend === 'declining' ? 'text-red-500' : 'text-gray-600'}">
-								{analytics.predictions.attendanceTrend}
-							</span>
+					<!-- Engagement -->
+					<div>
+						<h3 class="mb-2 font-semibold text-black">Check-in Methods</h3>
+						<div class="flex flex-wrap gap-3">
+							<span class="rounded-full bg-white px-3 py-1 text-xs"
+								>QR Code: {fmt(analytics?.engagement?.checkInsByMethod?.qrCode)}</span
+							>
+							<span class="rounded-full bg-white px-3 py-1 text-xs"
+								>Passcode: {fmt(analytics?.engagement?.checkInsByMethod?.passcode)}</span
+							>
+							<span class="rounded-full bg-white px-3 py-1 text-xs"
+								>Manual: {fmt(analytics?.engagement?.checkInsByMethod?.manual)}</span
+							>
 						</div>
 					</div>
+
+					<!-- Waitlist -->
+					{#if analytics?.waitlist?.totalJoined > 0}
+						<div>
+							<h3 class="mb-2 font-semibold text-black">Waitlist</h3>
+							<div class="flex items-center gap-4">
+								<div>
+									<div class="mb-1 text-[#BABABA]">Joined</div>
+									<div class="text-xl font-semibold">{fmt(analytics?.waitlist?.totalJoined)}</div>
+								</div>
+								<div>
+									<div class="mb-1 text-[#BABABA]">Promoted</div>
+									<div class="text-xl font-semibold">{fmt(analytics?.waitlist?.promoted)}</div>
+								</div>
+								<div>
+									<div class="mb-1 text-[#BABABA]">Rate</div>
+									<div class="text-xl font-semibold">
+										{fmtPercent(analytics?.waitlist?.promotionRate)}
+									</div>
+								</div>
+							</div>
+						</div>
+					{/if}
 				</div>
+
+				<div class="h-0 w-full border lg:h-full lg:w-0"></div>
+
+				<!-- Ticket Breakdown -->
+				<div class="flex w-full flex-col gap-3">
+					<h3 class="font-semibold text-black">Ticket Types</h3>
+					{#if analytics?.tickets?.byType?.length > 0}
+						{#each analytics.tickets.byType as tt}
+							<div class="flex items-center justify-between text-sm">
+								<span class="text-gray-600">{tt.name}</span>
+								<div class="flex items-center gap-3">
+									<span class="text-gray-400">{tt.sold} sold</span>
+									<span class="font-medium">{fmtCurrency(tt.revenue)}</span>
+									{#if tt.available > 0}
+										<span class="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600"
+											>{tt.percentSold}%</span
+										>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					{:else}
+						<p class="text-sm text-gray-400">No ticket types configured</p>
+					{/if}
+
+					<!-- Predictions -->
+					{#if analytics?.predictions?.confidence > 0}
+						<div class="mt-4">
+							<h3 class="font-semibold text-black">Predictions</h3>
+							<div class="mt-2 rounded-lg bg-white p-3 text-sm">
+								<div class="flex justify-between">
+									<span class="text-gray-500">Est. Final Attendance</span>
+									<span class="font-medium"
+										>{fmt(analytics.predictions.estimatedFinalAttendance)}</span
+									>
+								</div>
+								<div class="mt-1 flex justify-between">
+									<span class="text-gray-500">Est. Final Revenue</span>
+									<span class="font-medium"
+										>{fmtCurrency(analytics.predictions.estimatedFinalRevenue)}</span
+									>
+								</div>
+								<div class="mt-1 flex justify-between">
+									<span class="text-gray-500">Trend</span>
+									<span
+										class="font-medium capitalize {analytics.predictions.attendanceTrend ===
+										'growing'
+											? 'text-green-600'
+											: analytics.predictions.attendanceTrend === 'declining'
+												? 'text-red-500'
+												: 'text-gray-600'}"
+									>
+										{analytics.predictions.attendanceTrend}
+									</span>
+								</div>
+							</div>
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
+
+		<!-- Funnel -->
+		<div class="mb-6 rounded-xl bg-white p-6 shadow-sm">
+			<h3 class="mb-4 text-lg font-medium">Registration Funnel</h3>
+			<div class="grid grid-cols-2 gap-4 md:grid-cols-5">
+				<div class="text-center">
+					<p class="text-2xl font-bold">{fmt(analytics?.funnel?.registrationStarts)}</p>
+					<p class="text-xs text-gray-500">Started</p>
+				</div>
+				<div class="text-center">
+					<p class="text-2xl font-bold">{fmt(analytics?.funnel?.registrationCompletes)}</p>
+					<p class="text-xs text-gray-500">Completed</p>
+				</div>
+				<div class="text-center">
+					<p class="text-2xl font-bold">{fmt(analytics?.funnel?.paymentStarts)}</p>
+					<p class="text-xs text-gray-500">Payment Started</p>
+				</div>
+				<div class="text-center">
+					<p class="text-2xl font-bold">{fmt(analytics?.funnel?.paymentCompletes)}</p>
+					<p class="text-xs text-gray-500">Payment Complete</p>
+				</div>
+				<div class="text-center">
+					<p class="text-2xl font-bold text-red-500">
+						{fmtPercent(analytics?.funnel?.dropOffRate)}
+					</p>
+					<p class="text-xs text-gray-500">Drop-off Rate</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Communications -->
+		<div class="mb-6 rounded-xl bg-white p-6 shadow-sm">
+			<h3 class="mb-4 text-lg font-medium">Communications</h3>
+			<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+				<div>
+					<p class="text-2xl font-bold">{fmt(analytics?.communications?.emailsSent)}</p>
+					<p class="text-xs text-gray-500">Emails Sent</p>
+				</div>
+				<div>
+					<p class="text-2xl font-bold">{fmt(analytics?.communications?.invitationsSent)}</p>
+					<p class="text-xs text-gray-500">Invitations</p>
+				</div>
+				<div>
+					<p class="text-2xl font-bold">{fmt(analytics?.communications?.blastsSent)}</p>
+					<p class="text-xs text-gray-500">Blasts Sent</p>
+				</div>
+				<div>
+					<p class="text-2xl font-bold">
+						{fmtPercent(analytics?.communications?.invitationAcceptRate)}
+					</p>
+					<p class="text-xs text-gray-500">Accept Rate</p>
+				</div>
+			</div>
+		</div>
+	{:else if activeTab === 'ai'}
+		<!-- AI Insights Tab -->
+		<div class="space-y-6">
+			<div class="rounded-xl bg-white p-6 shadow-sm">
+				<div class="mb-4 flex items-center justify-between">
+					<h3 class="text-lg font-medium">AI-Generated Summary</h3>
+					<button
+						on:click={loadAISummary}
+						disabled={aiLoading}
+						class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+					>
+						{#if aiLoading}
+							<div
+								class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+							></div>
+							Generating...
+						{:else}
+							<Icon icon="mdi:auto-fix" class="h-4 w-4" />
+							Generate Summary
+						{/if}
+					</button>
+				</div>
+				{#if aiSummary}
+					<div class="prose prose-sm max-w-none rounded-lg bg-gray-50 p-4">
+						{@html renderMarkdown(aiSummary)}
+					</div>
+				{:else}
+					<p class="text-sm text-gray-400">
+						Click "Generate Summary" to get an AI-powered analysis of your event performance.
+					</p>
+				{/if}
+			</div>
+
+			<!-- Full event report: attendees, seating, admins, agenda, finance. -->
+			<div class="overflow-hidden rounded-xl bg-white shadow-sm">
+				<div class="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+					<div class="flex items-start gap-4">
+						<span
+							class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F0EBFB] text-[#6B46C1]"
+						>
+							<Icon icon="mdi:file-chart-outline" class="text-2xl" />
+						</span>
+						<div>
+							<h3 class="text-lg font-medium">Download Event Report</h3>
+							<p class="mt-1 max-w-md text-sm text-gray-500">
+								A complete record of this event — attendees and their registration answers, seating,
+								admins, participants, agenda, tickets, revenue, engagement and feedback.
+							</p>
+							<div class="mt-2 flex flex-wrap gap-1.5">
+								{#each ['Attendees', 'Seating', 'Admins', 'Agenda', 'Revenue', 'Feedback'] as chip}
+									<span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600"
+										>{chip}</span
+									>
+								{/each}
+							</div>
+						</div>
+					</div>
+
+					<button
+						on:click={() => {
+							reportError = '';
+							reportOpen = true;
+						}}
+						disabled={loading}
+						class="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#1F2937] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+					>
+						<Icon icon="mdi:download" class="h-4 w-4" />
+						Download Report
+					</button>
+				</div>
+				<div class="border-t border-gray-100 bg-gray-50 px-6 py-2.5">
+					<p class="text-xs text-gray-500">
+						<Icon icon="mdi:information-outline" class="mr-0.5 inline text-sm" />
+						Available as a designed <strong>PDF</strong> for sharing, or a full <strong>CSV</strong>
+						for analysis.
+					</p>
+				</div>
+			</div>
+
+			<div class="rounded-xl bg-white p-6 shadow-sm">
+				<h3 class="mb-4 text-lg font-medium">Chat with Your Event Data</h3>
+				<div class="flex gap-2">
+					<input
+						type="text"
+						bind:value={chatQuestion}
+						placeholder="Ask a question about your event analytics..."
+						class="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						on:keydown={(e) => e.key === 'Enter' && askQuestion()}
+					/>
+					<button
+						on:click={askQuestion}
+						disabled={chatLoading || !chatQuestion.trim()}
+						class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+					>
+						{chatLoading ? '...' : 'Ask'}
+					</button>
+				</div>
+				{#if chatAnswer}
+					<div class="prose prose-sm mt-4 max-w-none rounded-lg bg-gray-50 p-4">
+						{@html renderMarkdown(chatAnswer)}
+					</div>
 				{/if}
 			</div>
 		</div>
-	</div>
-
-	<!-- Funnel -->
-	<div class="mb-6 rounded-xl bg-white p-6 shadow-sm">
-		<h3 class="mb-4 text-lg font-medium">Registration Funnel</h3>
-		<div class="grid grid-cols-2 gap-4 md:grid-cols-5">
-			<div class="text-center">
-				<p class="text-2xl font-bold">{fmt(analytics?.funnel?.registrationStarts)}</p>
-				<p class="text-xs text-gray-500">Started</p>
-			</div>
-			<div class="text-center">
-				<p class="text-2xl font-bold">{fmt(analytics?.funnel?.registrationCompletes)}</p>
-				<p class="text-xs text-gray-500">Completed</p>
-			</div>
-			<div class="text-center">
-				<p class="text-2xl font-bold">{fmt(analytics?.funnel?.paymentStarts)}</p>
-				<p class="text-xs text-gray-500">Payment Started</p>
-			</div>
-			<div class="text-center">
-				<p class="text-2xl font-bold">{fmt(analytics?.funnel?.paymentCompletes)}</p>
-				<p class="text-xs text-gray-500">Payment Complete</p>
-			</div>
-			<div class="text-center">
-				<p class="text-2xl font-bold text-red-500">{fmtPercent(analytics?.funnel?.dropOffRate)}</p>
-				<p class="text-xs text-gray-500">Drop-off Rate</p>
-			</div>
-		</div>
-	</div>
-
-	<!-- Communications -->
-	<div class="mb-6 rounded-xl bg-white p-6 shadow-sm">
-		<h3 class="mb-4 text-lg font-medium">Communications</h3>
-		<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
-			<div>
-				<p class="text-2xl font-bold">{fmt(analytics?.communications?.emailsSent)}</p>
-				<p class="text-xs text-gray-500">Emails Sent</p>
-			</div>
-			<div>
-				<p class="text-2xl font-bold">{fmt(analytics?.communications?.invitationsSent)}</p>
-				<p class="text-xs text-gray-500">Invitations</p>
-			</div>
-			<div>
-				<p class="text-2xl font-bold">{fmt(analytics?.communications?.blastsSent)}</p>
-				<p class="text-xs text-gray-500">Blasts Sent</p>
-			</div>
-			<div>
-				<p class="text-2xl font-bold">{fmtPercent(analytics?.communications?.invitationAcceptRate)}</p>
-				<p class="text-xs text-gray-500">Accept Rate</p>
-			</div>
-		</div>
-	</div>
-
-	{:else if activeTab === 'ai'}
-	<!-- AI Insights Tab -->
-	<div class="space-y-6">
-		<div class="rounded-xl bg-white p-6 shadow-sm">
-			<div class="mb-4 flex items-center justify-between">
-				<h3 class="text-lg font-medium">AI-Generated Summary</h3>
-				<button on:click={loadAISummary} disabled={aiLoading}
-					class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50">
-					{#if aiLoading}
-						<div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-						Generating...
-					{:else}
-						<Icon icon="mdi:auto-fix" class="h-4 w-4" />
-						Generate Summary
-					{/if}
-				</button>
-			</div>
-			{#if aiSummary}
-				<div class="prose prose-sm max-w-none rounded-lg bg-gray-50 p-4">{@html renderMarkdown(aiSummary)}</div>
-			{:else}
-				<p class="text-sm text-gray-400">Click "Generate Summary" to get an AI-powered analysis of your event performance.</p>
-			{/if}
-		</div>
-
-		<div class="rounded-xl bg-white p-6 shadow-sm">
-			<h3 class="mb-4 text-lg font-medium">Chat with Your Data</h3>
-			<div class="flex gap-2">
-				<input type="text" bind:value={chatQuestion} placeholder="Ask a question about your event analytics..."
-					class="flex-1 rounded-lg border border-gray-200 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-					on:keydown={(e) => e.key === 'Enter' && askQuestion()} />
-				<button on:click={askQuestion} disabled={chatLoading || !chatQuestion.trim()}
-					class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
-					{chatLoading ? '...' : 'Ask'}
-				</button>
-			</div>
-			{#if chatAnswer}
-				<div class="prose prose-sm mt-4 max-w-none rounded-lg bg-gray-50 p-4">{@html renderMarkdown(chatAnswer)}</div>
-			{/if}
-		</div>
-	</div>
-
 	{:else if activeTab === 'surveys'}
-	<div class="flex h-70 flex-col items-center justify-center">
-		<Icon icon="mdi:clipboard-text-outline" class="mb-3 text-6xl text-gray-300" />
-		<p class="text-lg font-medium text-[#A2ACB2]">Surveys & Feedback</p>
-		<p class="mt-1 text-center text-sm text-gray-400">Create surveys and collect feedback from your event attendees. Coming soon.</p>
-	</div>
+		<div class="h-70 flex flex-col items-center justify-center">
+			<Icon icon="mdi:clipboard-text-outline" class="mb-3 text-6xl text-gray-300" />
+			<p class="text-lg font-medium text-[#A2ACB2]">Surveys & Feedback</p>
+			<p class="mt-1 text-center text-sm text-gray-400">
+				Create surveys and collect feedback from your event attendees. Coming soon.
+			</p>
+		</div>
 	{/if}
 </div>
+
+<ReportFormatModal
+	bind:open={reportOpen}
+	busy={reportBusy}
+	busyStep={reportStep}
+	errorText={reportError}
+	on:select={handleReportSelect}
+	on:close={() => (reportOpen = false)}
+/>
+
+<!-- Off-screen printable document. Rendered only once the data exists so the
+     page carries no extra DOM until a report is actually requested. -->
+{#if reportData}
+	<EventReportDocument bind:this={reportDoc} src={reportData} />
+{/if}

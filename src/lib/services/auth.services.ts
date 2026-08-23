@@ -73,12 +73,19 @@ export async function verifyLoginOTP(emailOrPhone: string, otp: string, isPhone 
 
 /**
  * Sends OTP via the unified endpoint — works for both new and existing users.
- * Returns { isNewUser: boolean }
+ *
+ * H-14 — this used to return `{ isNewUser }`, read straight from the server's
+ * response. That field was an account-enumeration oracle: one unauthenticated
+ * request per address revealed whether it holds a Rondwell account, and
+ * Rondwell holds attendee lists for NAMED events, so confirming an address is
+ * registered is itself a disclosure. The server no longer sends it, and
+ * `smartVerifyOTP` works it out from the verification result instead — by which
+ * point the caller has proved control of the address.
  */
 export async function smartRequestOTP(
   emailOrPhone: string,
   isPhone = false
-): Promise<{ isNewUser: boolean }> {
+): Promise<void> {
   setLoading(true);
   setError('');
   try {
@@ -91,7 +98,6 @@ export async function smartRequestOTP(
     const data = await res.json();
     if (!res.ok) throw new Error(parseApiError(res, data));
     toast.success('OTP sent! Check your inbox.');
-    return { isNewUser: data.isNewUser ?? true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Failed to send OTP';
     setError(msg);
@@ -103,24 +109,34 @@ export async function smartRequestOTP(
 }
 
 /**
- * Verifies OTP — uses isNewUser flag to call the correct endpoint directly.
- * Saves auth state on success. Returns 2FA_REQUIRED status if user has 2FA enabled.
+ * Verifies OTP and saves auth state. Returns 2FA_REQUIRED if the user has 2FA.
+ *
+ * H-14 — the caller no longer passes `isNewUser`, because the server no longer
+ * tells anyone. Login verification is attempted first and registration second.
+ *
+ * Exactly one can succeed: the OTP the server issued is type-scoped
+ * (`LOGIN` for an existing account, `REGISTRATION` for a new one) and
+ * single-use, so the wrong endpoint cannot consume it. Trying both here is not
+ * an oracle — the caller is holding a code mailed to that address, so they have
+ * already proved control of it.
  */
 export async function smartVerifyOTP(
   emailOrPhone: string,
   otp: string,
-  isPhone = false,
-  isNewUser = true
+  isPhone = false
 ): Promise<{ token: string; refreshToken: string; user: any; isNewUser: boolean; status?: string; tempToken?: string }> {
   setLoading(true);
   setError('');
   try {
     let data: any;
+    let isNewUser = false;
 
-    if (isNewUser) {
-      data = await verifyRegistrationOTP(emailOrPhone, otp, isPhone);
-    } else {
+    try {
       data = await verifyLoginOTP(emailOrPhone, otp, isPhone);
+    } catch {
+      // Not an existing account (or the code was minted for registration).
+      data = await verifyRegistrationOTP(emailOrPhone, otp, isPhone);
+      isNewUser = true;
     }
 
     // Check if 2FA is required
@@ -129,7 +145,7 @@ export async function smartVerifyOTP(
     }
 
     const { token, refreshToken, user } = data;
-    setUser(user, token, refreshToken);
+    await setUser(user, token, refreshToken);
     setVerified();
 
     return { token, refreshToken, user, isNewUser };
@@ -170,7 +186,7 @@ export async function googleSignIn(
     }
 
     const { token, refreshToken, user, isNewUser } = data;
-    setUser(user, token, refreshToken);
+    await setUser(user, token, refreshToken);
     setVerified();
 
     return { token, refreshToken, user, isNewUser };
@@ -191,14 +207,22 @@ export async function googleSignIn(
  * Called after OTP verify or Google sign-in returns 2FA_REQUIRED.
  */
 export async function verify2FALogin(
-  email: string,
+  tempToken: string,
   twoFactorCode: string,
   backupCode?: string
 ): Promise<{ token: string; refreshToken: string; user: any }> {
   setLoading(true);
   setError('');
   try {
-    const body: Record<string, string> = { email };
+    /**
+     * C-07 — the request carries the `tempToken` from the first factor, not an
+     * `email`. The server resolves the user from that signed receipt and does
+     * not read an email at all.
+     *
+     * Sending an email was what made 2FA a standalone factor: anyone with an
+     * address and one TOTP or backup code got a session, with no password.
+     */
+    const body: Record<string, string> = { tempToken };
     if (backupCode) {
       body.backupCode = backupCode;
     } else {
@@ -213,7 +237,7 @@ export async function verify2FALogin(
     if (!res.ok) throw new Error(parseApiError(res, data));
 
     const { token, refreshToken, user } = data;
-    setUser(user, token, refreshToken);
+    await setUser(user, token, refreshToken);
     setVerified();
 
     return { token, refreshToken, user };
@@ -246,11 +270,22 @@ export async function beginPasskeyAuth(email: string): Promise<any> {
 /**
  * Complete passkey authentication — sends assertion response to the server.
  */
-export async function completePasskeyAuth(userId: string, assertionData: any): Promise<any> {
+/**
+ * C-03 — no `userId` parameter.
+ *
+ * It used to select the account the server minted a session for, while the
+ * signature was checked against a user resolved from the `email` field. Pairing
+ * a victim's `credentialId` with an attacker's `email` and assertion passed the
+ * crypto against the attacker's key and issued a session for the victim. The
+ * server now resolves the account once, from the credential id inside the
+ * signed assertion — the one field an attacker cannot swap without breaking
+ * the signature.
+ */
+export async function completePasskeyAuth(assertionData: any): Promise<any> {
   const res = await fetch(`${BASE_URL}/api/v1/auth/passkeys/authenticate/complete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, ...assertionData }),
+    body: JSON.stringify(assertionData),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(parseApiError(res, data));

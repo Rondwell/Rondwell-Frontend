@@ -11,10 +11,17 @@
 		releaseUserPayoutHolds,
 		type PayoutPanel,
 		type PayoutPolicyMode,
-		type PayoutRiskTier
+		type PayoutRiskTier,
+		getAdminUser
 	} from '$lib/services/admin.services';
 	import PlanSelect from '$lib/components/hq/PlanSelect.svelte';
+	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+
+	// Moving another user's money is super-admin only (enforced server-side);
+	// hiding the entry point keeps a read-only admin from hitting a 403.
+	const adminUser = getAdminUser();
+	const isSuperAdmin = adminUser?.role === 'super_admin';
 
 	let users: any[] = [];
 	let total = 0;
@@ -279,10 +286,50 @@
 		fetchUsers();
 	}
 
+	/**
+	 * Copy the user's ID.
+	 *
+	 * The ID is the handle every other admin tool keys off — Finance →
+	 * Transfers, wallet audit, payout policy — so it needs to be lifted out of
+	 * this panel exactly, not squinted at and retyped. A wrong character in a
+	 * transfer means paying out of the wrong wallet.
+	 *
+	 * `navigator.clipboard` needs a secure context; the textarea fallback
+	 * keeps this working over plain HTTP (a LAN/staging box) instead of
+	 * silently doing nothing.
+	 */
+	let copiedUserId = false;
+	let copyTimer: ReturnType<typeof setTimeout>;
+
+	async function copyUserId(id: string) {
+		if (!id) return;
+		try {
+			if (navigator.clipboard?.writeText) {
+				await navigator.clipboard.writeText(id);
+			} else {
+				const ta = document.createElement('textarea');
+				ta.value = id;
+				ta.setAttribute('readonly', '');
+				ta.style.position = 'fixed';
+				ta.style.opacity = '0';
+				document.body.appendChild(ta);
+				ta.select();
+				document.execCommand('copy');
+				document.body.removeChild(ta);
+			}
+			copiedUserId = true;
+			clearTimeout(copyTimer);
+			copyTimer = setTimeout(() => (copiedUserId = false), 2000);
+		} catch {
+			copiedUserId = false;
+		}
+	}
+
 	async function openUserModal(user: any) {
 		selectedUser = user;
 		showModal = true;
 		modalLoading = true;
+		copiedUserId = false;
 		// Reset plan state for the newly opened user.
 		userPlan = null;
 		planError = '';
@@ -602,10 +649,58 @@
 								{(selectedUser.name || selectedUser.email || '?').charAt(0).toUpperCase()}
 							</div>
 						{/if}
-						<div>
+						<div class="min-w-0 flex-1">
 							<p class="text-lg font-semibold text-gray-900">{selectedUser.name || 'Unknown'}</p>
-							<p class="text-sm text-gray-400">{selectedUser.email}</p>
+							<p class="truncate text-sm text-gray-400">{selectedUser.email}</p>
 						</div>
+					</div>
+
+					<!--
+						User ID. Needed verbatim by Finance → Transfers, wallet audit and
+						the payout tools, so it is copyable rather than something to
+						transcribe by eye.
+					-->
+					<div class="mt-4 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
+						<p class="text-xs text-[#C1C2C2]">User ID</p>
+						<div class="mt-1 flex items-center gap-2">
+							<code
+								class="min-w-0 flex-1 truncate font-mono text-xs text-gray-800 select-all"
+								title={selectedUser._id}
+							>{selectedUser._id}</code>
+							<button
+								on:click={() => copyUserId(selectedUser._id)}
+								title="Copy user ID"
+								aria-label="Copy user ID"
+								class="flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition
+									{copiedUserId
+										? 'border-green-200 bg-green-50 text-green-700'
+										: 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}"
+							>
+								{#if copiedUserId}
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+									Copied
+								{:else}
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 012-2h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+									Copy
+								{/if}
+							</button>
+						</div>
+
+						<!--
+							Hands the id straight to the transfer composer. Copy-pasting an
+							ObjectId between two screens is the step most likely to put a
+							support transfer against the wrong wallet, so the common path
+							skips it entirely.
+						-->
+						{#if isSuperAdmin}
+							<button
+								on:click={() => goto(`/hq/finance/transfers?userId=${encodeURIComponent(selectedUser._id)}`)}
+								class="mt-2.5 flex w-full items-center justify-center gap-2 rounded-md border border-gray-200 bg-white py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+							>
+								<svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 10h18M7 15h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" stroke-width="2"/></svg>
+								Transfer funds from this wallet
+							</button>
+						{/if}
 					</div>
 
 					<!-- Status -->

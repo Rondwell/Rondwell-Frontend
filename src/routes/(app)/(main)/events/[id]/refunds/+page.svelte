@@ -9,6 +9,7 @@
 	on `receiptUrl` being present in the row).
 -->
 <script lang="ts">
+	import { openExternal } from '$lib/utils/openExternal';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { listEventRefunds, type Refund, type RefundStatus } from '$lib/services/refund.services';
@@ -72,9 +73,10 @@
 
 	function viewReceipt(r: Refund) {
 		if (r.receiptUrl) {
-			window.open(r.receiptUrl, '_blank');
+			// M-138 — `noopener,noreferrer` via the shared helper.
+			openExternal(r.receiptUrl);
 		} else if (r.transactionId) {
-			window.open(`/api/v1/payment/receipts/${r.transactionId}/url`, '_blank');
+			openExternal(`/api/v1/payment/receipts/${r.transactionId}/url`);
 		}
 	}
 </script>

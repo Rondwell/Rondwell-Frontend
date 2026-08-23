@@ -21,3 +21,25 @@ export const SITE = {
 	defaultImage: 'https://rondwell.com/events.png',
 	defaultImageType: 'image/png'
 } as const;
+
+/**
+ * Share-image rendering contract.
+ *
+ * Every og:image is served through the Netlify Image CDN at exactly these
+ * dimensions and format. Because the output size is fixed and guaranteed, we
+ * can declare og:image:width/height truthfully — which is what lets WhatsApp
+ * render a large preview without first downloading the file to measure it.
+ *
+ * 1200x630 (1.91:1) is the cross-platform standard: WhatsApp, Facebook,
+ * LinkedIn, X and iMessage all render it as a full-width card. Switching to a
+ * square card is a one-line change here — everything else derives from it.
+ */
+export const OG_IMAGE = {
+	width: 1200,
+	height: 630,
+	/** Output format. JPEG is universally decodable; WebP support is patchy on older WhatsApp builds. */
+	format: 'jpg',
+	mime: 'image/jpeg',
+	/** Quality tuned to land a 1200x630 photo well under WhatsApp's 600 KB ceiling. */
+	quality: 78
+} as const;

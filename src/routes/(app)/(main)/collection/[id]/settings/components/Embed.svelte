@@ -42,7 +42,9 @@
 
 	let copied = false;
 
-	const embedCode = `<iframe 
+	// csp-ignore-next-line — a copyable code SAMPLE the organizer pastes on THEIR
+	// site. This app never creates this iframe, so it needs no frame-src entry.
+		const embedCode = `<iframe 
   src="https://rondwell.com/embed/calendar/cal-QxJCmyPBjw5PKsT/events?" 
   width="600" 
   height="450" 

@@ -43,7 +43,19 @@ export interface CreateCouponPayload {
 	code: string;
 	discountType: DiscountType;
 	/** Percentage (0-100) for PERCENTAGE; minor units (kobo) for AMOUNT. */
-	discountValue: number;
+	/**
+	 * L-02 — MINOR units, and now only meaningful for PERCENTAGE.
+	 *
+	 * For an `AMOUNT` coupon send `discountValueMajor` instead: the payment
+	 * service owns the currency's minor-unit exponent and converts there. The
+	 * browser's own `Math.round(val * 100)` was correct only for two-decimal
+	 * currencies — every currency the platform handles today — so the two sides
+	 * agreed by coincidence rather than by contract, and JPY (zero minor units)
+	 * would have made every discount a hundred times too large.
+	 */
+	discountValue?: number;
+	/** L-02 — MAJOR units. Converted server-side against the declared `currency`. */
+	discountValueMajor?: number;
 	currency: CouponCurrency;
 	startDate: string;
 	endDate: string;

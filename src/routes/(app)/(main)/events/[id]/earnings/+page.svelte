@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { csvCell } from '$lib/utils/csv';
 	import { page } from '$app/stores';
-	import { getEventEarnings, getEventSalesSummary, getUserSubscriptionInfo, type SalesSummary } from '$lib/services/wallet.services';
+	import {
+		earningsSourceMeta,
+		getEventEarnings,
+		getEventSalesSummary,
+		getUserSubscriptionInfo,
+		type EarningsSource,
+		type SalesSummary
+	} from '$lib/services/wallet.services';
 	import SalesTimelineChart from '$lib/components/SalesTimelineChart.svelte';
 	import { getEventCache } from '$lib/stores/eventCache.store';
 	import { clickOutside } from '$lib/utils/constant';
@@ -29,6 +37,10 @@
 	let showStatusDropdown = false;
 	let dateFilter = 'All Time';
 	let showDateDropdown = false;
+	// Celebration layer — the earnings feed is now a union of ticket sales and
+	// non-ticket contributions, so the organizer needs to slice by source.
+	let sourceFilter = 'All';
+	let showSourceDropdown = false;
 	let loadingEarnings = true;
 
 	let earnings: any[] = [];
@@ -51,6 +63,24 @@
 
 	const statusOptions = ['All', 'Completed', 'Pending', 'Refunded'];
 	const dateOptions = ['All Time', 'Today', 'This Week', 'This Month', 'Last 3 Months', 'Last 6 Months'];
+	const sourceOptions: Array<{ value: string; label: string }> = [
+		{ value: 'All', label: 'All sources' },
+		{ value: 'TICKET', label: 'Ticket sales' },
+		{ value: 'WISHLIST', label: 'Gifts (registry)' },
+		{ value: 'RSVP_CONTRIBUTION', label: 'Guest contributions' },
+		{ value: 'GIFT_LINK', label: 'Gift links' }
+	];
+	$: sourceFilterLabel =
+		sourceOptions.find((o) => o.value === sourceFilter)?.label ?? 'All sources';
+
+	/** Rows from the union feed carry `source`; older ticket-only rows do not. */
+	function rowSource(e: any): EarningsSource {
+		return (e?.source as EarningsSource) ?? 'TICKET';
+	}
+
+	// Hoisted out of the markup: `{@const}` is only legal as the immediate
+	// child of a block tag, and this one sits inside a plain <div>.
+	const ticketMeta = earningsSourceMeta('TICKET');
 
 	function koboToNaira(amount: number): number {
 		// FE-P1-01 / FE-P1-16 — legacy alias for the kobo→major conversion
@@ -115,6 +145,7 @@
 			if (!name.includes(q) && !email.includes(q) && !ticketName.includes(q)) return false;
 		}
 		if (statusFilter !== 'All' && e.status !== statusFilter.toUpperCase()) return false;
+		if (sourceFilter !== 'All' && rowSource(e) !== sourceFilter) return false;
 		if (dateFilter !== 'All Time') {
 			const now = new Date();
 			const created = new Date(e.paidAt || e.createdAt);
@@ -138,13 +169,53 @@
 
 	$: earningsTotalPages = Math.ceil(filteredEarnings.length / earningsPerPage);
 	$: pagedEarnings = filteredEarnings.slice((earningsPage - 1) * earningsPerPage, earningsPage * earningsPerPage);
-	$: if (statusFilter || dateFilter || searchQuery) earningsPage = 1;
+	$: if (statusFilter || dateFilter || searchQuery || sourceFilter) earningsPage = 1;
+
+	/**
+	 * GAP 9 — promoter commissions.
+	 *
+	 * Loaded separately and allowed to fail: an event with promoter mode off
+	 * gets `null` here and the whole block simply doesn't render, so the
+	 * earnings page of an ordinary ticketed event is untouched.
+	 */
+	let promoterSummary: {
+		currency: string;
+		pendingKobo: number;
+		eligibleKobo: number;
+		paidKobo: number;
+		eligibleCount: number;
+		pendingCount: number;
+	} | null = null;
+
+	/**
+	 * Net once every commission is accounted for.
+	 *
+	 * PAID is already gone from the wallet; ELIGIBLE and PENDING are still
+	 * owed. All three are subtracted, because the honest answer to "what do I
+	 * actually keep" includes money that is committed but not yet moved.
+	 */
+	$: netAfterCommissions = salesSummary
+		? salesSummary.totals.net -
+			((promoterSummary?.paidKobo ?? 0) +
+				(promoterSummary?.eligibleKobo ?? 0) +
+				(promoterSummary?.pendingKobo ?? 0))
+		: 0;
+
+	async function loadPromoterSummary() {
+		try {
+			const { getPromoterPayoutSummary } = await import('$lib/services/promoter.services');
+			promoterSummary = await getPromoterPayoutSummary(eventId);
+		} catch {
+			promoterSummary = null;
+		}
+	}
 
 	onMount(() => {
 		if (eventId) {
 			fetchEarnings();
 			loadFeeRate();
 			loadSalesSummary();
+			loadPromoterSummary();
 		}
 	});
 
@@ -219,6 +290,9 @@
 			case 'COMPLETED': return 'bg-green-100 text-green-700';
 			case 'PENDING': return 'bg-yellow-100 text-yellow-700';
 			case 'REFUNDED': return 'bg-red-100 text-red-700';
+			// Contributions can terminate FAILED (abandoned checkout); ticket
+			// payments never surfaced this status, hence the addition.
+			case 'FAILED': return 'bg-red-50 text-red-500';
 			default: return 'bg-gray-100 text-gray-700';
 		}
 	}
@@ -248,27 +322,78 @@
 		return Number(e.groupMembersCount ?? e.metaData?.groupMembersCount ?? 0);
 	}
 
+	/**
+	 * Fee + net for one row, in MAJOR units.
+	 *
+	 * Ticket rows predate the stored-fee columns, so their fee is re-derived
+	 * from the organizer's rate — that is how this page has always worked.
+	 * Contribution rows carry `platformFeeKobo` / `netKobo` stamped at
+	 * settlement, so we read those verbatim: re-deriving would disagree with
+	 * the ledger for anything settled under a different plan rate.
+	 */
+	function rowFeeNet(e: any, ccy: string): { fee: number; net: number } {
+		const gross = koboToMajor(Number(e.totalAmount ?? 0), ccy);
+		if (rowSource(e) !== 'TICKET' && typeof e.platformFeeKobo === 'number') {
+			const fee = koboToMajor(Number(e.platformFeeKobo ?? 0), ccy);
+			const net = koboToMajor(Number(e.netKobo ?? Math.max(0, Number(e.totalAmount ?? 0) - Number(e.platformFeeKobo ?? 0))), ccy);
+			return { fee, net };
+		}
+		const fee = e.status === 'COMPLETED' ? gross * feeRate : 0;
+		return { fee, net: gross - fee };
+	}
+
+	/**
+	 * H-28 — the hand-rolled encoder here is gone; every cell goes through
+	 * `csvCell`.
+	 *
+	 * The version this replaced was the worst of the three sites, because it
+	 * was wrong in two independent ways:
+	 *
+	 * **Field breakout.** `.map(v => `"${v}"`)` wrapped every value in quotes
+	 * without doubling the quotes inside it, and the one field that could
+	 * contain a quote had them replaced with apostrophes on the way past
+	 * (`.replace(/"/g, "'")`) — a workaround that silently corrupts a gift
+	 * message rather than escaping it. Any other column containing a `"` — a
+	 * display name, a ticket type — broke the row and shifted every subsequent
+	 * column.
+	 *
+	 * **Formula injection.** No leading-character guard at all. `getUserName`
+	 * and the gift `message` are both attendee-supplied free text, and this
+	 * file is downloaded and opened in a spreadsheet by the organizer — the
+	 * person with access to the event's money.
+	 *
+	 * `csvCell` doubles embedded quotes properly, so the message no longer
+	 * needs mangling and round-trips intact.
+	 */
 	function downloadCSV() {
 		if (filteredEarnings.length === 0) return;
-		const headers = ['Name', 'Email', 'Time', 'Date', 'Ticket Type', 'Amount (₦)', `Fee (${feePercent}%)`, 'Net (₦)', 'Status'];
+		const headers = ['Source', 'Name', 'Email', 'Time', 'Date', 'Item', 'Amount', 'Currency', 'Fee', 'Net', 'Status', 'Note'];
 		const rows = filteredEarnings.map((e: any) => {
-			const gross = koboToNaira(e.totalAmount ?? 0);
-			const fee = e.status === 'COMPLETED' ? gross * feeRate : 0;
-			const net = gross - fee;
+			const ccy = (e.currency || 'NGN').toUpperCase();
+			const gross = koboToMajor(Number(e.totalAmount ?? 0), ccy);
+			const { fee, net } = rowFeeNet(e, ccy);
 			return [
+				earningsSourceMeta(rowSource(e)).label,
 				getUserName(e),
 				getUserEmail(e),
 				formatTime(e.paidAt || e.createdAt),
 				formatDate(e.paidAt || e.createdAt),
 				getTicketType(e),
 				gross.toFixed(2),
+				ccy,
 				fee > 0 ? fee.toFixed(2) : '0',
 				net.toFixed(2),
-				e.status
-			].map(v => `"${v}"`).join(',');
+				e.status,
+				// A gift often carries a message; it belongs in the export so
+				// the host can write thank-you notes offline. No longer
+				// quote-mangled — `csvCell` escapes it correctly.
+				e.metaData?.message ?? ''
+			].map(csvCell).join(',');
 		});
-		const csv = [headers.join(','), ...rows].join('\n');
-		const blob = new Blob([csv], { type: 'text/csv' });
+		const csv = [headers.map(csvCell).join(','), ...rows].join('\r\n');
+		// `\uFEFF` — a UTF-8 BOM, so Excel on Windows reads the accented
+		// characters in Nigerian names correctly instead of as mojibake.
+		const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
 		a.href = url;
@@ -305,20 +430,119 @@
 		<!-- Gateway fee is intentionally omitted: it is borne by the attendee at
 		     checkout (pass-on model) and is not deducted from the organizer's
 		     net, so surfacing it here only confused organizers. -->
-		<div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+		<!-- Headline totals now span EVERY revenue source (tickets + gifts +
+		     contributions), so the number here matches the wallet. The
+		     ticket-only split lives in the "Revenue by source" row below. -->
+		<div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
 			<div class="rounded-xl border bg-white p-4">
 				<p class="text-xs text-gray-500">Gross</p>
-				<p class="mt-1 text-xl font-semibold">{formatMoney(salesSummary.gross, salesSummary.currency)}</p>
+				<p class="mt-1 text-xl font-semibold">{formatMoney(salesSummary.totals.gross, salesSummary.currency)}</p>
 			</div>
 			<div class="rounded-xl border bg-white p-4">
-				<p class="text-xs text-gray-500">Platform fee</p>
-				<p class="mt-1 text-xl font-semibold text-red-500">-{formatMoney(salesSummary.platformFee, salesSummary.currency)}</p>
+				<!-- H-83 — the fee figure is marked when it is an ESTIMATE.
+				     The backend used to re-price every historical sale at the
+				     organizer's CURRENT tier rate and present the result as
+				     fact, so upgrading FREE -> PLUS retrospectively restated
+				     every past sale. It now sums the immutable WalletEntry
+				     ledger and reports `platformFeeBasis`; only events with no
+				     ledger coverage fall back to an estimate, and that is said
+				     here rather than hidden. -->
+				<p class="text-xs text-gray-500">
+					Platform fee
+					{#if salesSummary.platformFeeBasis === 'ESTIMATED'}
+						<span
+							class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+							title="No fee ledger entries cover this event, so this figure is estimated at your current plan rate rather than the rate charged at the time of sale."
+						>Estimated</span>
+					{/if}
+				</p>
+				<p class="mt-1 text-xl font-semibold text-red-500">-{formatMoney(salesSummary.totals.platformFee, salesSummary.currency)}</p>
 			</div>
 			<div class="rounded-xl border bg-white p-4">
 				<p class="text-xs text-gray-500">Net</p>
-				<p class="mt-1 text-xl font-semibold text-green-600">{formatMoney(salesSummary.net, salesSummary.currency)}</p>
+				<p class="mt-1 text-xl font-semibold text-green-600">{formatMoney(salesSummary.totals.net, salesSummary.currency)}</p>
 			</div>
 		</div>
+
+		<!-- GAP 9 — promoter commissions, as a NEGATIVE line.
+		     Commission leaves the organizer's wallet, so a net figure that
+		     ignored it would overstate what they actually keep. Shown only
+		     when promoter mode has produced something, and split by state
+		     because pending commission can still be reversed by a refund. -->
+		{#if promoterSummary && (promoterSummary.paidKobo > 0 || promoterSummary.eligibleKobo > 0 || promoterSummary.pendingKobo > 0)}
+			<div class="mb-6 rounded-xl border bg-white">
+				<div class="flex items-center justify-between border-b px-4 py-2">
+					<span class="text-xs font-medium text-gray-500">Promoter commissions</span>
+					<a href="/events/{eventId}/planning?tab=promoters" class="text-xs text-pink-600 hover:underline">
+						Manage
+					</a>
+				</div>
+				<div class="grid grid-cols-1 divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+					<div class="p-4">
+						<p class="text-xs text-gray-500">Paid out</p>
+						<p class="mt-1 text-lg font-semibold text-red-500">
+							−{formatMoney(promoterSummary.paidKobo, promoterSummary.currency)}
+						</p>
+						<p class="text-xs text-gray-400">already deducted from your wallet</p>
+					</div>
+					<div class="p-4">
+						<p class="text-xs text-gray-500">Ready to pay</p>
+						<p class="mt-1 text-lg font-semibold text-amber-600">
+							−{formatMoney(promoterSummary.eligibleKobo, promoterSummary.currency)}
+						</p>
+						<p class="text-xs text-gray-400">{promoterSummary.eligibleCount} awaiting payout</p>
+					</div>
+					<div class="p-4">
+						<p class="text-xs text-gray-500">Pending</p>
+						<p class="mt-1 text-lg font-semibold text-gray-500">
+							−{formatMoney(promoterSummary.pendingKobo, promoterSummary.currency)}
+						</p>
+						<p class="text-xs text-gray-400">still inside the refund window</p>
+					</div>
+				</div>
+				<div class="border-t px-4 py-2.5">
+					<div class="flex items-center justify-between text-sm">
+						<span class="text-gray-500">Net after all promoter commissions</span>
+						<span class="font-semibold text-green-700">
+							{formatMoney(netAfterCommissions, salesSummary.currency)}
+						</span>
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Revenue by source — only rendered once there IS non-ticket
+		     revenue, so an ordinary ticketed event's page is unchanged. -->
+		{#if salesSummary.contributions.count > 0}
+			<div class="mb-6 rounded-xl border bg-white">
+				<div class="border-b px-4 py-2 text-xs font-medium text-gray-500">Revenue by source</div>
+				<div class="grid grid-cols-1 divide-y sm:grid-cols-2 sm:divide-y-0 sm:divide-x lg:grid-cols-4">
+					<div class="p-4">
+						<div class="mb-1 flex items-center gap-2">
+							<span class="rounded-full px-2 py-0.5 text-[11px] font-medium" style="background-color: {ticketMeta.bg}; color: {ticketMeta.fg};">
+								{ticketMeta.short}
+							</span>
+							<span class="text-xs text-gray-400">{salesSummary.ticketsSold} sold</span>
+						</div>
+						<p class="text-lg font-semibold text-green-700">{formatMoney(salesSummary.net, salesSummary.currency)}</p>
+						<p class="text-xs text-gray-400">net · {formatMoney(salesSummary.gross, salesSummary.currency)} gross</p>
+					</div>
+					{#each salesSummary.contributions.bySource as row}
+						{@const meta = earningsSourceMeta(row.source)}
+						<div class="p-4">
+							<div class="mb-1 flex items-center gap-2">
+								<span class="rounded-full px-2 py-0.5 text-[11px] font-medium" style="background-color: {meta.bg}; color: {meta.fg};">
+									{meta.short}
+								</span>
+								<span class="text-xs text-gray-400">{row.count} {row.count === 1 ? 'gift' : 'gifts'}</span>
+							</div>
+							<p class="text-lg font-semibold text-green-700">{formatMoney(row.net, salesSummary.currency)}</p>
+							<p class="text-xs text-gray-400">net · {formatMoney(row.gross, salesSummary.currency)} gross</p>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
 		<!-- Inventory + ticket counts -->
 		<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
 			<div class="rounded-xl border bg-white p-4">
@@ -457,6 +681,18 @@
 		<div class="flex items-center gap-2">
 			<div class="flex h-[33px] w-[33px] cursor-pointer items-center justify-center rounded-lg bg-[#EBECED] hover:bg-gray-200" on:click={downloadCSV} role="button" tabindex="0" on:keydown={(e) => e.key === 'Enter' && downloadCSV()}><img src="/download-icon.svg" alt="download CSV" /></div>
 			<div class="flex h-[33px] w-[33px] items-center justify-center rounded-lg bg-[#EBECED]"><img src="/export.svg" alt="export" /></div>
+			<div use:clickOutside={() => (showSourceDropdown = false)} class="relative">
+				<button on:click={() => (showSourceDropdown = !showSourceDropdown)} class="flex items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm">
+					<Icon icon="mdi:shape-outline" class="text-base" /> {sourceFilterLabel}
+				</button>
+				{#if showSourceDropdown}
+					<div class="absolute right-0 z-10 mt-1 w-48 rounded-lg border bg-white shadow-lg">
+						{#each sourceOptions as opt}
+							<button on:click={() => { sourceFilter = opt.value; showSourceDropdown = false; }} class="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 {sourceFilter === opt.value ? 'font-medium text-pink-600' : ''}">{opt.label}</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
 			<div use:clickOutside={() => (showStatusDropdown = false)} class="relative">
 				<button on:click={() => (showStatusDropdown = !showStatusDropdown)} class="flex items-center gap-2 rounded-md bg-[#EBECED] px-3 py-2 text-xs text-[#616265] md:text-sm">
 					<img src="/filter-edit.svg" alt="filter" class="h-5 w-5" /> {statusFilter}
@@ -501,23 +737,24 @@
 		<div class="overflow-visible rounded-xl bg-white shadow-sm">
 			<!-- Table Header -->
 			<div class="hidden border-b px-4 py-3 text-xs font-medium text-gray-400 lg:flex">
-				<div class="w-[22%]">User</div>
-				<div class="w-[10%]">Time</div>
-				<div class="w-[12%]">Date</div>
-				<div class="w-[12%]">Ticket Type</div>
-				<div class="w-[12%] text-right">Amount</div>
-				<div class="w-[10%] text-right">Fee ({feePercent}%)</div>
-				<div class="w-[12%] text-right">Net</div>
-				<div class="w-[10%] text-right">Status</div>
+				<div class="w-[20%]">User</div>
+				<div class="w-[9%]">Time</div>
+				<div class="w-[11%]">Date</div>
+				<div class="w-[11%]">Source</div>
+				<div class="w-[12%]">Item</div>
+				<div class="w-[11%] text-right">Amount</div>
+				<div class="w-[9%] text-right">Fee</div>
+				<div class="w-[10%] text-right">Net</div>
+				<div class="w-[7%] text-right">Status</div>
 			</div>
 			{#each pagedEarnings as e}
 				{@const rowCcy = (e.currency || 'NGN').toUpperCase()}
 				{@const gross = koboToMajor(Number(e.totalAmount ?? 0), rowCcy)}
-				{@const fee = e.status === 'COMPLETED' ? gross * feeRate : 0}
-				{@const net = gross - fee}
+				{@const feeNet = rowFeeNet(e, rowCcy)}
+				{@const srcMeta = earningsSourceMeta(rowSource(e))}
 				<div class="flex flex-col gap-2 border-b px-4 py-3 last:border-none lg:flex-row lg:items-center lg:gap-0">
 					<!-- User -->
-					<div class="flex items-center gap-3 lg:w-[22%]">
+					<div class="flex items-center gap-3 lg:w-[20%]">
 						<div class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-pink-400 text-xs font-medium text-white">
 							{getUserInitials(e)}
 						</div>
@@ -527,26 +764,45 @@
 						</div>
 					</div>
 					<!-- Time -->
-					<div class="text-sm text-gray-500 lg:w-[10%]">{formatTime(e.paidAt || e.createdAt)}</div>
+					<div class="text-sm text-gray-500 lg:w-[9%]">{formatTime(e.paidAt || e.createdAt)}</div>
 					<!-- Date -->
-					<div class="text-sm text-gray-500 lg:w-[12%]">{formatDate(e.paidAt || e.createdAt)}</div>
-					<!-- Ticket Type -->
+					<div class="text-sm text-gray-500 lg:w-[11%]">{formatDate(e.paidAt || e.createdAt)}</div>
+					<!-- Source -->
+					<div class="lg:w-[11%]">
+						<span
+							class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium"
+							style="background-color: {srcMeta.bg}; color: {srcMeta.fg};"
+							title={srcMeta.label}
+						>
+							<Icon icon={srcMeta.icon} class="text-sm" />
+							{srcMeta.short}
+						</span>
+					</div>
+					<!-- Item (ticket type, or what the gift was for) -->
 					<div class="flex flex-wrap items-center gap-1 lg:w-[12%]">
-						<span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">{getTicketType(e)}</span>
+						<span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 truncate max-w-full">{getTicketType(e)}</span>
 						{#if isGroupPurchase(e)}
 							<span class="rounded-full bg-[#EDE9FE] px-2 py-1 text-xs font-medium text-[#513BE2]" title="Group registration">
 								👥 Group{getGroupCount(e) > 0 ? ` ×${getGroupCount(e)}` : ''}
 							</span>
 						{/if}
+						{#if e.metaData?.isAnonymous}
+							<span class="rounded-full bg-[#F0EFF1] px-2 py-1 text-xs font-medium text-[#83808D]" title="Hidden on the public contributor wall — you can still see them">
+								Anon
+							</span>
+						{/if}
+						{#if e.metaData?.message}
+							<span class="text-xs text-gray-400 truncate max-w-full" title={e.metaData.message}>“{e.metaData.message}”</span>
+						{/if}
 					</div>
 					<!-- Amount -->
-					<div class="text-sm font-medium lg:w-[12%] lg:text-right">{formatCurrency(gross, rowCcy)}</div>
+					<div class="text-sm font-medium lg:w-[11%] lg:text-right">{formatCurrency(gross, rowCcy)}</div>
 					<!-- Platform Fee -->
-					<div class="text-sm text-red-400 lg:w-[10%] lg:text-right">{fee > 0 ? `-${formatCurrency(fee, rowCcy)}` : '–'}</div>
+					<div class="text-sm text-red-400 lg:w-[9%] lg:text-right">{feeNet.fee > 0 ? `-${formatCurrency(feeNet.fee, rowCcy)}` : '–'}</div>
 					<!-- Net -->
-					<div class="text-sm font-medium text-green-700 lg:w-[12%] lg:text-right">{formatCurrency(net, rowCcy)}</div>
+					<div class="text-sm font-medium text-green-700 lg:w-[10%] lg:text-right">{formatCurrency(feeNet.net, rowCcy)}</div>
 					<!-- Status -->
-					<div class="lg:w-[10%] lg:text-right">
+					<div class="lg:w-[7%] lg:text-right">
 						<span class="rounded-full px-2 py-1 text-xs font-medium {getStatusStyle(e.status)}">{e.status.charAt(0) + e.status.slice(1).toLowerCase()}</span>
 					</div>
 				</div>
@@ -577,7 +833,7 @@
 		<div class="flex h-60 flex-col items-center justify-center rounded-xl bg-white">
 			<Icon icon="mdi:cash-off" class="mb-2 text-4xl text-gray-300" />
 			<p class="text-lg font-medium text-[#A2ACB2]">No earnings yet</p>
-			<p class="mt-1 text-sm text-gray-400">Earnings will appear here when tickets are sold.</p>
+			<p class="mt-1 text-sm text-gray-400">Ticket sales, gifts and guest contributions all show up here.</p>
 		</div>
 	{/if}
 </div>

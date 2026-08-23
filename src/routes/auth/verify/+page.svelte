@@ -11,7 +11,6 @@
   let code = Array(6).fill('');
   let email = '';
   let isPhone = false;
-  let isNewUser = true;
   let message = '';
   let loading = false;
   let seconds = 45;
@@ -20,7 +19,6 @@
   onMount(async () => {
     email = $page.url.searchParams.get('email') || localStorage.getItem('pending-email') || '';
     isPhone = localStorage.getItem('pending-is-phone') === '1';
-    isNewUser = localStorage.getItem('pending-is-new-user') === '1';
 
     if (!email) {
       message = 'No contact found. Please go back and try again.';
@@ -38,9 +36,7 @@
     loading = true;
     message = '';
     try {
-      const result = await smartRequestOTP(email, isPhone);
-      isNewUser = result.isNewUser;
-      localStorage.setItem('pending-is-new-user', isNewUser ? '1' : '0');
+      await smartRequestOTP(email, isPhone);
       message = 'OTP resent successfully';
       startTimer();
     } catch (err) {
@@ -81,18 +77,22 @@
     loading = true;
     message = '';
     try {
-      const result = await smartVerifyOTP(email, otp, isPhone, isNewUser);
+      const result = await smartVerifyOTP(email, otp, isPhone);
 
       // Check if 2FA is required
       if (result.status === '2FA_REQUIRED') {
         localStorage.setItem('2fa-pending-email', email);
+        // C-07 — the tempToken IS the credential for the second step. Storing
+        // only the email left `/auth/2fa` with nothing to authenticate with, so
+        // it reported "your sign-in session has expired" on arrival and Verify
+        // returned early without ever calling the server.
+        localStorage.setItem('2fa-temp-token', result.tempToken ?? '');
         goto(withReturnUrl(`/auth/2fa?email=${encodeURIComponent(email)}`, $page.url));
         return;
       }
 
       localStorage.removeItem('pending-email');
       localStorage.removeItem('pending-is-phone');
-      localStorage.removeItem('pending-is-new-user');
       message = 'Verified successfully';
 
       // Priority: returnUrl in the URL (invitation links) > stored redirect >

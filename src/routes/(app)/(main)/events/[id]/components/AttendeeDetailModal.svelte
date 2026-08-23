@@ -81,6 +81,16 @@
 		loadTimeline();
 	}
 
+	/**
+	 * GAP 6 — the gift this guest added at RSVP, if any.
+	 *
+	 * A SEPARATE charge from the ticket (linked only by `registrationId`), so
+	 * it is loaded separately too. Refunding the ticket does not touch it.
+	 */
+	let contribution: any = null;
+	/** GAP 7 — what the guest declared at the door-gate, for the organizer's audit. */
+	$: ageDeclaration = registration?.registration_data?.ageDeclaration ?? null;
+
 	async function loadDetail() {
 		try {
 			const detail = await getAttendeeDetail(eventId, attendeeId);
@@ -92,6 +102,21 @@
 			ticketCurrency = detail.ticketCurrency || 'NGN';
 			seatInfo = detail.seatInfo || null;
 			detailCache.set(attendeeId, detail);
+
+			// Best-effort: an organizer without contribution access, or a
+			// payment service blip, must not blank the whole modal.
+			const regId = detail.registration?.registration_id ?? detail.registration?._id;
+			if (regId) {
+				try {
+					const { getEventContributions } = await import('$lib/services/contribution.services');
+					const res = await getEventContributions(eventId, {
+						registrationId: String(regId),
+						status: 'COMPLETED',
+						limit: 1
+					});
+					contribution = res.data[0] ?? null;
+				} catch { contribution = null; }
+			}
 		} catch (e) { console.error('Failed to load detail:', e); }
 		finally { detailLoading = false; }
 	}
@@ -281,9 +306,40 @@
 							</div>
 						{/if}
 						{#if registration?.event_passcode && isConfirmed}
-							<div>
+							<div class="border-r border-gray-200 pr-6">
 								<p class="text-xs text-[#C1C2C2]">Event Passcode</p>
 								<p class="text-sm font-semibold font-mono text-black">{registration.event_passcode}</p>
+							</div>
+						{/if}
+						<!-- GAP 6 — the gift is a SEPARATE charge from the ticket, so it
+						     gets its own cell rather than being folded into Amount Paid. -->
+						{#if contribution}
+							<div class="border-r border-gray-200 pr-6">
+								<p class="text-xs text-[#C1C2C2]">Contribution</p>
+								<p class="text-sm font-semibold text-[#3CBD2C]">
+									{new Intl.NumberFormat('en-NG', {
+										style: 'currency',
+										currency: contribution.currency || 'NGN',
+										minimumFractionDigits: 0
+									}).format((contribution.amountKobo ?? 0) / 100)}
+								</p>
+								{#if contribution.message}
+									<p class="mt-0.5 max-w-[220px] text-xs text-[#83808D]">“{contribution.message}”</p>
+								{/if}
+							</div>
+						{/if}
+						<!-- GAP 7 — the door audit trail. This is the evidence the age
+						     check actually ran, which is the point of the feature for
+						     licensed premises. -->
+						{#if ageDeclaration}
+							<div>
+								<p class="text-xs text-[#C1C2C2]">Age at event</p>
+								<p class="text-sm font-semibold text-black">
+									{ageDeclaration.ageAtEvent}
+									<span class="text-xs font-normal text-[#83808D]">
+										· {ageDeclaration.method === 'ID_REQUIRED' ? 'ID verified' : 'self-declared'}
+									</span>
+								</p>
 							</div>
 						{/if}
 					</div>

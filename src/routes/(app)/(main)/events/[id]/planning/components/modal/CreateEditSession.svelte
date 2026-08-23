@@ -7,6 +7,7 @@
 	import { createEventDispatcher, tick } from 'svelte';
 	import DatePickerModal from '../../../../../../create-event/components/DatePickerModal.svelte';
 	import TimeModal from '../../../../../../create-event/components/TimeModal.svelte';
+	import { buildZonedInstant } from '$lib/utils/eventTime';
 
 	const dispatch = createEventDispatcher();
 
@@ -212,8 +213,46 @@
 
 	function formatDate(date: Date): string { return formatDayLabel(date); }
 
+	/**
+	 * H-75 — the event's timezone is now USED, not just stored.
+	 *
+	 * This function assembled `"YYYY-MM-DDTHH:mm:00"` and handed it to
+	 * `new Date(...)`, which parses a string with no offset as **browser-local**.
+	 * So a Lagos-based organizer creating a New York event, selecting
+	 * `America/New_York` and typing 7:00 PM, stored `19:00 WAT` = `18:00 UTC`.
+	 * The correct instant is `23:00 UTC` — **five hours wrong, at creation.**
+	 *
+	 * The old body contradicted itself in three lines: one comment said *"Build
+	 * a date string in the event's timezone context"* and the next said *"Use
+	 * the browser's local timezone (which matches the user's intent)"*. Only the
+	 * second was true, and it is the bug.
+	 *
+	 * `buildZonedInstant` takes the zone as a **required** argument — see
+	 * `$lib/utils/eventTime.ts` for why, and for how the offset is derived
+	 * without shipping a timezone database.
+	 */
 	function buildDateTime(date: Date, timeStr: string): string {
-		return combineDateAndTime(date, timeStr).toISOString();
+		return buildZonedInstant(date, timeStr, resolveEventTimeZone());
+	}
+
+	/**
+	 * The zone this form is authoring in.
+	 *
+	 * Falls back to the browser zone only when the form has no explicit zone —
+	 * which is the pre-existing behaviour for forms that do not offer a zone
+	 * picker, and is correct for them: an organizer editing a session on their
+	 * own event means their own clock.
+	 */
+	function resolveEventTimeZone(): string {
+		// H-75 — a session's start/end belong to the event's zone. `eventData`
+		// is the loaded event, so its `timeZone` is authoritative here.
+		const explicit = eventData?.timeZone;
+		if (explicit) return String(explicit);
+		try {
+			return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+		} catch {
+			return 'UTC';
+		}
 	}
 
 	function scrollToId(id: string) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }

@@ -18,8 +18,14 @@
 		<link rel="icon" type="image/png" sizes="32x32" href="%sveltekit.assets%/favicon.png" />
 		<link rel="icon" type="image/png" sizes="16x16" href="%sveltekit.assets%/favicon.png" />
 
-		<!-- Prevent flash of unstyled content -->
-		<script>
+		<!-- Prevent flash of unstyled content.
+
+		     M-07 — `nonce="%sveltekit.nonce%"` so this inline script survives a
+		     CSP with no `unsafe-inline`. SvelteKit substitutes a fresh nonce per
+		     request and emits the matching `script-src 'nonce-...'`. Without the
+		     attribute this script is blocked and every page loads with the wrong
+		     theme for a frame — the exact flash it exists to prevent. -->
+		<script nonce="%sveltekit.nonce%">
 			(function () {
 				function getTheme() {
 					var stored = localStorage.getItem('theme');
@@ -58,7 +64,9 @@
 
 		%sveltekit.head%
 
-		<!-- Google Identity Services -->
+		<!-- Google Identity Services.
+		     M-07 — allowed by name in `script-src` (svelte.config.js). An
+		     external script needs no nonce, but its ORIGIN must be listed. -->
 		<script src="https://accounts.google.com/gsi/client" async defer></script>
 	</head>
 

@@ -8,3 +8,27 @@
 
 [functions]
   node_bundler = "esbuild"
+
+# Netlify Image CDN — hosts we are allowed to transform share images from.
+#
+# Every og:image is rewritten to /.netlify/images?url=<source>&w=1200&h=630...
+# so WhatsApp fetches a ~35 KB edge-cached JPEG from our own origin instead of
+# a half-megabyte original straight out of S3. Sources not matched below are
+# rejected by the Image CDN with a 400 and the preview silently loses its
+# image, so any NEW image host must be added here.
+#
+# These are regular expressions matched against the full source URL. They use
+# TOML *literal* strings (single quotes) so the backslashes reach the regex
+# engine untouched — double-quoted TOML strings process escapes first, which
+# is the usual way these patterns end up silently wrong.
+[images]
+  remote_images = [
+    # S3 bucket "rondwell-project" (us-east-1), all URL styles AWS may emit.
+    'https://rondwell-project\.s3\.us-east-1\.amazonaws\.com/.*',
+    'https://rondwell-project\.s3\.amazonaws\.com/.*',
+    'https://s3\.us-east-1\.amazonaws\.com/rondwell-project/.*',
+    # Marketing artwork still served from Cloudinary.
+    'https://res\.cloudinary\.com/.*',
+    # Any CloudFront distribution we later put in front of the bucket.
+    'https://[a-z0-9-]+\.cloudfront\.net/.*'
+  ]

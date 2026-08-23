@@ -508,12 +508,15 @@
 </div>
 
 <!-- Create/Edit Ticket Modal -->
+<!-- H-75 — `eventTimeZone` is passed so the sales window is built in the
+     EVENT's zone rather than whichever zone the organizer is sitting in. -->
 <CreateTicketModal
 	bind:open={showCreateTicketModal}
 	{eventId}
 	ticket={editingTicket}
 	eventTitle={eventData?.title ?? ''}
 	eventCapacity={maxAttendees}
+	eventTimeZone={eventData?.timeZone ?? ''}
 	waitlistEnabled={waitlistEnabled}
 	existingTickets={tickets}
 	isMultiDay={eventData?.isMultiDay ?? false}

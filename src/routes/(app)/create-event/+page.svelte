@@ -8,6 +8,7 @@
 	import { toast } from '$lib/stores/toast.store';
 	import { colors, type Color } from '$lib/utils/colors';
 	import { clickOutside } from '$lib/utils/constant';
+	import { majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount, tick } from 'svelte';
 	import Sidebar from '../components/Sidebar.svelte';
@@ -28,6 +29,14 @@
 	import TimeModal from './components/TimeModal.svelte';
 	import TimezoneModal from './components/TimezoneModal.svelte';
 	import VisibilityModal from './components/VisibilityModal.svelte';
+	// C-13 — one representation of visibility, shared by the modal and this page.
+	import {
+		DEFAULT_VISIBILITY,
+		toEventVisibility,
+		visibilityIcon,
+		visibilityLabel,
+		type EventVisibility
+	} from '$lib/constants/event-visibility';
 
 	let showImageSelectorModal = false;
 	let eventImageUrl = '/events.png';
@@ -73,7 +82,12 @@
 	let activeDayEndTime = -1;
 
 	// Form state
-	let visibility = 'public';
+	// C-13 — this is the WIRE ENUM, not a display string. All three writers of
+	// this variable (here, the AI prefill below, and VisibilityModal) now agree
+	// on that one representation, and the display label is derived from it —
+	// which is what makes "the picker says Public, the payload says PRIVATE"
+	// unrepresentable rather than merely fixed.
+	let visibility: EventVisibility = DEFAULT_VISIBILITY;
 	let eventName = '';
 	let startTime = '1:30 AM';
 	let endTime = '2:30 AM';
@@ -88,12 +102,28 @@
 	let description = '';	let registrationType: 'FREE' | 'PAID' = 'FREE';
 	let maxAttendees: number | null = null;
 	let waitlistEnabled = false;
+	/**
+	 * GAP 5 — planning estimates from the capacity step. Distinct from
+	 * `maxAttendees`: that is an enforcement cap, these are what the organizer
+	 * expects and expects to spend, and they seed the Budget tab.
+	 */
+	let expectedGuestCount: number | null = null;
+	let roughBudget: number | null = null;
 	let publicGuestListEnabled = false;
 	let postEventFeedbackEnabled = false;
 	let donationsEnabled = false;
+	// ── Celebration layer toggles ────────────────────────────────────────
+	// Create-time is on/off only; the detail lives on the event's Settings
+	// page. Each maps to a named sub-document on the event, matching the
+	// convention the model already uses (checkinSettings, pageSettings, …).
+	let ageRestrictionEnabled = false;
+	let ageRestrictionMinimumAge = 18;
+	let giftRegistryEnabled = false;
+	let memoriesEnabled = false;
+	let promoterEnabled = false;
+	let budgetEnabled = false;
 	// The custom event link is set after creation from the event's Settings page
 	// (see events/[id]/settings). New events get an auto-generated slug.
-	let approvalRequired = false;
 
 	// Submission state
 	let submitting = false;
@@ -104,6 +134,7 @@
 	let aiError = '';
 
 	import type { AIGeneratedEvent } from '$lib/services/ai.services';
+	import { buildZonedInstant } from '$lib/utils/eventTime';
 
 	function parseISODate(iso: string): Date {
 		// Guard against malformed values from the model — `new Date('nonsense')`
@@ -192,9 +223,13 @@
 		}
 
 		// Visibility
+		// C-13 — normalise once, through the shared coercion, then derive the
+		// icon. This used to map the wire value back down to a lowercase
+		// display string, which is the conversion that made the modal's
+		// capitalised label look like a plausible third representation.
 		if (data.visibility) {
-			visibility = data.visibility === 'PUBLIC' ? 'public' : 'private';
-			visibility_icon = data.visibility === 'PUBLIC' ? 'mdi:web' : 'mdi:lock';
+			visibility = toEventVisibility(data.visibility);
+			visibility_icon = visibilityIcon(visibility);
 		}
 
 		// Dates & times
@@ -313,7 +348,8 @@
 		}
 	}
 
-	let visibility_icon = 'mdi:web';
+	// C-13 — derived from the wire value, never set independently.
+	let visibility_icon = visibilityIcon(DEFAULT_VISIBILITY);
 
 	function formatDate(date: Date) {
 		return date.toLocaleDateString('en-US', {
@@ -411,20 +447,47 @@
 		showImageSelectorModal = false;
 	}
 
+	/**
+	 * H-75 — the event's timezone is now USED, not just stored.
+	 *
+	 * This function assembled `"YYYY-MM-DDTHH:mm:00"` and handed it to
+	 * `new Date(...)`, which parses a string with no offset as **browser-local**.
+	 * So a Lagos-based organizer creating a New York event, selecting
+	 * `America/New_York` and typing 7:00 PM, stored `19:00 WAT` = `18:00 UTC`.
+	 * The correct instant is `23:00 UTC` — **five hours wrong, at creation.**
+	 *
+	 * The old body contradicted itself in three lines: one comment said *"Build
+	 * a date string in the event's timezone context"* and the next said *"Use
+	 * the browser's local timezone (which matches the user's intent)"*. Only the
+	 * second was true, and it is the bug.
+	 *
+	 * `buildZonedInstant` takes the zone as a **required** argument — see
+	 * `$lib/utils/eventTime.ts` for why, and for how the offset is derived
+	 * without shipping a timezone database.
+	 */
 	function buildDateTime(date: Date, timeStr: string): string {
-		const [timePart, meridiem] = timeStr.split(' ');
-		let [hours, minutes] = timePart.split(':').map(Number);
-		if (meridiem === 'PM' && hours !== 12) hours += 12;
-		if (meridiem === 'AM' && hours === 12) hours = 0;
-		// Build a date string in the event's timezone context
-		const year = date.getFullYear();
-		const month = String(date.getMonth() + 1).padStart(2, '0');
-		const day = String(date.getDate()).padStart(2, '0');
-		const h = String(hours).padStart(2, '0');
-		const m = String(minutes).padStart(2, '0');
-		// Use the browser's local timezone (which matches the user's intent)
-		const d = new Date(`${year}-${month}-${day}T${h}:${m}:00`);
-		return d.toISOString();
+		return buildZonedInstant(date, timeStr, resolveEventTimeZone());
+	}
+
+	/**
+	 * The zone this form is authoring in.
+	 *
+	 * Falls back to the browser zone only when the form has no explicit zone —
+	 * which is the pre-existing behaviour for forms that do not offer a zone
+	 * picker, and is correct for them: an organizer editing a session on their
+	 * own event means their own clock.
+	 */
+	function resolveEventTimeZone(): string {
+		// H-75 — `timezone` is the zone the organizer PICKED in this form. It
+		// was sent to the server and never used to compute the instant; that is
+		// the whole finding.
+		const explicit = timezone;
+		if (explicit) return String(explicit);
+		try {
+			return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+		} catch {
+			return 'UTC';
+		}
 	}
 
 	function mapEventType(type: string): 'VIRTUAL' | 'PHYSICAL' | 'HYBRID' {
@@ -471,7 +534,11 @@
 				timeZone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
 				eventType: mapEventType(eventType),
 				registrationType,
-				visibility: visibility === 'public' ? 'PUBLIC' as const : 'PRIVATE' as const,
+				// C-13 — `visibility` IS the wire value now. The comparison that
+				// used to live here (`=== 'public' ? 'PUBLIC' : 'PRIVATE'`) was the
+				// silent failure point: any writer that did not produce exactly the
+				// lowercase string fell through to PRIVATE.
+				visibility,
 				themeColor: selectedColor.name,
 				locationDetails: location || physicalAddress ? {
 					virtual: (eventType === 'Virtual' || eventType === 'Hybrid') && location
@@ -488,6 +555,31 @@
 				postEventFeedbackEnabled,
 				collectionId: selectedCollectionId || undefined,
 				isMultiDay,
+
+				// ── Celebration layer ────────────────────────────────────
+				// `guestContributions.enabled` is sent ALONGSIDE the master
+				// `donationsEnabled` flag: the server requires both to be true
+				// before it will take a guest's money, so flipping only one
+				// here would produce a toggle that looks on and does nothing.
+				guestContributions: { enabled: donationsEnabled },
+				ageRestriction: {
+					enabled: ageRestrictionEnabled,
+					minimumAge: Math.max(13, Math.min(99, Math.round(ageRestrictionMinimumAge || 18))),
+					verificationMethod: 'SELF_DECLARED' as const,
+				},
+				giftRegistry: { enabled: giftRegistryEnabled, showOnPublicPage: true },
+				memories: { enabled: memoriesEnabled },
+				budget: {
+					// GAP 5 — typing a budget in the capacity step IS turning
+					// budgeting on. Making them tick a second box elsewhere to see
+					// the number they just entered would be busywork.
+					enabled: budgetEnabled || roughBudget !== null || expectedGuestCount !== null,
+					expectedGuestCount: expectedGuestCount ?? undefined,
+					// Major units in the UI, integer kobo on the wire — the same
+					// contract as every other amount on the platform.
+					estimatedTotalKobo: roughBudget !== null ? majorToKobo(roughBudget) : undefined,
+				},
+				promoter: { enabled: promoterEnabled },
 			};
 
 			const result = await createEvent(payload);
@@ -507,6 +599,23 @@
 				} catch (e) {
 					console.warn('Failed to upload event image:', e);
 					// Non-critical — event was still created; image can be added later.
+				}
+			}
+
+			// GAP 3 — an enabled registry with nothing in it is a dead tab, so
+			// create the registry itself here rather than making the organizer
+			// find a second "create" button. Best-effort: the event is already
+			// created, and the Gifts tab offers the same action if this fails.
+			if (giftRegistryEnabled) {
+				try {
+					const { createWishlist } = await import('$lib/services/wishlist.services');
+					await createWishlist({
+						eventId,
+						scopeType: 'EVENT',
+						title: `${eventName.trim()} Registry`
+					});
+				} catch (e) {
+					console.warn('Failed to create the gift registry:', e);
 				}
 			}
 
@@ -802,6 +911,12 @@
 						bind:postEventFeedbackEnabled
 						bind:waitlistEnabled
 						bind:donationsEnabled
+						bind:ageRestrictionEnabled
+						bind:ageRestrictionMinimumAge
+						bind:giftRegistryEnabled
+						bind:memoriesEnabled
+						bind:promoterEnabled
+						bind:budgetEnabled
 					/>
 				</div>
 			</div>
@@ -851,7 +966,8 @@
 							class="text-xl font-light"
 							style="color: {selectedColor.lightText}"
 						/>
-						<div class="">{visibility}</div>
+						<!-- C-13 — the pill renders a DERIVED label. -->
+					<div class="">{visibilityLabel(visibility)}</div>
 						<span>{@html arrowDown}</span>
 					</button>
 					<VisibilityModal bind:open={openVisibilityModal} bind:visibility bind:visibility_icon />
@@ -1376,61 +1492,36 @@
 						</div>
 					</div>
 
-					<!-- Request Approval -->
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-1">
-							<div style="color: {selectedColor.lightText}">
-								<svg
-									width="18"
-									height="18"
-									viewBox="0 0 18 18"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
-								>
-									<path
-										d="M11.265 2.25751C10.635 1.77751 9.855 1.5 9 1.5C6.93 1.5 5.25 3.18 5.25 5.25C5.25 7.32 6.93 9 9 9C11.07 9 12.75 7.32 12.75 5.25"
-										stroke="currentColor"
-										stroke-width="1.125"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-									<path
-										d="M2.55762 16.5C2.55762 13.5975 5.44514 11.25 9.00014 11.25C9.72014 11.25 10.4176 11.3475 11.0701 11.5275"
-										stroke="currentColor"
-										stroke-width="1.125"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-									<path
-										d="M16.5 13.5C16.5 14.0625 16.3425 14.595 16.065 15.045C15.9075 15.315 15.705 15.555 15.4725 15.75C14.9475 16.2225 14.2575 16.5 13.5 16.5C12.405 16.5 11.4525 15.915 10.935 15.045C10.6575 14.595 10.5 14.0625 10.5 13.5C10.5 12.555 10.935 11.7075 11.625 11.16C12.1425 10.7475 12.795 10.5 13.5 10.5C15.1575 10.5 16.5 11.8425 16.5 13.5Z"
-										stroke="currentColor"
-										stroke-width="1.125"
-										stroke-miterlimit="10"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-									<path
-										d="M12.3301 13.5006L13.0726 14.2431L14.6701 12.7656"
-										stroke="currentColor"
-										stroke-width="1.125"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-								</svg>
-							</div>
+				<!--
+					H-25 — the "Request Approval" toggle was REMOVED, not wired up.
 
-							<span>Request Approval</span>
-						</div>
-						<label class="inline-flex cursor-pointer items-center">
-							<input type="checkbox" class="peer sr-only" bind:checked={approvalRequired} />
-							<div
-								class="peer relative h-6 w-10 rounded-full peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-4"
-								style="background-color: {approvalRequired
-									? selectedColor.text
-									: selectedColor.toggle}"
-							></div>
-						</label>
-					</div>
+					A repo-wide search found `approvalRequired` in exactly two places:
+					the `let` on this page and the checkbox that bound to it. **It never
+					appeared in the create payload**, and `CreateEventPayload` has no
+					such field — so an organizer running an invite-vetted event switched
+					Approval on, saw the toggle move, created the event, and got an event
+					with no approval gate. `RegistrationModal` reads approval state from
+					`selectedTicket.requiresApproval`, which was `false`, so it rendered
+					"Register" instead of "Request to Get In" and finalised straight to
+					`ATTENDING`. **Strangers were admitted to an event the organizer
+					believed was gated.**
+
+					It could not simply be mapped, either. Approval is a property of a
+					TICKET TYPE (`requiresApproval`), and this page does not create one —
+					`TicketModal` here is only a FREE/PAID switch, and ticket types are
+					created afterwards on the event's manage page. There was no ticket in
+					existence at this point for the flag to attach to.
+
+					So the control is gone rather than left lying: shipping a switch that
+					silently discards an access-control decision is worse than not
+					offering it, because the organizer has no way to discover it did
+					nothing until strangers are already inside.
+
+					**Approval is set per ticket type**, on the event's Tickets tab,
+					where `requiresApproval` is a real field the registration flow reads.
+					Re-adding it here means threading it into ticket creation — not
+					restoring the checkbox.
+				-->
 
 					<!-- Capacity -->
 					<div class="flex items-center justify-between">
@@ -1505,7 +1596,13 @@
 									</svg>
 								</button>
 							</div>
-							<CapacityModal open={openCapacityModal} bind:maxAttendees bind:waitlistEnabled />
+							<CapacityModal
+							open={openCapacityModal}
+							bind:maxAttendees
+							bind:waitlistEnabled
+							bind:expectedGuestCount
+							bind:roughBudget
+						/>
 						</div>
 					</div>
 				</div>
@@ -1703,6 +1800,12 @@
 						bind:postEventFeedbackEnabled
 						bind:waitlistEnabled
 						bind:donationsEnabled
+						bind:ageRestrictionEnabled
+						bind:ageRestrictionMinimumAge
+						bind:giftRegistryEnabled
+						bind:memoriesEnabled
+						bind:promoterEnabled
+						bind:budgetEnabled
 					/>
 				</div>
 			</div>

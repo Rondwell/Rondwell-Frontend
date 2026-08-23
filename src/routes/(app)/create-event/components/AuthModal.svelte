@@ -15,7 +15,6 @@
 	let step: 'email' | 'otp' = 'email';
 	let contact = '';
 	let otp = '';
-	let isNewUser = true;
 	let loading = false;
 	let googleLoading = false;
 	let passkeyLoading = false;
@@ -106,8 +105,12 @@
 			if (result.status === '2FA_REQUIRED') {
 				// For 2FA, redirect to the 2FA page
 				localStorage.setItem('2fa-pending-email', result.user.email);
+        // C-07 — the tempToken IS the credential for the second step.
+        // The email is kept only to show the user which account they are
+        // completing; the server no longer reads it.
+        localStorage.setItem('2fa-temp-token', result.tempToken ?? '');
 				open = false;
-				goto(`/auth/2fa?email=${encodeURIComponent(result.user.email)}`);
+				goto('/auth/2fa');
 				return;
 			}
 			toast.success(result.isNewUser ? 'Account created successfully!' : 'Signed in successfully!');
@@ -130,7 +133,6 @@
 		error = '';
 		try {
 			const options = await beginPasskeyAuth(contact.trim());
-			const userId = options.userId;
 
 			function base64urlToBuffer(base64url: string): Uint8Array {
 				const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
@@ -161,8 +163,8 @@
 			const cred = assertion as PublicKeyCredential;
 			const response = cred.response as AuthenticatorAssertionResponse;
 
-			const result = await completePasskeyAuth(userId, {
-				email: contact.trim(),
+			// C-03 — see auth/+page.svelte: identity comes from the signed assertion.
+			const result = await completePasskeyAuth({
 				credentialId: cred.id,
 				assertionResponse: {
 					id: cred.id,
@@ -179,13 +181,16 @@
 
 			if (result.status === '2FA_REQUIRED') {
 				localStorage.setItem('2fa-pending-email', contact.trim());
+				// C-07 — the tempToken IS the credential for the second step.
+				// Without it `/auth/2fa` has nothing to authenticate with.
+				localStorage.setItem('2fa-temp-token', result.tempToken ?? '');
 				open = false;
-				goto(`/auth/2fa?email=${encodeURIComponent(contact.trim())}`);
+				goto('/auth/2fa');
 				return;
 			}
 
 			const { token, refreshToken, user } = result;
-			setUser(user, token, refreshToken);
+			await setUser(user, token, refreshToken);
 			setVerified();
 			toast.success('Signed in with passkey!');
 			dispatch('authenticated');
@@ -213,8 +218,9 @@
 		}
 		loading = true; error = '';
 		try {
-			const result = await smartRequestOTP(contact.trim());
-			isNewUser = result.isNewUser;
+			// H-14 — the server no longer reports whether this address is
+			// registered; `smartVerifyOTP` determines it from the verification.
+			await smartRequestOTP(contact.trim());
 			step = 'otp';
 			startTimer();
 		} catch (e: any) {
@@ -228,7 +234,7 @@
 		if (!otp.trim()) { error = 'Please enter the OTP'; return; }
 		loading = true; error = '';
 		try {
-			await smartVerifyOTP(contact.trim(), otp.trim(), false, isNewUser);
+			await smartVerifyOTP(contact.trim(), otp.trim(), false);
 			toast.success('Signed in successfully!');
 			dispatch('authenticated');
 			open = false;
@@ -243,8 +249,7 @@
 		if (resendTimer > 0) return;
 		loading = true; error = '';
 		try {
-			const result = await smartRequestOTP(contact.trim());
-			isNewUser = result.isNewUser;
+			await smartRequestOTP(contact.trim());
 			startTimer();
 		} catch (e: any) {
 			error = e.message ?? 'Failed to resend OTP';

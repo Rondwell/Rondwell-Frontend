@@ -5,6 +5,25 @@
 	import Seo from '$lib/components/Seo.svelte';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
+	/**
+	 * H-72 — every user-supplied URL on this page goes through `safeHref`.
+	 *
+	 * **Svelte does not sanitise URL attributes.** `href={value}` interpolates
+	 * verbatim, so a `javascript:` URL stored in a vendor's website field, a
+	 * social handle, a booth resource link or a portfolio link is one click
+	 * from executing script in a visitor's session — on a PUBLIC page, against
+	 * a visitor who has never interacted with that vendor.
+	 *
+	 * A sweep of every `href={…}` binding found eight such sinks across six
+	 * storefront pages. `safeHref` is the allow-list check that already existed
+	 * at `event-page/[id]/participant/+page.svelte` and was used on exactly one
+	 * page; it now lives in `$lib/security/safeUrl` so there is one copy.
+	 *
+	 * It returns `undefined` for a rejected URL, which drops the `href`
+	 * attribute entirely — the anchor renders as inert text rather than as a
+	 * dead `#` link that still looks clickable.
+	 */
+	import { safeHref } from '$lib/security/safeUrl';
 
 	export let data: any;
 	$: seo = data?.seo;
@@ -169,7 +188,7 @@
 							<h3 class="text-base font-semibold text-gray-900">Resources</h3>
 							<div class="mt-3 space-y-2">
 								{#each booth.resources as resource}
-									<a href={resource.url} target="_blank" rel="noopener noreferrer"
+									<a href={safeHref(resource.url)} target="_blank" rel="noopener noreferrer"
 										class="flex items-center gap-3 rounded-xl border border-gray-100 p-3 transition hover:bg-gray-50">
 										<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50">
 											{#if resource.type === 'PDF'}

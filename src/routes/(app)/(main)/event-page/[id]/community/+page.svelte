@@ -1,4 +1,7 @@
 <script lang="ts">
+	// C-09 — every user-content {@html} sink routes through one shared
+	// sanitizer. A bare {@html} on stored content is a bug.
+	import { sanitizeHtml } from '$lib/security/sanitizeHtml';
 	import { page } from '$app/stores';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { getEventTheme } from '$lib/stores/eventTheme';
@@ -484,7 +487,7 @@
 			<h2 class="mb-3 text-xl font-bold" style="color: {themeColor.text};">{selectedPost.title}</h2>
 			{#if selectedPost.content}
 				{#if isHtml(selectedPost.content)}
-				<div class="post-content text-sm leading-relaxed" style="color: {themeColor.text};">{@html selectedPost.content}</div>
+				<div class="post-content text-sm leading-relaxed" style="color: {themeColor.text};">{@html sanitizeHtml(selectedPost.content)}</div>
 				{:else}
 				<div class="whitespace-pre-wrap text-sm leading-relaxed" style="color: {themeColor.text};">{selectedPost.content}</div>
 				{/if}

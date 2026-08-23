@@ -3,7 +3,7 @@
 	import ProfileSwitchOverlay from '$lib/components/ProfileSwitchOverlay.svelte';
 	import { getActiveProfile, getAllProfiles, switchProfile, type UserProfileData } from '$lib/services/profile.services';
 	import { getWalletBalance } from '$lib/services/wallet.services';
-	import { authState, clearUser, isAuthenticated, setActiveProfile } from '$lib/stores/auth.store';
+	import { authState, logout, isAuthenticated, setActiveProfile } from '$lib/stores/auth.store';
 	import { onMount } from 'svelte';
 
 	export let showMenu = false;
@@ -149,8 +149,13 @@
 		switching = false;
 	}
 
-	function handleLogout() {
-		clearUser();
+	// H-02 — this was `clearUser(); goto('/auth');`, which only wiped
+	// localStorage. The refresh token stayed valid server-side for its full
+	// 30-day sliding window, so an exfiltrated token survived the victim
+	// logging out. `logout()` calls `POST /auth/logout` first, then clears
+	// locally whether or not the call succeeded.
+	async function handleLogout() {
+		await logout();
 		goto('/auth');
 	}
 
@@ -300,6 +305,25 @@
 						</button>
 					</div>
 				</div>
+
+				<!--
+					GAP 9 — "My promotions".
+
+					Lives here rather than in the main sidebar on purpose: it only
+					matters to people who promote somebody else's event, which is a
+					minority of accounts, and a permanent top-level slot for it would
+					be noise for everyone else. Anyone approved as a promoter also
+					reaches it straight from the card on the event page.
+				-->
+				<a href="/promotions" on:click={onClose} class="flex cursor-pointer items-center gap-2">
+					<div class="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-[#FFF0E0]">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<path d="M4.16667 8.33073V11.6641C4.16667 12.5845 4.91286 13.3307 5.83333 13.3307H7.08333L11.3092 16.4674C12.1327 17.0785 13.3333 16.4906 13.3333 15.4653V4.52947C13.3333 3.50418 12.1327 2.9163 11.3092 3.52739L7.08333 6.66406H5.83333C4.91286 6.66406 4.16667 7.41026 4.16667 8.33073Z" stroke="#2A2D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+							<path d="M15.8333 7.5C16.5237 8.19036 16.5237 11.8096 15.8333 12.5" stroke="#2A2D32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+						</svg>
+					</div>
+					<span>My promotions</span>
+				</a>
 
 				<a href="/settings" on:click={onClose} class="flex cursor-pointer items-center gap-2">
 					<div class="flex h-[36px] w-[36px] items-center justify-center rounded-full bg-[#E2E4E5]">

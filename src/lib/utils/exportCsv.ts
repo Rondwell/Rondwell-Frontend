@@ -4,22 +4,29 @@
  * plain objects into a downloadable .csv — no backend round-trip needed.
  */
 
-function escapeCell(value: unknown): string {
-	if (value === null || value === undefined) return '';
-	let s: string;
-	if (value instanceof Date) {
-		s = value.toISOString();
-	} else if (typeof value === 'object') {
-		s = JSON.stringify(value);
-	} else {
-		s = String(value);
-	}
-	// Quote when the cell contains a comma, quote, or newline; escape quotes.
-	if (/[",\n\r]/.test(s)) {
-		s = `"${s.replace(/"/g, '""')}"`;
-	}
-	return s;
-}
+/**
+ * H-28 — this module's own `escapeCell` is gone; it delegates to `csvCell`.
+ *
+ * The version it replaced quoted correctly per RFC 4180 and **had no formula
+ * guard at all** — no leading-character test anywhere. Quoting protects the
+ * *file format*: it stops a comma inside a value becoming a column break. It
+ * does not stop Excel, Sheets, LibreOffice or Numbers evaluating a cell whose
+ * text begins with `=`, `+`, `-` or `@`, because quotes are stripped during
+ * parsing and evaluation happens afterwards.
+ *
+ * The consumers are the participant-management tables — Speakers, Vendors,
+ * Exhibitors, Collaboration Requests — every column of which is **text a third
+ * party typed about themselves**. A vendor sets their business name to a
+ * `=HYPERLINK(...)` formula, the organizer exports the table, and it executes
+ * when they open it.
+ *
+ * `csvCell` in `./csv.ts` already had the guard and was already the correct
+ * one. Two implementations of the same function, one safe and one not, IS the
+ * finding — so this file now has none of its own.
+ */
+import { csvCell } from './csv';
+
+const escapeCell = csvCell;
 
 export interface CsvColumn<T> {
 	header: string;

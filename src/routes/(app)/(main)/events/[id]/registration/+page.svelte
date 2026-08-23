@@ -7,6 +7,7 @@
 	import EventForm from './components/EventForm.svelte';
 	import SeatCapacity from './components/SeatCapacity.svelte';
 	import Tickets from './components/Tickets.svelte';
+	import Contributions from './components/Contributions.svelte';
 
 	$: eventId = $page.params.id as string;
 
@@ -28,7 +29,7 @@
 	// Support deep-linking to a specific tab via ?tab= query param
 	$: {
 		const tabParam = $page.url.searchParams.get('tab');
-		if (tabParam && ['ticket', 'event_forms', 'seat_capacity', 'email_blasts'].includes(tabParam)) {
+		if (tabParam && ['ticket', 'event_forms', 'seat_capacity', 'email_blasts', 'contributions'].includes(tabParam)) {
 			activeTab = tabParam;
 		}
 	}
@@ -77,6 +78,14 @@
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M14.1667 17.0833H5.83333C3.33333 17.0833 1.66667 15.8333 1.66667 12.9167V7.08333C1.66667 4.16667 3.33333 2.91667 5.83333 2.91667H14.1667C16.6667 2.91667 18.3333 4.16667 18.3333 7.08333V12.9167C18.3333 15.8333 16.6667 17.0833 14.1667 17.0833Z" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M14.1667 7.5L11.5583 9.58333C10.7 10.2667 9.29167 10.2667 8.43333 9.58333L5.83333 7.5" stroke="currentColor" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`
+		},
+		{
+			id: 'contributions',
+			label: 'Contributions',
+			icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M20 12v9H4v-9M12 21V8M22 8H2v4h20V8zM12 8H7.5a2.5 2.5 0 010-5C11 3 12 8 12 8zM12 8h4.5a2.5 2.5 0 000-5C13 3 12 8 12 8z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
 `
 		}
@@ -164,6 +173,8 @@
 			<SeatCapacity {eventData} />
 		{:else if activeTab === 'email_blasts'}
 			<EmailBlasts {eventId} {eventData} />
+		{:else if activeTab === 'contributions'}
+			<Contributions {eventId} {eventData} />
 		{/if}
 	{/if}
 </div>

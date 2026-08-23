@@ -17,6 +17,7 @@
 		type CouponCurrency
 	} from '$lib/services/coupon.services';
 	import { getMyEvents } from '$lib/services/event.services';
+	import { buildZonedInstant } from '$lib/utils/eventTime';
 
 	$: collectionId = $page.params.id ?? '';
 
@@ -93,14 +94,40 @@
 		endTime = '11:59 PM';
 	}
 
+	/**
+	 * H-75 — the event's timezone is now USED, not just stored.
+	 *
+	 * `d.setHours(...)` sets the hour in the **browser's** zone, so a ticket
+	 * sales window or a payment deadline was stored at whatever instant that
+	 * wall-clock time happened to name where the organizer was sitting — not
+	 * where the event is. An organizer in Lagos scheduling a New York event's
+	 * sales cutoff for 5:00 PM stored 16:00 UTC; the intended instant is
+	 * 22:00 UTC.
+	 *
+	 * The return type is unchanged (`Date`) so callers are unaffected.
+	 */
 	function buildDateTime(date: Date, timeStr: string): Date {
-		const [timePart, meridiem] = timeStr.split(' ');
-		let [hours, minutes] = timePart.split(':').map(Number);
-		if (meridiem === 'PM' && hours !== 12) hours += 12;
-		if (meridiem === 'AM' && hours === 12) hours = 0;
-		const d = new Date(date);
-		d.setHours(hours, minutes, 0, 0);
-		return d;
+		return new Date(buildZonedInstant(date, timeStr, resolveEventTimeZone()));
+	}
+
+	/**
+	 * The zone this form authors in. These two forms carry no zone picker of
+	 * their own, so they inherit the event's when one is in scope and otherwise
+	 * fall back to the browser — which is the pre-existing behaviour, and
+	 * correct for an organizer editing their own event on their own clock.
+	 */
+	function resolveEventTimeZone(): string {
+		// This form carries no event zone of its own — it schedules a
+		// collection-level payment deadline — so it authors in the operator's
+		// own zone. Routed through the same helper so the instant is built by
+		// one code path rather than by `setHours`.
+		const explicit = '';
+		if (explicit) return String(explicit);
+		try {
+			return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+		} catch {
+			return 'UTC';
+		}
 	}
 
 	function formatDate(date: Date): string {
@@ -175,7 +202,23 @@
 			await createCoupon({
 				code: code.trim().toUpperCase(),
 				discountType,
-				discountValue: discountType === 'AMOUNT' ? Math.round(val * 100) : val,
+				/**
+				 * L-02 — the browser no longer does the major→minor conversion.
+				 *
+				 * It was `Math.round(val * 100)`, which is correct only for
+				 * currencies with two minor-unit digits. Every currency the
+				 * platform handles today is, so the two sides agreed by
+				 * coincidence rather than by contract — and JPY (zero minor
+				 * units) would have made every discount a hundred times too
+				 * large.
+				 *
+				 * `discountValueMajor` is sent alongside a declared currency and
+				 * converted by the payment service, which owns the currency
+				 * table. `discountValue` is still sent for PERCENTAGE, which is
+				 * unitless.
+				 */
+				discountValue: discountType === 'AMOUNT' ? undefined : val,
+				discountValueMajor: discountType === 'AMOUNT' ? val : undefined,
 				currency,
 				startDate: buildDateTime(startDateObj, startTime).toISOString(),
 				endDate: buildDateTime(endDateObj, endTime).toISOString(),

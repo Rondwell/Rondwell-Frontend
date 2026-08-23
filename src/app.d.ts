@@ -3,7 +3,23 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		// interface Locals {}
+
+		/**
+		 * H-13 — the server-side session, populated by `hooks.server.ts` from a
+		 * verified `httpOnly` cookie. `undefined` means signed out.
+		 *
+		 * This is for RENDERING and ROUTING decisions. The API remains the
+		 * authority on data access — a page must never treat `locals.user` as
+		 * permission to return something the API would have refused.
+		 */
+		interface Locals {
+			user?: {
+				id: string;
+				email: string;
+				name?: string;
+				role?: string;
+			};
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}

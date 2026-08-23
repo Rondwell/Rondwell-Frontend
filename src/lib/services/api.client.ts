@@ -2,7 +2,6 @@ import { browser } from '$app/environment';
 import { clearUser } from '$lib/stores/auth.store';
 import { setPostAuthRedirect } from '$lib/utils/redirect';
 
-const USER_URL = import.meta.env.VITE_API_URL;
 
 /**
  * Sends an expired session back to /auth WITHOUT losing where they were going.
@@ -42,7 +41,6 @@ function bounceToAuth(): void {
  * across refreshes within the session. Reset the scope when the user
  * starts a new intent that should not collapse with the previous one.
  */
-let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 
 function getStoredToken(): string | null {
@@ -50,27 +48,38 @@ function getStoredToken(): string | null {
   return localStorage.getItem('auth_token');
 }
 
-function getStoredRefreshToken(): string | null {
-  if (!browser) return null;
-  return localStorage.getItem('auth_refresh_token');
-}
-
-function setStoredTokens(token: string, refreshToken: string) {
+function setStoredToken(token: string) {
   if (!browser) return;
   localStorage.setItem('auth_token', token);
-  localStorage.setItem('auth_refresh_token', refreshToken);
 }
 
+/**
+ * H-13 — renew the access token via the server, which owns the refresh token.
+ *
+ * This used to POST the refresh token straight from `localStorage` to the user
+ * service. That is what made every login self-destruct: the SvelteKit server
+ * held the same token in its session cookie, upstream rotates on every use, and
+ * a replayed rotated token is M-15's stolen-credential signal — so whichever
+ * side spent second revoked all of the user's sessions.
+ *
+ * The refresh token is no longer in script at all. `/api/session/refresh` reads
+ * the httpOnly cookie, spends it, re-cookies the rotated replacement, and hands
+ * back only a fresh access token. One holder, one spender.
+ *
+ * A 503 is a transport problem at the server hop, NOT an invalid session, so it
+ * returns null WITHOUT signing the user out — the caller surfaces a failed
+ * request and the next attempt can succeed. Only a 401 ends the session.
+ */
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = getStoredRefreshToken();
-  if (!refreshToken) return null;
+  if (!browser) return null;
 
   try {
-    const res = await fetch(`${USER_URL}/api/v1/auth/refresh-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
+    const res = await fetch('/api/session/refresh', { method: 'POST' });
+
+    if (res.status === 503) {
+      // Auth service unreachable. Keep the session; fail this request only.
+      return null;
+    }
 
     if (!res.ok) {
       clearUser();
@@ -78,14 +87,25 @@ async function refreshAccessToken(): Promise<string | null> {
       return null;
     }
 
-    const data = await res.json();
-    const newToken = data.token ?? data.accessToken;
-    const newRefresh = data.refreshToken ?? refreshToken;
-    setStoredTokens(newToken, newRefresh);
+    const data = await res.json().catch(() => null);
+    const newToken = data?.token;
+
+    if (!newToken) {
+      // eslint-disable-next-line no-console
+      console.error(
+        '[H-13] /api/session/refresh responded ok without an access token. ' +
+          'Signing out rather than continuing with a stale credential.'
+      );
+      clearUser();
+      bounceToAuth();
+      return null;
+    }
+
+    setStoredToken(newToken);
     return newToken;
   } catch {
-    clearUser();
-    bounceToAuth();
+    // Same-origin fetch failed outright (offline, page unloading). Not evidence
+    // the session is invalid — do not sign the user out over it.
     return null;
   }
 }
@@ -111,16 +131,24 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
   let res = await fetch(url, { ...options, headers });
 
   if (res.status === 401) {
-    // Deduplicate: if already refreshing, wait for that one
-    if (!isRefreshing) {
-      isRefreshing = true;
-      refreshPromise = refreshAccessToken().finally(() => {
-        isRefreshing = false;
+    /**
+     * Deduplicate concurrent refreshes.
+     *
+     * The check and the capture happen in the same synchronous step, and the
+     * captured promise is what gets awaited. Reading `refreshPromise` again
+     * after the await was a race: an in-flight refresh nulls the field in its
+     * own `.finally`, so a second caller that arrived just after it settled
+     * awaited `null`, got `null`, and threw "Session expired" even though the
+     * refresh had just succeeded. A page firing two requests at once — which
+     * `/collection` does — could fail one of them for no reason.
+     */
+    const pending =
+      refreshPromise ??
+      (refreshPromise = refreshAccessToken().finally(() => {
         refreshPromise = null;
-      });
-    }
+      }));
 
-    const newToken = await refreshPromise;
+    const newToken = await pending;
     if (!newToken) {
       const err: any = new Error('Session expired. Please log in again.');
       err.status = 401;
@@ -130,6 +158,14 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
     // Retry original request with new token
     headers.set('Authorization', `Bearer ${newToken}`);
     res = await fetch(url, { ...options, headers });
+
+    /**
+     * A second 401 after a successful refresh means the credential was never
+     * the problem — the endpoint is refusing this user for some other reason.
+     * The response is returned as-is rather than treated as a dead session:
+     * signing the user out here is what turned one misbehaving endpoint into a
+     * logout loop nothing could escape.
+     */
   }
 
   return res;

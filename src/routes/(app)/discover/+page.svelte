@@ -93,6 +93,11 @@
 	<meta property="og:title" content="Discover | Rondwell" />
 	<meta property="og:description" content="Discover events, vendors, speakers, and exhibitors on Rondwell." />
 	<meta property="og:image" content="https://res.cloudinary.com/dksfuytfd/image/upload/v1747893120/Rodwell_uedn7l.png" />
+	<!-- Required for WhatsApp to render a large preview card without first
+	     downloading the image to measure it. -->
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:image:type" content="image/png" />
 	<meta property="og:url" content="https://rondwell.com/discover" />
 	<meta property="og:type" content="website" />
 	<meta name="twitter:card" content="summary_large_image" />

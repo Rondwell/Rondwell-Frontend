@@ -75,10 +75,21 @@
     <path d="M7.01758 16.0391C6.67591 16.0391 6.39258 15.7557 6.39258 15.4141V13.7891C6.39258 13.4474 6.67591 13.1641 7.01758 13.1641C7.35924 13.1641 7.64258 13.4474 7.64258 13.7891V15.4141C7.64258 15.7557 7.36758 16.0391 7.01758 16.0391Z" fill="currentColor"/>
     <path d="M7.01758 8.46094C6.67591 8.46094 6.39258 8.1776 6.39258 7.83594V4.58594C6.39258 4.24427 6.67591 3.96094 7.01758 3.96094C7.35924 3.96094 7.64258 4.24427 7.64258 4.58594V7.83594C7.64258 8.1776 7.36758 8.46094 7.01758 8.46094Z" fill="currentColor"/>
     <path d="M7.01628 14.4193C5.47461 14.4193 4.22461 13.1693 4.22461 11.6276C4.22461 10.0859 5.47461 8.83594 7.01628 8.83594C8.55794 8.83594 9.80794 10.0859 9.80794 11.6276C9.80794 13.1693 8.55794 14.4193 7.01628 14.4193ZM7.01628 10.0859C6.16628 10.0859 5.47461 10.7776 5.47461 11.6276C5.47461 12.4776 6.16628 13.1693 7.01628 13.1693C7.86628 13.1693 8.55794 12.4776 8.55794 11.6276C8.55794 10.7776 7.87461 10.0859 7.01628 10.0859Z" fill="currentColor"/>
+    </svg>`,
+
+		// GAP 3 — gift registry.
+		giftsIcon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 12v9H4v-9M12 21V8M22 8H2v4h20V8zM12 8H7.5a2.5 2.5 0 010-5C11 3 12 8 12 8zM12 8h4.5a2.5 2.5 0 000-5C13 3 12 8 12 8z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`
 	};
 
-	function updateEventSubMenu(eventId: string) {
+	// GAP 3 — the Gifts item only appears when the organizer turned the
+	// registry on. A permanently-visible tab for a feature 90% of events don't
+	// use is clutter; a tab that appears the moment you enable it is discovery.
+	$: ({ event: eventStore } = getEventCache(eventId));
+	$: giftRegistryEnabled = ($eventStore as any)?.giftRegistry?.enabled === true;
+
+	function updateEventSubMenu(eventId: string, showGifts: boolean) {
 		subMenuItems.set([
 			{ label: 'Overview', icon: eventsIcon.overviewIcon, nav: `/events/${eventId}` },
 			{ label: 'Attendees', icon: eventsIcon.attendeeIcon, nav: `/events/${eventId}/attendees` },
@@ -94,6 +105,11 @@
 				nav: `/events/${eventId}/participants`
 				// nav: ''
 			},
+			// Sits between Participants and Planning — after "who's coming",
+			// before "how it gets built", which is where gifts belong.
+			...(showGifts
+				? [{ label: 'Gifts', icon: eventsIcon.giftsIcon, nav: `/events/${eventId}/gifts` }]
+				: []),
 			{ label: 'Planning', icon: eventsIcon.planningIcon, nav: `/events/${eventId}/planning` },
 			{ label: 'Insights', icon: eventsIcon.insightsIcon, nav: `/events/${eventId}/insights` },
 			{ label: 'Settings', icon: eventsIcon.moreIcon, nav: `/events/${eventId}/settings` }
@@ -117,7 +133,7 @@
 				activeSubItem.set('');
 			} else {
 				// Build the submenu dynamically for this event
-				updateEventSubMenu(eventId);
+				updateEventSubMenu(eventId, giftRegistryEnabled);
 
 				// Find matching submenu item
 				const currentMenu = get(subMenuItems);

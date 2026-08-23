@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { Mail } from 'lucide-svelte';
+	// Per-icon path, not the `lucide-svelte` barrel. The barrel re-exports ~3,000
+	// icon modules, and in dev SSR Vite fetches each one individually — one
+	// `Mail` import pulled the whole set into the module graph for `/`, pushing
+	// the first request past Vite's 60s transport timeout.
+	import Mail from 'lucide-svelte/icons/mail';
 </script>
 
 <footer class="flex min-h-[300px] w-full items-center justify-center bg-[#F4F5F6] px-4">

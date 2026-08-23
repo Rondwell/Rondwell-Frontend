@@ -437,16 +437,25 @@
 					</div>
 				</div>
 
-				<!-- Tabs -->
-				<div class="mt-5 flex gap-1 border-b border-gray-200">
-					{#each [['overview', 'Overview'], ['registrations', 'Registrations'], ['groups', 'Group tickets'], ['tickets', 'Tickets']] as [value, label]}
-						<button on:click={() => selectDetailTab(value as DetailTab)}
-							class="-mb-px border-b-2 px-3 py-2 text-sm transition {detailTab === value ? 'border-[#513BE2] font-medium text-[#513BE2]' : 'border-transparent text-gray-500 hover:text-gray-700'}">
-							{label}
-							{#if value === 'registrations' && stats}<span class="ml-1 text-xs text-gray-400">{stats.registrations?.total ?? 0}</span>{/if}
-							{#if value === 'groups' && stats}<span class="ml-1 text-xs text-gray-400">{stats.groups?.total ?? 0}</span>{/if}
-						</button>
-					{/each}
+				<!--
+					Tabs. The four labels are wider than a phone screen, and without
+					`overflow-x-auto` the last ones (Group tickets, Tickets) were
+					simply unreachable on mobile — the row clipped with no way to
+					scroll to them. `flex-shrink-0` stops flex from squashing the
+					labels into ellipses instead of overflowing, which is what makes
+					the scroll actually happen.
+				-->
+				<div class="custom-scrollbar mt-5 overflow-x-auto border-b border-gray-200">
+					<div class="flex w-max min-w-full gap-1">
+						{#each [['overview', 'Overview'], ['registrations', 'Registrations'], ['groups', 'Group tickets'], ['tickets', 'Tickets']] as [value, label]}
+							<button on:click={() => selectDetailTab(value as DetailTab)}
+								class="-mb-px flex-shrink-0 border-b-2 px-3 py-2 text-sm whitespace-nowrap transition {detailTab === value ? 'border-[#513BE2] font-medium text-[#513BE2]' : 'border-transparent text-gray-500 hover:text-gray-700'}">
+								{label}
+								{#if value === 'registrations' && stats}<span class="ml-1 text-xs text-gray-400">{stats.registrations?.total ?? 0}</span>{/if}
+								{#if value === 'groups' && stats}<span class="ml-1 text-xs text-gray-400">{stats.groups?.total ?? 0}</span>{/if}
+							</button>
+						{/each}
+					</div>
 				</div>
 
 				{#if detailTab === 'overview'}

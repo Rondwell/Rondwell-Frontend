@@ -102,7 +102,11 @@
       // Check if 2FA is required
       if (result.status === '2FA_REQUIRED') {
         localStorage.setItem('2fa-pending-email', result.user.email);
-        goto(withReturnUrl(`/auth/2fa?email=${encodeURIComponent(result.user.email)}`, $page.url));
+        // C-07 — the tempToken IS the credential for the second step.
+        // The email is kept only to show the user which account they are
+        // completing; the server no longer reads it.
+        localStorage.setItem('2fa-temp-token', result.tempToken ?? '');
+        goto(withReturnUrl('/auth/2fa', $page.url));
         return;
       }
 
@@ -131,7 +135,6 @@
     try {
       // 1. Get authentication options from server (includes userId)
       const options = await beginPasskeyAuth(contact);
-      const userId = options.userId;
 
       // 2. Convert base64url to Uint8Array for WebAuthn API
       function base64urlToBuffer(base64url: string): Uint8Array {
@@ -165,8 +168,11 @@
       const response = cred.response as AuthenticatorAssertionResponse;
 
       // 4. Send assertion to server
-      const result = await completePasskeyAuth(userId, {
-        email: contact,
+      // C-03 — no `userId`, no `email`. The server resolves the account from
+      // the credential id inside the SIGNED assertion. Sending a separate
+      // identity is what allowed pairing a victim's credentialId with an
+      // attacker's email to mint a session for the victim.
+      const result = await completePasskeyAuth({
         credentialId: cred.id,
         assertionResponse: {
           id: cred.id,
@@ -184,13 +190,17 @@
       // 5. Check if 2FA is required
       if (result.status === '2FA_REQUIRED') {
         localStorage.setItem('2fa-pending-email', contact);
-        goto(withReturnUrl(`/auth/2fa?email=${encodeURIComponent(contact)}`, $page.url));
+        // C-07 — the tempToken IS the credential for the second step.
+        // The email is kept only to show the user which account they are
+        // completing; the server no longer reads it.
+        localStorage.setItem('2fa-temp-token', result.tempToken ?? '');
+        goto(withReturnUrl('/auth/2fa', $page.url));
         return;
       }
 
       // 6. Save auth state and redirect
       const { token, refreshToken, user } = result;
-      setUser(user, token, refreshToken);
+      await setUser(user, token, refreshToken);
       setVerified();
       toast.success('Signed in with passkey!');
 
@@ -229,10 +239,12 @@
     errorMsg = '';
 
     try {
-      const { isNewUser } = await smartRequestOTP(contact, usePhone);
+      // H-14 — `isNewUser` is gone from the OTP-request response, and with it
+      // the `pending-is-new-user` handoff. It was written to localStorage on a
+      // PUBLIC page, so the enumeration answer outlived the request.
+      await smartRequestOTP(contact, usePhone);
       localStorage.setItem('pending-email', contact);
       localStorage.setItem('pending-is-phone', usePhone ? '1' : '0');
-      localStorage.setItem('pending-is-new-user', isNewUser ? '1' : '0');
       // Carry any pending destination (e.g. an admin invitation) forward.
       goto(withReturnUrl(`/auth/verify?email=${encodeURIComponent(contact)}`, $page.url));
     } catch (err) {

@@ -5,8 +5,10 @@
 	import Nav from '../../../../components/Nav.svelte';
 	import Admin from './components/Admin.svelte';
 	import Agenda from './components/Agenda.svelte';
+	import Budget from './components/Budget.svelte';
 	import Community from './components/Community.svelte';
 	import Media from './components/Media.svelte';
+	import Promoters from './components/Promoters.svelte';
 	import Rooms from './components/Rooms.svelte';
 	import Sessions from './components/Sessions.svelte';
 
@@ -81,6 +83,26 @@
 `
 		},
 		{
+			id: 'budget',
+			label: 'Budget',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M15.8333 6.66406H4.16667C2.78595 6.66406 1.66667 7.78335 1.66667 9.16406V15.0007C1.66667 16.3814 2.78595 17.5007 4.16667 17.5007H15.8333C17.214 17.5007 18.3333 16.3814 18.3333 15.0007V9.16406C18.3333 7.78335 17.214 6.66406 15.8333 6.66406Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.5833 6.66667V4.58333C14.5833 3.66286 13.8371 2.91667 12.9167 2.91667H4.58333C3.20262 2.91667 2.08333 4.03595 2.08333 5.41667V9.16667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M14.5833 13.75C15.2737 13.75 15.8333 13.1904 15.8333 12.5C15.8333 11.8096 15.2737 11.25 14.5833 11.25C13.893 11.25 13.3333 11.8096 13.3333 12.5C13.3333 13.1904 13.893 13.75 14.5833 13.75Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`
+		},
+		{
+			id: 'promoters',
+			label: 'Promoters',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M4.16667 8.33073V11.6641C4.16667 12.5845 4.91286 13.3307 5.83333 13.3307H7.08333L11.3092 16.4674C12.1327 17.0785 13.3333 16.4906 13.3333 15.4653V4.52947C13.3333 3.50418 12.1327 2.9163 11.3092 3.52739L7.08333 6.66406H5.83333C4.91286 6.66406 4.16667 7.41026 4.16667 8.33073Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M15.8333 7.5C16.5237 8.19036 16.5237 11.8096 15.8333 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M6.66667 13.3359V16.2526C6.66667 16.9429 7.22631 17.5026 7.91667 17.5026H8.75C9.44036 17.5026 10 16.9429 10 16.2526V15.0026" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+`
+		},
+		{
 			id: 'admin',
 			label: 'Admin & Team',
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -127,7 +149,11 @@
 	{:else if activeTab === 'community'}
 		<Community eventTitle={eventData?.title ?? ''} />
 	{:else if activeTab === 'media'}
-		<Media eventTitle={eventData?.title ?? ''} />
+		<Media eventTitle={eventData?.title ?? ''} eventData={rawEvent} />
+	{:else if activeTab === 'budget'}
+		<Budget eventTitle={eventData?.title ?? ''} />
+	{:else if activeTab === 'promoters'}
+		<Promoters eventData={rawEvent} />
 	{:else if activeTab === 'admin'}
 		<Admin eventTitle={eventData?.title ?? ''} />
 	{/if}

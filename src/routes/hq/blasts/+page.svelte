@@ -29,6 +29,11 @@
 		type EmailBlast
 	} from '$lib/services/adminBlast.services';
 	import { getAdminUser } from '$lib/services/admin.services';
+	import Select from '$lib/components/hq/PlanSelect.svelte';
+	// The same date/time pickers the organizer-facing platform uses, so a
+	// scheduled broadcast is picked exactly the way a scheduled event is.
+	import DatePickerModal from '../../(app)/create-event/components/DatePickerModal.svelte';
+	import TimeModal from '../../(app)/create-event/components/TimeModal.svelte';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import Image from '@tiptap/extension-image';
@@ -80,7 +85,42 @@
 
 	// Scheduling
 	let mode: 'now' | 'schedule' | 'draft' = 'now';
-	let scheduledLocal = '';
+	let scheduledDate: Date | null = null;
+	/** 12-hour label from TimeModal, e.g. "7:30 PM". */
+	let scheduledTime = '';
+	let showDatePicker = false;
+	let showTimePicker = false;
+
+	const STATUS_OPTIONS = [
+		{ value: '', label: 'All statuses' },
+		{ value: 'DRAFT', label: 'Draft' },
+		{ value: 'SCHEDULED', label: 'Scheduled' },
+		{ value: 'SENDING', label: 'Sending' },
+		{ value: 'SENT', label: 'Sent' },
+		{ value: 'PARTIALLY_SENT', label: 'Partially sent' },
+		{ value: 'FAILED', label: 'Failed' },
+		{ value: 'CANCELLED', label: 'Cancelled' }
+	];
+
+	/**
+	 * Fold the picked date and 12-hour time label into one local Date.
+	 * Returns null until both halves are chosen — a date with no time would
+	 * silently schedule the send for midnight.
+	 */
+	function scheduledAtDate(): Date | null {
+		if (!scheduledDate || !scheduledTime) return null;
+		const [clock, meridiem] = scheduledTime.trim().split(' ');
+		const [rawHours, rawMinutes] = clock.split(':').map(Number);
+		if (Number.isNaN(rawHours) || Number.isNaN(rawMinutes)) return null;
+		let hours = rawHours % 12;
+		if (meridiem?.toUpperCase() === 'PM') hours += 12;
+		const dt = new Date(scheduledDate);
+		dt.setHours(hours, rawMinutes, 0, 0);
+		return dt;
+	}
+
+	$: scheduledAt = scheduledDate && scheduledTime ? scheduledAtDate() : null;
+	$: scheduleInPast = Boolean(scheduledAt && scheduledAt.getTime() < Date.now());
 
 	// Flow
 	let saving = false;
@@ -102,7 +142,10 @@
 		.map((e) => e.trim().toLowerCase())
 		.filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
 
-	$: reach = audience === 'CUSTOM' ? customEmails.length : (counts?.withEmail ?? null);
+	// `deliverable` is what actually gets sent — `withEmail` still counts users
+	// who opted out of marketing, whom the dispatcher drops.
+	$: reach =
+		audience === 'CUSTOM' ? customEmails.length : (counts?.deliverable ?? counts?.withEmail ?? null);
 
 	$: canSubmit =
 		subject.trim().length >= 3 &&
@@ -110,7 +153,7 @@
 		(channelEmail || channelInApp) &&
 		(audience !== 'CUSTOM' || customEmails.length > 0) &&
 		(!ctaEnabled || (ctaText.trim() && /^https?:\/\//i.test(ctaUrl.trim()))) &&
-		(mode !== 'schedule' || Boolean(scheduledLocal)) &&
+		(mode !== 'schedule' || (Boolean(scheduledAt) && !scheduleInPast)) &&
 		!saving;
 
 	onMount(() => {
@@ -182,7 +225,10 @@
 		inAppTitle = '';
 		inAppBody = '';
 		mode = 'now';
-		scheduledLocal = '';
+		scheduledDate = null;
+		scheduledTime = '';
+		showDatePicker = false;
+		showTimePicker = false;
 		composerError = '';
 		successMsg = '';
 		confirmSend = false;
@@ -222,11 +268,14 @@
 			inAppBody = b.inAppBody ?? '';
 			if (b.scheduledAt) {
 				mode = 'schedule';
-				// datetime-local wants local wall-clock with no zone suffix.
+				// Split the stored instant back into the two controls. TimeModal
+				// works in 30-minute steps, so a time saved off-step is rounded
+				// down to the nearest option it can actually show as selected.
 				const d = new Date(b.scheduledAt);
-				scheduledLocal = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-					.toISOString()
-					.slice(0, 16);
+				scheduledDate = d;
+				const hour12 = d.getHours() % 12 === 0 ? 12 : d.getHours() % 12;
+				const meridiem = d.getHours() < 12 ? 'AM' : 'PM';
+				scheduledTime = `${hour12}:${d.getMinutes() < 30 ? '00' : '30'} ${meridiem}`;
 			} else {
 				mode = 'draft';
 			}
@@ -310,8 +359,7 @@
 			channels: { email: channelEmail, inApp: channelInApp },
 			inAppTitle: inAppTitle.trim() || undefined,
 			inAppBody: inAppBody.trim() || undefined,
-			scheduledAt:
-				mode === 'schedule' && scheduledLocal ? new Date(scheduledLocal).toISOString() : null,
+			scheduledAt: mode === 'schedule' ? (scheduledAt?.toISOString() ?? null) : null,
 			sendNow
 		};
 	}
@@ -461,20 +509,13 @@
 
 	<!-- Filter -->
 	<div class="mt-5 flex flex-wrap items-center gap-3">
-		<select
-			bind:value={statusFilter}
-			on:change={() => load()}
-			class="h-[38px] rounded-lg border border-gray-200 bg-white px-3 text-sm focus:ring-1 focus:ring-[#513BE2] focus:outline-none"
-		>
-			<option value="">All statuses</option>
-			<option value="DRAFT">Draft</option>
-			<option value="SCHEDULED">Scheduled</option>
-			<option value="SENDING">Sending</option>
-			<option value="SENT">Sent</option>
-			<option value="PARTIALLY_SENT">Partially sent</option>
-			<option value="FAILED">Failed</option>
-			<option value="CANCELLED">Cancelled</option>
-		</select>
+		<div class="w-full max-w-[200px] sm:w-[200px]">
+			<Select
+				bind:value={statusFilter}
+				options={STATUS_OPTIONS}
+				on:change={() => load()}
+			/>
+		</div>
 		<span class="text-xs text-gray-400">{total.toLocaleString()} total</span>
 	</div>
 
@@ -590,24 +631,35 @@
 
 <!-- ─── Composer ──────────────────────────────────────────────────────── -->
 {#if showComposer}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3 backdrop-blur-sm">
-		<div class="flex h-full max-h-[94vh] w-full max-w-3xl flex-col rounded-xl bg-white shadow-xl">
+	<!--
+		Full-bleed sheet on phones, centred dialog from `sm` up. `100dvh` rather
+		than `100vh` so the browser's collapsing address bar cannot push the
+		footer actions below the fold on mobile Safari/Chrome.
+	-->
+	<div
+		class="fixed inset-0 z-50 flex items-stretch justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:px-3 sm:py-4"
+	>
+		<div
+			class="flex h-[100dvh] w-full flex-col bg-white shadow-xl sm:h-full sm:max-h-[94vh] sm:max-w-3xl sm:rounded-xl"
+		>
 			<!-- Header -->
-			<div class="flex items-center justify-between border-b border-gray-200 px-5 py-3">
-				<div class="flex items-center gap-3">
+			<div
+				class="flex items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 sm:px-5"
+			>
+				<div class="flex min-w-0 items-center gap-3">
 					<div
-						class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-[#DB3EC6] to-[#513BE2]"
+						class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] sm:flex"
 					>
 						<Icon icon="mdi:bullhorn-variant-outline" class="h-5 w-5 text-white" />
 					</div>
-					<div>
-						<h2 class="font-semibold text-gray-800">
+					<div class="min-w-0">
+						<h2 class="truncate font-semibold text-gray-800">
 							{editingId ? 'Edit broadcast' : 'New broadcast'}
 						</h2>
-						<p class="text-xs text-[#A5A6A6]">Sent from Rondwell to your users</p>
+						<p class="truncate text-xs text-[#A5A6A6]">Sent from Rondwell to your users</p>
 					</div>
 				</div>
-				<div class="flex items-center gap-3">
+				<div class="flex shrink-0 items-center gap-2 sm:gap-3">
 					{#if reach !== null}
 						<span
 							class="hidden items-center gap-1.5 rounded-full border-2 border-[#E5E6E6] px-3 py-1 sm:flex"
@@ -619,7 +671,7 @@
 						</span>
 					{/if}
 					<button
-						class="flex h-8 w-8 items-center justify-center rounded-full bg-[#EBECED]"
+						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EBECED]"
 						on:click={closeComposer}
 						aria-label="Close"
 					>
@@ -628,7 +680,7 @@
 				</div>
 			</div>
 
-			<div class="custom-scrollbar flex-1 overflow-y-auto px-5 py-4">
+			<div class="custom-scrollbar flex-1 overflow-y-auto px-4 py-4 sm:px-5">
 				<!-- Audience -->
 				<div class="mb-4">
 					<span class="mb-1.5 block text-xs font-medium text-[#666769]">Send to</span>
@@ -667,18 +719,29 @@
 						</p>
 					{:else if countsError}
 						<p class="mt-2 text-xs text-red-500">{countsError}</p>
+					{:else if countsLoading}
+						<p class="mt-2 text-[11px] text-gray-400">Sizing this audience…</p>
 					{:else if counts}
+						{@const deliverable = counts.deliverable ?? counts.withEmail}
 						<p class="mt-2 text-[11px] text-gray-500">
 							<span class="font-medium text-gray-700"
-								>{counts.withEmail.toLocaleString()} will receive this</span
+								>{deliverable.toLocaleString()} will receive this</span
 							>
+							{#if counts.total > 0}
+								· out of {counts.total.toLocaleString()} in this segment
+							{/if}
 							{#if counts.total > counts.withEmail}
 								· {(counts.total - counts.withEmail).toLocaleString()} have no email on file
 							{/if}
 							{#if counts.optedOut > 0}
-								· {counts.optedOut.toLocaleString()} opted out of marketing and are excluded
+								· {counts.optedOut.toLocaleString()} opted out of marketing
 							{/if}
 						</p>
+						{#if deliverable === 0}
+							<p class="mt-1 text-[11px] text-amber-600">
+								Nobody matches this audience right now — nothing would be sent.
+							</p>
+						{/if}
 					{/if}
 				</div>
 
@@ -1053,8 +1116,20 @@
 					{/if}
 				</div>
 
-				<!-- Scheduling -->
-				<div class="mb-4 rounded-lg border border-gray-100 bg-[#F8F8F9] p-3">
+				<!--
+					Scheduling. The pickers anchor below their trigger, and this card
+					sits at the bottom of a scrolling body — so while one is open the
+					card grows by roughly the popover's height. Without that the panel
+					is clipped by the scroll container and the calendar is unusable.
+					(On phones both pickers centre themselves in the viewport instead,
+					so the extra room costs nothing there.)
+				-->
+				<div
+					class="mb-4 rounded-lg border border-gray-100 bg-[#F8F8F9] p-3 transition-[padding] {showDatePicker ||
+					showTimePicker
+						? 'pb-[300px] sm:pb-[320px]'
+						: ''}"
+				>
 					<div class="flex flex-wrap items-center gap-2">
 						{#each [{ v: 'now', icon: 'mdi:send', label: 'Send now' }, { v: 'schedule', icon: 'mdi:clock-outline', label: 'Schedule' }, { v: 'draft', icon: 'mdi:content-save-outline', label: 'Save as draft' }] as opt}
 							<button
@@ -1073,14 +1148,73 @@
 						{/each}
 					</div>
 					{#if mode === 'schedule'}
-						<input
-							type="datetime-local"
-							bind:value={scheduledLocal}
-							class="mt-3 h-[36px] rounded-lg border border-gray-200 bg-white px-3 text-xs focus:border-gray-400 focus:outline-none"
-						/>
-						<p class="mt-1 text-[11px] text-gray-400">
-							Uses your local time. Broadcasts go out within a minute of the scheduled time.
-						</p>
+						<div class="mt-3 flex flex-wrap items-center gap-2">
+							<!-- Date -->
+							<div class="relative" use:clickOutside={() => (showDatePicker = false)}>
+								<button
+									type="button"
+									on:click={() => {
+										showDatePicker = !showDatePicker;
+										showTimePicker = false;
+									}}
+									class="flex h-[38px] items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 transition hover:border-gray-300"
+								>
+									<Icon icon="mdi:calendar-blank-outline" class="text-sm text-gray-400" />
+									{scheduledDate
+										? scheduledDate.toLocaleDateString('en-US', {
+												month: 'short',
+												day: 'numeric',
+												year: 'numeric'
+											})
+										: 'Pick a date'}
+								</button>
+								<DatePickerModal
+									bind:open={showDatePicker}
+									bind:selectedDate={scheduledDate}
+									minDate={new Date()}
+									on:select={() => (showDatePicker = false)}
+								/>
+							</div>
+
+							<!-- Time -->
+							<div class="relative" use:clickOutside={() => (showTimePicker = false)}>
+								<button
+									type="button"
+									on:click={() => {
+										showTimePicker = !showTimePicker;
+										showDatePicker = false;
+									}}
+									class="flex h-[38px] items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 transition hover:border-gray-300"
+								>
+									<Icon icon="mdi:clock-outline" class="text-sm text-gray-400" />
+									{scheduledTime || 'Pick a time'}
+								</button>
+								<TimeModal bind:open={showTimePicker} bind:selectedTime={scheduledTime} />
+							</div>
+						</div>
+
+						{#if scheduleInPast}
+							<p class="mt-2 text-[11px] text-red-500">
+								That time has already passed — pick a later one.
+							</p>
+						{:else if scheduledAt}
+							<p class="mt-2 text-[11px] text-gray-500">
+								Goes out <span class="font-medium text-gray-700"
+									>{scheduledAt.toLocaleString('en-GB', {
+										weekday: 'short',
+										day: 'numeric',
+										month: 'short',
+										hour: '2-digit',
+										minute: '2-digit'
+									})}</span
+								> your local time.
+							</p>
+						{:else}
+							<p class="mt-2 text-[11px] text-gray-400">
+								Pick both a date and a time. Broadcasts go out within a minute of the scheduled
+								time.
+							</p>
+						{/if}
 					{/if}
 				</div>
 
@@ -1098,7 +1232,9 @@
 			</div>
 
 			<!-- Footer -->
-			<div class="border-t border-gray-200 px-5 py-3">
+			<div
+				class="border-t border-gray-200 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5"
+			>
 				{#if confirmSend && mode === 'now'}
 					<!--
 						Last stop before an irreversible send. The recipient count is
@@ -1115,7 +1251,7 @@
 					</div>
 				{/if}
 
-				<div class="mb-2 flex items-center justify-between">
+				<div class="mb-2 flex flex-wrap items-center justify-between gap-2">
 					<span class="text-xs text-[#B9BABA]">
 						{#if reach !== null}
 							Reaching <span class="font-medium text-gray-700">{reach.toLocaleString()}</span>
@@ -1127,12 +1263,13 @@
 					<button
 						on:click={handleTest}
 						disabled={testing || !canSubmit}
-						class="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-[#626365] transition hover:bg-gray-50 disabled:opacity-40"
+						class="flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-[#626365] transition hover:bg-gray-50 disabled:opacity-40"
 					>
 						{#if testing}
 							<Icon icon="mdi:loading" class="animate-spin text-sm" /> Sending…
 						{:else}
-							<Icon icon="mdi:email-fast-outline" class="text-sm" /> Send test to me
+							<!-- Goes to every Rondwell inbox, not just the acting admin. -->
+							<Icon icon="mdi:email-fast-outline" class="text-sm" /> Send test to the team
 						{/if}
 					</button>
 				</div>

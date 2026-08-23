@@ -13,16 +13,44 @@
 			? `/collection/${collection._id}/events`
 			: undefined;
 
+	/**
+	 * H-74 — tags are stripped WITHOUT parsing the HTML.
+	 *
+	 * This used `tmp.innerHTML = html` to extract text, which **parses the
+	 * attacker's HTML into a live DOM** before reading `textContent` off it.
+	 * Assigning `innerHTML` does not run `<script>`, but it does run every
+	 * other execution vector the parser supports —
+	 * `<img src=x onerror=...>`, `<svg onload=...>`, `<iframe srcdoc=...>` —
+	 * because those fire on insertion, not on script evaluation.
+	 *
+	 * The field is `collection.description`, organizer-authored, and this card
+	 * renders on the dashboard overview and the collection list. The irony is
+	 * that the function's entire purpose is to *discard* the HTML: it never
+	 * needed to parse it.
+	 *
+	 * `DOMParser` with `text/html` builds an **inert** document — no script
+	 * execution, no resource loading, no event handlers — which is exactly the
+	 * "give me the text" operation intended. The regex path is kept for SSR,
+	 * where there is no `DOMParser`, and it is safe there because the result is
+	 * interpolated as text rather than as markup.
+	 */
 	function stripHtml(html: string): string {
 		if (!html) return '';
-		// Use a temporary element to extract text content from HTML
-		if (typeof document !== 'undefined') {
-			const tmp = document.createElement('div');
-			tmp.innerHTML = html;
-			return tmp.textContent || tmp.innerText || '';
+
+		if (typeof DOMParser !== 'undefined') {
+			try {
+				const doc = new DOMParser().parseFromString(html, 'text/html');
+				return (doc.body?.textContent ?? '').replace(/\s+/g, ' ').trim();
+			} catch {
+				// fall through to the regex path
+			}
 		}
-		// SSR fallback: strip tags with regex
-		return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+
+		return html
+			.replace(/<[^>]*>/g, '')
+			.replace(/&nbsp;/g, ' ')
+			.replace(/\s+/g, ' ')
+			.trim();
 	}
 
 	$: plainDescription = stripHtml(collection?.description ?? '');

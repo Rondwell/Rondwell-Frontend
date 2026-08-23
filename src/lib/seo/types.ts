@@ -10,10 +10,14 @@ export interface SeoMeta {
 	title: string;
 	/** Clean, emoji-free meta description / og:description. */
 	description: string;
-	/** Absolute https share-image URL (passed through from the source). */
+	/** Absolute https share-image URL (a Netlify Image CDN transform). */
 	image: string;
-	/** True MIME type of the image (e.g. "image/png"). Omitted when unknown. */
+	/** True MIME type of the rendered image. */
 	imageType?: string;
+	/** Exact rendered width in px. Always emitted — WhatsApp needs it. */
+	imageWidth?: number;
+	/** Exact rendered height in px. Always emitted — WhatsApp needs it. */
+	imageHeight?: number;
 	/** Absolute canonical URL of the page. */
 	url: string;
 	/** og:type — "website", "article", "profile", etc. Defaults to "website". */

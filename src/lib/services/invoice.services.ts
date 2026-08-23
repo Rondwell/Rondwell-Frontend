@@ -1,5 +1,7 @@
 import { authFetch } from '$lib/services/api.client';
 import { throwApiError } from '$lib/utils/errorMessage';
+// M-138 / M-137 — one call site owns external opens.
+import { openExternal } from '$lib/utils/openExternal';
 
 const PAYMENT_URL = import.meta.env.VITE_PAYMENT_API_URL || import.meta.env.VITE_API_URL;
 
@@ -29,8 +31,9 @@ export async function downloadInvoice(collaborationId: string, invoiceNumber: st
 	try {
 		const url = await getInvoicePdfUrl(collaborationId, invoiceNumber);
 		if (!url) return { ok: false, message: 'Invoice not available yet' };
-		window.open(url, '_blank');
-		return { ok: true };
+		// M-138 — was `window.open(url, '_blank')`. Without `noopener` the opened
+		// page can navigate this tab to a look-alike login.
+		return openExternal(url);
 	} catch (e: any) {
 		return { ok: false, message: e?.message || 'Invoice not available yet — try again shortly' };
 	}
@@ -41,8 +44,7 @@ export async function downloadReceipt(transactionId: string): Promise<{ ok: bool
 	try {
 		const url = await getReceiptPdfUrl(transactionId);
 		if (!url) return { ok: false, message: 'Receipt not available yet' };
-		window.open(url, '_blank');
-		return { ok: true };
+		return openExternal(url);
 	} catch (e: any) {
 		return { ok: false, message: e?.message || 'Receipt not available yet — try again shortly' };
 	}

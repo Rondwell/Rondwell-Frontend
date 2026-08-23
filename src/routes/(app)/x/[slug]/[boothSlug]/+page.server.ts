@@ -1,22 +1,22 @@
 import type { PageServerLoad } from './$types';
-import { SITE, buildBoothSeo } from '$lib/seo';
+import { SITE, buildBoothSeo, fallbackSeo, fetchSeoJson } from '$lib/seo';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const { slug: exhibitorSlug, boothSlug } = params;
-	if (!exhibitorSlug || !boothSlug) return { seo: null };
+	if (!exhibitorSlug || !boothSlug) return { seo: fallbackSeo('/') };
+
+	const path = `/x/${exhibitorSlug}/${boothSlug}`;
 
 	try {
-		const res = await globalThis.fetch(
+		const json = await fetchSeoJson(
 			`${SITE.api}/api/v1/products/public/discover/exhibitor/${encodeURIComponent(exhibitorSlug)}/booth/${encodeURIComponent(boothSlug)}`
 		);
-		if (!res.ok) return { seo: null };
-		const json = await res.json();
-		const data = json.data;
-		if (!data?.booth) return { seo: null };
+		const data = json?.data;
+		if (!data?.booth) return { seo: fallbackSeo(path) };
 
 		return { seo: buildBoothSeo(data.booth, data.exhibitor, exhibitorSlug, boothSlug) };
 	} catch (err) {
 		console.error('[SEO] x/[slug]/[boothSlug] load failed:', err);
-		return { seo: null };
+		return { seo: fallbackSeo(path) };
 	}
 };

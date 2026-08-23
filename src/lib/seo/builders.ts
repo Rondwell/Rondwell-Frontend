@@ -7,18 +7,34 @@
  * WhatsApp-safe metadata.
  */
 
-import { SITE } from './config';
+import { OG_IMAGE, SITE } from './config';
 import type { SeoMeta } from './types';
-import { buildDescription, canonical, ogImageType, resolveOgImage, stripHtml, truncate } from './utils';
+import {
+	buildDescription,
+	canonical,
+	ogImageUrl,
+	resolveOgImage,
+	stripHtml,
+	truncate
+} from './utils';
 
 const titleOf = (name: string) => `${name} | ${SITE.name}`;
 
-/** Resolve a share image and its true MIME type from the first non-empty source. */
-function pickImage(...candidates: Array<string | null | undefined>): { image: string; imageType: string } {
+/**
+ * Resolve a share image from the first non-empty candidate and render it
+ * through the Image CDN.
+ *
+ * The output is always a 1200x630 JPEG regardless of what the source was, so
+ * the MIME type is a constant rather than something guessed from the source
+ * extension — no more declaring "image/png" for bytes that are actually JPEG,
+ * which is a mismatch WhatsApp and Facebook both punish by dropping the image.
+ */
+function pickImage(...candidates: Array<string | null | undefined>): {
+	image: string;
+	imageType: string;
+} {
 	const source = candidates.find((c) => c && String(c).trim());
-	const image = resolveOgImage(source);
-	const imageType = ogImageType(image) || SITE.defaultImageType;
-	return { image, imageType };
+	return { image: ogImageUrl(resolveOgImage(source)), imageType: OG_IMAGE.mime };
 }
 
 /* ───────────────────────────── Event ───────────────────────────── */
@@ -56,7 +72,12 @@ export function buildEventSeo(event: any, canonicalPath: string, _attendeeCount 
 
 	const description = buildDescription(
 		rawDesc,
-		[dateLabel, timeLabel, registrationType === 'FREE' ? 'Free entry' : 'Paid entry', locationLabel],
+		[
+			dateLabel,
+			timeLabel,
+			registrationType === 'FREE' ? 'Free entry' : 'Paid entry',
+			locationLabel
+		],
 		`Join ${title} on ${SITE.name}`
 	);
 
@@ -180,7 +201,16 @@ export function buildCollectionSeo(collection: any, events: any[], slug: string)
 		}
 	};
 
-	return { title: titleOf(name), description, image, imageType, url, ogType: 'website', imageAlt: name, jsonLd };
+	return {
+		title: titleOf(name),
+		description,
+		image,
+		imageType,
+		url,
+		ogType: 'website',
+		imageAlt: name,
+		jsonLd
+	};
 }
 
 /* ───────────────────────────── Vendor ───────────────────────────── */
@@ -189,7 +219,11 @@ export function buildVendorSeo(vendor: any, products: any[], slug: string): SeoM
 	const name = vendor.businessName || vendor.name || 'Vendor';
 	const rawDesc = stripHtml(vendor.businessDescription || vendor.bio);
 	const url = canonical(`/v/${slug}`);
-	const { image, imageType } = pickImage(vendor.coverImageUrl, vendor.logoUrl, vendor.profilePictureUrl);
+	const { image, imageType } = pickImage(
+		vendor.coverImageUrl,
+		vendor.logoUrl,
+		vendor.profilePictureUrl
+	);
 	const productCount = products.length;
 
 	const description = buildDescription(
@@ -235,7 +269,16 @@ export function buildVendorSeo(vendor: any, products: any[], slug: string): SeoM
 			: {})
 	};
 
-	return { title: titleOf(name), description, image, imageType, url, ogType: 'website', imageAlt: name, jsonLd };
+	return {
+		title: titleOf(name),
+		description,
+		image,
+		imageType,
+		url,
+		ogType: 'website',
+		imageAlt: name,
+		jsonLd
+	};
 }
 
 /* ───────────────────────────── Speaker ───────────────────────────── */
@@ -271,7 +314,16 @@ export function buildSpeakerSeo(speaker: any, portfolios: any[], slug: string): 
 		...(speaker.expertise ? { knowsAbout: speaker.expertise } : {})
 	};
 
-	return { title: titleOf(name), description, image, imageType, url, ogType: 'profile', imageAlt: name, jsonLd };
+	return {
+		title: titleOf(name),
+		description,
+		image,
+		imageType,
+		url,
+		ogType: 'profile',
+		imageAlt: name,
+		jsonLd
+	};
 }
 
 /* ──────────────────────────── Exhibitor ──────────────────────────── */
@@ -310,12 +362,26 @@ export function buildExhibitorSeo(exhibitor: any, booths: any[], slug: string): 
 		publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url }
 	};
 
-	return { title: titleOf(name), description, image, imageType, url, ogType: 'website', imageAlt: name, jsonLd };
+	return {
+		title: titleOf(name),
+		description,
+		image,
+		imageType,
+		url,
+		ogType: 'website',
+		imageAlt: name,
+		jsonLd
+	};
 }
 
 /* ─────────────────────── Vendor product (detail) ─────────────────────── */
 
-export function buildProductSeo(product: any, vendor: any, vendorSlug: string, productSlug: string): SeoMeta {
+export function buildProductSeo(
+	product: any,
+	vendor: any,
+	vendorSlug: string,
+	productSlug: string
+): SeoMeta {
 	const name = product.productName || 'Product';
 	const vendorName = vendor?.businessName || vendor?.name || 'Vendor';
 	const rawDesc = stripHtml(product.description);
@@ -361,7 +427,12 @@ export function buildProductSeo(product: any, vendor: any, vendorSlug: string, p
 
 /* ───────────────────── Speaker portfolio (detail) ───────────────────── */
 
-export function buildPortfolioSeo(portfolio: any, speaker: any, speakerSlug: string, portfolioSlug: string): SeoMeta {
+export function buildPortfolioSeo(
+	portfolio: any,
+	speaker: any,
+	speakerSlug: string,
+	portfolioSlug: string
+): SeoMeta {
 	const title = portfolio.title || 'Portfolio';
 	const speakerName = speaker?.fullName || speaker?.name || 'Speaker';
 	const rawDesc = stripHtml(portfolio.description);
@@ -399,12 +470,21 @@ export function buildPortfolioSeo(portfolio: any, speaker: any, speakerSlug: str
 
 /* ───────────────────── Exhibitor booth (detail) ───────────────────── */
 
-export function buildBoothSeo(booth: any, exhibitor: any, exhibitorSlug: string, boothSlug: string): SeoMeta {
+export function buildBoothSeo(
+	booth: any,
+	exhibitor: any,
+	exhibitorSlug: string,
+	boothSlug: string
+): SeoMeta {
 	const title = booth.title || 'Digital Booth';
 	const exhibitorName = exhibitor?.companyName || exhibitor?.name || 'Exhibitor';
 	const rawDesc = stripHtml(booth.description);
 	const url = canonical(`/x/${exhibitorSlug}/${boothSlug}`);
-	const { image, imageType } = pickImage(booth.bannerUrl, booth.media?.[0]?.url, exhibitor?.coverImageUrl);
+	const { image, imageType } = pickImage(
+		booth.bannerUrl,
+		booth.media?.[0]?.url,
+		exhibitor?.coverImageUrl
+	);
 
 	const description = buildDescription(
 		rawDesc,
@@ -424,6 +504,112 @@ export function buildBoothSeo(booth: any, exhibitor: any, exhibitorSlug: string,
 
 	return {
 		title: `${title} - ${exhibitorName} | ${SITE.name}`,
+		description,
+		image,
+		imageType,
+		url,
+		ogType: 'website',
+		imageAlt: title,
+		jsonLd
+	};
+}
+
+/* ────────────────── Gift registry / wishlist (GAP 3) ────────────────── */
+
+/**
+ * F5 — WhatsApp-first metadata for a shared registry.
+ *
+ * These links are pasted into group chats, not indexed by Google, so the
+ * description carries the two things that make someone tap: how much is still
+ * needed, and how many gifts are left. A generic "view this registry" card
+ * gets ignored.
+ */
+export function buildWishlistSeo(registry: any, itemCount: number, slug: string): SeoMeta {
+	const title = registry?.title || 'Gift Registry';
+	const rawDesc = stripHtml(registry?.description);
+	const url = canonical(`/w/${slug}`);
+	const { image, imageType } = pickImage(registry?.coverImageUrl);
+
+	const remaining = Math.max(0, itemCount - (registry?.totals?.fulfilledCount ?? 0));
+	const description = buildDescription(
+		rawDesc,
+		[
+			remaining > 0 ? `${remaining} gift${remaining === 1 ? '' : 's'} still available` : 'Every gift claimed',
+			registry?.isOpen === false ? 'Closed' : ''
+		],
+		`Pick a gift from ${title} on ${SITE.name}`
+	);
+
+	const jsonLd = {
+		'@context': 'https://schema.org',
+		'@type': 'ItemList',
+		name: title,
+		description: truncate(rawDesc, 160) || description,
+		url,
+		image,
+		numberOfItems: itemCount,
+		publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url }
+	};
+
+	return {
+		title: titleOf(title),
+		description,
+		image,
+		imageType,
+		url,
+		ogType: 'website',
+		imageAlt: title,
+		jsonLd
+	};
+}
+
+/* ───────────────────────── Gift link (GAP 4) ───────────────────────── */
+
+/**
+ * F5 — metadata for a standalone gift link.
+ *
+ * The single most-shared surface in the celebration layer: someone posts
+ * "it's my birthday 🎉" with this URL and the preview is what decides whether
+ * anyone taps. The occasion and the recipient's name do more work than any
+ * description, so they lead.
+ *
+ * The amount RAISED is deliberately omitted from the card. Publishing a
+ * running total on a link that lands in a group chat invites judgement about
+ * who gave what — and no competitor does it either.
+ */
+export function buildGiftLinkSeo(link: any, slug: string): SeoMeta {
+	const title = link?.title || 'Send a gift';
+	const rawDesc = stripHtml(link?.message);
+	const url = canonical(`/gift/${slug}`);
+	const { image, imageType } = pickImage(link?.coverImageUrl);
+
+	const occasionLabel: Record<string, string> = {
+		BIRTHDAY: 'Birthday',
+		WEDDING: 'Wedding',
+		GRADUATION: 'Graduation',
+		BABY: 'New baby',
+		THANK_YOU: 'Thank you',
+		OTHER: ''
+	};
+
+	const description = buildDescription(
+		rawDesc,
+		[occasionLabel[link?.occasion] || '', 'Send a gift in seconds'],
+		`Send ${title} a gift on ${SITE.name}`
+	);
+
+	const jsonLd = {
+		'@context': 'https://schema.org',
+		'@type': 'WebPage',
+		name: title,
+		description: truncate(rawDesc, 160) || description,
+		url,
+		image,
+		publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url }
+	};
+
+	return {
+		title: titleOf(title),
 		description,
 		image,
 		imageType,

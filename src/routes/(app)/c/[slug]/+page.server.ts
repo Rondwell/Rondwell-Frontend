@@ -1,22 +1,22 @@
 import type { PageServerLoad } from './$types';
-import { SITE, buildCollectionSeo } from '$lib/seo';
+import { SITE, buildCollectionSeo, fallbackSeo, fetchSeoJson } from '$lib/seo';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const { slug } = params;
-	if (!slug) return { seo: null };
+	if (!slug) return { seo: fallbackSeo('/') };
+
+	const path = `/c/${slug}`;
 
 	try {
-		const res = await globalThis.fetch(
+		const data = await fetchSeoJson(
 			`${SITE.api}/api/v1/collections/by-slug/${encodeURIComponent(slug)}`
 		);
-		if (!res.ok) return { seo: null };
-		const data = await res.json();
-		const collection = data.collection;
-		if (!collection) return { seo: null };
+		const collection = data?.collection;
+		if (!collection) return { seo: fallbackSeo(path) };
 
 		return { seo: buildCollectionSeo(collection, data.events ?? [], slug) };
 	} catch (err) {
 		console.error('[SEO] c/[slug] load failed:', err);
-		return { seo: null };
+		return { seo: fallbackSeo(path) };
 	}
 };

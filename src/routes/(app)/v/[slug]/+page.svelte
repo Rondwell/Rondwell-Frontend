@@ -5,6 +5,25 @@
 	import Seo from '$lib/components/Seo.svelte';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
+	/**
+	 * H-72 — every user-supplied URL on this page goes through `safeHref`.
+	 *
+	 * **Svelte does not sanitise URL attributes.** `href={value}` interpolates
+	 * verbatim, so a `javascript:` URL stored in a vendor's website field, a
+	 * social handle, a booth resource link or a portfolio link is one click
+	 * from executing script in a visitor's session — on a PUBLIC page, against
+	 * a visitor who has never interacted with that vendor.
+	 *
+	 * A sweep of every `href={…}` binding found eight such sinks across six
+	 * storefront pages. `safeHref` is the allow-list check that already existed
+	 * at `event-page/[id]/participant/+page.svelte` and was used on exactly one
+	 * page; it now lives in `$lib/security/safeUrl` so there is one copy.
+	 *
+	 * It returns `undefined` for a rejected URL, which drops the `href`
+	 * attribute entirely — the anchor renders as inert text rather than as a
+	 * dead `#` link that still looks clickable.
+	 */
+	import { safeHref } from '$lib/security/safeUrl';
 
 	export let data: any;
 	$: seo = data?.seo;
@@ -128,7 +147,7 @@
 						{#if links.length > 0}
 							<div class="mt-3 flex flex-wrap items-center gap-2">
 								{#each links as [key, value]}
-									<a href={key === 'website' ? String(value) : `https://${key === 'twitter' || key === 'x' ? 'x.com' : key + '.com'}/${value}`}
+									<a href={safeHref(key === 'website' ? String(value) : `https://${key === 'twitter' || key === 'x' ? 'x.com' : key + '.com'}/${value}`)}
 										target="_blank" rel="noopener noreferrer"
 										class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 transition hover:bg-gray-200">
 										<Icon icon={socialIconMap[key] ?? 'mdi:link'} class="h-4 w-4 text-gray-600" />
@@ -267,7 +286,7 @@
 							{#if vendor.contactInfo?.website}
 								<div>
 									<p class="text-xs font-medium text-gray-400 uppercase">Website</p>
-									<a href={vendor.contactInfo.website} target="_blank" rel="noopener noreferrer" class="mt-1 text-sm text-[#513BE2]">{vendor.contactInfo.website}</a>
+									<a href={safeHref(vendor.contactInfo.website)} target="_blank" rel="noopener noreferrer" class="mt-1 text-sm text-[#513BE2]">{vendor.contactInfo.website}</a>
 								</div>
 							{/if}
 						</div>

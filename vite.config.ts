@@ -56,6 +56,33 @@ export default defineConfig({
 		})
 	],
 	server: {
-		allowedHosts: []
+		allowedHosts: [],
+
+		/**
+		 * Pre-transform the two modules every single page depends on, at startup.
+		 *
+		 * `src/app.css` is a Tailwind v4 entry, and its first transform costs ~25s
+		 * on this project (the scan touches every file under `src/`, and cold reads
+		 * on Windows run ~40ms each). The root `+layout.svelte` imports it, so that
+		 * cost landed on whichever request arrived first.
+		 *
+		 * In SSR that request goes through Vite 6's module-runner transport, which
+		 * gives up after a hard-coded 60s and is not configurable:
+		 *
+		 *   Error when evaluating SSR module /src/routes/+layout.svelte:
+		 *   transport invoke timed out after 60000ms  ... fetchModule /src/app.css
+		 *
+		 * The render then aborts with a 500, and reloading starts over from cold —
+		 * so the dev server could sit there failing every request indefinitely.
+		 *
+		 * Warmup does the same work at boot, where nothing is waiting on a 60s
+		 * budget, and the first real request hits an already-warm cache (~1s).
+		 * It does not make the total work smaller, it stops it landing inside a
+		 * request that is allowed to time out.
+		 */
+		warmup: {
+			ssrFiles: ['./src/app.css', './src/routes/+layout.svelte'],
+			clientFiles: ['./src/app.css', './src/routes/+layout.svelte']
+		}
 	}
 });

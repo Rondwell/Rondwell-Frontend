@@ -17,6 +17,26 @@
 	let requestId = 0;
 	let debounce = 0;
 
+	/**
+	 * GAP 8 — make planners findable.
+	 *
+	 * Event planners already exist on the platform as vendors with
+	 * `businessType: 'Event Planning'`; nothing surfaced them. These chips are
+	 * the whole fix — a first-class filter, not a new subsystem. "Planning &
+	 * Coordination" is deliberately first: it is the category an organizer
+	 * setting up a big event looks for before anything else.
+	 */
+	const QUICK_CATEGORIES = [
+		{ label: 'Planning & Coordination', value: 'Event Planning' },
+		{ label: 'Catering', value: 'Catering' },
+		{ label: 'Photography', value: 'Photography' },
+		{ label: 'Decoration', value: 'Decoration' },
+		{ label: 'Sound & Lighting', value: 'Sound & Lighting' },
+		{ label: 'Entertainment', value: 'Entertainment' },
+		{ label: 'Event Venue', value: 'Event Venue' }
+	];
+	let businessType = '';
+
 	onDestroy(() => clearTimeout(debounce));
 
 	$: searchQuery = $discoverFilters.search.trim();
@@ -29,7 +49,8 @@
 			const data = await discoverVendors({
 				page: pageNumber,
 				limit: PAGE_SIZE,
-				search: search || undefined
+				search: search || undefined,
+				businessType: businessType || undefined
 			});
 			if (id !== requestId) return;
 			vendors = data?.vendors ?? [];
@@ -49,11 +70,18 @@
 		debounce = window.setTimeout(() => loadVendors(search, pageNumber), delay);
 	}
 
-	$: if (searchQuery !== lastKey) {
+	// Key on BOTH the search text and the category chip so selecting a chip
+	// actually re-queries — keying on search alone would leave the list stale.
+	$: filterKey = `${searchQuery}::${businessType}`;
+	$: if (filterKey !== lastKey) {
 		const isFirstLoad = lastKey === null;
-		lastKey = searchQuery;
+		lastKey = filterKey;
 		currentPage = 1;
 		schedule(searchQuery, 1, isFirstLoad ? 0 : 220);
+	}
+
+	function toggleCategory(value: string) {
+		businessType = businessType === value ? '' : value;
 	}
 
 	function goToPage(pageNumber: number) {
@@ -87,6 +115,31 @@
 		</h1>
 		{#if !loading && !failed && total}
 			<span class="text-xs font-semibold text-gray-400">{total.toLocaleString()} vendors</span>
+		{/if}
+	</div>
+
+	<!-- GAP 8 — category chips. "Planning & Coordination" leads. -->
+	<div class="mb-4 flex flex-wrap gap-2">
+		{#each QUICK_CATEGORIES as cat}
+			<button
+				type="button"
+				aria-pressed={businessType === cat.value}
+				on:click={() => toggleCategory(cat.value)}
+				class="rounded-full px-3 py-1.5 text-xs font-medium transition-colors {businessType === cat.value
+					? 'bg-gray-900 text-white'
+					: 'bg-[#EBECED] text-[#5D646F] hover:bg-gray-200'}"
+			>
+				{cat.label}
+			</button>
+		{/each}
+		{#if businessType}
+			<button
+				type="button"
+				on:click={() => (businessType = '')}
+				class="rounded-full px-3 py-1.5 text-xs font-medium text-[#83808D] underline"
+			>
+				Clear
+			</button>
 		{/if}
 	</div>
 

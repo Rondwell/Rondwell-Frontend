@@ -1,4 +1,7 @@
 <script lang="ts">
+	// C-09 — every user-content {@html} sink routes through one shared
+	// sanitizer. A bare {@html} on stored content is a bug.
+	import { sanitizeHtml } from '$lib/security/sanitizeHtml';
 	import { page } from '$app/stores';
 	import SubscribeModal from '$lib/components/SubscribeModal.svelte';
 	import { publicSubscribeToCollection } from '$lib/services/collection.services';
@@ -11,6 +14,25 @@
 	import Seo from '$lib/components/Seo.svelte';
 	import Icon from '@iconify/svelte';
 	import { onDestroy, onMount } from 'svelte';
+	/**
+	 * H-72 — every user-supplied URL on this page goes through `safeHref`.
+	 *
+	 * **Svelte does not sanitise URL attributes.** `href={value}` interpolates
+	 * verbatim, so a `javascript:` URL stored in a vendor's website field, a
+	 * social handle, a booth resource link or a portfolio link is one click
+	 * from executing script in a visitor's session — on a PUBLIC page, against
+	 * a visitor who has never interacted with that vendor.
+	 *
+	 * A sweep of every `href={…}` binding found eight such sinks across six
+	 * storefront pages. `safeHref` is the allow-list check that already existed
+	 * at `event-page/[id]/participant/+page.svelte` and was used on exactly one
+	 * page; it now lives in `$lib/security/safeUrl` so there is one copy.
+	 *
+	 * It returns `undefined` for a rejected URL, which drops the `href`
+	 * attribute entirely — the anchor renders as inert text rather than as a
+	 * dead `#` link that still looks clickable.
+	 */
+	import { safeHref } from '$lib/security/safeUrl';
 
 	export let data: any;
 	$: seo = data?.seo;
@@ -218,7 +240,7 @@
 						{#if links.length > 0}
 							<div class="mt-3 flex flex-wrap items-center gap-2">
 								{#each links as [key, value]}
-									<a href={key === 'website' ? String(value) : `https://${key === 'twitter' || key === 'x' ? 'x.com' : key + '.com'}/${value}`}
+									<a href={safeHref(key === 'website' ? String(value) : `https://${key === 'twitter' || key === 'x' ? 'x.com' : key + '.com'}/${value}`)}
 										target="_blank" rel="noopener noreferrer"
 										class="flex h-8 w-8 items-center justify-center rounded-full transition hover:opacity-80"
 										style="background-color: {themeColor.smallCover}">
@@ -257,7 +279,7 @@
 					</div>
 					<div class="relative">
 						<div class="prose prose-sm max-w-none text-sm leading-relaxed {showFullDescription ? '' : 'line-clamp-2'}" style="color: {themeColor.lightText}">
-							{@html collection.description}
+							{@html sanitizeHtml(collection.description)}
 						</div>
 						{#if stripHtml(collection.description).length > 120}
 							<button

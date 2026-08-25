@@ -539,12 +539,22 @@
 			const attendeeData = await attendeeRes.json();
 			if (!attendeeRes.ok) throw new Error(attendeeData.message ?? 'Failed to create attendee');
 
-			const existingAttendee = attendeeData.data;
-			const attendeeId = existingAttendee?._id ?? existingAttendee?.id ?? attendeeData.attendeeId;
 			// P1-15: capture the registration token issued by event-service. The
 			// payment service trusts this token (not raw IDs) for the public
 			// ticket-purchase route.
+			//
+			// M-72 removed the attendee record from this response, so the token is
+			// now the ONLY thing carrying our attendeeId. It is forwarded to the
+			// registration call below, which reads the id out of the signed claims.
+			// Reading `attendeeData.data._id` here (as this used to) yielded
+			// `undefined` against any current backend and broke registration.
 			let registrationToken: string | undefined = attendeeData.registrationToken;
+			if (!registrationToken) {
+				throw new Error('Registration could not be started. Please try again.');
+			}
+			// Older backends still returned the record; harmless to keep reading.
+			const attendeeId =
+				attendeeData.data?._id ?? attendeeData.data?.id ?? attendeeData.attendeeId;
 
 			// GROUP REGISTRATION PATH
 			if (isGroupRegistration && groupMembers.length > 0) {
@@ -553,6 +563,8 @@
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
 						eventId,
+						// The lead's attendeeId is read from these signed claims server-side.
+						registrationToken,
 						ticketTypeId: selectedTicketId || undefined,
 						leadDetails: {
 							attendeeId,
@@ -633,6 +645,8 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					eventId,
+					// The attendeeId is read from these signed claims server-side.
+					registrationToken,
 					attendeeId,
 					attendee_details: {
 						email: email.trim().toLowerCase(),

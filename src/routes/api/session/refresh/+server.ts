@@ -67,7 +67,7 @@ export const POST: RequestHandler = async ({ cookies, url }) => {
 	}
 
 	if (!res.ok) {
-		invalidateSessionToken(current);
+		await invalidateSessionToken(current);
 		clearSessionCookie(cookies, secure);
 		return json({ success: false, message: 'Session expired' }, { status: 401 });
 	}
@@ -90,14 +90,14 @@ export const POST: RequestHandler = async ({ cookies, url }) => {
 				'The cookie now holds a spent token, so the session is ended rather ' +
 				'than left to trip M-15 reuse detection on its next use.'
 		);
-		invalidateSessionToken(current);
+		await invalidateSessionToken(current);
 		clearSessionCookie(cookies, secure);
 		return json({ success: false, message: 'Session expired' }, { status: 401 });
 	}
 
 	// The old value is dead the moment upstream issued its replacement — drop any
 	// cached "live" verdict for it before the next render reads the cache.
-	invalidateSessionToken(current);
+	await invalidateSessionToken(current);
 	setSessionCookie(cookies, rotated, secure);
 
 	// Only the access token crosses back into script.

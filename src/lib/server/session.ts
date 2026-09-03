@@ -80,10 +80,22 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-function cacheKey(token: string): string {
-	// The token is a bearer credential; key on a prefix + length rather than
-	// holding the whole value as a map key that could surface in a heap dump.
-	return `${token.slice(0, 24)}:${token.length}`;
+async function cacheKey(token: string): Promise<string> {
+	// The token is a bearer credential, so the raw value is not held as a map
+	// key where it could surface in a heap dump — but this was
+	// `${token.slice(0, 24)}:${token.length}`, and the first 24 characters of
+	// every HS256 JWT are the same 36-character header
+	// (`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9`). The prefix contributed nothing
+	// and the key was effectively the token's LENGTH: two users' sessions
+	// collided whenever their tokens were the same size, and a cached positive
+	// was then returned for a token that had never been verified.
+	//
+	// A hash satisfies the original intent and actually distinguishes tokens.
+	// SHA-256 via the Web Crypto global rather than `node:crypto`: this project
+	// has no `@types/node`, and `crypto.subtle` is present in both the dev
+	// server and the deployed Netlify function.
+	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+	return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**
@@ -97,7 +109,7 @@ function cacheKey(token: string): string {
 export async function verifySession(token: string): Promise<CacheEntry> {
 	if (!token) return { user: null, at: Date.now() };
 
-	const key = cacheKey(token);
+	const key = await cacheKey(token);
 	const hit = cache.get(key);
 	if (hit && Date.now() - hit.at < SESSION_CACHE_TTL_MS) return hit;
 
@@ -174,8 +186,8 @@ export function clearSessionCache(): void {
  * it would otherwise keep `hooks.server.ts` treating a spent credential as a
  * valid session for the rest of the TTL.
  */
-export function invalidateSessionToken(token: string): void {
-	if (token) cache.delete(cacheKey(token));
+export async function invalidateSessionToken(token: string): Promise<void> {
+	if (token) cache.delete(await cacheKey(token));
 }
 
 /**

@@ -12,26 +12,48 @@ function getAdminToken(): string | null {
   return localStorage.getItem('admin_token');
 }
 
-export function setAdminAuth(token: string, admin: any) {
+/**
+ * M-84 — mirror the token into an `httpOnly` cookie so
+ * `routes/hq/+layout.server.ts` can guard the console SERVER-side.
+ *
+ * Until this existed the only guard on an 18-section console covering
+ * finance, wallets, AML, KYC and reconciliation was
+ * `$: if (browser && !isAdminAuthenticated()) goto('/hq/login')` — and with
+ * SSR on globally, an unauthenticated `GET /hq/finance` returned **200 with
+ * the rendered admin shell**; the redirect fired only after hydration.
+ *
+ * **`await` this before navigating to `/hq`.** It used to be a fire-and-forget
+ * `void fetch(...).catch(() => {})`, so `goto('/hq')` raced the cookie: the
+ * layout's server `load` ran with no `rw_hq_session` and redirected straight
+ * back to `/hq/login`. Because the failure was swallowed, a sign-in that had
+ * genuinely succeeded looked like a spinner that did nothing — no error, no
+ * navigation. The cookie is now a precondition of entering the console, so it
+ * is waited for, and a failure is thrown rather than dropped.
+ */
+export async function setAdminAuth(token: string, admin: any): Promise<void> {
   if (!browser) return;
   localStorage.setItem('admin_token', token);
   localStorage.setItem('admin_user', JSON.stringify(admin));
 
-  /**
-   * M-84 — mirror the token into an `httpOnly` cookie so
-   * `routes/hq/+layout.server.ts` can guard the console SERVER-side.
-   *
-   * Until this existed the only guard on an 18-section console covering
-   * finance, wallets, AML, KYC and reconciliation was
-   * `$: if (browser && !isAdminAuthenticated()) goto('/hq/login')` — and with
-   * SSR on globally, an unauthenticated `GET /hq/finance` returned **200 with
-   * the rendered admin shell**; the redirect fired only after hydration.
-   */
-  void fetch('/api/hq-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token })
-  }).catch(() => {});
+  let res: Response;
+  try {
+    res = await fetch('/api/hq-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+  } catch {
+    throw new Error('Could not reach the server to start your admin session. Please try again.');
+  }
+
+  if (!res.ok) {
+    // The credentials were right — the admin service accepted them a moment
+    // ago — so the token must not be left in localStorage looking valid while
+    // the server has no session for it.
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
+    throw new Error('Signed in, but the admin session could not be established. Please try again.');
+  }
 }
 
 export function getAdminUser(): any | null {
@@ -44,13 +66,25 @@ export function getAdminUser(): any | null {
   }
 }
 
-export function clearAdminAuth() {
+/**
+ * M-84 — drop the server-side cookie too, or the layout guard keeps letting
+ * this browser through.
+ *
+ * Awaitable for the same reason `setAdminAuth` is: a caller that navigates
+ * immediately would otherwise leave a live `rw_hq_session` behind. Callers
+ * that cannot await (a Svelte event handler) still get the localStorage half
+ * synchronously, which is what the client-side guard reads.
+ */
+export async function clearAdminAuth(): Promise<void> {
   if (!browser) return;
   localStorage.removeItem('admin_token');
   localStorage.removeItem('admin_user');
-  // M-84 — drop the server-side cookie too, or the layout guard keeps letting
-  // this browser through.
-  void fetch('/api/hq-session', { method: 'DELETE' }).catch(() => {});
+  try {
+    await fetch('/api/hq-session', { method: 'DELETE' });
+  } catch {
+    // Signing out must not fail loudly; the local half is already gone and the
+    // cookie is short-lived.
+  }
 }
 
 /**
@@ -97,7 +131,7 @@ async function adminFetch(path: string, options: RequestInit = {}): Promise<any>
   const res = await fetch(`${API_URL}/api/v1/admin${path}`, { ...options, headers });
 
   if (res.status === 401) {
-    clearAdminAuth();
+    await clearAdminAuth();
     if (browser) window.location.href = '/hq/login';
     throw new Error('Session expired');
   }
@@ -172,7 +206,7 @@ export async function getUserWallet(id: string) {
   const res = await fetch(`${API_URL}/api/v1/admin/users/${id}/wallet`, { headers });
 
   if (res.status === 401) {
-    clearAdminAuth();
+    await clearAdminAuth();
     if (browser) window.location.href = '/hq/login';
     throw new Error('Session expired');
   }

@@ -26,9 +26,12 @@
 		return () => window.removeEventListener('resize', checkScreenSize);
 	});
 
-	function handleLogout() {
-		clearAdminAuth();
-		goto('/hq/login');
+	async function handleLogout() {
+		// Awaited so the `rw_hq_session` cookie is actually gone before the
+		// navigation; otherwise the layout guard on the next visit still sees a
+		// live session for a browser that has signed out.
+		await clearAdminAuth();
+		await goto('/hq/login');
 	}
 
 	const menuItems = [

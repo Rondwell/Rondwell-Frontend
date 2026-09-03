@@ -29,8 +29,11 @@
 		loading = true;
 		try {
 			const { token, admin } = await adminLogin(email, password);
-			setAdminAuth(token, admin);
-			goto('/hq');
+			// M-84 — awaited: `setAdminAuth` mirrors the token into the `httpOnly`
+			// cookie that `hq/+layout.server.ts` reads. Navigating before it lands
+			// meant the layout redirected straight back here.
+			await setAdminAuth(token, admin);
+			await goto('/hq');
 		} catch (err: any) {
 			errorMsg = err.message || 'Login failed. Please check your credentials.';
 		} finally {

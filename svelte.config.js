@@ -19,7 +19,28 @@ import { loadEnv } from 'vite';
  * `.env` points there, production allows api.rondwell.com because
  * `.env.production` does. The two cannot drift.
  */
-const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '');
+/**
+ * Which env file the policy follows is decided by the VITE COMMAND, not by
+ * `NODE_ENV`.
+ *
+ * The docblock above already says `NODE_ENV` is unreliable here, and then this
+ * line used it anyway. Vite only forces `NODE_ENV=production` for `vite build`;
+ * for `vite dev` it leaves whatever the shell had. So a terminal that happened
+ * to export `NODE_ENV=production` — after a build, or a stray `set`, and it
+ * persists for the life of the shell — made `loadEnv` read `.env.production`
+ * under `vite dev`. The dev server then served the PRODUCTION policy:
+ * `connect-src` allowed `https://api.rondwell.com` and nothing on localhost, so
+ * the browser refused every call to `VITE_API_URL` (http://localhost:3000) —
+ * admin login included — with a CSP violation rather than a network error.
+ *
+ * `vite dev` puts `dev` in argv and a build does not, so the command is the one
+ * signal here that cannot be polluted by the environment. `build` keeps reading
+ * `NODE_ENV`, which Vite itself sets to `production` before this file loads.
+ */
+const viteCommand = process.argv.find((a) => a === 'dev' || a === 'build' || a === 'preview');
+const mode = viteCommand === 'dev' ? 'development' : process.env.NODE_ENV || 'development';
+
+const env = loadEnv(mode, process.cwd(), '');
 
 /** `http://localhost:3000/api` -> `http://localhost:3000`; unparseable -> dropped. */
 function toOrigin(value) {

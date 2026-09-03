@@ -91,7 +91,7 @@ export const DELETE: RequestHandler = async ({ request, cookies, url }) => {
 		}
 	}
 
-	if (refreshToken) invalidateSessionToken(refreshToken);
+	if (refreshToken) await invalidateSessionToken(refreshToken);
 	clearSessionCookie(cookies, url.protocol === 'https:');
 	clearSessionCache();
 	return json({ success: true, serverInvalidated });

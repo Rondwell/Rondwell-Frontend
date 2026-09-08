@@ -1,12 +1,20 @@
 <script lang="ts">
 	import { Plus, Minus } from 'lucide-svelte';
-	import { createEventDispatcher } from 'svelte';
+	// `tick` and `clickOutside` are both used by the Original Event Date picker
+	// below but were never imported — `tick()` threw a ReferenceError the moment
+	// the field was clicked, so the picker could not be opened at all.
+	import { createEventDispatcher, tick } from 'svelte';
 	import DatePickerModal from '../../create-event/components/DatePickerModal.svelte';
 	import { colors, type Color } from '$lib/utils/colors';
+	import { clickOutside } from '$lib/utils/constant';
 
 	export let show = false;
 	let openStartDatePickerModal = false;
-	let startDate = new Date(2025, 10, 25);
+	// Was hardcoded to `new Date(2025, 10, 25)`, so this picker always opened on
+	// November 2025 whenever the speaker filled the form in. This field is the
+	// *original* (already-held) event date, so today is the right anchor to page
+	// backwards from — no rounding to a future slot, unlike the create-event form.
+	let startDate = new Date();
 	function scrollToId(id: string, options?: { behavior?: ScrollBehavior }) {
 		const el = document.getElementById(id);
 		if (!el) return;

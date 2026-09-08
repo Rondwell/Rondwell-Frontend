@@ -8,12 +8,13 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"check": "node scripts/check-csp.mjs && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check": "node scripts/check-csp.mjs && node scripts/check-og-image-hosts.mjs && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"check:csp": "node scripts/check-csp.mjs",
-		"prebuild": "node scripts/check-csp.mjs"
+		"check:og-images": "node scripts/check-og-image-hosts.mjs",
+		"prebuild": "node scripts/check-csp.mjs && node scripts/check-og-image-hosts.mjs"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",

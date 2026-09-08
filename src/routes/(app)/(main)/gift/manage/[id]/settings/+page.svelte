@@ -14,17 +14,24 @@
 	a hard refresh.
 -->
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import { toast } from '$lib/stores/toast.store';
 	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import { majorToKobo, koboToMajor } from '$lib/utils/money';
-	import { updateGiftLink, closeGiftLink } from '$lib/services/giftLink.services';
+	import {
+		updateGiftLink,
+		closeGiftLink,
+		discardGiftCoverImage
+	} from '$lib/services/giftLink.services';
 	import { getGiftLinkCtx } from '../context';
+	import CoverImagePicker from '../../../components/CoverImagePicker.svelte';
 
 	const { link, reload } = getGiftLinkCtx();
 
 	let sTitle = '';
 	let sMessage = '';
+	let sCover = '';
 	let sTargetMajor: number | null = null;
 	let sStatus: 'ACTIVE' | 'PAUSED' | 'CLOSED' = 'ACTIVE';
 	let sShowWall = true;
@@ -39,6 +46,7 @@
 	$: if ($link && seededId !== $link._id) {
 		sTitle = $link.title;
 		sMessage = $link.message ?? '';
+		sCover = $link.coverImageUrl ?? '';
 		sTargetMajor = $link.targetAmountKobo
 			? koboToMajor($link.targetAmountKobo, $link.currency)
 			: null;
@@ -49,6 +57,27 @@
 	}
 
 	$: isClosed = $link?.status === 'CLOSED';
+
+	/**
+	 * The cover as it is SAVED right now, mirrored into a plain variable.
+	 *
+	 * `onDestroy` below needs it, and reading `$link` from a destroy callback
+	 * depends on when the store auto-subscription is torn down relative to the
+	 * callback. Mirroring it reactively removes the question.
+	 */
+	$: savedCover = $link?.coverImageUrl ?? '';
+
+	/**
+	 * Drop an uploaded-but-unsaved cover when the user navigates away.
+	 *
+	 * Uploading happens as soon as an image is picked so the preview is real,
+	 * but "Save changes" is what actually attaches it. Leaving without saving
+	 * would otherwise strand the object. Best-effort by design — the S3
+	 * lifecycle rule sweeps whatever this misses.
+	 */
+	onDestroy(() => {
+		if (sCover && sCover !== savedCover) void discardGiftCoverImage(sCover);
+	});
 
 	async function save() {
 		if (!$link) return;
@@ -61,6 +90,9 @@
 			await updateGiftLink($link._id, {
 				title: sTitle.trim(),
 				message: sMessage,
+				// `null` is a deliberate REMOVE. An empty string would be
+				// stored as one and the page would render a broken <img>.
+				coverImageUrl: sCover || null,
 				targetAmountKobo: sTargetMajor ? majorToKobo(sTargetMajor, $link.currency) : 0,
 				status: sStatus,
 				showContributorWall: sShowWall,
@@ -119,6 +151,15 @@
 					placeholder="A note people see before they give."
 				></textarea>
 			</label>
+
+			<div class="mt-4">
+				<CoverImagePicker
+					bind:value={sCover}
+					savedValue={savedCover}
+					disabled={isClosed}
+					hint="Shown at the top of your gift page and used as the preview when the link is shared. Changes take effect when you save."
+				/>
+			</div>
 
 			<label class="mt-4 block">
 				<span class="text-sm font-medium text-gray-900">Target ({$link.currency})</span>

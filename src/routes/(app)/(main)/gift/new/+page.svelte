@@ -10,6 +10,7 @@
 	raises nothing.
 -->
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import Icon from '@iconify/svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from '$lib/stores/toast.store';
@@ -18,10 +19,12 @@
 	import { colors, type Color } from '$lib/utils/colors';
 	import {
 		createGiftLink,
+		discardGiftCoverImage,
 		GIFT_OCCASIONS,
 		type GiftLinkOccasion,
 		type GiftLink
 	} from '$lib/services/giftLink.services';
+	import CoverImagePicker from '../components/CoverImagePicker.svelte';
 
 	let step: 1 | 2 | 3 = 1;
 
@@ -39,6 +42,20 @@
 
 	let creating = false;
 	let created: GiftLink | null = null;
+
+	/**
+	 * Discard an uploaded cover if the wizard is abandoned before the link is
+	 * created.
+	 *
+	 * The image is uploaded the moment it is picked, because the preview has
+	 * to be real — but a link that is never created leaves an object nothing
+	 * points at. This is the tidy path; the server-side lifecycle rule sweeps
+	 * anything it misses (a hard tab close, a lost connection), so it is
+	 * deliberately fire-and-forget rather than something to block navigation on.
+	 */
+	onDestroy(() => {
+		if (coverImageUrl && !created) void discardGiftCoverImage(coverImageUrl);
+	});
 
 	$: shareUrl = created ? `${typeof window !== 'undefined' ? window.location.origin : ''}/gift/${created.slug}` : '';
 	$: canContinue1 = !!occasion;
@@ -59,7 +76,7 @@
 				title: title.trim(),
 				occasion,
 				message: message.trim() || undefined,
-				coverImageUrl: coverImageUrl.trim() || undefined,
+				coverImageUrl: coverImageUrl || undefined,
 				themeColor: selectedColor.name,
 				currency,
 				targetAmountKobo: targetMajor ? majorToKobo(targetMajor, currency) : undefined,
@@ -170,18 +187,7 @@
 				></textarea>
 			</div>
 
-			<div>
-				<label class="mb-1 block text-xs font-medium text-gray-700" for="g-cover">Cover image URL</label>
-				<input
-					id="g-cover"
-					bind:value={coverImageUrl}
-					placeholder="https://…"
-					class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none"
-				/>
-				<p class="mt-1 text-xs text-gray-400">
-					This becomes the preview image when the link is shared.
-				</p>
-			</div>
+			<CoverImagePicker bind:value={coverImageUrl} />
 
 			<div>
 				<span class="mb-2 block text-xs font-medium text-gray-700">Page colour</span>

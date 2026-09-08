@@ -184,6 +184,127 @@ export async function getGiftLinkContributions(
 	};
 }
 
+// ── Cover image ─────────────────────────────────────────────────
+
+/**
+ * The cover image is the share card.
+ *
+ * A gift link's whole job is to be posted in a group chat, and the preview
+ * WhatsApp renders decides whether anyone taps it. So the upload happens in
+ * the wizard, BEFORE the link exists: the server stores the object as a
+ * transient draft and only makes it permanent once a create or update attaches
+ * it. Anything the user picks and then abandons is swept by an S3 lifecycle
+ * rule, so a closed tab costs nothing.
+ */
+
+/** Longest edge of the stored image, in pixels. */
+const COVER_MAX_EDGE = 1600;
+/** JPEG quality for the re-encode. */
+const COVER_QUALITY = 0.86;
+/** Anything at or under this is uploaded untouched. */
+const COVER_SKIP_RESIZE_BYTES = 400 * 1024;
+
+/**
+ * Downscale and re-encode in the browser before uploading.
+ *
+ * Phone cameras produce 4-12 MB images and the server caps uploads at 5 MB, so
+ * without this a perfectly ordinary photo is simply rejected. Re-encoding also
+ * strips EXIF — including GPS coordinates, which people do not expect to
+ * publish alongside a birthday photo.
+ *
+ * Falls back to the original bytes if anything goes wrong: a failed resize must
+ * not become a failed upload.
+ */
+async function prepareCoverImage(file: File): Promise<string> {
+	const asDataUrl = () =>
+		new Promise<string>((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(reader.result as string);
+			reader.onerror = () => reject(new Error('Could not read that image file.'));
+			reader.readAsDataURL(file);
+		});
+
+	// GIFs are left alone — drawing one to a canvas keeps only the first frame,
+	// which silently turns an animation into a still.
+	if (file.type === 'image/gif' || file.size <= COVER_SKIP_RESIZE_BYTES) {
+		return asDataUrl();
+	}
+
+	try {
+		const source = await asDataUrl();
+		const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+			const el = new Image();
+			el.onload = () => resolve(el);
+			el.onerror = () => reject(new Error('decode failed'));
+			el.src = source;
+		});
+
+		const scale = Math.min(1, COVER_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+		const width = Math.max(1, Math.round(img.naturalWidth * scale));
+		const height = Math.max(1, Math.round(img.naturalHeight * scale));
+
+		const canvas = document.createElement('canvas');
+		canvas.width = width;
+		canvas.height = height;
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return source;
+
+		// A white ground, so a transparent PNG does not turn black once it is
+		// flattened into a JPEG.
+		ctx.fillStyle = '#ffffff';
+		ctx.fillRect(0, 0, width, height);
+		ctx.drawImage(img, 0, 0, width, height);
+
+		const out = canvas.toDataURL('image/jpeg', COVER_QUALITY);
+		// Only keep the re-encode when it actually helped.
+		return out.length < source.length ? out : source;
+	} catch {
+		return asDataUrl();
+	}
+}
+
+/**
+ * Upload a cover image and return its public URL.
+ *
+ * The returned URL is a transient draft until a create or update saves it onto
+ * a link.
+ */
+export async function uploadGiftCoverImage(file: File): Promise<string> {
+	if (!file.type.startsWith('image/')) {
+		throw new Error('Please choose an image file.');
+	}
+	const data = await prepareCoverImage(file);
+	const res = await authFetch(`${GIFT_LINKS_API}/cover`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ data })
+	});
+	if (!res.ok) await throwApiError(res, 'Could not upload that image');
+	const json = await res.json();
+	return json?.data?.url ?? '';
+}
+
+/**
+ * Discard a draft cover the user replaced or cancelled.
+ *
+ * Never throws. It is called from cleanup paths where an error would surface a
+ * failure for something the user did not ask for, and the server-side
+ * lifecycle rule collects anything this misses.
+ */
+export async function discardGiftCoverImage(url: string): Promise<void> {
+	if (!url) return;
+	try {
+		await authFetch(`${GIFT_LINKS_API}/cover`, {
+			method: 'DELETE',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ url })
+		});
+	} catch {
+		/* ignore — the lifecycle rule expires abandoned drafts */
+	}
+}
+
+
 // ── Public ───────────────────────────────────────────────────────────────
 
 export async function getPublicGiftLink(slug: string): Promise<PublicGiftLink | null> {

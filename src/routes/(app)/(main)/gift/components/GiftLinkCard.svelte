@@ -25,6 +25,9 @@
 	export let link: GiftLink;
 
 	$: meta = GIFT_OCCASIONS.find((x) => x.value === link.occasion) ?? GIFT_OCCASIONS[5];
+	/** Reset per link so a recycled card does not inherit a previous failure. */
+	let coverFailed = false;
+	$: if (link.coverImageUrl) coverFailed = false;
 	$: publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/gift/${link.slug}` : '';
 	$: pct =
 		link.targetAmountKobo && link.targetAmountKobo > 0
@@ -60,11 +63,30 @@
 			class="flex min-w-0 flex-1 items-start gap-3 text-left"
 			on:click={() => goto(`/gift/manage/${link._id}`)}
 		>
-			<div
-				class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[#F2E4F8] text-xl"
-			>
-				{meta.emoji}
-			</div>
+			<!--
+				The owner's cover, so the dashboard row matches the card people
+				see in WhatsApp. Falls back to the occasion emoji when there is
+				no cover, or when the image cannot be loaded — a broken-image
+				glyph in a list reads as "this link is broken".
+			-->
+			{#if link.coverImageUrl && !coverFailed}
+				<img
+					src={link.coverImageUrl}
+					alt=""
+					width="44"
+					height="44"
+					loading="lazy"
+					decoding="async"
+					on:error={() => (coverFailed = true)}
+					class="h-11 w-11 flex-shrink-0 rounded-xl object-cover"
+				/>
+			{:else}
+				<div
+					class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[#F2E4F8] text-xl"
+				>
+					{meta.emoji}
+				</div>
+			{/if}
 			<div class="min-w-0">
 				<p class="truncate font-semibold text-gray-900">{link.title}</p>
 				<p class="text-xs text-[#83808D]">

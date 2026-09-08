@@ -115,6 +115,54 @@ export function resolveOgImage(url?: string | null): string {
 }
 
 /**
+ * Hosts the Netlify Image CDN is allowed to fetch a share image from.
+ *
+ * This MIRRORS `netlify.toml`'s `[images].remote_images`, and it exists
+ * because of how that allow-list fails. A transform request for a host that is
+ * not listed does not fall back to the original — the Image CDN answers 400,
+ * so `og:image` points at a URL that returns an error and the share card
+ * renders with NO image at all. That is strictly worse than the generic
+ * platform artwork, and it is invisible from our side: the tag is present and
+ * well-formed, only the bytes are missing.
+ *
+ * So an unrecognised host degrades to the site default here, BEFORE the
+ * transform is built. Anything added to `remote_images` must be added here
+ * too; the two lists are checked against each other by
+ * `scripts/check-og-image-hosts.mjs`.
+ */
+const ALLOWED_IMAGE_HOSTS: RegExp[] = [
+	// S3 bucket "rondwell-project" (us-east-1), every URL style AWS emits.
+	/^rondwell-project\.s3\.us-east-1\.amazonaws\.com$/i,
+	/^rondwell-project\.s3\.amazonaws\.com$/i,
+	/^s3\.us-east-1\.amazonaws\.com$/i,
+	// Marketing artwork still served from Cloudinary.
+	/^res\.cloudinary\.com$/i,
+	// Any CloudFront distribution we later put in front of the bucket.
+	/^[a-z0-9-]+\.cloudfront\.net$/i
+];
+
+/**
+ * True when the Image CDN will actually be able to fetch this source.
+ *
+ * Same-origin URLs are always fine — they need no `remote_images` entry.
+ * `s3.us-east-1.amazonaws.com` is path-style, so the bucket is the first path
+ * segment and has to be checked there rather than in the host.
+ */
+export function isTransformableImageSource(url: string): boolean {
+	if (url.startsWith('/')) return true;
+	try {
+		const u = new URL(url);
+		if (u.protocol !== 'https:') return false;
+		if (u.hostname.toLowerCase() === new URL(SITE.url).hostname.toLowerCase()) return true;
+		if (!ALLOWED_IMAGE_HOSTS.some((re) => re.test(u.hostname))) return false;
+		if (/^s3\./i.test(u.hostname)) return u.pathname.startsWith('/rondwell-project/');
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
  * Wrap a resolved image URL in a Netlify Image CDN transform.
  *
  * This is the single most important step for reliable WhatsApp previews, and
@@ -146,9 +194,13 @@ export function ogImageUrl(source: string): string {
 	// Already a transform (defensive — never double-wrap).
 	if (source.includes('/.netlify/images')) return source;
 
+	// A host the Image CDN will refuse produces a 400, not a fallback — so the
+	// card would lose its image entirely. Substitute the site default instead.
+	const usable = isTransformableImageSource(source) ? source : SITE.defaultImage;
+
 	// Keep same-origin images as a relative source; the Image CDN resolves
 	// them without needing a remote_images allowlist entry.
-	const param = source.startsWith(`${SITE.url}/`) ? source.slice(SITE.url.length) : source;
+	const param = usable.startsWith(`${SITE.url}/`) ? usable.slice(SITE.url.length) : usable;
 
 	const q = new URLSearchParams({
 		url: param,

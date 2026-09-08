@@ -89,10 +89,41 @@
 	// unrepresentable rather than merely fixed.
 	let visibility: EventVisibility = DEFAULT_VISIBILITY;
 	let eventName = '';
-	let startTime = '1:30 AM';
-	let endTime = '2:30 AM';
-	let startDate = new Date(2025, 10, 25);
-	let endDate = new Date(2025, 10, 30);
+	/**
+	 * The date/time row seeds from the clock, not from a constant.
+	 *
+	 * These were hardcoded (`new Date(2025, 10, 25)` at 1:30 AM), so the picker
+	 * always opened on **November 2025** regardless of when the organizer
+	 * arrived: they had to page the calendar back to the month they were
+	 * actually in, and from 2026 on the default event was already in the past.
+	 * Seeding from `new Date()` lands the calendar on the current month with
+	 * today ringed, which is the day most new events are scheduled from.
+	 *
+	 * The component script re-runs on the client during hydration, so these are
+	 * the *browser's* clock even though the page is server-rendered.
+	 */
+	function nextHalfHourSlot(from: Date): Date {
+		const d = new Date(from);
+		d.setSeconds(0, 0);
+		// Round strictly up, so the default start is never a slot that has
+		// already passed. Rolling past 11:30 PM carries the date into tomorrow,
+		// which is what an organizer creating an event at that hour means.
+		d.setMinutes(d.getMinutes() + (30 - (d.getMinutes() % 30)));
+		return d;
+	}
+
+	const defaultStart = nextHalfHourSlot(new Date());
+	const defaultEnd = new Date(defaultStart.getTime() + 60 * 60 * 1000);
+
+	// `formatTimeLabel` emits exactly the labels TimeModal lists, so these
+	// defaults show up highlighted as the selected slot rather than as a value
+	// the organizer can see but never re-pick.
+	let startTime = formatTimeLabel(defaultStart);
+	let endTime = formatTimeLabel(defaultEnd);
+	// Single-day by default — the same calendar day, one hour long. The old
+	// defaults spanned five days for an event whose multi-day toggle was off.
+	let startDate = defaultStart;
+	let endDate = defaultEnd;
 	let locationName = '...';
 	let timezone = '';
 	let eventType: 'Virtual' | 'Physical' | 'Hybrid' = 'Virtual';
@@ -180,14 +211,23 @@
 		return raw;
 	}
 
+	/** A wall-clock label in TimeModal's vocabulary, e.g. `9:00 AM`. */
+	function formatTimeLabel(d: Date): string {
+		let hours = d.getHours();
+		const minutes = d.getMinutes();
+		const meridiem = hours >= 12 ? 'PM' : 'AM';
+		hours = hours % 12 || 12;
+		return `${hours}:${String(minutes).padStart(2, '0')} ${meridiem}`;
+	}
+
 	function formatTimeFromISO(iso: string): string {
+		const d = new Date(iso);
+		// `new Date('nonsense')` yields an Invalid Date rather than throwing, so
+		// the catch below never fired for the case it was written for — the
+		// getters returned NaN and the field read "NaN:NaN AM".
+		if (isNaN(d.getTime())) return '9:00 AM';
 		try {
-			const d = new Date(iso);
-			let hours = d.getHours();
-			const minutes = d.getMinutes();
-			const meridiem = hours >= 12 ? 'PM' : 'AM';
-			hours = hours % 12 || 12;
-			return `${hours}:${String(minutes).padStart(2, '0')} ${meridiem}`;
+			return formatTimeLabel(d);
 		} catch { return '9:00 AM'; }
 	}
 

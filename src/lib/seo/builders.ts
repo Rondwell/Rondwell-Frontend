@@ -581,6 +581,18 @@ export function buildGiftLinkSeo(link: any, slug: string): SeoMeta {
 	const title = link?.title || 'Send a gift';
 	const rawDesc = stripHtml(link?.message);
 	const url = canonical(`/gift/${slug}`);
+	const ownerName = stripHtml(link?.ownerName).trim();
+
+	/**
+	 * The owner's uploaded cover, or the platform default.
+	 *
+	 * This is the whole reason someone bothers to set a cover: a gift link is
+	 * posted into a group chat and the card is what people see before they
+	 * decide to tap. `pickImage` renders it through the Image CDN at exactly
+	 * 1200x630, which is what lets us declare truthful og:image dimensions —
+	 * the tags WhatsApp needs to lay out a large card without downloading the
+	 * file first.
+	 */
 	const { image, imageType } = pickImage(link?.coverImageUrl);
 
 	const occasionLabel: Record<string, string> = {
@@ -592,10 +604,16 @@ export function buildGiftLinkSeo(link: any, slug: string): SeoMeta {
 		OTHER: ''
 	};
 
+	/**
+	 * The fallback used to read "Send {title} a gift on Rondwell", which put
+	 * the PAGE title where a person's name belongs — "Send Ada's 30th 🎉 a
+	 * gift on Rondwell". `ownerName` is the field that actually holds a
+	 * person, and the public payload already returns it.
+	 */
 	const description = buildDescription(
 		rawDesc,
-		[occasionLabel[link?.occasion] || '', 'Send a gift in seconds'],
-		`Send ${title} a gift on ${SITE.name}`
+		[occasionLabel[link?.occasion] || '', ownerName && `For ${ownerName}`, 'Send a gift in seconds'],
+		ownerName ? `Send ${ownerName} a gift on ${SITE.name}` : `Send a gift on ${SITE.name}`
 	);
 
 	const jsonLd = {
@@ -615,7 +633,7 @@ export function buildGiftLinkSeo(link: any, slug: string): SeoMeta {
 		imageType,
 		url,
 		ogType: 'website',
-		imageAlt: title,
+		imageAlt: ownerName ? `${title} — a gift link for ${ownerName}` : title,
 		jsonLd
 	};
 }

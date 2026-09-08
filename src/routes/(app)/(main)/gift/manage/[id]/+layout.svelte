@@ -104,6 +104,10 @@
 	});
 
 	$: occasion = GIFT_OCCASIONS.find((o) => o.value === $link?.occasion) ?? GIFT_OCCASIONS[5];
+
+	/** Falls the header back to the occasion emoji if the cover cannot load. */
+	let coverFailed = false;
+	$: if ($link?.coverImageUrl) coverFailed = false;
 	$: shareUrl =
 		$link && typeof window !== 'undefined' ? `${window.location.origin}/gift/${$link.slug}` : '';
 
@@ -152,9 +156,22 @@
 		<!-- Header — shared by every tab -->
 		<div class="mb-6 flex flex-wrap items-start justify-between gap-4">
 			<div class="flex min-w-0 items-start gap-3">
-				<div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[#F2E4F8] text-2xl">
-					{occasion.emoji}
-				</div>
+				<!-- The owner's cover, so every gift surface shows the same artwork. -->
+				{#if $link.coverImageUrl && !coverFailed}
+					<img
+						src={$link.coverImageUrl}
+						alt=""
+						width="48"
+						height="48"
+						decoding="async"
+						on:error={() => (coverFailed = true)}
+						class="h-12 w-12 flex-shrink-0 rounded-xl object-cover"
+					/>
+				{:else}
+					<div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-[#F2E4F8] text-2xl">
+						{occasion.emoji}
+					</div>
+				{/if}
 				<div class="min-w-0">
 					<h1 class="truncate text-2xl font-bold text-gray-900">{$link.title}</h1>
 					<p class="text-sm text-[#83808D]">

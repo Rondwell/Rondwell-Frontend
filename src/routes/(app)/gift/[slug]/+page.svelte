@@ -45,6 +45,12 @@
 
 	$: occasionMeta = GIFT_OCCASIONS.find((o) => o.value === link?.occasion) ?? GIFT_OCCASIONS[5];
 
+	/** Set when the cover image fails to load; falls back to the occasion emoji. */
+	let coverFailed = false;
+	// Reset per link, so navigating between gift pages does not inherit a
+	// previous page's failure.
+	$: if (link?.coverImageUrl) coverFailed = false;
+
 	let wall: { name: string; message: string | null; at: string }[] = [];
 	let wallSummary = { contributorCount: 0, raisedKobo: 0 };
 
@@ -186,8 +192,24 @@
 		{:else}
 			<!-- Header -->
 			<div class="overflow-hidden rounded-2xl" style="background-color: {themeColor.cover};">
-				{#if link.coverImageUrl}
-					<img src={link.coverImageUrl} alt={link.title} class="h-44 w-full object-cover" />
+				<!--
+					The cover the owner uploaded, and the same artwork the share
+					card carries. `coverFailed` falls back to the occasion emoji
+					rather than leaving a browser's broken-image glyph on a page
+					someone is about to be asked for money on — an image can go
+					missing (a stale URL, an S3 hiccup) and this page has no way
+					to know until the request fails.
+				-->
+				{#if link.coverImageUrl && !coverFailed}
+					<img
+						src={link.coverImageUrl}
+						alt={link.title}
+						width="1200"
+						height="630"
+						decoding="async"
+						on:error={() => (coverFailed = true)}
+						class="h-44 w-full object-cover"
+					/>
 				{:else}
 					<div
 						class="flex h-44 w-full items-center justify-center text-6xl"

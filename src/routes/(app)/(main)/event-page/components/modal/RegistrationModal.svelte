@@ -85,6 +85,14 @@
 	let errors: Record<string, string> = {};
 	let submitting = false;
 	let submitError = '';
+	/**
+	 * True when the payment went through but the seat has not been confirmed
+	 * back to us yet. The confirmation screen says so instead of asserting a
+	 * confirmation we have not actually observed — settlement completes
+	 * server-side (webhook, or the payment service's recovery sweep) and the
+	 * ticket email follows, so this is "not yet", never "lost".
+	 */
+	let pendingConfirmation = false;
 	let selectedGateway: 'PAYSTACK' = 'PAYSTACK';
 
 	// ── Coupon / discount code ─────────────────────────────────────────────
@@ -863,6 +871,7 @@
 				amount: res.totalAmount,
 				currency: res.currency || contributionCurrency,
 				ref: res.reference || '',
+				metadata: { transactionId: res.reference || '' },
 				channels: ['card', 'bank', 'ussd', 'bank_transfer'],
 				callback: () => {
 					// The webhook is the canonical settlement and is idempotent;
@@ -1002,23 +1011,55 @@
 						amount: paymentData.totalAmount,
 						currency: paymentData.currency || selectedTicket?.currency || 'NGN',
 						ref: paymentData.reference || '',
+						metadata: { transactionId: paymentData.reference || '' },
 						channels: ['card', 'bank', 'ussd', 'bank_transfer'],
 						callback: (_response: any) => {
 							const EVENT_URL = import.meta.env.VITE_EVENT_API_URL;
 
-							// Step 1: Verify and settle payment (creates wallets, credits organizer, etc.)
-							// P0-04 / P0-05: forward the HMAC verification token. The
-							// route is fully idempotent — calling it once per
-							// reference is safe even if the webhook beats us to it.
-							verifyAndSettleTicketPayment(paymentData.reference, verificationToken)
-								.then(() => {
-									if (isGroupRegistration) {
-										// Step 2 (Group): activate the group — finalizes the
-										// lead AND every member seat. This is now only a
-										// latency optimisation: the payment webhook performs
-										// the same activation, and both paths are idempotent,
-										// so a closed tab no longer strands paid members.
-										return fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/payment/success`, {
+							/**
+							 * The money is captured by the time this fires, so we always
+							 * move the user to the confirmation step. What we must NOT do
+							 * is claim their ticket is confirmed when it is not.
+							 *
+							 * This used to set `attendee_status = 'ATTENDING'` in BOTH the
+							 * success and the failure branch, and `verifyAndSettleTicketPayment`
+							 * resolves rather than rejects on an HTTP error (it returns
+							 * `{ status: res.ok }`), so `.catch()` almost never ran and the
+							 * `.then()` branch painted "confirmed" over a settlement that
+							 * had returned 401 or 500. That is how the whole failure stayed
+							 * invisible: the buyer saw a confirmation, the organizer saw
+							 * nothing, and no email was ever sent.
+							 *
+							 * Settlement is no longer dependent on this call succeeding —
+							 * the webhook settles it, and the payment service sweeps for
+							 * captured-but-unsettled charges every few minutes — so a
+							 * failure here means "not yet", not "lost". We say that.
+							 */
+							(async () => {
+								let confirmed = false;
+								try {
+									// Step 1: Verify and settle payment (creates wallets,
+									// credits organizer, etc). P0-04 / P0-05: forward the HMAC
+									// verification token. The route is idempotent, so calling
+									// it once per reference is safe even if the webhook wins.
+									const settle = await verifyAndSettleTicketPayment(
+										paymentData.reference,
+										verificationToken,
+									);
+									if (!settle.status) {
+										// Not fatal, and not a payment failure. Recorded so it
+										// shows up in a session replay / bug report instead of
+										// vanishing.
+										console.warn('[payment] verify-and-settle did not settle:', settle.message);
+									}
+
+									// Step 2: finalize the seat(s). The event service verifies
+									// settlement with the payment service before finalizing, so
+									// this is safe to call even if step 1 reported a failure —
+									// and it succeeds if the webhook got there first.
+									const finalizeRes = isGroupRegistration
+										// Group: activates the lead AND every member seat.
+										? await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/payment/success`, {
 											method: 'POST',
 											headers: { 'Content-Type': 'application/json' },
 											body: JSON.stringify({
@@ -1027,29 +1068,36 @@
 												eventId,
 												paymentReference: paymentData.reference,
 											}),
-										});
-									} else {
-										// Step 2 (Single): Finalize registration on event service
-										return fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`, {
+										})
+										: await fetch(`${EVENT_URL}/api/v1/events/${eventId}/registrations/finalize/${registrationResult.registration_id}`, {
 											method: 'POST', headers: { 'Content-Type': 'application/json' }
 										});
+
+									if (finalizeRes.ok) {
+										const body = await finalizeRes.json().catch(() => ({}));
+										const state = body?.status ?? body?.data?.status;
+										confirmed = state !== 'PENDING_PAYMENT_CONFIRMATION';
 									}
-								}).then(() => {
+								} catch (err) {
+									console.error('[payment] post-payment settlement/finalize failed:', err);
+								}
+
+								if (confirmed) {
 									registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
-									// GAP 6 — offer the gift AFTER the ticket has settled.
-									// Bundling it into the ticket charge would break
-									// TicketPayment reconciliation and per-ticket refunds.
-									step = nextStepAfterRegistration();
-									submitting = false;
-								}).catch(() => {
-									// Settlement or finalize might be handled by webhook — still show confirmation
-									registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
-									// GAP 6 — offer the gift AFTER the ticket has settled.
-									// Bundling it into the ticket charge would break
-									// TicketPayment reconciliation and per-ticket refunds.
-									step = nextStepAfterRegistration();
-									submitting = false;
-								});
+									pendingConfirmation = false;
+								} else {
+									// Leave the status as the server last reported it and tell
+									// the user their ticket is still being confirmed, rather
+									// than showing them a confirmation that may not be true.
+									pendingConfirmation = true;
+								}
+
+								// GAP 6 — offer the gift AFTER the ticket has settled.
+								// Bundling it into the ticket charge would break
+								// TicketPayment reconciliation and per-ticket refunds.
+								step = nextStepAfterRegistration();
+								submitting = false;
+							})();
 						},
 						onClose: () => {
 							submitError = 'Payment window was closed. You can try again.';
@@ -1863,8 +1911,20 @@
 					</div>
 
 					<h2 class="text-2xl font-semibold" style="color: {themeColor.text};">
-						{selectedTicket?.requiresApproval ? 'Request Submitted' : 'Registration Confirmed'}
+						{#if pendingConfirmation}
+							Payment Received
+						{:else}
+							{selectedTicket?.requiresApproval ? 'Request Submitted' : 'Registration Confirmed'}
+						{/if}
 					</h2>
+					{#if pendingConfirmation}
+						<p class="text-sm leading-relaxed" style="color: {themeColor.lightText};">
+							Your payment went through. We're still confirming your
+							{isGroupRegistration ? 'tickets' : 'ticket'} with the organizer — this
+							usually takes a moment. Your ticket email will arrive as soon as it's
+							confirmed, and you don't need to pay again or do anything else.
+						</p>
+					{:else}
 					<p class="text-sm leading-relaxed" style="color: {themeColor.lightText};">
 						{#if isGroupRegistration}
 							{selectedTicket?.requiresApproval
@@ -1876,6 +1936,7 @@
 								: `You're registered for ${eventData?.title ?? 'this event'}. Check your email for confirmation details.`}
 						{/if}
 					</p>
+					{/if}
 
 					<!-- GAP 6 — a second chance to gift, for anyone who skipped. -->
 					{#if contributionsOn && !contributionDone}

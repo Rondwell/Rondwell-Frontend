@@ -140,6 +140,7 @@
 					amount: amount,
 					currency: data.currency || upgradeCurrency,
 					ref: ref,
+					metadata: { transactionId: ref },
 					channels: ['card', 'bank', 'ussd', 'bank_transfer'],
 					callback: async (_response: any) => {
 						// Payment successful — refresh subscription state

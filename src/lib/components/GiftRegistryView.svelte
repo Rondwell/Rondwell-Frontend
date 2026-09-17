@@ -125,6 +125,7 @@
 				amount: res.totalAmount,
 				currency: res.currency || currency,
 				ref: res.reference || '',
+				metadata: { transactionId: res.reference || '' },
 				channels: ['card', 'bank', 'ussd', 'bank_transfer'],
 				callback: () => {
 					// The webhook is the canonical settlement and is idempotent —

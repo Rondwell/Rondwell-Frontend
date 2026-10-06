@@ -10,8 +10,9 @@
 	import { resolveCollectionThemeColor } from '$lib/stores/collectionTheme';
 	import { applyThemeColor, resetThemeColor } from '$lib/stores/themeColor';
 	import { toast } from '$lib/stores/toast.store';
-	import { colors, type Color } from '$lib/utils/colors';
+	import { DEFAULT_THEME, type Color } from '$lib/utils/colors';
 	import Seo from '$lib/components/Seo.svelte';
+	import ThemeBackdrop from '$lib/components/ThemeBackdrop.svelte';
 	import Icon from '@iconify/svelte';
 	import { onDestroy, onMount } from 'svelte';
 	/**
@@ -43,7 +44,7 @@
 	let notFound = false;
 	let collection: any = null;
 	let events: any[] = [];
-	let themeColor: Color = colors[0];
+	let themeColor: Color = DEFAULT_THEME;
 	let showSubscribeModal = false;
 	let subscribing = false;
 
@@ -187,7 +188,9 @@
 		<a href="/discover" class="mt-2 rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800">Discover Events</a>
 	</div>
 {:else}
-	<div class="min-h-screen" style="background-color: {themeColor.bg}">
+	<div class="isolate min-h-screen" style="background-color: {themeColor.bg}">
+		<!-- Premium theme artwork (Default light rays, brand glows) -->
+		<ThemeBackdrop theme={themeColor} behind />
 		<!-- COVER BANNER with rounded corners -->
 		<div class="mx-auto max-w-5xl px-4 pt-6 sm:px-6">
 			<div class="relative">

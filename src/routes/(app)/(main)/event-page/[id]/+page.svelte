@@ -13,10 +13,11 @@
 	import { getEventDays, getPublicEventPage } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { setEventSlug } from '$lib/stores/eventSlug';
-	import { activeEventPageTheme, getEventTheme, setEventTheme } from '$lib/stores/eventTheme';
+	import { activeEventPageFont, activeEventPageTheme, getEventTheme, setEventTheme } from '$lib/stores/eventTheme';
 	import { toast } from '$lib/stores/toast.store';
 	import type { Color } from '$lib/utils/colors';
-	import { colors } from '$lib/utils/colors';
+	import { DEFAULT_THEME, resolveTheme } from '$lib/utils/colors';
+	import { resolveThemeFont } from '$lib/utils/themeFonts';
 	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import { clearPaymentCallbackFromUrl, parsePaymentCallback } from '$lib/utils/paymentCallback';
 	import { onMount } from 'svelte';
@@ -64,7 +65,7 @@
 	let contributorWall: { name: string; message: string | null; at: string }[] = [];
 	let contributorSummary = { contributorCount: 0, raisedKobo: 0 };
 
-	let themeColor: Color = colors[0];
+	let themeColor: Color = DEFAULT_THEME;
 	$: if (eventId) themeColor = getEventTheme(eventId);
 
 	onMount(async () => {
@@ -125,17 +126,15 @@
 				selectedTicket = available?._id ?? '';
 			}
 
-			// Apply theme from event's themeColor
-			if (event.themeColor) {
-				const matched = colors.find(
-					(c: Color) => c.name.toLowerCase() === event.themeColor.toLowerCase()
-						|| c.bg.toLowerCase() === event.themeColor.toLowerCase()
-				);
-				if (matched) {
-					setEventTheme(eventId, matched);
-					themeColor = matched;
-					activeEventPageTheme.set(matched);
-				}
+			// Apply the organizer's theme. `resolveTheme` also maps retired
+			// palettes ("White Black") and events saved without a theme to the
+			// current default, so every event renders a real palette.
+			{
+				const matched = resolveTheme(event.themeColor);
+				setEventTheme(eventId, matched);
+				themeColor = matched;
+				activeEventPageTheme.set(matched);
+				activeEventPageFont.set(resolveThemeFont(event.themeFont));
 			}
 
 			// Store slug for sub-page URL rewriting

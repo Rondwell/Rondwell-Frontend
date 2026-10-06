@@ -96,10 +96,27 @@ export const FEEDBACK_RATINGS: Array<{ value: number; emoji: string; label: stri
 	{ value: 5, emoji: '🤩', label: 'Loved it' }
 ];
 
+/**
+ * Where the post-event thank-you stands, computed server-side from the event's
+ * end time and the send stamp. `MISSED` means the automatic window closed
+ * without a send; `canSendNow` says the organizer may still send it by hand.
+ */
+export type ThankYouState = 'SCHEDULED' | 'DUE' | 'SENT' | 'MISSED' | 'OFF' | 'UNAVAILABLE';
+
+export interface ThankYouStatus {
+	state: ThankYouState;
+	scheduledFor: string | null;
+	autoWindowClosesAt: string | null;
+	manualWindowClosesAt: string | null;
+	eventEndsAt: string | null;
+	canSendNow: boolean;
+}
+
 export async function getEventEmailSettings(eventId: string): Promise<{
 	settings: EventEmailSettings;
 	reminderCatalog: ReminderCatalogEntry[];
 	feedbackSummary: FeedbackSummary;
+	thankYouStatus?: ThankYouStatus;
 }> {
 	const res = await authFetch(`${EVENT_URL}/api/v1/events/${eventId}/email-settings`);
 	if (!res.ok) await throwApiError(res, 'Failed to load email settings');
@@ -118,6 +135,33 @@ export async function updateEventEmailSettings(
 	if (!res.ok) await throwApiError(res, 'Failed to update email settings');
 	const data = await res.json();
 	return data.settings;
+}
+
+/**
+ * Send the post-event thank-you right now — the recovery path when the
+ * automatic send was missed, or simply sooner than the scheduled time. The
+ * optional note is saved as part of the same request.
+ */
+export async function sendThankYouNow(
+	eventId: string,
+	customMessage?: string | null
+): Promise<{
+	message: string;
+	queued: number;
+	recipients: number;
+	settings: EventEmailSettings;
+	thankYouStatus: ThankYouStatus;
+}> {
+	const res = await authFetch(
+		`${EVENT_URL}/api/v1/events/${eventId}/email-settings/thank-you/send`,
+		{
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(customMessage === undefined ? {} : { customMessage })
+		}
+	);
+	if (!res.ok) await throwApiError(res, 'Failed to send the thank-you email');
+	return res.json();
 }
 
 export async function getFeedbackResponses(

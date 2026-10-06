@@ -11,10 +11,12 @@
 <script lang="ts">
 	import {
 		getEventEmailSettings,
+		sendThankYouNow,
 		updateEventEmailSettings,
 		type EventEmailSettings,
 		type ReminderCatalogEntry,
-		type ReminderSlot
+		type ReminderSlot,
+		type ThankYouStatus
 	} from '$lib/services/eventEmailSettings.services';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -41,6 +43,8 @@
 	let expandedKey: string | null = null;
 	let thankYouEnabled = true;
 	let thankYouMessage = '';
+	let thankYouStatus: ThankYouStatus | null = null;
+	let sendingThankYou = false;
 
 	let loadedFor = '';
 	$: if (open && eventId && loadedFor !== eventId) {
@@ -63,10 +67,70 @@
 			slots = (data.settings.reminders ?? []).map((s) => ({ ...s }));
 			thankYouEnabled = data.settings.thankYou?.enabled ?? true;
 			thankYouMessage = data.settings.thankYou?.customMessage ?? '';
+			thankYouStatus = data.thankYouStatus ?? null;
 		} catch (e: any) {
 			error = e?.message || 'Could not load these settings';
 		} finally {
 			loading = false;
+		}
+	}
+
+	function formatWhen(iso: string | null): string {
+		if (!iso) return '';
+		const d = new Date(iso);
+		if (Number.isNaN(d.getTime())) return '';
+		return d.toLocaleString(undefined, {
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric',
+			hour: 'numeric',
+			minute: '2-digit'
+		});
+	}
+
+	/** One line under "Thank-you email" that says exactly where it stands. */
+	$: thankYouCaption = (() => {
+		const s = thankYouStatus;
+		if (!s) return 'Goes out an hour after the event ends.';
+		switch (s.state) {
+			case 'SENT':
+				return 'Sent to everyone who attended.';
+			case 'UNAVAILABLE':
+				return "Not sent — the event was cancelled or archived.";
+			case 'OFF':
+				return s.canSendNow
+					? 'Switched off. You can still send it now.'
+					: 'Switched off — nothing will be sent.';
+			case 'DUE':
+				return 'Going out in the next few minutes.';
+			case 'MISSED':
+				return s.canSendNow
+					? "The automatic send didn't go out. Send it now — your attendees will still get it."
+					: 'The window to send this has closed.';
+			case 'SCHEDULED':
+			default:
+				return s.scheduledFor
+					? `Goes out ${formatWhen(s.scheduledFor)} — an hour after the event ends.`
+					: 'Goes out an hour after the event ends.';
+		}
+	})();
+
+	async function handleSendThankYouNow() {
+		sendingThankYou = true;
+		error = '';
+		successMsg = '';
+		try {
+			const result = await sendThankYouNow(eventId, thankYouMessage.trim() || null);
+			settings = result.settings;
+			thankYouEnabled = result.settings.thankYou?.enabled ?? true;
+			thankYouStatus = result.thankYouStatus;
+			successMsg = result.message || 'Thank-you email sent';
+			dispatch('saved', result.settings);
+			setTimeout(() => (successMsg = ''), 3500);
+		} catch (e: any) {
+			error = e?.message || 'Could not send the thank-you email';
+		} finally {
+			sendingThankYou = false;
 		}
 	}
 
@@ -107,6 +171,11 @@
 			successMsg = 'Saved';
 			dispatch('saved', updated);
 			setTimeout(() => (successMsg = ''), 2500);
+			// The toggle moves the thank-you between "scheduled" and "off", so the
+			// server-computed status is refreshed rather than guessed locally.
+			getEventEmailSettings(eventId)
+				.then((d) => (thankYouStatus = d.thankYouStatus ?? thankYouStatus))
+				.catch(() => {});
 		} catch (e: any) {
 			error = e?.message || 'Could not save these settings';
 		} finally {
@@ -300,11 +369,21 @@
 													? ` · ${settings.thankYou.recipientCount}`
 													: ''}
 											</span>
+										{:else if thankYouStatus?.state === 'MISSED'}
+											<span
+												class="rounded-full bg-[#FFF4E5] px-2 py-0.5 text-[10px] font-medium text-[#B25E09]"
+											>
+												Not sent
+											</span>
+										{:else if thankYouStatus?.state === 'DUE'}
+											<span
+												class="rounded-full bg-[#F2E4F8] px-2 py-0.5 text-[10px] font-medium text-[#AB46DD]"
+											>
+												Sending soon
+											</span>
 										{/if}
 									</p>
-									<p class="text-xs text-[#B9BABA]">
-										Goes out an hour after the event ends.
-									</p>
+									<p class="text-xs text-[#B9BABA]">{thankYouCaption}</p>
 								</div>
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -348,6 +427,28 @@
 									<p class="mt-1 text-[11px] text-gray-400">
 										Quoted in the email under your name.
 									</p>
+								</div>
+							{/if}
+
+							{#if thankYouStatus?.canSendNow && !settings?.thankYou?.sentAt}
+								<div
+									class="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-4 py-3"
+								>
+									<p class="text-xs text-[#8A8B95]">
+										Your event has ended. Send the thank-you to everyone who attended.
+									</p>
+									<button
+										type="button"
+										on:click={handleSendThankYouNow}
+										disabled={sendingThankYou || saving || loading}
+										class="flex items-center gap-1.5 rounded-lg bg-[#131517] px-3.5 py-2 text-xs font-medium text-white transition hover:bg-[#2A2B30] disabled:cursor-not-allowed disabled:bg-[#969798]"
+									>
+										{#if sendingThankYou}
+											<Icon icon="mdi:loading" class="animate-spin text-sm" /> Sending…
+										{:else}
+											<Icon icon="mdi:send-outline" class="text-sm" /> Send now
+										{/if}
+									</button>
 								</div>
 							{/if}
 						</div>

@@ -7,7 +7,7 @@
 		uploadCollectionProfilePicture
 	} from '$lib/services/event.services';
 	import { toast } from '$lib/stores/toast.store';
-	import { colors } from '$lib/utils/colors';
+	import { colors, DEFAULT_THEME_NAME, resolveTheme, themeSwatch } from '$lib/utils/colors';
 	import Icon from '@iconify/svelte';
 	import PlaceholderExtension from '@tiptap/extension-placeholder';
 	import StarterKit from '@tiptap/starter-kit';
@@ -87,7 +87,8 @@
 			const c = await getCollectionById(collectionId);
 			eventData.name = c.name ?? '';
 			eventData.description = c.description ?? '';
-			eventData.tintColor = c.themeColor ?? 'Light Rose';
+			// Normalise legacy values (hex, retired "White Black") to a palette name.
+			eventData.tintColor = resolveTheme(c.themeColor).name;
 			eventData.publicUrl = c.slug ?? c.customLink ?? '';
 			eventData.coverBannerUrl = c.coverBannerUrl ?? '';
 			profile.profilePicture = c.profilePictureUrl ?? '';
@@ -179,7 +180,7 @@
 	let eventData: EventData = {
 		name: '',
 		description: '',
-		tintColor: 'Light Rose',
+		tintColor: DEFAULT_THEME_NAME,
 		publicUrl: '',
 		coverBannerUrl: '',
 		location: { type: 'City', city: '' },
@@ -376,12 +377,13 @@
 			<div class="mb-4">
 				<label for="color" class="mb-2 block text-sm font-medium text-gray-700">Tint Color</label>
 				<div class="flex flex-wrap items-center justify-start gap-3">
-					{#each colors as color}
+					{#each colors as color (color.name)}
 						<button
 							type="button"
+							title={color.name}
 							class="h-8 w-8 rounded-full border-2"
-							style="background-color: {color.bg};"
-							class:border-black={eventData.tintColor === color.name || eventData.tintColor === color.bg}
+							style="background: {themeSwatch(color)};"
+							class:border-black={resolveTheme(eventData.tintColor).name === color.name}
 							on:click={() => selectTintColor(color.name)}
 							aria-label={`Select color ${color.name}`}
 						></button>

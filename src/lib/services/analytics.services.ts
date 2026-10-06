@@ -199,32 +199,61 @@ export async function getExhibitorPredictions(profileId: string) {
 
 // ─── AI ANALYTICS ────────────────────────────────────────────────────────────
 
-export async function generateAnalyticsSummary(entityType: string, entityId: string): Promise<{ summary: string; generatedAt: string } | null> {
+/**
+ * Read the server's explanation out of a failed AI response.
+ *
+ * These helpers used to return `null` on ANY non-2xx and drop the body, so the
+ * dashboards could only ever say "Unable to generate summary." — whether the
+ * model was unavailable, the analytics service was down, or there was simply
+ * no data yet. The AI service now sends a message that is safe to display.
+ */
+async function aiErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json();
+    const message = body?.error || body?.message;
+    if (typeof message === 'string' && message.trim()) return message;
+  } catch {
+    /* not JSON — use the fallback */
+  }
+  if (res.status === 401) return 'Please sign in again to use AI insights.';
+  if (res.status === 429) return 'The AI assistant is busy right now. Please try again in a minute.';
+  if (res.status >= 500) return 'AI insights are temporarily unavailable. Please try again shortly.';
+  return fallback;
+}
+
+export type AISummaryResult = { summary: string; generatedAt: string; error?: undefined } | { error: string; summary?: undefined };
+export type AIChatResult = { answer: string; generatedAt: string; error?: undefined } | { error: string; answer?: undefined };
+
+export async function generateAnalyticsSummary(entityType: string, entityId: string): Promise<AISummaryResult> {
   try {
     const res = await authFetch(AI_API + '/summary', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ entityType, entityId }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { error: await aiErrorMessage(res, 'Unable to generate a summary right now.') };
     const json = await res.json();
-    return json.data ?? json;
+    const data = json.data ?? json;
+    if (!data?.summary) return { error: 'The AI returned an empty summary. Please try again.' };
+    return data;
   } catch {
-    return null;
+    return { error: "Couldn't reach the AI service. Check your connection and try again." };
   }
 }
 
-export async function chatWithAnalytics(entityType: string, entityId: string, question: string): Promise<{ answer: string; generatedAt: string } | null> {
+export async function chatWithAnalytics(entityType: string, entityId: string, question: string): Promise<AIChatResult> {
   try {
     const res = await authFetch(AI_API + '/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ entityType, entityId, question }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { error: await aiErrorMessage(res, 'Unable to answer that right now.') };
     const json = await res.json();
-    return json.data ?? json;
+    const data = json.data ?? json;
+    if (!data?.answer) return { error: 'The AI returned an empty answer. Please try again.' };
+    return data;
   } catch {
-    return null;
+    return { error: "Couldn't reach the AI service. Check your connection and try again." };
   }
 }

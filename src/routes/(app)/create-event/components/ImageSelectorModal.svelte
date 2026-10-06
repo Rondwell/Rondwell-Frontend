@@ -39,6 +39,9 @@
 
 	async function loadImages(category: string, query: string) {
 		errorMsg = '';
+		// Re-evaluated on every load: once the provider is configured, a modal
+		// that saw "disabled" earlier must not stay stuck on that state.
+		providerDisabled = false;
 		const cacheKey = `${category}|${query.trim().toLowerCase()}`;
 
 		// Serve from cache instantly when we've already fetched this view.
@@ -111,11 +114,16 @@
 		open = false;
 	}
 
-	// Load the default category the first time the modal is opened.
+	// Load the default category the first time the modal is opened — and again
+	// on the next open if the last attempt was unavailable or failed, so a
+	// transient error (or a just-configured provider) does not need a reload.
 	let hasLoaded = false;
+	$: if (!open && hasLoaded && (providerDisabled || errorMsg)) {
+		hasLoaded = false;
+	}
 	$: if (open && !hasLoaded) {
 		hasLoaded = true;
-		loadImages(selectedCategory, '');
+		loadImages(selectedCategory, searchQuery);
 	}
 
 	onMount(() => {
@@ -252,7 +260,7 @@
 										href="{image.authorUrl}?utm_source=rondwell&utm_medium=referral"
 										target="_blank"
 										rel="noopener noreferrer"
-										class="absolute bottom-0 left-0 right-0 truncate bg-black/40 px-2 py-1 text-[10px] text-white opacity-0 transition group-hover:opacity-100"
+										class="absolute bottom-0 left-0 right-0 truncate bg-black/40 px-2 py-1 text-[10px] text-white transition md:opacity-0 md:group-hover:opacity-100"
 									>
 										{image.author}
 									</a>

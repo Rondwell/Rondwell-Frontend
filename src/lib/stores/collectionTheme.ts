@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import { colors, type Color } from '$lib/utils/colors';
+import { resolveTheme, type Color } from '$lib/utils/colors';
 import { writable } from 'svelte/store';
 
 const STORAGE_KEY = 'rondwell_collection_themes';
@@ -30,22 +30,22 @@ export function setCollectionTheme(collectionId: string, color: Color) {
 	collectionThemes.update((themes) => ({ ...themes, [collectionId]: color }));
 }
 
-/** Get the theme for a specific collection (falls back to first color) */
+/**
+ * Get the theme for a specific collection (falls back to the default theme).
+ *
+ * The cache holds whole Color objects, so it is re-resolved BY NAME: a cached
+ * copy of a retired palette ("White Black") or of old token values would
+ * otherwise keep rendering forever.
+ */
 export function getCollectionTheme(collectionId: string): Color {
 	const themes = loadThemes();
-	return themes[collectionId] ?? colors[0];
+	return resolveTheme(themes[collectionId]?.name);
 }
 
 /**
- * Resolve a themeColor value (could be a color name like "Pale Pink" or a hex like "#EBF6FF")
- * to a proper Color object from the colors array.
+ * Resolve a themeColor value (a palette name like "Pale Pink", a legacy name,
+ * or a hex like "#EBF6FF") to a palette from the colors array.
  */
 export function resolveCollectionThemeColor(themeColor: string | undefined): Color {
-	if (!themeColor) return colors[0];
-	const match = colors.find(
-		(c) =>
-			c.name.toLowerCase() === themeColor.toLowerCase() ||
-			c.bg.toLowerCase() === themeColor.toLowerCase()
-	);
-	return match ?? colors[0];
+	return resolveTheme(themeColor);
 }

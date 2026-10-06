@@ -63,14 +63,14 @@
 	async function loadAISummary() {
 		aiLoading = true;
 		const result = await generateAnalyticsSummary('vendor', profileId);
-		aiSummary = result?.summary || 'Unable to generate summary.';
+		aiSummary = result.summary || result.error || 'Unable to generate summary.';
 		aiLoading = false;
 	}
 	async function askQuestion() {
 		if (!chatQuestion.trim()) return;
 		chatLoading = true;
 		const result = await chatWithAnalytics('vendor', profileId, chatQuestion);
-		chatAnswer = result?.answer || 'Unable to answer.';
+		chatAnswer = result.answer || result.error || 'Unable to answer.';
 		chatLoading = false;
 	}
 

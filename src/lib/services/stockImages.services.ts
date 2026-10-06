@@ -69,7 +69,9 @@ export async function triggerStockImageDownload(downloadLocation: string | null)
  */
 export async function stockImageToFile(imageUrl: string, filename = 'event-cover'): Promise<File | null> {
 	try {
-		const res = await fetch(imageUrl);
+		// Through our own origin: the CSP's connect-src does not (and should
+		// not) allow the browser to fetch images.unsplash.com directly.
+		const res = await fetch(`/api/stock-images/image?url=${encodeURIComponent(imageUrl)}`);
 		if (!res.ok) return null;
 		const blob = await res.blob();
 		const ext = (blob.type.split('/')[1] || 'jpg').split('+')[0];

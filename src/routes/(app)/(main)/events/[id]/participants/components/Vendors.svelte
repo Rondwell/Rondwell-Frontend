@@ -70,9 +70,12 @@
 	}
 
 	function getStatusLabel(status: string): string {
+		// APPROVED is what the event service records when a vendor accepts an
+		// invitation (or the organizer approves their request) — the vendor's own
+		// dashboard calls that "Accepted", so this tab does too.
 		const map: Record<string, string> = {
 			INVITED: 'Invited', ACCEPTED: 'Accepted', CONFIRMED: 'Order Confirmed',
-			DECLINED: 'Declined', MANUAL_ADD: 'Manual Add', APPROVED: 'Approved',
+			DECLINED: 'Declined', MANUAL_ADD: 'Manual Add', APPROVED: 'Accepted',
 			APPLIED: 'Applied', PENDING_APPROVAL: 'Order Pending', INACTIVE: 'Inactive',
 		};
 		return map[status] || status;

@@ -88,7 +88,7 @@
 	function getStatusLabel(status: string): string {
 		const map: Record<string, string> = {
 			INVITED: 'Invited', ACCEPTED: 'Accepted', CONFIRMED: 'Confirmed',
-			DECLINED: 'Declined', MANUAL_ADD: 'Manual Add', APPROVED: 'Approved',
+			DECLINED: 'Declined', MANUAL_ADD: 'Manual Add', APPROVED: 'Accepted',
 			APPLIED: 'Applied', PENDING_APPROVAL: 'Pending', INACTIVE: 'Inactive',
 		};
 		return map[status] || status;

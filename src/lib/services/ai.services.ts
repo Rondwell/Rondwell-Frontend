@@ -15,6 +15,7 @@ export interface AIGeneratedEvent {
   registrationDeadline?: string;
   maxAttendees?: number;
   themeColor?: string;
+  themeFont?: string;
   locationDetails?: {
     virtual?: { platform: string; meetingLink: string };
     physical?: { venueName: string; venueAddress: string; seatingCapacity?: number };

@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import type { Color } from '$lib/utils/colors';
+import { themeChrome, type Color } from '$lib/utils/colors';
 import { writable } from 'svelte/store';
 
 // Default brand color — matches the webmanifest theme_color
@@ -58,7 +58,7 @@ if (browser) {
  * actually sees behind the notification bar).
  */
 export function applyThemeColor(color: string | Color) {
-	const value = typeof color === 'string' ? color : color.bg;
+	const value = typeof color === 'string' ? color : themeChrome(color);
 	themeColor.set(value);
 }
 

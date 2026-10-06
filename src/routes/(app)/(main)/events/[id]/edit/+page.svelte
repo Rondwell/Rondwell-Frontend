@@ -4,7 +4,14 @@
 	import { bulkReplaceEventDays, getEventDays, updateEvent, uploadEventDescriptionImage, uploadEventPhoto, type EventDayPayload } from '$lib/services/event.services';
 	import { getEventCache, invalidateEventCache } from '$lib/stores/eventCache.store';
 	import { toast } from '$lib/stores/toast.store';
-	import { colors, type Color } from '$lib/utils/colors';
+	import { colors, DEFAULT_THEME, resolveTheme, themeSwatch, type Color } from '$lib/utils/colors';
+	import {
+		DEFAULT_FONT,
+		ensureThemeFontLoaded,
+		resolveThemeFont,
+		themeFonts,
+		type ThemeFont
+	} from '$lib/utils/themeFonts';
 	import { clickOutside } from '$lib/utils/constant';
 	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import Icon from '@iconify/svelte';
@@ -43,7 +50,11 @@
 
 	let name = '';
 	let descriptionHtml = ''; // stored as HTML for rich editor
-	let selectedColor: Color = colors[0];
+	let selectedColor: Color = DEFAULT_THEME;
+	let selectedFont: ThemeFont = DEFAULT_FONT;
+	// The font picker below previews every face; the stylesheets are tiny and
+	// the browser fetches font files only for the samples it actually draws.
+	$: if (typeof window !== 'undefined') themeFonts.forEach(ensureThemeFontLoaded);
 	let publicUrl = '';
 	let socialPreviewImage: string | null = null;
 	let displayPictureUrl: string | null = null;
@@ -181,11 +192,11 @@
 			rawEvent = event;
 			name = event.title ?? '';
 			descriptionHtml = event.description ?? '';
-			const matched = colors.find(
-				(c: Color) => c.name.toLowerCase() === (event.themeColor ?? '').toLowerCase()
-				  || c.bg.toLowerCase() === (event.themeColor ?? '').toLowerCase()
-			);
-			selectedColor = matched ?? colors[0];
+			// resolveTheme maps retired palettes ("White Black") to their
+			// replacement, so saving an old event never silently picks a
+			// random palette.
+			selectedColor = resolveTheme(event.themeColor);
+			selectedFont = resolveThemeFont(event.themeFont);
 			publicUrl = event.customLinkSlug ?? '';
 			const sl = event.socialLinks ?? {};
 			links = {
@@ -348,6 +359,7 @@
 				title: name.trim(),
 				description: descriptionHtml,
 				themeColor: selectedColor.name,
+				themeFont: selectedFont.id,
 				customLinkSlug: publicUrl || undefined,
 				socialLinks: links,
 				startDateTime: buildDateTime(startDate, startTime),
@@ -851,29 +863,54 @@
 		<div class="mb-6 rounded-lg bg-[#FDFDFD] p-4">
 			<h2 class="mb-3 text-2xl font-semibold">Customization</h2>
 
-			<!-- Tint Color -->
+			<!-- Theme colour -->
 			<div class="mb-4">
-				<label class="mb-2 block text-sm font-medium text-gray-700">Tint Color</label>
-				<div class="flex flex-wrap items-center gap-3">
-					{#each colors as color}
+				<p id="theme-color-label" class="mb-2 block text-sm font-medium text-gray-700">Theme color</p>
+				<div class="flex flex-wrap items-center gap-3" role="radiogroup" aria-labelledby="theme-color-label">
+					{#each colors as color (color.name)}
+						{@const isSelected = selectedColor.name === color.name}
 						<button
 							type="button"
+							role="radio"
+							aria-checked={isSelected}
 							title={color.name}
+							aria-label={color.name}
 							class="relative h-8 w-8 rounded-full border-2 transition-transform hover:scale-110"
-							style="background-color: {color.bg}; border-color: {selectedColor.name === color.name ? color.button : '#e5e7eb'};"
+							style="background: {themeSwatch(color)}; border-color: {isSelected ? color.button : '#e5e7eb'};"
 							on:click={() => (selectedColor = color)}
 						>
-							{#if selectedColor.name === color.name}
+							{#if isSelected}
 								<span class="absolute inset-0 flex items-center justify-center">
-									<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-										<path d="M2 6l3 3 5-5" stroke={color.button} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+									<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+										<path d="M2 6l3 3 5-5" stroke={color.scheme === 'dark' ? '#FFFFFF' : color.button} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 									</svg>
 								</span>
 							{/if}
 						</button>
 					{/each}
 				</div>
-				<p class="mt-2 text-xs text-gray-400">Selected: {selectedColor.name}</p>
+				<p class="mt-2 text-xs text-gray-400">Selected: <span class="capitalize">{selectedColor.name}</span></p>
+			</div>
+
+			<!-- Theme font -->
+			<div class="mb-4">
+				<p id="theme-font-label" class="mb-2 block text-sm font-medium text-gray-700">Font</p>
+				<div class="grid grid-cols-3 gap-2 sm:grid-cols-5" role="radiogroup" aria-labelledby="theme-font-label">
+					{#each themeFonts as font (font.id)}
+						{@const isSelected = selectedFont.id === font.id}
+						<button
+							type="button"
+							role="radio"
+							aria-checked={isSelected}
+							class="flex flex-col items-center gap-0.5 rounded-lg border bg-white px-2 py-2.5 transition hover:border-gray-400 {isSelected ? 'border-gray-900 shadow-sm' : 'border-gray-200'}"
+							on:click={() => (selectedFont = font)}
+						>
+							<span class="text-xl leading-tight text-gray-900" style="font-family: {font.display}; font-synthesis: none;">Ag</span>
+							<span class="truncate text-[11px] font-medium text-gray-700">{font.label}</span>
+						</button>
+					{/each}
+				</div>
+				<p class="mt-2 text-xs text-gray-400">Used for your event title and headings on the public page.</p>
 			</div>
 
 			<!-- Public URL -->

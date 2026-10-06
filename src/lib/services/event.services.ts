@@ -16,6 +16,8 @@ export interface CreateEventPayload {
 	registrationType: 'FREE' | 'PAID';
 	visibility: 'PUBLIC' | 'PRIVATE';
 	themeColor?: string;
+	/** Theme font id from `$lib/utils/themeFonts` (e.g. 'playfair'). */
+	themeFont?: string;
 	locationDetails?: {
 		virtual?: { platform: string; meetingLink: string };
 		physical?: {
@@ -2336,11 +2338,13 @@ export async function uploadCollectionCoverBanner(
 
 export async function getPublicCollectionBySlug(
 	slug: string
-): Promise<{ collection: any; events: any[] }> {
+): Promise<{ collection: any; events: any[]; eventTags: any[] }> {
 	const res = await fetch(`${EVENT_URL}/api/v1/collections/by-slug/${encodeURIComponent(slug)}`);
 	if (!res.ok) await throwApiError(res, 'Collection not found');
 	const data = await res.json();
-	return { collection: data.collection, events: data.events ?? [] };
+	// `eventTags` drives the category chips on the public collection page; it
+	// was dropped here, so the filter never rendered.
+	return { collection: data.collection, events: data.events ?? [], eventTags: data.eventTags ?? [] };
 }
 
 export async function scrapeExternalEventUrl(url: string): Promise<{

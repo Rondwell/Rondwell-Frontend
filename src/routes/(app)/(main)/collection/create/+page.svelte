@@ -5,7 +5,7 @@
 		uploadCollectionCoverBanner,
 		uploadCollectionProfilePicture
 	} from '$lib/services/event.services';
-	import { colors, type Color } from '$lib/utils/colors';
+	import { colors, themeSwatch, type Color } from '$lib/utils/colors';
 	import Icon from '@iconify/svelte';
 	import PlaceholderExtension from '@tiptap/extension-placeholder';
 	import StarterKit from '@tiptap/starter-kit';
@@ -202,10 +202,11 @@
 			<div class="mb-4">
 				<label class="mb-2 block text-sm font-medium text-gray-700">Theme Color</label>
 				<div class="flex flex-wrap items-center justify-start gap-3">
-					{#each colors as color}
+					{#each colors as color (color.name)}
 						<button type="button"
+							title={color.name}
 							class="h-8 w-8 rounded-full border-2 transition-transform hover:scale-110"
-							style="background-color: {color.bg};"
+							style="background: {themeSwatch(color)};"
 							class:border-black={selectedColor.name === color.name}
 							class:border-transparent={selectedColor.name !== color.name}
 							on:click={() => (selectedColor = color)}

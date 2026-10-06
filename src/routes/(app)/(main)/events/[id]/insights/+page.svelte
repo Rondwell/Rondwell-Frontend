@@ -157,7 +157,7 @@
 	async function loadAISummary() {
 		aiLoading = true;
 		const result = await generateAnalyticsSummary('event', eventId);
-		aiSummary = result?.summary || 'Unable to generate summary at this time.';
+		aiSummary = result.summary || result.error || 'Unable to generate summary at this time.';
 		aiLoading = false;
 	}
 
@@ -165,7 +165,7 @@
 		if (!chatQuestion.trim()) return;
 		chatLoading = true;
 		const result = await chatWithAnalytics('event', eventId, chatQuestion);
-		chatAnswer = result?.answer || 'Unable to answer at this time.';
+		chatAnswer = result.answer || result.error || 'Unable to answer at this time.';
 		chatLoading = false;
 	}
 

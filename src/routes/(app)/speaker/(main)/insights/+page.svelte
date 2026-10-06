@@ -63,7 +63,7 @@
 	async function loadAISummary() {
 		aiLoading = true;
 		const result = await generateAnalyticsSummary('speaker', profileId);
-		aiSummary = result?.summary || 'Unable to generate summary.';
+		aiSummary = result.summary || result.error || 'Unable to generate summary.';
 		aiLoading = false;
 	}
 
@@ -71,7 +71,7 @@
 		if (!chatQuestion.trim()) return;
 		chatLoading = true;
 		const result = await chatWithAnalytics('speaker', profileId, chatQuestion);
-		chatAnswer = result?.answer || 'Unable to answer.';
+		chatAnswer = result.answer || result.error || 'Unable to answer.';
 		chatLoading = false;
 	}
 

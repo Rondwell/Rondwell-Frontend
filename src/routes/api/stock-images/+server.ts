@@ -50,10 +50,27 @@ function normalize(photo: any) {
 	};
 }
 
+/**
+ * Search results are the same for every organizer (the categories are fixed
+ * queries), so they are cached at Netlify's edge: one Unsplash request serves
+ * everyone for an hour instead of each modal open spending one of the 50
+ * demo-tier requests per hour.
+ */
+const SEARCH_CACHE_HEADERS = {
+	'cache-control': 'public, max-age=300',
+	'netlify-cdn-cache-control': 'public, durable, s-maxage=3600, stale-while-revalidate=86400'
+};
+
 export const GET: RequestHandler = async ({ url, fetch }) => {
 	const accessKey = getAccessKey();
 	if (!accessKey) {
-		return json({ results: [], disabled: true });
+		// Never cached: the moment the key is configured, results must appear.
+		// `reason` is for operators (visible in the network tab); the modal
+		// shows its own upload-only message.
+		return json(
+			{ results: [], disabled: true, reason: 'UNSPLASH_ACCESS_KEY is not configured on the server' },
+			{ headers: { 'cache-control': 'no-store' } }
+		);
 	}
 
 	const category = url.searchParams.get('category') ?? 'Featured';
@@ -77,7 +94,7 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 		}
 		const data = await res.json();
 		const results = Array.isArray(data.results) ? data.results.map(normalize) : [];
-		return json({ results, total: data.total ?? results.length, page });
+		return json({ results, total: data.total ?? results.length, page }, { headers: SEARCH_CACHE_HEADERS });
 	} catch (err: any) {
 		if (err?.status) throw err;
 		throw error(502, 'Failed to reach stock image provider');

@@ -69,17 +69,30 @@
 		loading = false;
 	});
 
+	let aiSummaryError = '';
+	let chatError = '';
+
 	async function loadAISummary() {
 		aiLoading = true;
+		aiSummaryError = '';
 		const result = await generateAnalyticsSummary('collection', collectionId);
-		aiSummary = result?.summary || 'Unable to generate summary.';
+		if (result.error) {
+			aiSummaryError = result.error;
+		} else {
+			aiSummary = result.summary ?? '';
+		}
 		aiLoading = false;
 	}
 	async function askQuestion() {
-		if (!chatQuestion.trim()) return;
+		if (!chatQuestion.trim() || chatLoading) return;
 		chatLoading = true;
-		const result = await chatWithAnalytics('collection', collectionId, chatQuestion);
-		chatAnswer = result?.answer || 'Unable to answer.';
+		chatError = '';
+		const result = await chatWithAnalytics('collection', collectionId, chatQuestion.trim());
+		if (result.error) {
+			chatError = result.error;
+		} else {
+			chatAnswer = result.answer ?? '';
+		}
 		chatLoading = false;
 	}
 
@@ -229,8 +242,14 @@
 					{:else}<Icon icon="mdi:auto-fix" class="h-4 w-4" /> Generate Summary{/if}
 				</button>
 			</div>
+			{#if aiSummaryError}
+				<div role="alert" class="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+					<Icon icon="mdi:alert-circle-outline" class="mt-0.5 h-4 w-4 shrink-0" />
+					<span>{aiSummaryError}</span>
+				</div>
+			{/if}
 			{#if aiSummary}<div class="prose prose-sm max-w-none rounded-lg bg-gray-50 p-4">{@html renderMarkdown(aiSummary)}</div>
-			{:else}<p class="text-sm text-gray-400">Click "Generate Summary" for an AI analysis of your collection performance.</p>{/if}
+			{:else if !aiSummaryError}<p class="text-sm text-gray-400">Click "Generate Summary" for an AI analysis of your collection performance.</p>{/if}
 		</div>
 		<div class="rounded-xl bg-white p-6 shadow-sm">
 			<h3 class="mb-4 text-lg font-medium">Chat with Your Data</h3>
@@ -241,6 +260,12 @@
 				<button on:click={askQuestion} disabled={chatLoading || !chatQuestion.trim()}
 					class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{chatLoading ? '...' : 'Ask'}</button>
 			</div>
+			{#if chatError}
+				<div role="alert" class="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+					<Icon icon="mdi:alert-circle-outline" class="mt-0.5 h-4 w-4 shrink-0" />
+					<span>{chatError}</span>
+				</div>
+			{/if}
 			{#if chatAnswer}<div class="prose prose-sm mt-4 max-w-none rounded-lg bg-gray-50 p-4">{@html renderMarkdown(chatAnswer)}</div>{/if}
 		</div>
 	</div>

@@ -256,3 +256,25 @@ button {
 	size: A4;
 	margin: 14mm 12mm 16mm;
 }
+
+/*
+ * Event theme fonts (see $lib/utils/themeFonts.ts).
+ *
+ * A wrapper with `.theme-scope` and the `--theme-font-*` variables themes
+ * everything inside it: body text uses the body face, the event title and
+ * section headings use the display face. `.theme-display` applies the display
+ * face to any other element (e.g. the event-name input on the create page).
+ *
+ * `font-synthesis: none` stops the browser faking bold on single-weight
+ * display faces (Bebas Neue, Great Vibes) — a synthesised bold script looks
+ * smeared, the real weight looks intended.
+ */
+.theme-scope {
+	font-family: var(--theme-font-body, inherit);
+}
+.theme-scope h1,
+.theme-scope h2,
+.theme-display {
+	font-family: var(--theme-font-display, inherit);
+	font-synthesis: none;
+}

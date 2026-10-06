@@ -9,7 +9,7 @@
 	import { uploadVendorCover, uploadVendorLogo } from '$lib/services/vendor.services';
 	import { setActiveProfile } from '$lib/stores/auth.store';
 	import { toast } from '$lib/stores/toast.store';
-	import { colors, type Color } from '$lib/utils/colors';
+	import { DEFAULT_THEME, type Color } from '$lib/utils/colors';
 	import countries from '$lib/utils/countries.json';
 	import OnboardingNavbar from '../../components/OnboardingNavbar.svelte';
 
@@ -24,7 +24,10 @@
 	// ============================================
 	// THEME
 	// ============================================
-	let selectedColor: Color = colors[7];
+	// The onboarding look IS the Default event theme (light-ray artwork + its
+	// tokens). Never index the palette by position — it was `colors[7]`, the
+	// now-retired "White Black" palette.
+	let selectedColor: Color = DEFAULT_THEME;
 
 	// ============================================
 	// STEP CONTROL

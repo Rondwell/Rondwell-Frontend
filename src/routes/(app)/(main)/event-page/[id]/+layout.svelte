@@ -1,12 +1,18 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { afterNavigate } from '$app/navigation';
-	import { activeEventPageTheme, getEventTheme, setEventTheme } from '$lib/stores/eventTheme';
+	import {
+		activeEventPageFont,
+		activeEventPageTheme,
+		getEventTheme,
+		hasCachedEventTheme,
+		setEventTheme
+	} from '$lib/stores/eventTheme';
 	import { eventSlugMap, setEventSlug } from '$lib/stores/eventSlug';
 	import { isAuthenticated } from '$lib/stores/auth.store';
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
-	import type { Color } from '$lib/utils/colors';
-	import { colors } from '$lib/utils/colors';
+	import { DEFAULT_THEME, findTheme, type Color } from '$lib/utils/colors';
+	import { resolveThemeFont, themeFontHref, themeFontStyle, type ThemeFont } from '$lib/utils/themeFonts';
 
 	export let data: any;
 
@@ -15,36 +21,31 @@
 	subMenuItems.set([]);
 	activeSubItem.set('');
 
-	/** Resolve the initial theme from server data or localStorage — never fall back to colors[0] blindly */
+	/**
+	 * Resolve the initial theme.
+	 *
+	 * The SERVER value wins when present: it is the organizer's current
+	 * choice, while the localStorage copy may be stale (they changed the theme
+	 * since this visitor's last visit, or the palette was retired). The cache
+	 * is the fallback for a failed server load, re-resolved by name so a
+	 * retired palette maps to its replacement.
+	 */
 	function resolveInitialTheme(eventId: string, serverThemeColor: string | null): Color {
-		// 1. Check localStorage first (fastest, already resolved)
-		const stored = getEventTheme(eventId);
-		if (stored && stored.name !== colors[0].name) {
-			return stored;
+		const fromServer = findTheme(serverThemeColor);
+		if (fromServer) {
+			setEventTheme(eventId, fromServer);
+			return fromServer;
 		}
-
-		// 2. Use server-provided theme color to match against our palette
-		if (serverThemeColor) {
-			const matched = colors.find(
-				(c: Color) => c.name.toLowerCase() === serverThemeColor.toLowerCase()
-					|| c.bg.toLowerCase() === serverThemeColor.toLowerCase()
-			);
-			if (matched) {
-				setEventTheme(eventId, matched);
-				return matched;
-			}
-		}
-
-		// 3. If localStorage had a stored theme (even if it was colors[0]), use it
-		if (stored) {
-			return stored;
-		}
-
-		// 4. True fallback
-		return colors[0];
+		if (hasCachedEventTheme(eventId)) return getEventTheme(eventId);
+		return DEFAULT_THEME;
 	}
 
-	let themeColor: Color = colors[0];
+	// Font pairing: server value first (SSR, so the stylesheet is in the first
+	// paint), then whatever the page resolves after its own fetch.
+	$: themeFont = ($activeEventPageFont ?? resolveThemeFont(data?.serverThemeFont)) as ThemeFont;
+	$: themeFontLink = themeFontHref(themeFont);
+
+	let themeColor: Color = DEFAULT_THEME;
 	let themeReady = false;
 
 	$: {
@@ -66,6 +67,7 @@
 			}
 		} else {
 			activeEventPageTheme.set(null);
+			activeEventPageFont.set(null);
 			themeReady = true;
 		}
 	}
@@ -168,6 +170,14 @@
 	$: requiresAuth = isSubPage && !isPublicSubPage && !$isAuthenticated;
 </script>
 
+<svelte:head>
+	{#if themeFontLink}
+		<link rel="stylesheet" href={themeFontLink} />
+	{/if}
+</svelte:head>
+
+<!-- Font scope for the whole event page (overview, sub-tabs, modals). -->
+<div class="theme-scope flex min-w-0 flex-1 flex-col" style={themeFontStyle(themeFont)}>
 <!-- Themed tab navigation -->
 <nav
 	class="custom-scrollbar mb-6 flex gap-2 overflow-x-auto whitespace-nowrap pb-1"
@@ -218,3 +228,4 @@
 {:else}
 <slot />
 {/if}
+</div>

@@ -7,6 +7,8 @@
 	import { resetThemeColor, themeColor } from '$lib/stores/themeColor';
 	import { activeSubItem, showSubMenu, subMenuItems } from '$lib/stores/uiStore.js';
 	import { setPostAuthRedirect } from '$lib/utils/redirect';
+	import { themeChrome } from '$lib/utils/colors';
+	import ThemeBackdrop from '$lib/components/ThemeBackdrop.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import Sidebar from '../components/Sidebar.svelte';
 	import SideMenu from '../components/SideMenu.svelte';
@@ -98,7 +100,7 @@
 	$: {
 		if (browser) {
 			if (isEventPage && $activeEventPageTheme) {
-				themeColor.set($activeEventPageTheme.bg);
+				themeColor.set(themeChrome($activeEventPageTheme));
 			} else {
 				const key = getThemeKeyForRoute($page.url.pathname);
 				themeColor.set(gradientTopColors[key] ?? gradientTopColors.default);
@@ -117,6 +119,12 @@
 	class="relative flex min-h-screen flex-col text-sm font-medium md:flex-row"
 	style="background-image: {isEventPage ? 'none' : selectedTheme}; background-color: {isEventPage ? eventPageBg : 'transparent'};"
 >
+	<!-- Event page theme artwork (Default light rays, brand glows). Flat
+	     palettes have no backdrop and keep the plain background colour. -->
+	{#if isEventPage}
+		<ThemeBackdrop theme={$activeEventPageTheme} />
+	{/if}
+
 	<!-- Sidebar -->
 	<div class="relative md:min-w-[117px]">
 		<Sidebar background_color={isEventPage ? eventPageBg : '#f4f5f6'} />

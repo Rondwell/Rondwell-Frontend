@@ -1,41 +1,43 @@
+<!--
+	Theme picker sheet: colour + font.
+
+	Style and Template were removed. Neither was ever saved or rendered — the
+	style cards only changed a thumbnail on this page, and the Template row had
+	no handler at all (which is why tapping it did nothing). Event page
+	templates are planned separately; see docs/EVENT-PAGE-TEMPLATES-PLAN.md.
+
+	Both choices ARE persisted now: `themeColor` (palette name) and `themeFont`
+	(font id) are saved on the event and rendered on the public page.
+-->
 <script lang="ts">
-	import { fade, fly } from 'svelte/transition';
-	import { colors, type Color } from '$lib/utils/colors';
+	import { fly } from 'svelte/transition';
+	import { colors, themeSwatch, DEFAULT_THEME, type Color } from '$lib/utils/colors';
+	import {
+		DEFAULT_FONT,
+		ensureThemeFontLoaded,
+		themeFonts,
+		type ThemeFont
+	} from '$lib/utils/themeFonts';
 
 	export let open = false;
+	export let selectedColor: Color = DEFAULT_THEME;
+	export let selectedFont: ThemeFont = DEFAULT_FONT;
 
-	export let selectedStyle = 'Minimal';
-	export let selectedFont = 'Default';
-	export let selectedColor = colors[0];
+	let activeTab: 'color' | 'font' = 'color';
 
-	let activeTab = 'style'; // 'color', 'style', 'font', 'template'
-	const styles = ['Minimal', 'Quantum', 'Warp', 'Emoji', 'Confetti', 'Pattern', 'Seasonal'];
-	const fonts = [
-		'Default',
-		'Musio',
-		'Factoria',
-		'Ivy Pesto',
-		'Ivy Mode',
-		'Alverata',
-		'Roc Grotesk',
-		'Benguiat',
-		'Pearl',
-		'Geist Mono',
-		'New Spirit'
-	];
+	// Font previews need the faces; the stylesheets are small and the font
+	// files download only for the faces actually drawn.
+	$: if (open && activeTab === 'font') themeFonts.forEach(ensureThemeFontLoaded);
 
-	function selectStyle(style: string) {
-		selectedStyle = style;
+	function close() {
+		open = false;
 	}
 
-	function selectColor(color: any) {
-		selectedColor = color;
-	}
-	function selectFont(font: string) {
-		selectedFont = font;
+	function onKeydown(event: KeyboardEvent) {
+		if (open && event.key === 'Escape') close();
 	}
 
-	let arrow = `<svg width="10" height="16" viewBox="0 0 14 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+	const arrow = `<svg width="10" height="16" viewBox="0 0 14 20" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="12.1816" y="8.05963" width="9.43215" height="1.86395" rx="0.931977" transform="rotate(-135 12.1816 8.05963)" fill="currentColor"/>
     <rect y="6.73932" width="9.53286" height="1.86395" rx="0.931977" transform="rotate(-45 0 6.73932)" fill="currentColor"/>
     <rect x="1.31836" y="11.2471" width="9.43215" height="1.86395" rx="0.931977" transform="rotate(45 1.31836 11.2471)" fill="currentColor"/>
@@ -43,152 +45,129 @@
     </svg>`;
 </script>
 
+<svelte:window on:keydown={onKeydown} />
+
 {#if open}
-	<!-- Main Modal -->
 	<div
-		class="bg fixed inset-x-0 bottom-0 z-50 flex h-auto w-full flex-col p-6"
-		style="max-height: 70vh;"
+		class="bg fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-4 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6"
+		style="max-height: 78vh;"
+		role="dialog"
+		aria-modal="false"
+		aria-label="Event theme"
 		transition:fly={{ y: 300, duration: 300 }}
 	>
-		<!-- Scrollable content -->
-		<div
-			class="custom-scrollbar mb-10 flex max-h-[180px] flex-col items-center justify-between gap-6 overflow-y-auto text-gray-500 md:flex-1 lg:items-stretch lg:pb-[50px]"
-		>
-			<!-- Style (always open view) -->
-			{#if activeTab === 'style'}
-				<div class="flex flex-wrap items-center justify-center gap-4">
-					{#each styles as style, i}
+		<!-- Header -->
+		<div class="flex items-center justify-between gap-3">
+			<div class="min-w-0">
+				<p class="text-sm font-semibold text-gray-900">Theme</p>
+				<p class="truncate text-xs text-gray-500">Pick a colour and a font for your event page.</p>
+			</div>
+			<button
+				type="button"
+				on:click={close}
+				class="shrink-0 rounded-full bg-gray-900 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-gray-700"
+			>
+				Done
+			</button>
+		</div>
+
+		<!-- Options (scrolls on small screens) -->
+		<div class="custom-scrollbar min-h-0 flex-1 overflow-y-auto pb-1" style="max-height: 42vh;">
+			{#if activeTab === 'color'}
+				<div class="grid grid-cols-4 gap-x-2 gap-y-4 sm:grid-cols-5 lg:grid-cols-10" role="radiogroup" aria-label="Colour">
+					{#each colors as color (color.name)}
+						{@const isSelected = selectedColor?.name === color.name}
 						<button
-							class="relative flex w-24 cursor-pointer flex-col items-center rounded-xl"
-							on:click={() => selectStyle(style)}
+							type="button"
+							role="radio"
+							aria-checked={isSelected}
+							title={color.name}
+							class="group flex flex-col items-center gap-1.5 focus:outline-none"
+							on:click={() => (selectedColor = color)}
 						>
-							<img
-								src={`/${style}.svg`}
-								alt={style}
-								class="mb-1 h-[72px] w-full rounded-lg {selectedStyle === style
-									? 'border-2 border-black'
-									: ''}"
-							/>
-							<span class="text-xs text-gray-700">{style}</span>
-							{#if i === 6}
-								<span class="absolute bottom-4 rounded bg-orange-500 px-1 text-xs text-white"
-									>NEW</span
-								>
-							{/if}
+							<span
+								class="relative h-12 w-12 rounded-full shadow-sm ring-offset-2 transition group-hover:scale-105 group-focus-visible:ring-2 group-focus-visible:ring-gray-400 {isSelected
+									? 'ring-2 ring-gray-900'
+									: 'ring-1 ring-black/10'}"
+								style="background: {themeSwatch(color)};"
+							>
+								{#if isSelected}
+									<span class="absolute inset-0 flex items-center justify-center">
+										<svg width="16" height="16" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+											<path d="M2 6l3 3 5-5" stroke={color.scheme === 'dark' ? '#FFFFFF' : '#141414'} stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+										</svg>
+									</span>
+								{/if}
+							</span>
+							<span class="max-w-[72px] truncate text-[11px] capitalize {isSelected ? 'font-semibold text-gray-900' : 'text-gray-600'}">
+								{color.name}
+							</span>
 						</button>
 					{/each}
 				</div>
-			{/if}
-
-			<!-- Color Modal -->
-			{#if activeTab === 'color'}
-				<div class="flex flex-wrap items-center justify-center gap-3">
-					{#each colors as color}
+			{:else}
+				<div class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5" role="radiogroup" aria-label="Font">
+					{#each themeFonts as font (font.id)}
+						{@const isSelected = selectedFont?.id === font.id}
 						<button
-							aria-label="color"
-							class="h-12 w-12 cursor-pointer rounded-full border-2"
-							style="background-color: {color.bg};"
-							class:border-black={selectedColor === color}
-							on:click={() => selectColor(color)}
-						></button>
-					{/each}
-				</div>
-			{/if}
-
-			<!-- Font Modal -->
-			{#if activeTab === 'font'}
-				<div class="flex flex-wrap items-center justify-center gap-4">
-					{#each fonts as font}
-						<button class="flex flex-col items-center gap-1" on:click={() => selectFont(font)}>
-							<div
-								class="w-[89px] cursor-pointer rounded-lg border bg-[#FAFCFE] p-3 text-center text-xl font-semibold {selectedFont ===
-								font
-									? 'border-black'
-									: ''}"
-								style="font-family: {font};"
-							>
+							type="button"
+							role="radio"
+							aria-checked={isSelected}
+							class="flex flex-col items-center gap-1 rounded-xl border bg-[#FAFCFE] px-2 py-3 transition hover:border-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 {isSelected
+								? 'border-gray-900 shadow-sm'
+								: 'border-gray-200'}"
+							on:click={() => (selectedFont = font)}
+						>
+							<span class="text-2xl leading-tight text-gray-900" style="font-family: {font.display}; font-synthesis: none;">
 								Ag
-							</div>
-							<p class="mt-1 text-xs">{font}</p>
+							</span>
+							<span class="truncate text-[11px] font-medium text-gray-800">{font.label}</span>
+							<span class="text-[10px] text-gray-500">{font.vibe}</span>
 						</button>
 					{/each}
 				</div>
 			{/if}
 		</div>
 
-		<!-- Toolbar (fixed at bottom inside modal) -->
-		<div
-			class="sticky bottom-0 grid min-h-[50px] w-full place-items-center gap-4 text-gray-500 sm:grid-cols-2 lg:grid-cols-4"
-		>
+		<!-- Tabs -->
+		<div class="grid w-full grid-cols-2 gap-3 text-gray-600" role="tablist" aria-label="Theme options">
 			<button
-				class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
+				type="button"
+				role="tab"
+				aria-selected={activeTab === 'color'}
+				class="flex h-[45px] w-full items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
 				class:selected={activeTab === 'color'}
 				on:click={() => (activeTab = 'color')}
 			>
-				<div class="flex items-center gap-1">
-					<span style="background-color: {selectedColor.bg}" class="h-6 w-6 rounded-full"></span>
-					<p>Color</p>
-				</div>
-				<div class="flex items-center gap-1">
-					<p>{selectedColor.name}</p>
+				<span class="flex min-w-0 items-center gap-2">
+					<span
+						class="h-6 w-6 shrink-0 rounded-full ring-1 ring-black/10"
+						style="background: {themeSwatch(selectedColor)};"
+					></span>
+					<span>Color</span>
+				</span>
+				<span class="flex min-w-0 items-center gap-1">
+					<span class="truncate capitalize">{selectedColor?.name}</span>
 					<span>{@html arrow}</span>
-				</div>
+				</span>
 			</button>
 
 			<button
-				class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
-				class:selected={activeTab === 'style'}
-				on:click={() => (activeTab = 'style')}
-			>
-				<div class="flex items-center gap-1">
-					<span class="h-6 w-6 rounded-full bg-[#E8E2DC]"></span>
-					<p>Style</p>
-				</div>
-				<div class="flex items-center gap-1">
-					<p>{selectedStyle === 'Minimal' ? 'Default' : selectedStyle}</p>
-					<span>{@html arrow}</span>
-				</div>
-			</button>
-
-			<button
-				class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
+				type="button"
+				role="tab"
+				aria-selected={activeTab === 'font'}
+				class="flex h-[45px] w-full items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
 				class:selected={activeTab === 'font'}
 				on:click={() => (activeTab = 'font')}
 			>
-				<div class="flex items-center gap-1">
-					<span class="text-lg font-semibold" style="font-family: {selectedFont};">Ag</span>
-					<p>Font</p>
-				</div>
-
-				<div class="flex items-center gap-1">
-					<p>{selectedFont}</p>
+				<span class="flex min-w-0 items-center gap-2">
+					<span class="text-lg font-semibold" style="font-family: {selectedFont?.display}; font-synthesis: none;">Ag</span>
+					<span>Font</span>
+				</span>
+				<span class="flex min-w-0 items-center gap-1">
+					<span class="truncate">{selectedFont?.label}</span>
 					<span>{@html arrow}</span>
-				</div>
-			</button>
-
-			<button
-				class="flex h-[45px] w-full max-w-[315px] items-center justify-between gap-2 rounded-md bg-[#F5EEED] px-4 py-2"
-			>
-				<div class="flex items-center gap-1">
-					<svg
-						width="22"
-						height="22"
-						viewBox="0 0 22 22"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M10.5 0.75C15.8848 0.75 20.25 5.11522 20.25 10.5V11.25C20.25 16.6348 15.8848 21 10.5 21V0.75Z"
-							fill="#D1CCC5"
-						/>
-						<circle cx="10.875" cy="10.875" r="9.75" stroke="#D1CCC5" stroke-width="2.25" />
-					</svg>
-					<p>Template</p>
-				</div>
-				<div class="flex items-center gap-1">
-					<p>Default</p>
-					<span>{@html arrow}</span>
-				</div>
+				</span>
 			</button>
 		</div>
 	</div>
@@ -196,9 +175,11 @@
 
 <style>
 	.bg {
-		background: rgba(255, 255, 255, 0.5);
+		background: rgba(255, 255, 255, 0.72);
 		backdrop-filter: blur(20px);
+		-webkit-backdrop-filter: blur(20px);
 		border-radius: 18.75px 18.75px 0px 0px;
+		box-shadow: 0 -8px 30px rgba(15, 15, 20, 0.08);
 	}
 	button.selected {
 		background-color: #e6dfde;

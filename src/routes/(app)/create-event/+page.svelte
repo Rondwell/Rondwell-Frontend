@@ -6,7 +6,15 @@
 	import { stockImageToFile, triggerStockImageDownload } from '$lib/services/stockImages.services';
 	import { setEventTheme } from '$lib/stores/eventTheme';
 	import { toast } from '$lib/stores/toast.store';
-	import { colors, type Color } from '$lib/utils/colors';
+	import { DEFAULT_THEME, findTheme, themeSwatch, type Color } from '$lib/utils/colors';
+	import {
+		DEFAULT_FONT,
+		ensureThemeFontLoaded,
+		resolveThemeFont,
+		themeFontStyle,
+		type ThemeFont
+	} from '$lib/utils/themeFonts';
+	import ThemeBackdrop from '$lib/components/ThemeBackdrop.svelte';
 	import { clickOutside } from '$lib/utils/constant';
 	import { majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
@@ -314,15 +322,16 @@
 			}
 		}
 
-		// Theme color
+		// Theme colour + font (both validated server-side against the same lists)
 		if (data.themeColor) {
-			const match = colors.find(
-				(c) => c.name.toLowerCase() === data.themeColor!.toLowerCase()
-			);
+			const match = findTheme(data.themeColor);
 			if (match) {
 				selectedColor = match;
 				setEventTheme('pending', selectedColor);
 			}
+		}
+		if (data.themeFont) {
+			selectedFont = resolveThemeFont(data.themeFont);
 		}
 
 		// Boolean settings
@@ -399,12 +408,13 @@
 		});
 	}
 
-	let selectedStyle = 'Minimal';
-	let selectedFont = 'Default';
-	let selectedColor: Color = colors[0];
+	let selectedFont: ThemeFont = DEFAULT_FONT;
+	let selectedColor: Color = DEFAULT_THEME;
 
 	// Persist theme to store whenever organizer changes it
 	$: setEventTheme('pending', selectedColor);
+	// Load the chosen pairing so the live preview renders in the real faces.
+	$: ensureThemeFontLoaded(selectedFont);
 
 	onMount(async () => {
 		// Pre-load collections and check for pre-selected collectionId from query params
@@ -476,9 +486,19 @@
 			// Unsplash stock photo — import the bytes into our own S3 bucket so we
 			// never hotlink at serve time. Remember the download-tracking URL; the
 			// download endpoint is pinged after the event is created.
+			const previousUrl = eventImageUrl;
+			const previousFile = selectedImageFile;
 			eventImageUrl = val.url; // instant preview while we fetch the bytes
 			pendingStockDownloadLocation = val.downloadLocation;
 			selectedImageFile = await stockImageToFile(val.url, 'event-cover');
+			if (!selectedImageFile) {
+				// Without the bytes the cover cannot be saved; showing a preview
+				// that silently won't persist is worse than saying so.
+				eventImageUrl = previousUrl;
+				selectedImageFile = previousFile;
+				pendingStockDownloadLocation = null;
+				toast.error("Couldn't import that photo. Please pick another one or upload your own.");
+			}
 		} else if (typeof val === 'string') {
 			// Local preset path (e.g. "/events.png") — shown as-is, not uploaded.
 			selectedImageFile = null;
@@ -580,6 +600,7 @@
 				// lowercase string fell through to PRIVATE.
 				visibility,
 				themeColor: selectedColor.name,
+				themeFont: selectedFont.id,
 				locationDetails: location || physicalAddress ? {
 					virtual: (eventType === 'Virtual' || eventType === 'Hybrid') && location
 						? { platform: location.includes('zoom.us') ? 'Zoom' : location.includes('meet.google.com') ? 'Google Meet' : 'Other', meetingLink: location }
@@ -720,9 +741,16 @@
 <AILoadingOverlay visible={aiLoading} message={aiLoading ? 'Generating your event with AI...' : ''} />
 
 <div
-	class="relative flex flex-col md:flex-row min-h-screen overflow-auto"
-	style="background-color: {selectedColor.bg}; color: {selectedColor.text}; font-family: {selectedFont}"
+	class="theme-scope relative flex flex-col md:flex-row min-h-screen overflow-auto"
+	style="background-color: {selectedColor.bg}; color: {selectedColor.text}; {themeFontStyle(selectedFont)}"
 >
+	<!-- Premium theme artwork (Default light rays, brand glows) — live preview -->
+	<ThemeBackdrop theme={selectedColor} />
+
+	<!-- One image picker for both layouts: two instances meant two Unsplash
+	     requests per open (against a 50/hr limit) and duplicate input ids. -->
+	<ImageSelectorModal bind:open={showImageSelectorModal} on:select={handleImageSelect} />
+
 	<!-- Sidebar -->
 
 	<div class="md:w-[117px]">
@@ -756,7 +784,6 @@
 						<span class="text-sm font-medium">Upload or choose a cover</span>
 					</span>
 				</button>
-				<ImageSelectorModal bind:open={showImageSelectorModal} on:select={handleImageSelect} />
 			</div>
 
 			<div class="space-y-4">
@@ -773,14 +800,16 @@
 						on:click={() => (showThemeModal = !showThemeModal)}
 					>
 						<div class="flex items-center gap-2">
-							<img
-								src={`/${selectedStyle}.svg`}
-								alt={selectedStyle}
-								class="mb-1 h-[36.75px] w-[54px]"
-							/>
-							<div>
+							<span
+								class="mb-1 flex h-[36.75px] w-[54px] items-center justify-center rounded-md text-base font-semibold ring-1 ring-black/10"
+								style="background: {themeSwatch(selectedColor)}; color: {selectedColor.text}; font-family: {selectedFont.display}; font-synthesis: none;"
+								aria-hidden="true"
+							>
+								Ag
+							</span>
+							<div class="text-left">
 								<div class="text-xs" style="color: {selectedColor.lightText};">Theme</div>
-								<div class="font-semibold">{selectedStyle}</div>
+								<div class="font-semibold capitalize">{selectedColor.name} · {selectedFont.label}</div>
 							</div>
 						</div>
 						<div aria-label="change theme" style="color: {selectedColor.lightText}">
@@ -868,8 +897,7 @@
 						</div>
 					</button>
 					<ThemeModal
-						open={showThemeModal}
-						bind:selectedStyle
+						bind:open={showThemeModal}
 						bind:selectedFont
 						bind:selectedColor
 					/>
@@ -1020,7 +1048,7 @@
 				bind:value={eventName}
 				placeholder="Event Name *"
 				required
-				class="w-full py-1.5 text-4xl font-semibold focus:outline-none"
+				class="theme-display w-full bg-transparent py-1.5 text-4xl font-semibold focus:outline-none"
 				style="--placeholder-color: {selectedColor.lightText}; color: {selectedColor.lightText}"
 			/>
 			{#if submitError && !eventName.trim()}
@@ -1049,7 +1077,6 @@
 						<span class="text-sm font-medium">Upload or choose a cover</span>
 					</span>
 				</button>
-				<ImageSelectorModal bind:open={showImageSelectorModal} on:select={handleImageSelect} />
 			</div>
 
 			<!-- Date & Time -->
@@ -1662,14 +1689,16 @@
 						on:click={() => (showThemeModal = !showThemeModal)}
 					>
 						<div class="flex items-center gap-2">
-							<img
-								src={`/${selectedStyle}.svg`}
-								alt={selectedStyle}
-								class="mb-1 h-[36.75px] w-[54px]"
-							/>
-							<div>
+							<span
+								class="mb-1 flex h-[36.75px] w-[54px] items-center justify-center rounded-md text-base font-semibold ring-1 ring-black/10"
+								style="background: {themeSwatch(selectedColor)}; color: {selectedColor.text}; font-family: {selectedFont.display}; font-synthesis: none;"
+								aria-hidden="true"
+							>
+								Ag
+							</span>
+							<div class="text-left">
 								<div class="text-xs" style="color: {selectedColor.lightText};">Theme</div>
-								<div class="font-semibold">{selectedStyle}</div>
+								<div class="font-semibold capitalize">{selectedColor.name} · {selectedFont.label}</div>
 							</div>
 						</div>
 						<div aria-label="change theme" style="color: {selectedColor.lightText}">
@@ -1757,8 +1786,7 @@
 						</div>
 					</button>
 					<ThemeModal
-						open={showThemeModal}
-						bind:selectedStyle
+						bind:open={showThemeModal}
 						bind:selectedFont
 						bind:selectedColor
 					/>

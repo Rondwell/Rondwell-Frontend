@@ -1,15 +1,14 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { getEventTheme } from '$lib/stores/eventTheme';
-	import type { Color } from '$lib/utils/colors';
-	import { colors } from '$lib/utils/colors';
+	import { DEFAULT_THEME, findTheme } from '$lib/utils/colors';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
 	import Dropdown from '../../../components/Dropdown.svelte';
 
 	$: eventId = $page.params.id ?? '';
 	$: token = $page.params.token ?? '';
-	$: themeColor = eventId ? getEventTheme(eventId) : colors[0];
+	$: themeColor = eventId ? getEventTheme(eventId) : DEFAULT_THEME;
 
 	let loading = true;
 	let error = '';
@@ -68,12 +67,9 @@
 				declined = true;
 			}
 
-			// Apply theme
+			// Apply theme (retired palettes resolve to their replacement)
 			if (eventInfo?.themeColor) {
-				const matched = colors.find(
-					(c: Color) => c.name.toLowerCase() === eventInfo.themeColor.toLowerCase()
-						|| c.bg.toLowerCase() === eventInfo.themeColor.toLowerCase()
-				);
+				const matched = findTheme(eventInfo.themeColor);
 				if (matched) themeColor = matched;
 			}
 		} catch (e: any) {
@@ -188,7 +184,7 @@
 	<title>{eventInfo?.title ? `Complete Registration - ${eventInfo.title}` : 'Complete Registration'} | Rondwell</title>
 </svelte:head>
 
-<div class="flex min-h-screen w-full items-center justify-center px-4 py-8" style="background-color: {themeColor.bg};">
+<div class="flex min-h-screen w-full items-center justify-center px-4 py-8" style="background-color: {themeColor.backdrop ? 'transparent' : themeColor.bg};">
 	<div class="w-full max-w-[480px]">
 
 		{#if loading}

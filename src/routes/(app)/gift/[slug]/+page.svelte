@@ -13,7 +13,8 @@
 	import { page } from '$app/stores';
 	import Icon from '@iconify/svelte';
 	import Seo from '$lib/components/Seo.svelte';
-	import { colors, type Color } from '$lib/utils/colors';
+	import ThemeBackdrop from '$lib/components/ThemeBackdrop.svelte';
+	import { resolveTheme, type Color } from '$lib/utils/colors';
 	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import { toast } from '$lib/stores/toast.store';
 	import {
@@ -39,9 +40,8 @@
 
 	// The owner picked a palette name; resolve it back to the palette entry so
 	// the whole page is themed the way they set it up.
-	$: themeColor =
-		(link?.themeColor && colors.find((c) => c.name.toLowerCase() === link!.themeColor!.toLowerCase())) ||
-		colors[0];
+	// `resolveTheme` maps retired palettes to their replacement.
+	$: themeColor = resolveTheme(link?.themeColor);
 
 	$: occasionMeta = GIFT_OCCASIONS.find((o) => o.value === link?.occasion) ?? GIFT_OCCASIONS[5];
 
@@ -171,7 +171,8 @@
 
 <Seo {seo} />
 
-<div class="min-h-screen py-8" style="background-color: {themeColor.bg};">
+<div class="isolate min-h-screen py-8" style="background-color: {themeColor.bg};">
+	<ThemeBackdrop theme={themeColor} behind />
 	<div class="mx-auto max-w-lg px-4">
 		{#if loading}
 			<div class="h-96 animate-pulse rounded-2xl" style="background-color: {themeColor.cover};"></div>

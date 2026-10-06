@@ -8,10 +8,13 @@ export const load: LayoutServerLoad = async ({ params }) => {
 	const { id } = params;
 	try {
 		const res = await globalThis.fetch(`${API_BASE}/api/v1/events/${id}/public`);
-		if (!res.ok) return { serverThemeColor: null, slug: null };
+		if (!res.ok) return { serverThemeColor: null, serverThemeFont: null, slug: null };
 		const data = await res.json();
 		return {
 			serverThemeColor: data.event?.themeColor ?? null,
+			// Loaded server-side so the font stylesheet is in the first paint
+			// rather than swapping in after the client fetch.
+			serverThemeFont: data.event?.themeFont ?? null,
 			// Expose the pretty slug so the layout can rewrite sub-tab URLs
 			// consistently — even on a cold refresh where the overview page
 			// (the only other place that sets the slug map) never ran.
@@ -28,6 +31,6 @@ export const load: LayoutServerLoad = async ({ params }) => {
 			features: data.features ?? null
 		};
 	} catch {
-		return { serverThemeColor: null, slug: null, features: null };
+		return { serverThemeColor: null, serverThemeFont: null, slug: null, features: null };
 	}
 };

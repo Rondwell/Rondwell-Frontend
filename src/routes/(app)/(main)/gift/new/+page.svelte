@@ -16,7 +16,7 @@
 	import { toast } from '$lib/stores/toast.store';
 	import { cleanErrorMessage } from '$lib/utils/errorMessage';
 	import { majorToKobo, formatMoney } from '$lib/utils/money';
-	import { colors, type Color } from '$lib/utils/colors';
+	import { colors, DEFAULT_THEME, themeSwatch, type Color } from '$lib/utils/colors';
 	import {
 		createGiftLink,
 		discardGiftCoverImage,
@@ -38,7 +38,7 @@
 	let minMajor = 500;
 	let allowAnonymous = true;
 	let showContributorWall = true;
-	let selectedColor: Color = colors[0];
+	let selectedColor: Color = DEFAULT_THEME;
 
 	let creating = false;
 	let created: GiftLink | null = null;
@@ -197,10 +197,11 @@
 							type="button"
 							aria-label={c.name}
 							on:click={() => (selectedColor = c)}
+							title={c.name}
 							class="h-8 w-8 rounded-full border-2 transition-transform {selectedColor.name === c.name
 								? 'scale-110 border-gray-900'
 								: 'border-transparent'}"
-							style="background-color: {c.bg};"
+							style="background: {themeSwatch(c)};"
 						></button>
 					{/each}
 				</div>

@@ -43,8 +43,24 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 		return json({ success: false, message: 'refreshToken is required' }, { status: 400 });
 	}
 
+	/**
+	 * A rejected token is refused. A token we could not check is accepted.
+	 *
+	 * The check exists to stop session fixation — anyone POSTing an arbitrary
+	 * string and having it handed back as a cookie on later requests. An
+	 * `invalid` verdict is exactly that case and still gets a 401.
+	 *
+	 * `unverifiable` is different: the auth service did not answer. Refusing
+	 * there meant that whenever introspection was broken, sign-in "succeeded"
+	 * but the cookie was never set — so the SPA worked off the access token
+	 * while every server-rendered protected route bounced the user to `/auth`,
+	 * with no way out but to keep signing in. The cookie is set instead, which
+	 * is safe: its only use is being presented back to the very service that
+	 * will validate it, and a planted value buys an attacker nothing because
+	 * `verifySession` rejects it as soon as the service is reachable again.
+	 */
 	const session = await verifySession(refreshToken);
-	if (!session.user) {
+	if (session.status === 'invalid') {
 		return json({ success: false, message: 'Invalid session' }, { status: 401 });
 	}
 

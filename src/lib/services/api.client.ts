@@ -76,8 +76,18 @@ async function refreshAccessToken(): Promise<string | null> {
   try {
     const res = await fetch('/api/session/refresh', { method: 'POST' });
 
-    if (res.status === 503) {
-      // Auth service unreachable. Keep the session; fail this request only.
+    /**
+     * Any 5xx is infrastructure, not a verdict on the credential — keep the
+     * session and fail only this request.
+     *
+     * This checked `=== 503` alone, which is the one status our own endpoint
+     * chooses on an upstream transport failure. It is not the only one that
+     * arrives: a Netlify function that cold-starts past its limit answers 502 or
+     * 504, and a gateway under load answers 502. Each of those was read as
+     * "session over" and signed the user out mid-task for a problem that had
+     * nothing to do with their session. Only the 401 below ends it.
+     */
+    if (res.status >= 500) {
       return null;
     }
 

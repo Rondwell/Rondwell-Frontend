@@ -63,18 +63,56 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const token = event.cookies.get(SESSION_COOKIE);
 	const secure = event.url.protocol === 'https:';
 
+	/**
+	 * `true` when we hold a session cookie but could not get an answer about it.
+	 * Not the same as being signed out — see the `status` docblock in
+	 * `$lib/server/session`.
+	 */
+	let unverified = false;
+
 	if (token) {
 		const session = await verifySession(token);
 		event.locals.user = session.user ?? undefined;
+		unverified = session.status === 'unverifiable';
 
-		// A refresh token the service has revoked (H-02's logout invalidation) or
-		// that has expired must not keep being presented on every request.
-		if (!session.user) {
+		/**
+		 * Drop the cookie ONLY on a verdict, never on a shrug.
+		 *
+		 * This was `if (!session.user)`, which deleted the session cookie whenever
+		 * verification came back empty — including when the auth service was
+		 * simply unreachable. Combined with `session.ts` resolving its URL to
+		 * `http://localhost:3001` on Netlify, that meant every single request to
+		 * the deployed site destroyed the user's session cookie and then
+		 * redirected them to `/auth`. People signed in, browsed on the access
+		 * token in `localStorage`, and got thrown out the moment anything
+		 * server-rendered — which reads exactly like "it logs me out if I sit
+		 * still for a minute".
+		 */
+		if (session.status === 'invalid') {
 			event.cookies.delete(SESSION_COOKIE, { path: '/', httpOnly: true, secure, sameSite: 'lax' });
 		}
 	}
 
-	if (!event.locals.user && isProtected(event.url.pathname)) {
+	/**
+	 * The guard redirects when we KNOW there is no session — not when we merely
+	 * failed to check one.
+	 *
+	 * `unverified` means the browser presented a session cookie and the auth
+	 * service did not answer. Redirecting on that turns any auth-service hiccup
+	 * into a forced sign-out for every user mid-session, which is the outage this
+	 * platform just had. Instead we degrade to the behaviour that predates this
+	 * hook: serve the page shell and let the API — which still requires a valid
+	 * access token for every byte of data — be the authority.
+	 *
+	 * Nothing leaks by doing so. The shell is the same markup an anonymous
+	 * visitor can already fetch; `locals.user` stays undefined, so no
+	 * server-rendered page gets user data, and any `+page.server.ts` fetch that
+	 * needs a credential still fails. The cost of this branch is a logged-out
+	 * visitor occasionally seeing an empty dashboard frame instead of the login
+	 * page. The cost of the alternative is ejecting every signed-in organizer the
+	 * moment the user service blinks.
+	 */
+	if (!event.locals.user && !unverified && isProtected(event.url.pathname)) {
 		// Carry the destination so the user lands where they were going after
 		// signing in. `pathname + search` only — never a caller-supplied absolute
 		// URL, which is the open-redirect shape H-73 covers on `/welcome`.

@@ -58,8 +58,39 @@ import { env } from '$env/dynamic/private';
  * for one page render costs one upstream call.
  */
 
+/**
+ * Where to ask.
+ *
+ * `VITE_API_URL` (the gateway) is in the chain because it is the only one of
+ * these that is actually SET, in both `.env` and `.env.production`. Without it
+ * every deploy fell through to `http://localhost:3001`, which on Netlify is
+ * nothing at all — so `verifySession` hit its `catch` for EVERY request, every
+ * session introspected as `null`, and `hooks.server.ts` both deleted the cookie
+ * and bounced the user to `/auth`. That is the "signed out after sitting idle
+ * for a minute" report: the SPA kept working from the access token in
+ * `localStorage`, and the session only visibly died the next time a protected
+ * route was server-rendered (a hard refresh, a tab regaining focus, or any
+ * `+page.server.ts` load). `/api/session` POST failed the same way at sign-in,
+ * so the cookie was usually never set in the first place.
+ *
+ * `hqSession.ts` already carried this exact fix for the admin console — the same
+ * bug, the same symptom, diagnosed there and never applied here. Keep the two
+ * chains in step.
+ *
+ * The gateway proxies `/api/v1/auth` to the user service (`ROUTE_MAP` in
+ * `services/gateway/src/app.ts`), so the same path works through either.
+ */
 const USER_API =
-	env.PRIVATE_USER_SERVICE_URL || env.PUBLIC_API_URL || 'http://localhost:3001';
+	env.PRIVATE_USER_SERVICE_URL ||
+	env.PUBLIC_API_URL ||
+	env.VITE_API_URL ||
+	// Build-time fallback. `$env/dynamic/private` reads `process.env` at RUNTIME,
+	// and on Netlify that holds only what is configured in the site's
+	// environment — a repo `.env.production` never reaches it. Vite inlines this
+	// one at build, so the deployed function has a real gateway URL even when
+	// nothing was set in the Netlify UI.
+	import.meta.env.VITE_API_URL ||
+	'http://localhost:3001';
 
 export const SESSION_COOKIE = 'rw_session';
 
@@ -73,9 +104,27 @@ export interface SessionUser {
 	role?: string;
 }
 
+/**
+ * Why `status` exists, and is not just `user === null`.
+ *
+ * "The service says this token is dead" and "we could not reach the service"
+ * are completely different facts, and collapsing them into a null user is what
+ * made a brief blip indistinguishable from a revoked session. `verifySession`
+ * was already careful not to *cache* a transport failure — but its only caller
+ * then deleted the session cookie on any falsy user, which threw away the
+ * credential anyway. One slow introspect and the user was signed out for real.
+ *
+ * `invalid` is a verdict from upstream and is safe to act on. `unverifiable`
+ * means we learned nothing: treat the request as unauthenticated (fail closed
+ * for the route guard) but LEAVE THE COOKIE ALONE so the next request, or the
+ * client's own refresh, can recover.
+ */
+type SessionStatus = 'valid' | 'invalid' | 'unverifiable';
+
 interface CacheEntry {
 	user: SessionUser | null;
 	at: number;
+	status: SessionStatus;
 }
 
 const cache = new Map<string, CacheEntry>();
@@ -107,7 +156,7 @@ async function cacheKey(token: string): Promise<string> {
  * fails closed for the route guard.
  */
 export async function verifySession(token: string): Promise<CacheEntry> {
-	if (!token) return { user: null, at: Date.now() };
+	if (!token) return { user: null, at: Date.now(), status: 'invalid' };
 
 	const key = await cacheKey(token);
 	const hit = cache.get(key);
@@ -121,10 +170,21 @@ export async function verifySession(token: string): Promise<CacheEntry> {
 			signal: AbortSignal.timeout(4000)
 		});
 
+		/**
+		 * Only a 401/403 is upstream saying "this token is dead". A 5xx, a 429 or
+		 * a gateway error says nothing about the token — it is the auth service
+		 * having a bad moment, and ending the session over it is the overreaction
+		 * this whole `status` distinction exists to prevent.
+		 */
 		if (!res.ok) {
-			const miss: CacheEntry = { user: null, at: Date.now() };
-			cache.set(key, miss);
-			return miss;
+			if (res.status === 401 || res.status === 403) {
+				const miss: CacheEntry = { user: null, at: Date.now(), status: 'invalid' };
+				cache.set(key, miss);
+				return miss;
+			}
+			// Not cached: the next request should get a fresh answer, not a stale
+			// "we couldn't tell".
+			return { user: null, at: Date.now(), status: 'unverifiable' };
 		}
 
 		const data = await res.json();
@@ -138,14 +198,18 @@ export async function verifySession(token: string): Promise<CacheEntry> {
 						role: raw.role ?? undefined
 					}
 				: null,
-			at: Date.now()
+			at: Date.now(),
+			// A 200 with no user in the body is a protocol error, not a verdict on
+			// the token. Treat it as "we could not tell" rather than ending a
+			// session over a response shape we did not expect.
+			status: raw ? 'valid' : 'unverifiable'
 		};
-		cache.set(key, entry);
+		if (entry.status === 'valid') cache.set(key, entry);
 		return entry;
 	} catch {
 		// Do NOT cache a transport failure — a blip must not sign everyone out
-		// for the full TTL.
-		return { user: null, at: Date.now() };
+		// for the full TTL, and must not cost them the cookie either.
+		return { user: null, at: Date.now(), status: 'unverifiable' };
 	}
 }
 

@@ -9,6 +9,8 @@
 	// regex tag-strip straight back into the HTML parser.
 	import { stripTagsForPreview } from '$lib/utils/textPreview';
 	import Seo from '$lib/components/Seo.svelte';
+	import JoinMeetingCard from '$lib/components/JoinMeetingCard.svelte';
+	import AddToCalendarMenu from '$lib/components/AddToCalendarMenu.svelte';
 	import { publicSubscribeToCollection } from '$lib/services/collection.services';
 	import { getEventDays, getPublicEventPage } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
@@ -769,23 +771,38 @@
 
 				<!-- Location -->
 				{#if event.eventType === 'VIRTUAL'}
-				<div class="mt-3 flex items-center gap-4">
-					<div class="flex w-[44px] items-center justify-center rounded-md border py-[11px]" style="border-color: {themeColor.toggle};">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="color: {themeColor.text};"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</div>
-					<div class="text-base font-medium" style="color: {themeColor.text};">{event.locationDetails?.virtual?.platform ?? 'Virtual Event'}</div>
+				<!--
+					The join card replaces what used to be a line of static text
+					printing `virtual.platform` and nothing else. The meeting link was
+					never rendered here and is blanked on the public payload anyway, so
+					a registered attendee had no route to it at all. The card asks
+					`/join-details`, which returns the URL only to a viewer entitled to
+					it, and explains the wait when it does not.
+				-->
+				<div class="mt-3">
+					<JoinMeetingCard
+						eventId={event._id ?? event.id}
+						eventTitle={event.title}
+						startDateTime={event.startDateTime}
+						endDateTime={event.endDateTime}
+						virtual={event.locationDetails?.virtual ?? null}
+						{themeColor}
+					/>
 				</div>
 
 				{:else if event.eventType === 'HYBRID'}
-				<!-- Hybrid: show both virtual and physical -->
-				<div class="mt-3 flex items-center gap-4">
-					<div class="flex w-[44px] items-center justify-center rounded-md border py-[11px]" style="border-color: {themeColor.toggle};">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="color: {themeColor.text};"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</div>
-					<div>
-						<div class="text-base font-medium" style="color: {themeColor.text};">{event.locationDetails?.virtual?.platform ?? 'Virtual Link'}</div>
-						<div class="text-xs" style="color: {themeColor.lightText};">Online</div>
-					</div>
+				<!-- Hybrid: the online half, then the venue below it. `compact` so the
+				     two blocks read as a pair rather than one dominating. -->
+				<div class="mt-3">
+					<JoinMeetingCard
+						eventId={event._id ?? event.id}
+						eventTitle={event.title}
+						startDateTime={event.startDateTime}
+						endDateTime={event.endDateTime}
+						virtual={event.locationDetails?.virtual ?? null}
+						{themeColor}
+						compact
+					/>
 				</div>
 				{#if event.locationDetails?.physical}
 				<div class="mt-2 flex items-center gap-4">
@@ -822,6 +839,29 @@
 						</svg>
 					</div>
 					<div class="text-base font-medium" style="color: {themeColor.text};">Register to See Address</div>
+				</div>
+				{/if}
+
+				<!--
+					Add to calendar for events with no join card of their own.
+					`JoinMeetingCard` already carries the menu for VIRTUAL and HYBRID,
+					so offering it again here would duplicate the control; PHYSICAL and
+					location-TBD events get it standalone.
+
+					Deliberately NOT gated on being signed in. The client asked for
+					signed-in visitors, but an anonymous one costs nothing to serve —
+					the ICS simply has no join link, which the backend already enforces
+					per viewer — and "save the date" before registering is how a
+					visitor becomes an attendee.
+				-->
+				{#if event.eventType !== 'VIRTUAL' && event.eventType !== 'HYBRID'}
+				<div class="mt-3">
+					<AddToCalendarMenu
+						eventId={event._id ?? event.id}
+						eventTitle={event.title}
+						{themeColor}
+						variant="ghost"
+					/>
 				</div>
 				{/if}
 			</div>

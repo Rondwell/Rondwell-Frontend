@@ -21,6 +21,7 @@
 	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import { toast } from '$lib/stores/toast.store';
 	import Icon from '@iconify/svelte';
+	import AddToCalendarMenu from '$lib/components/AddToCalendarMenu.svelte';
 	import Dropdown from '../Dropdown.svelte';
 	import SeatSelector from '../SeatSelector.svelte';
 
@@ -1936,6 +1937,27 @@
 								: `You're registered for ${eventData?.title ?? 'this event'}. Check your email for confirmation details.`}
 						{/if}
 					</p>
+					{/if}
+
+					<!--
+						Add to calendar, at the moment it is most likely to be used.
+						The confirmation email carries an `.ics` attachment too, but this
+						is the point where someone has just committed to attending and
+						still has the page in front of them — asking them to go and find
+						an email instead is how an event gets forgotten.
+
+						Hidden for an approval-pending registration: they do not have a
+						place yet, and a calendar entry would imply otherwise.
+					-->
+					{#if !selectedTicket?.requiresApproval && eventId}
+						<AddToCalendarMenu
+							{eventId}
+							eventTitle={eventData?.title ?? 'Event'}
+							{themeColor}
+							variant="solid"
+							fullWidth
+							label="Add to my calendar"
+						/>
 					{/if}
 
 					<!-- GAP 6 — a second chance to gift, for anyone who skipped. -->

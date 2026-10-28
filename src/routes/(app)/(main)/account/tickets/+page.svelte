@@ -9,6 +9,25 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { getMyTickets, type MyTicket } from '$lib/services/ticket.services';
+	import AddToCalendarMenu from '$lib/components/AddToCalendarMenu.svelte';
+
+	/**
+	 * The neutral palette this page is built in, in the shape
+	 * `AddToCalendarMenu` expects.
+	 *
+	 * The component is themeable because it lives on event pages, which carry an
+	 * organizer's colours. This page has none, so it supplies the greys it
+	 * already uses rather than borrowing a theme from one of the listed events.
+	 */
+	const NEUTRAL_THEME = {
+		cover: '#FFFFFF',
+		smallCover: '#F3F4F6',
+		toggle: '#E5E7EB',
+		text: '#111827',
+		lightText: '#6B7280',
+		button: '#111827',
+		buttonText: '#FFFFFF'
+	};
 	import { formatMoney } from '$lib/utils/money';
 	import SettingsBackButton from '$lib/components/SettingsBackButton.svelte';
 	import Icon from '@iconify/svelte';
@@ -106,6 +125,24 @@
 							>
 								View event
 							</button>
+							<!--
+								Add to calendar, for a ticket already held.
+								Only for an upcoming event: offering it on a past one
+								produces a calendar entry in the past, which is noise.
+
+								`NEUTRAL_THEME` rather than each event's own palette — this
+								page is deliberately un-themed, and pulling per-event themes
+								would turn the list into a patchwork.
+							-->
+							{#if new Date(t.eventStartDate).getTime() > Date.now()}
+								<AddToCalendarMenu
+									eventId={t.eventId}
+									eventTitle={t.eventTitle}
+									themeColor={NEUTRAL_THEME}
+									variant="ghost"
+									label="Add to calendar"
+								/>
+							{/if}
 							{#if isTransferable(t)}
 								<button
 									on:click={() => goto(`/account/tickets/${t.id}/transfer`)}

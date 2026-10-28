@@ -16,6 +16,7 @@
 	} from '$lib/utils/themeFonts';
 	import ThemeBackdrop from '$lib/components/ThemeBackdrop.svelte';
 	import { clickOutside } from '$lib/utils/constant';
+	import { detectMeetingPlatform } from '$lib/utils/meetingPlatform';
 	import { majorToKobo } from '$lib/utils/money';
 	import Icon from '@iconify/svelte';
 	import { onMount, tick } from 'svelte';
@@ -602,8 +603,27 @@
 				themeColor: selectedColor.name,
 				themeFont: selectedFont.id,
 				locationDetails: location || physicalAddress ? {
+					/**
+					 * Platform recognition, from the parsed URL.
+					 *
+					 * This was `location.includes('zoom.us') ? 'Zoom' :
+					 * includes('meet.google.com') ? 'Google Meet' : 'Other'`, which
+					 * matched on the raw string — so `evil.com/?x=zoom.us` was
+					 * "Zoom" — and knew nothing of Teams or Webex.
+					 * `detectMeetingPlatform` keys off `URL.hostname` and covers
+					 * both. The backend runs the same check on write and remains the
+					 * authority; this is what makes the label correct in the UI
+					 * before the round trip.
+					 */
 					virtual: (eventType === 'Virtual' || eventType === 'Hybrid') && location
-						? { platform: location.includes('zoom.us') ? 'Zoom' : location.includes('meet.google.com') ? 'Google Meet' : 'Other', meetingLink: location }
+						? (() => {
+							const detected = detectMeetingPlatform(location);
+							return {
+								platform: detected?.label ?? 'Online',
+								platformKey: detected?.platform ?? 'OTHER',
+								meetingLink: detected?.joinUrl ?? location
+							};
+						})()
 						: undefined,
 					physical: (eventType === 'Physical' || eventType === 'Hybrid') && physicalAddress
 						? { venueName: physicalAddress, venueAddress: physicalAddress, resolvedAddress: { lat: 0, lng: 0, formatted_address: physicalAddress } }

@@ -189,7 +189,7 @@
 						<Mail size={18} />
 					</a>
 				</div>
-				<p class="text-sm text-[#A9AAAA]">23 Sesan Moyegun St. Surulere, Lagos, Nigeria.</p>
+				<p class="text-sm text-[#A9AAAA]">Surulere, Lagos State, Nigeria.</p>
 			</div>
 			<div class="w-full md:mt-4 md:text-center">
 				<div

@@ -14,6 +14,7 @@
 	import AttendeeDetailModal from '../components/AttendeeDetailModal.svelte';
 	import InviteGuestsModal from '../components/InviteGuestsModal.svelte';
 	import ShowAttendeeList from './components/ShowAttendeeList.svelte';
+	import ImportVirtualAttendance from './components/ImportVirtualAttendance.svelte';
 
 	$: eventId = $page.params.id as string;
 
@@ -381,6 +382,20 @@
 			<p class="text-sm text-red-600">{error}</p>
 			<button on:click={() => (error = '')} class="text-red-400 hover:text-red-600">✕</button>
 		</div>
+	{/if}
+
+	<!--
+		Virtual attendance import.
+		Renders itself only for a finished Zoom-backed virtual or hybrid event, so
+		it is invisible on every other event rather than being a disabled control
+		organizers have to wonder about.
+	-->
+	{#if !loading && rawEvent}
+		<ImportVirtualAttendance
+			{eventId}
+			event={rawEvent}
+			onImported={() => void fetchAttendees()}
+		/>
 	{/if}
 
 	<!-- At a Glance Section -->

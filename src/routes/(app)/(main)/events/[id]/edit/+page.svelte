@@ -14,6 +14,7 @@
 	} from '$lib/utils/themeFonts';
 	import { clickOutside } from '$lib/utils/constant';
 	import { cleanErrorMessage } from '$lib/utils/errorMessage';
+	import { detectMeetingPlatform, PLATFORM_BRANDS } from '$lib/utils/meetingPlatform';
 	import Icon from '@iconify/svelte';
 	import Image from '@tiptap/extension-image';
 	import Link from '@tiptap/extension-link';
@@ -77,6 +78,66 @@
 	// Event Type & Location state
 	let eventType: 'Virtual' | 'Physical' | 'Hybrid' = 'Virtual';
 	let virtualLink = '';
+	/** Join-link reveal policy. Defaults match the event model's own defaults. */
+	let meetingLinkVisibility: 'ON_REGISTRATION' | 'BEFORE_START' | 'AT_START' = 'BEFORE_START';
+	let revealMinutesBefore = 60;
+
+	/** Which providers Rondwell can create a meeting on for this organizer. */
+	const PROVISION_OPTIONS = [
+		{ provider: 'GOOGLE' as const, label: 'Google Meet', icon: 'logos:google-meet' },
+		{ provider: 'ZOOM' as const, label: 'Zoom', icon: 'logos:zoom-icon' },
+		{ provider: 'OUTLOOK' as const, label: 'Teams', icon: 'logos:microsoft-teams' }
+	];
+	let connectedProviders: Array<'GOOGLE' | 'ZOOM' | 'OUTLOOK'> = [];
+	let provisioning: 'GOOGLE' | 'ZOOM' | 'OUTLOOK' | null = null;
+
+	/**
+	 * Which providers are both configured on this deployment AND connected by
+	 * this organizer. Fetched quietly — a failure just leaves the buttons
+	 * disabled with their "connect first" tooltip, which is the correct
+	 * fallback and needs no error surface of its own.
+	 */
+	async function loadConnectedProviders() {
+		try {
+			const { listIntegrations } = await import('$lib/services/integration.services');
+			const res = await listIntegrations();
+			connectedProviders = res.integrations
+				.filter((i) => !i.needsRefresh && res.available[i.platform] !== false)
+				.map((i) => i.platform);
+		} catch {
+			connectedProviders = [];
+		}
+	}
+
+	async function handleProvision(
+		provider: 'GOOGLE' | 'ZOOM' | 'OUTLOOK',
+		label: string
+	) {
+		// Replacing a link attendees may already hold deserves a confirmation,
+		// not a silent overwrite — they would arrive at an empty room.
+		const replacing = Boolean(virtualLink.trim());
+		if (
+			replacing &&
+			!confirm(
+				`This event already has a meeting link. Replace it with a new ${label} meeting? ` +
+					`Anyone who already has the old link will not be able to join.`
+			)
+		) {
+			return;
+		}
+
+		provisioning = provider;
+		try {
+			const { provisionMeeting } = await import('$lib/services/calendar.services');
+			const meeting = await provisionMeeting(eventId, provider, replacing);
+			virtualLink = meeting.joinUrl;
+			toast.success(`${meeting.label} meeting created and saved to this event.`);
+		} catch (e: any) {
+			toast.error(e?.message ?? `Could not create the ${label} meeting`);
+		} finally {
+			provisioning = null;
+		}
+	}
 	let physicalAddress = '';
 	let showEventTypeModal = false;
 	let showLocationModal = false;
@@ -183,6 +244,10 @@
 	}
 
 	onMount(async () => {
+		// Which conferencing accounts this organizer has connected, so the
+		// "create one for me" buttons are only enabled when they can work.
+		void loadConnectedProviders();
+
 		// Use cached event data
 		const { event: eventStore, loading: loadingStore } = getEventCache(eventId);
 		
@@ -225,6 +290,10 @@
 			const et = (event.eventType ?? 'VIRTUAL').toUpperCase();
 			eventType = et === 'VIRTUAL' ? 'Virtual' : et === 'PHYSICAL' ? 'Physical' : et === 'HYBRID' ? 'Hybrid' : 'Virtual';
 			virtualLink = event.locationDetails?.virtual?.meetingLink ?? '';
+			// `??` on each: an event created before these fields existed has
+			// neither, and must land on the same defaults the model applies.
+			meetingLinkVisibility = event.meetingLinkVisibility ?? 'BEFORE_START';
+			revealMinutesBefore = event.revealMinutesBefore ?? 60;
 			physicalAddress = event.locationDetails?.physical?.venueAddress
 				?? event.locationDetails?.physical?.resolvedAddress?.formatted_address
 				?? event.locationDetails?.physical?.venueName
@@ -344,8 +413,32 @@
 			const etMap: Record<string, string> = { 'Virtual': 'VIRTUAL', 'Physical': 'PHYSICAL', 'Hybrid': 'HYBRID' };
 			const locationDetails: any = {};
 			if (eventType === 'Virtual' || eventType === 'Hybrid') {
-				const platform = virtualLink.includes('zoom') ? 'Zoom' : virtualLink.includes('meet.google') ? 'Google Meet' : virtualLink.includes('teams') ? 'Microsoft Teams' : 'Virtual';
-				locationDetails.virtual = { platform, meetingLink: virtualLink, calendarIntegrations: [] };
+				/**
+				 * Recognised from the parsed URL rather than by substring.
+				 *
+				 * The previous chain tested `includes('zoom')`, `includes('meet.google')`
+				 * and `includes('teams')` against the whole string, so any URL with
+				 * those characters anywhere in it — path, query, or a lookalike
+				 * domain — was labelled as that vendor. It also could not tell a
+				 * genuine link from an unusable one. `detectMeetingPlatform` matches
+				 * on `URL.hostname` and rejects non-http(s) outright; the backend
+				 * repeats the check on write and is the authority.
+				 */
+				const detected = detectMeetingPlatform(virtualLink);
+				if (!detected) {
+					const msg =
+						'Enter a valid meeting link starting with https:// (for example a Google Meet, Zoom or Teams URL).';
+					saveError = msg;
+					toast.error(msg);
+					saving = false;
+					return;
+				}
+				locationDetails.virtual = {
+					platform: detected.label,
+					platformKey: detected.platform,
+					meetingLink: detected.joinUrl,
+					calendarIntegrations: []
+				};
 			}
 			if (eventType === 'Physical' || eventType === 'Hybrid') {
 				locationDetails.physical = {
@@ -367,6 +460,12 @@
 				timeZone: timezone || undefined,
 				eventType: etMap[eventType] ?? 'VIRTUAL',
 				locationDetails,
+				// Only meaningful for events that have a join link at all; sending
+				// them for a purely physical event would store a policy that governs
+				// nothing and read as a setting the organizer never chose.
+				...(eventType === 'Virtual' || eventType === 'Hybrid'
+					? { meetingLinkVisibility, revealMinutesBefore }
+					: {}),
 				visibility: visibility === 'Private' ? 'PRIVATE' : 'PUBLIC',
 				isMultiDay,
 			} as any);
@@ -796,14 +895,131 @@
 					placeholder="https://meet.google.com/abc-defg-hij"
 					class="w-full rounded-md border border-gray-200 bg-[#F8F8F9] px-3 py-2.5 text-sm text-gray-700 placeholder-gray-400 focus:border-gray-400 focus:outline-none"
 				/>
-				{#if virtualLink}
-				{@const platform = virtualLink.includes('zoom') ? 'Zoom' : virtualLink.includes('meet.google') ? 'Google Meet' : virtualLink.includes('teams') ? 'Microsoft Teams' : ''}
-				{#if platform}
-				<p class="mt-1 flex items-center gap-1 text-xs text-green-600">
-					<Icon icon="mdi:check-circle" class="text-sm" /> Detected: {platform}
-				</p>
+
+				<!--
+					Let Rondwell create the room instead.
+					This removes the step organizers most often get wrong: pasting a
+					personal-room link that every one of their events then shares.
+					Only offered for providers this deployment has credentials for and
+					the organizer has actually connected — otherwise it is a button
+					that can only fail.
+				-->
+				<div class="mt-2 flex flex-wrap items-center gap-2">
+					<span class="text-xs text-gray-500">or let Rondwell create one:</span>
+					{#each PROVISION_OPTIONS as option (option.provider)}
+						{@const connected = connectedProviders.includes(option.provider)}
+						<button
+							type="button"
+							disabled={provisioning !== null || !connected}
+							title={connected
+								? `Create a ${option.label} meeting for this event`
+								: `Connect ${option.label} in Settings first`}
+							on:click={() => handleProvision(option.provider, option.label)}
+							class="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700
+							       transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+						>
+							<Icon icon={option.icon} class="text-[14px]" />
+							{provisioning === option.provider ? 'Creating…' : option.label}
+						</button>
+					{/each}
+					{#if connectedProviders.length === 0}
+						<a href="/settings" class="text-xs text-gray-900 underline">
+							Connect an account
+						</a>
+					{/if}
+				</div>
+				{#if virtualLink.trim()}
+					<!--
+						Live recognition, replacing a `includes('zoom')` /
+						`includes('meet.google')` / `includes('teams')` chain that matched
+						anywhere in the string and silently showed nothing for Webex or a
+						malformed URL. Now the organizer is told either which platform was
+						recognised or that the link is unusable — before they save, which
+						is the only moment the feedback is worth anything.
+					-->
+					{@const detected = detectMeetingPlatform(virtualLink)}
+					{#if detected && detected.platform !== 'OTHER'}
+						<p class="mt-1.5 flex items-center gap-1.5 text-xs text-green-600">
+							<Icon icon={PLATFORM_BRANDS[detected.platform].icon} class="text-sm" />
+							Recognised as {detected.label}{detected.meetingId
+								? ` · meeting ${detected.meetingId}`
+								: ''}
+						</p>
+					{:else if detected}
+						<p class="mt-1.5 flex items-center gap-1.5 text-xs text-gray-500">
+							<Icon icon="mdi:link-variant" class="text-sm" />
+							Valid link. Attendees will see a generic “Join the event” button.
+						</p>
+					{:else}
+						<p class="mt-1.5 flex items-center gap-1.5 text-xs text-red-600">
+							<Icon icon="mdi:alert-circle-outline" class="text-sm" />
+							That doesn’t look like a meeting link. It should start with https://
+						</p>
+					{/if}
 				{/if}
-				{/if}
+
+				<!--
+					Who can see the link, and when.
+					A conferencing URL is a bearer credential — anyone holding it joins —
+					so for a paid virtual event, publishing it is the same as making the
+					event free. This is the organizer's control over that.
+				-->
+				<div class="mt-4 rounded-lg border border-gray-200 bg-[#FBFBFD] p-3.5">
+					<div class="mb-2 flex items-start gap-2">
+						<Icon icon="mdi:shield-lock-outline" class="mt-0.5 text-base text-gray-400" />
+						<div>
+							<p class="text-sm font-medium text-gray-700">Who can see the join link</p>
+							<p class="mt-0.5 text-xs text-gray-500">
+								Anyone with the link can join, so it’s only ever shown to registered
+								attendees. You can delay it further.
+							</p>
+						</div>
+					</div>
+
+					<div class="space-y-1.5">
+						{#each [
+							{ value: 'ON_REGISTRATION', label: 'As soon as they register', hint: 'Best for free or internal events' },
+							{ value: 'BEFORE_START', label: 'Shortly before the event starts', hint: 'Recommended' },
+							{ value: 'AT_START', label: 'Only once the event begins', hint: 'Strictest' }
+						] as option (option.value)}
+							<label
+								class="flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 transition-colors {meetingLinkVisibility ===
+								option.value
+									? 'border-gray-900 bg-white'
+									: 'border-gray-200 bg-white hover:border-gray-300'}"
+							>
+								<input
+									type="radio"
+									bind:group={meetingLinkVisibility}
+									value={option.value}
+									class="mt-0.5 accent-gray-900"
+								/>
+								<span class="flex-1">
+									<span class="block text-sm text-gray-800">{option.label}</span>
+									<span class="block text-[11px] text-gray-500">{option.hint}</span>
+								</span>
+							</label>
+						{/each}
+					</div>
+
+					{#if meetingLinkVisibility === 'BEFORE_START'}
+						<div class="mt-2.5 flex items-center gap-2">
+							<label for="reveal-minutes" class="text-xs text-gray-600">Show it</label>
+							<select
+								id="reveal-minutes"
+								bind:value={revealMinutesBefore}
+								class="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs text-gray-700 focus:border-gray-400 focus:outline-none"
+							>
+								<option value={15}>15 minutes</option>
+								<option value={30}>30 minutes</option>
+								<option value={60}>1 hour</option>
+								<option value={180}>3 hours</option>
+								<option value={1440}>1 day</option>
+							</select>
+							<span class="text-xs text-gray-600">before the start time</span>
+						</div>
+					{/if}
+				</div>
 			</div>
 			{/if}
 

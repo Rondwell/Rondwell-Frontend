@@ -3,6 +3,7 @@
 	import Nav from '../../components/Nav.svelte';
 	import Account from './Components/Account.svelte';
 	import CallbackDomains from './Components/CallbackDomains.svelte';
+	import ConnectedAccounts from './Components/ConnectedAccounts.svelte';
 	import NotificationPreferences from './Components/NotificationPreferences.svelte';
 	import Orders from './Components/Orders.svelte';
 	import PaymentMethods from './Components/PaymentMethods.svelte';
@@ -80,6 +81,13 @@
 	{#if activeTab === 'account'}
 		<Account />
 		<NotificationPreferences />
+		<!--
+			Available to every role, not just organizers: an attendee benefits from
+			a connected calendar as much as an organizer does. The OAuth callback
+			redirects back to `/settings`, which is why this lives on the default
+			tab rather than behind one the user would have to re-select.
+		-->
+		<ConnectedAccounts />
 		{#if isOrganizer}
 			<CallbackDomains />
 		{/if}

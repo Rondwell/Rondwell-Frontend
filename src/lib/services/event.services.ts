@@ -15,11 +15,29 @@ export interface CreateEventPayload {
 	eventType: 'VIRTUAL' | 'PHYSICAL' | 'HYBRID';
 	registrationType: 'FREE' | 'PAID';
 	visibility: 'PUBLIC' | 'PRIVATE';
+	/**
+	 * When a registered attendee may see the join link.
+	 *
+	 * Only meaningful for `VIRTUAL` / `HYBRID`. The server defaults to
+	 * `BEFORE_START` at 60 minutes, so omitting both is the safe choice.
+	 */
+	meetingLinkVisibility?: 'ON_REGISTRATION' | 'BEFORE_START' | 'AT_START';
+	revealMinutesBefore?: number;
 	themeColor?: string;
 	/** Theme font id from `$lib/utils/themeFonts` (e.g. 'playfair'). */
 	themeFont?: string;
 	locationDetails?: {
-		virtual?: { platform: string; meetingLink: string };
+		virtual?: {
+			/** Display label; free text so an organizer can name their own room. */
+			platform: string;
+			/** Normalised key. The server recomputes it from the link on write. */
+			platformKey?: 'GOOGLE_MEET' | 'ZOOM' | 'MS_TEAMS' | 'WEBEX' | 'OTHER';
+			meetingLink: string;
+			meetingId?: string;
+			passcode?: string;
+			dialInNumbers?: string[];
+			calendarIntegrations?: ('GOOGLE_CALENDAR' | 'ICAL' | 'OUTLOOK')[];
+		};
 		physical?: {
 			venueName: string;
 			venueAddress: string;
@@ -2675,7 +2693,17 @@ export interface EventDayPayload {
 	endTime: string;
 	checkinEnabled?: boolean;
 	locationOverride?: {
-		virtual?: { platform: string; meetingLink: string };
+		virtual?: {
+			/** Display label; free text so an organizer can name their own room. */
+			platform: string;
+			/** Normalised key. The server recomputes it from the link on write. */
+			platformKey?: 'GOOGLE_MEET' | 'ZOOM' | 'MS_TEAMS' | 'WEBEX' | 'OTHER';
+			meetingLink: string;
+			meetingId?: string;
+			passcode?: string;
+			dialInNumbers?: string[];
+			calendarIntegrations?: ('GOOGLE_CALENDAR' | 'ICAL' | 'OUTLOOK')[];
+		};
 		physical?: {
 			venueName: string;
 			venueAddress: string;

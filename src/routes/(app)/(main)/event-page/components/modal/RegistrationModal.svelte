@@ -23,7 +23,7 @@
 	import Icon from '@iconify/svelte';
 	import AddToCalendarMenu from '$lib/components/AddToCalendarMenu.svelte';
 	import Dropdown from '../Dropdown.svelte';
-	import SeatSelector from '../SeatSelector.svelte';
+	import SeatMapViewer from '$lib/seating/SeatMapViewer.svelte';
 
 	export let open = false;
 	export let eventData: any = null;
@@ -194,6 +194,15 @@
 	let registrationResult: any = null;
 	let selectedSeatId = '';
 	let selectedSeatNumber = '';
+	/**
+	 * The hold token for the chosen seat.
+	 *
+	 * Held seats are `RESERVED` until payment succeeds, at which point the
+	 * cascade converts the hold to `OCCUPIED`. Keeping the token here means
+	 * an abandoned registration can release the seat instead of leaving it
+	 * reserved for the full window.
+	 */
+	let selectedSeatHoldToken = '';
 	let hasSeatLayout = false;
 
 	/**
@@ -274,6 +283,7 @@
 		registrationResult = null;
 		selectedSeatId = '';
 		selectedSeatNumber = '';
+		selectedSeatHoldToken = '';
 		hasSeatLayout = false;
 		groupMembers = [];
 		editingMemberIndex = -1;
@@ -1614,13 +1624,32 @@
 					</div>
 					{/if}
 
-					<SeatSelector
+					<!--
+						FE-P3-04 — the picker now reports a *set* of held seats, so
+						one component serves both single and party selection. This
+						modal registers one attendee, so it takes the first and
+						keeps `linked_seat_id` unchanged.
+
+						`holdToken` is carried through: the hold is what reserves
+						the seat during checkout, and the payment-success cascade
+						converts it to OCCUPIED.
+					-->
+					<SeatMapViewer
 						{eventId}
 						ticketTypeId={selectedTicketId}
+						quantity={1}
 						{themeColor}
 						on:select={(e) => {
-							selectedSeatId = e.detail.seatId;
-							selectedSeatNumber = e.detail.seatNumber;
+							const first = e.detail.seats[0];
+							selectedSeatId = first?.seatId ?? '';
+							selectedSeatNumber = first?.seatNumber ?? '';
+							selectedSeatHoldToken = first?.holdToken ?? '';
+							if (selectedSeatId) submitError = '';
+						}}
+						on:clear={() => {
+							selectedSeatId = '';
+							selectedSeatNumber = '';
+							selectedSeatHoldToken = '';
 						}}
 						on:unavailable={(e) => { submitError = e.detail.message; }}
 					/>
@@ -1647,9 +1676,16 @@
 						Back to form
 					</button>
 
-					<!-- Skip seat selection -->
-					<button class="text-xs" style="color: {themeColor.lightText};"
-						on:click={() => { selectedSeatId = ''; selectedSeatNumber = ''; proceedToRegistration(); }}>
+					<!--
+						Skip seat selection.
+
+						M-35 — disabled while a submission is in flight. It stayed
+						live during `proceedToRegistration`, so a second click
+						double-submitted the registration.
+					-->
+					<button class="text-xs disabled:opacity-50" style="color: {themeColor.lightText};"
+						disabled={submitting}
+						on:click={() => { selectedSeatId = ''; selectedSeatNumber = ''; selectedSeatHoldToken = ''; proceedToRegistration(); }}>
 						Skip seat selection
 					</button>
 				</div>

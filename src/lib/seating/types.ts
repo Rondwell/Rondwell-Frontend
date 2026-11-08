@@ -89,6 +89,35 @@ export interface SeatNumbering {
 	pattern?: string;
 }
 
+/**
+ * A single seat's departure from what its element would otherwise
+ * generate, keyed by `seatKey` ("rowIdx:colIdx").
+ *
+ * A block is parametric — `rows × cols` with one pitch and one tier —
+ * which is what makes it fast to author. But real venues are not
+ * uniform: one seat in the middle is a wheelchair space, four at the end
+ * of a row are premium, two behind a pillar do not exist, one is pulled
+ * out of line to clear a doorway.
+ *
+ * Without overrides the only way to express any of that is to explode
+ * the block into individual seats, which throws away the parametric
+ * structure and makes the next edit miserable. The override map keeps
+ * the block intact and records only the exceptions.
+ *
+ * `undefined` and `null` differ for `seatTypeId`: absent means "inherit
+ * the element's tier", `null` means "explicitly no tier".
+ */
+export interface SeatOverride {
+	seatTypeId?: string | null;
+	/** Suppressed — generates no seat at all. */
+	removed?: boolean;
+	/** Replaces the generated label outright. */
+	label?: string;
+	/** Nudge from the generated position, in world units. */
+	dx?: number;
+	dy?: number;
+}
+
 export interface LayoutElement {
 	id: string;
 	type: SeatElementType;
@@ -108,7 +137,14 @@ export interface LayoutElement {
 	elevationStep?: number;
 	curvature?: number;
 	aisleAfter?: number[];
+	/**
+	 * @deprecated Superseded by `seatOverrides[key].removed`, which can
+	 * carry the rest of a seat's exceptions too. Still honoured on read so
+	 * layouts saved before overrides existed keep their removed seats.
+	 */
 	removedSeats?: string[];
+	/** Per-seat exceptions, keyed by "rowIdx:colIdx". */
+	seatOverrides?: Record<string, SeatOverride>;
 
 	seatTypeId?: string | null;
 	section?: string;

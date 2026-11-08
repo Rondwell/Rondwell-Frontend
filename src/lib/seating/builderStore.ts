@@ -33,6 +33,7 @@ import type {
 	LayoutElement,
 	SeatType,
 	SeatNumbering,
+	SeatOverride,
 	StageView,
 	LayoutType,
 	SeatLayout
@@ -53,8 +54,30 @@ export interface BuilderState {
 	status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 	/** Element ids currently selected. */
 	selection: string[];
+	/**
+	 * Individually selected seats, as `"<elementId>:<rowIdx>:<colIdx>"`.
+	 *
+	 * Element ids never contain a colon, so the first one separates the
+	 * element from its seat key — the same composite the canvas renderer
+	 * already uses as a seat's id, so selection round-trips without a
+	 * translation step.
+	 */
+	seatSelection: string[];
+	/** Whether the canvas acts on whole blocks or on individual seats. */
+	editTarget: 'blocks' | 'seats';
 	/** True when there are unsaved changes. */
 	dirty: boolean;
+}
+
+/** Split `"<elementId>:<row>:<col>"` back into its parts. */
+export function parseSeatUid(uid: string): { elementId: string; seatKey: string } | null {
+	const i = uid.indexOf(':');
+	if (i <= 0) return null;
+	return { elementId: uid.slice(0, i), seatKey: uid.slice(i + 1) };
+}
+
+export function seatUid(elementId: string, seatKey: string): string {
+	return `${elementId}:${seatKey}`;
 }
 
 interface HistoryEntry {
@@ -101,6 +124,8 @@ function initialState(): BuilderState {
 		defaultView: '2D',
 		status: 'DRAFT',
 		selection: [],
+		seatSelection: [],
+		editTarget: 'blocks',
 		dirty: false
 	};
 }
@@ -177,6 +202,8 @@ export function createBuilderStore() {
 				defaultView: layout.defaultView ?? '2D',
 				status: layout.status ?? 'DRAFT',
 				selection: [],
+				seatSelection: [],
+				editTarget: 'blocks',
 				dirty: false
 			});
 			history = [];
@@ -436,6 +463,148 @@ export function createBuilderStore() {
 			touch(() => ({ selection: [] }));
 		},
 
+		// ── Individual seats ──
+		//
+		// Seat edits are expressed as `seatOverrides` on the owning
+		// element, never by exploding a block into loose seats: the block
+		// stays parametric, so changing its row count later still works.
+
+		setEditTarget(editTarget: 'blocks' | 'seats') {
+			touch(() => ({ editTarget, seatSelection: [], selection: [] }));
+		},
+
+		selectSeats(uids: string[]) {
+			touch(() => ({ seatSelection: uids }));
+		},
+		toggleSeatSelect(uid: string) {
+			touch((s) => ({
+				seatSelection: s.seatSelection.includes(uid)
+					? s.seatSelection.filter((x) => x !== uid)
+					: [...s.seatSelection, uid]
+			}));
+		},
+		addSeatsToSelection(uids: string[]) {
+			touch((s) => ({ seatSelection: [...new Set([...s.seatSelection, ...uids])] }));
+		},
+		clearSeatSelection() {
+			touch(() => ({ seatSelection: [] }));
+		},
+
+		/**
+		 * Merge a patch into the override of every selected seat.
+		 *
+		 * Grouped by element so each element's override map is rebuilt
+		 * once rather than per seat — selecting 500 seats and recolouring
+		 * them is one pass, not 500 object spreads over the same map.
+		 *
+		 * Passing `undefined` for a field deletes it, which is how a seat
+		 * returns to inheriting its element's value. That is distinct from
+		 * `null`, which the generator reads as an explicit "no tier".
+		 */
+		patchSeats(
+			uids: string[],
+			patch: Partial<SeatOverride>,
+			coalesceKey: string | null = null
+		) {
+			if (!uids.length) return;
+
+			const byElement = new Map<string, string[]>();
+			for (const uid of uids) {
+				const parsed = parseSeatUid(uid);
+				if (!parsed) continue;
+				const list = byElement.get(parsed.elementId);
+				if (list) list.push(parsed.seatKey);
+				else byElement.set(parsed.elementId, [parsed.seatKey]);
+			}
+			if (!byElement.size) return;
+
+			commit(
+				(s) => ({
+					elements: s.elements.map((el) => {
+						const keys = byElement.get(el.id);
+						if (!keys) return el;
+
+						const next: Record<string, SeatOverride> = { ...(el.seatOverrides ?? {}) };
+						for (const key of keys) {
+							const merged: SeatOverride = { ...(next[key] ?? {}) };
+							for (const [field, value] of Object.entries(patch)) {
+								if (value === undefined) delete (merged as any)[field];
+								else (merged as any)[field] = value;
+							}
+							// Drop overrides that no longer override anything, so
+							// the document does not accumulate empty objects as
+							// seats are toggled back and forth.
+							if (Object.keys(merged).length === 0) delete next[key];
+							else next[key] = merged;
+						}
+
+						return {
+							...el,
+							seatOverrides: Object.keys(next).length ? next : undefined
+						};
+					})
+				}),
+				coalesceKey
+			);
+		},
+
+		/** Suppress seats — they generate no inventory at all. */
+		removeSeats(uids: string[]) {
+			this.patchSeats(uids, { removed: true });
+		},
+
+		/** Bring suppressed seats back. */
+		restoreSeats(uids: string[]) {
+			this.patchSeats(uids, { removed: undefined });
+		},
+
+		/** Move seats relative to where their element would place them. */
+		nudgeSeats(uids: string[], dx: number, dy: number, coalesceKey = 'seat-nudge') {
+			if (!uids.length) return;
+
+			const byElement = new Map<string, Set<string>>();
+			for (const uid of uids) {
+				const parsed = parseSeatUid(uid);
+				if (!parsed) continue;
+				const set = byElement.get(parsed.elementId);
+				if (set) set.add(parsed.seatKey);
+				else byElement.set(parsed.elementId, new Set([parsed.seatKey]));
+			}
+
+			commit(
+				(s) => ({
+					elements: s.elements.map((el) => {
+						const keys = byElement.get(el.id);
+						if (!keys) return el;
+						const next: Record<string, SeatOverride> = { ...(el.seatOverrides ?? {}) };
+						for (const key of keys) {
+							const cur = next[key] ?? {};
+							// Accumulated, so a continuous drag adds up instead of
+							// snapping back to the last frame's delta.
+							next[key] = {
+								...cur,
+								dx: (cur.dx ?? 0) + dx,
+								dy: (cur.dy ?? 0) + dy
+							};
+						}
+						return { ...el, seatOverrides: next };
+					})
+				}),
+				coalesceKey
+			);
+		},
+
+		/** Clear every per-seat exception on the selected seats. */
+		resetSeats(uids: string[]) {
+			this.patchSeats(uids, {
+				seatTypeId: undefined,
+				removed: undefined,
+				label: undefined,
+				dx: undefined,
+				dy: undefined
+			});
+		},
+
 		// ── Seat types ──
 
 		upsertSeatType(type: SeatType) {
@@ -477,6 +646,10 @@ export function createBuilderStore() {
 				// Selection is pruned to what still exists, so undoing a
 				// delete does not leave phantom ids selected.
 				selection: s.selection.filter((id) => entry.elements.some((e) => e.id === id)),
+				seatSelection: s.seatSelection.filter((uid) => {
+					const parsed = parseSeatUid(uid);
+					return parsed ? entry.elements.some((e) => e.id === parsed.elementId) : false;
+				}),
 				dirty: true
 			}));
 		},
@@ -490,6 +663,10 @@ export function createBuilderStore() {
 				elements: entry.elements,
 				seatTypes: entry.seatTypes,
 				selection: s.selection.filter((id) => entry.elements.some((e) => e.id === id)),
+				seatSelection: s.seatSelection.filter((uid) => {
+					const parsed = parseSeatUid(uid);
+					return parsed ? entry.elements.some((e) => e.id === parsed.elementId) : false;
+				}),
 				dirty: true
 			}));
 		},

@@ -75,6 +75,12 @@
 
 			scene.setLayout(elements, toSceneSeats(seats), seatTypes, stageView);
 			scene.setSelection(selectedIds);
+			// Record what was just built so the reactive guard does not
+			// immediately rebuild the same thing after mount.
+			builtElements = elements;
+			builtSeats = seats;
+			builtTypes = seatTypes;
+			builtStageView = stageView;
 
 			/**
 			 * The canvas is sized from its parent, so a pane resize (sidebar
@@ -103,11 +109,51 @@
 		scene = null;
 	});
 
-	// Rebuild when the design changes; recolour when only selection does.
-	$: if (scene && elements) {
-		scene.setLayout(elements, toSceneSeats(seats), seatTypes, stageView);
+	/**
+	 * Rebuild on a design change; recolour on a selection change.
+	 *
+	 * These must be separate reactive statements, and the rebuild must
+	 * not *read* `selectedIds`. Svelte derives a statement's dependencies
+	 * from the variables it mentions, so a single block touching both
+	 * would tear down and re-instance the whole mesh every time the user
+	 * clicked a seat — 50,000 instances rebuilt to change one colour.
+	 *
+	 * The change check is reference identity, which is exact here because
+	 * the builder store treats elements as immutable: every edit produces
+	 * a new array. That makes it O(1) rather than hashing the layout on
+	 * each invalidation.
+	 */
+	let builtElements: LayoutElement[] | null = null;
+	let builtSeats: Seat[] | null = null;
+	let builtTypes: SeatType[] | null = null;
+	let builtStageView: StageView | null | undefined;
+
+	function rebuildIfChanged(
+		els: LayoutElement[],
+		sts: Seat[],
+		types: SeatType[],
+		sv: StageView | null
+	) {
+		if (!scene) return;
+		if (
+			els === builtElements &&
+			sts === builtSeats &&
+			types === builtTypes &&
+			sv === builtStageView
+		)
+			return;
+
+		builtElements = els;
+		builtSeats = sts;
+		builtTypes = types;
+		builtStageView = sv;
+
+		scene.setLayout(els, toSceneSeats(sts), types, sv);
+		// Re-applied because a rebuild resets instance colours.
 		scene.setSelection(selectedIds);
 	}
+
+	$: rebuildIfChanged(elements, seats, seatTypes, stageView);
 	$: if (scene) scene.setSelection(selectedIds);
 
 	export function viewFromSeat(seatId: string) {

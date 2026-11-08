@@ -184,6 +184,8 @@ export function generateSeatsForElement(
 	const cx = element.x + element.width / 2;
 	const cy = element.y + element.height / 2;
 
+	const overrides = element.seatOverrides ?? {};
+
 	const emit = (
 		rowIndex: number,
 		colIndex: number,
@@ -194,7 +196,9 @@ export function generateSeatsForElement(
 		labelSeatOrdinal: number
 	): GeneratedSeat | null => {
 		const seatKey = `${rowIndex}:${colIndex}`;
-		if (removed.has(seatKey)) return null;
+		// `removedSeats` is the pre-overrides form; both are honoured.
+		const ov = overrides[seatKey];
+		if (ov?.removed || removed.has(seatKey)) return null;
 
 		const rowLabel =
 			element.rowLabel && element.rowLabel.length
@@ -214,11 +218,19 @@ export function generateSeatsForElement(
 			colIndex,
 			rowLabel,
 			seatIndex,
-			label: formatSeatLabel(numbering.pattern, { section, row: rowLabel, seat: seatIndex }),
+			label:
+				ov?.label && ov.label.length
+					? ov.label
+					: formatSeatLabel(numbering.pattern, { section, row: rowLabel, seat: seatIndex }),
 			section,
-			seatTypeId,
-			x,
-			y,
+			// `undefined` inherits the element's tier; an explicit `null`
+			// clears it. `??` would collapse those two cases together.
+			seatTypeId: ov && 'seatTypeId' in ov ? (ov.seatTypeId ?? null) : seatTypeId,
+			// Nudges are world-space, applied after rotation, so dragging a
+			// seat right on screen moves it right on screen even when its
+			// block is rotated.
+			x: x + num(ov?.dx, 0),
+			y: y + num(ov?.dy, 0),
 			z,
 			size: seatSize
 		};
@@ -226,8 +238,11 @@ export function generateSeatsForElement(
 
 	// ── Single seat (and the legacy CHAIR / BIG_CHAIR sprites) ──
 	if (type === 'SEAT' || type === 'CHAIR' || type === 'BIG_CHAIR') {
+		const ov = overrides['0:0'];
+		if (ov?.removed || removed.has('0:0')) return [];
+
 		const rowLabel = element.rowLabel || element.row || rowLabelFor(0, numbering);
-		const explicit = element.seatNumber;
+		const explicit = ov?.label || element.seatNumber;
 		const seatIndex = num(numbering.seatNumberStart, 1);
 		return [
 			{
@@ -241,9 +256,9 @@ export function generateSeatsForElement(
 						? explicit
 						: formatSeatLabel(numbering.pattern, { section, row: rowLabel, seat: seatIndex }),
 				section,
-				seatTypeId,
-				x: cx,
-				y: cy,
+				seatTypeId: ov && 'seatTypeId' in ov ? (ov.seatTypeId ?? null) : seatTypeId,
+				x: cx + num(ov?.dx, 0),
+				y: cy + num(ov?.dy, 0),
 				z: baseZ,
 				size: Math.max(seatSize, Math.min(element.width, element.height) || seatSize)
 			}
@@ -344,7 +359,8 @@ export function generateSeatsForElement(
 			const seatIndex =
 				num(numbering.seatNumberStart, 1) + labelSeatOrdinal * posInt(numbering.seatStep, 1);
 			const seatKey = `0:${j}`;
-			if (removed.has(seatKey)) continue;
+			const ov = overrides[seatKey];
+			if (ov?.removed || removed.has(seatKey)) continue;
 
 			const { x, y } = rotatePoint(px, py, cx, cy, rotation);
 			out.push({
@@ -353,15 +369,18 @@ export function generateSeatsForElement(
 				colIndex: j,
 				rowLabel: tableLabel,
 				seatIndex,
-				label: formatSeatLabel(numbering.pattern, {
-					section,
-					row: tableLabel,
-					seat: seatIndex
-				}),
+				label:
+					ov?.label && ov.label.length
+						? ov.label
+						: formatSeatLabel(numbering.pattern, {
+								section,
+								row: tableLabel,
+								seat: seatIndex
+							}),
 				section,
-				seatTypeId,
-				x,
-				y,
+				seatTypeId: ov && 'seatTypeId' in ov ? (ov.seatTypeId ?? null) : seatTypeId,
+				x: x + num(ov?.dx, 0),
+				y: y + num(ov?.dy, 0),
 				z: baseZ,
 				size: seatSize
 			});

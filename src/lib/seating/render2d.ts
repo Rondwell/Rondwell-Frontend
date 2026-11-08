@@ -27,7 +27,7 @@
  * stadium scale.
  */
 
-import type { LayoutElement, Seat, SeatType } from './types';
+import type { LayoutElement, Seat, SeatType, SeatOverride } from './types';
 import { isFixture, isSeatGenerating } from './types';
 import type { Viewport, Bounds } from './viewport';
 import { generateSeatsForElement, type GeneratedSeat } from './geometry';
@@ -47,6 +47,15 @@ export interface RenderSeat {
 	isAccessible?: boolean;
 	/** False when the seat is not part of the selected ticket type. */
 	selectable: boolean;
+	/**
+	 * Suppressed by the organizer. Builder-only: drawn as a dashed ghost
+	 * so it can be selected and restored.
+	 *
+	 * Without this the seat simply disappears from the canvas, and the
+	 * only way back would be to find the override in the element's data —
+	 * a one-way door in the UI.
+	 */
+	removed?: boolean;
 }
 
 export interface RenderOptions {
@@ -62,6 +71,8 @@ export interface RenderOptions {
 	showGrid?: boolean;
 	gridSize?: number;
 	selectedElementIds?: Set<string>;
+	/** Suppressed in seat mode, where handles would compete with seats. */
+	showHandles?: boolean;
 	guides?: Array<{ axis: 'x' | 'y'; at: number }>;
 	marquee?: { from: { x: number; y: number }; to: { x: number; y: number } } | null;
 	canvasBounds?: { width: number; height: number } | null;
@@ -124,7 +135,15 @@ const DETAIL_MIN_PX = 5;
 export function deriveRenderSeats(
 	elements: LayoutElement[],
 	inventory: Seat[] | null,
-	opts: { ticketTypeId?: string | null } = {}
+	opts: {
+		ticketTypeId?: string | null;
+		/**
+		 * Also emit suppressed seats, flagged `removed`, so the builder can
+		 * draw them as restorable ghosts. Off for the attendee picker —
+		 * a removed seat is not a seat.
+		 */
+		includeRemoved?: boolean;
+	} = {}
 ): RenderSeat[] {
 	const byKey = new Map<string, Seat>();
 	const byLabel = new Map<string, Seat>();
@@ -142,6 +161,66 @@ export function deriveRenderSeats(
 			generated = generateSeatsForElement(el);
 		} catch {
 			continue;
+		}
+
+		/**
+		 * Ghosts: re-run the generator on a copy of the element with the
+		 * `removed` flags stripped, then take whatever the real run left
+		 * out.
+		 *
+		 * Deliberately done by *calling the generator twice* rather than
+		 * by adding an "include removed" switch to it. The generator is
+		 * duplicated backend/frontend and pinned by a parity harness; a
+		 * builder-only parameter would exist on one side only, or bloat
+		 * the server with a flag it never passes. The second pass costs
+		 * nothing because it only runs for elements that actually have a
+		 * removal.
+		 */
+		const removedGhosts: GeneratedSeat[] = [];
+		if (opts.includeRemoved) {
+			const overrides = el.seatOverrides ?? {};
+			const hasRemoval =
+				(el.removedSeats?.length ?? 0) > 0 ||
+				Object.values(overrides).some((o) => o?.removed);
+
+			if (hasRemoval) {
+				const cleared: Record<string, SeatOverride> = {};
+				for (const [k, v] of Object.entries(overrides)) {
+					const { removed: _drop, ...rest } = v ?? {};
+					cleared[k] = rest;
+				}
+				try {
+					const all = generateSeatsForElement({
+						...el,
+						removedSeats: undefined,
+						seatOverrides: cleared
+					});
+					const liveKeys = new Set(generated.map((g) => g.seatKey));
+					for (const g of all) {
+						if (!liveKeys.has(g.seatKey)) removedGhosts.push(g);
+					}
+				} catch {
+					/* ghosts are cosmetic; never fail the render for them */
+				}
+			}
+		}
+
+		for (const g of removedGhosts) {
+			out.push({
+				seatId: `${el.id}:${g.seatKey}`,
+				label: g.label,
+				x: g.x,
+				y: g.y,
+				size: g.size,
+				status: 'AVAILABLE',
+				seatTypeId: g.seatTypeId ?? null,
+				section: g.section,
+				rowLabel: g.rowLabel,
+				seatIndex: g.seatIndex,
+				isAccessible: false,
+				selectable: true,
+				removed: true
+			});
 		}
 
 		for (const g of generated) {
@@ -287,6 +366,107 @@ export class SeatIndex {
 			}
 		}
 		return out;
+	}
+}
+
+// ── Transform handles ──────────────────────────────────────────────────
+
+export type HandleId = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rotate';
+
+/** Handle size and rotation-arm length, in **screen** pixels. */
+const HANDLE_PX = 9;
+const ROTATE_ARM_PX = 26;
+
+/**
+ * Handle positions in world space for one element.
+ *
+ * Sizes are divided by zoom so a handle stays the same size on screen at
+ * any magnification — a handle that shrinks with the canvas becomes
+ * un-grabbable exactly when you have zoomed out to reposition something
+ * large.
+ */
+export function handlePositions(
+	el: LayoutElement,
+	zoom: number
+): Array<{ id: HandleId; x: number; y: number }> {
+	const { x, y, width: w, height: h } = el;
+	const arm = ROTATE_ARM_PX / zoom;
+	return [
+		{ id: 'nw', x, y },
+		{ id: 'n', x: x + w / 2, y },
+		{ id: 'ne', x: x + w, y },
+		{ id: 'e', x: x + w, y: y + h / 2 },
+		{ id: 'se', x: x + w, y: y + h },
+		{ id: 's', x: x + w / 2, y: y + h },
+		{ id: 'sw', x, y: y + h },
+		{ id: 'w', x, y: y + h / 2 },
+		{ id: 'rotate', x: x + w / 2, y: y - arm }
+	];
+}
+
+/** Which handle, if any, a world point is grabbing. */
+export function handleAt(
+	el: LayoutElement,
+	wx: number,
+	wy: number,
+	zoom: number
+): HandleId | null {
+	// Generous on touch: the visual handle is 9px but the hit area is
+	// larger, because a fingertip covers far more than that.
+	const r = (HANDLE_PX * 1.6) / zoom;
+	for (const h of handlePositions(el, zoom)) {
+		if (Math.abs(wx - h.x) <= r && Math.abs(wy - h.y) <= r) return h.id;
+	}
+	return null;
+}
+
+/** CSS cursor for a handle. */
+export function handleCursor(id: HandleId | null): string {
+	switch (id) {
+		case 'nw':
+		case 'se':
+			return 'nwse-resize';
+		case 'ne':
+		case 'sw':
+			return 'nesw-resize';
+		case 'n':
+		case 's':
+			return 'ns-resize';
+		case 'e':
+		case 'w':
+			return 'ew-resize';
+		case 'rotate':
+			return 'grab';
+		default:
+			return '';
+	}
+}
+
+function drawHandles(ctx: CanvasRenderingContext2D, el: LayoutElement, zoom: number) {
+	const size = HANDLE_PX / zoom;
+	const half = size / 2;
+
+	// Arm connecting the element to its rotation handle.
+	const rot = handlePositions(el, zoom).find((h) => h.id === 'rotate')!;
+	ctx.strokeStyle = '#ec4899';
+	ctx.lineWidth = 1 / zoom;
+	ctx.beginPath();
+	ctx.moveTo(el.x + el.width / 2, el.y);
+	ctx.lineTo(rot.x, rot.y);
+	ctx.stroke();
+
+	for (const h of handlePositions(el, zoom)) {
+		ctx.beginPath();
+		if (h.id === 'rotate') {
+			ctx.arc(h.x, h.y, half, 0, Math.PI * 2);
+		} else {
+			ctx.rect(h.x - half, h.y - half, size, size);
+		}
+		ctx.fillStyle = '#ffffff';
+		ctx.fill();
+		ctx.strokeStyle = '#ec4899';
+		ctx.lineWidth = 1.5 / zoom;
+		ctx.stroke();
 	}
 }
 
@@ -480,6 +660,29 @@ export function drawSeatMap(ctx: CanvasRenderingContext2D, o: RenderOptions): vo
 		const isSelected = o.selectedIds.has(s.seatId);
 		const isHovered = o.hoveredId === s.seatId;
 
+		/**
+		 * A suppressed seat: dashed outline, no fill. Visibly "not a seat"
+		 * while still being there to click, which is what makes removal
+		 * reversible from the canvas.
+		 */
+		if (s.removed) {
+			ctx.globalAlpha = 1;
+			ctx.setLineDash([3 / vp.zoom, 3 / vp.zoom]);
+			ctx.strokeStyle = isSelected ? SELECTED_STROKE : dark ? '#52525b' : '#a1a1aa';
+			ctx.lineWidth = (isSelected ? 2 : 1) / vp.zoom;
+			if (isSelected) {
+				ctx.fillStyle = 'rgba(34,197,94,0.18)';
+				roundRect(ctx, s.x - half, s.y - half, s.size, s.size, s.size * 0.22);
+				ctx.fill();
+				ctx.stroke();
+			} else {
+				roundRect(ctx, s.x - half, s.y - half, s.size, s.size, s.size * 0.22);
+				ctx.stroke();
+			}
+			ctx.setLineDash([]);
+			continue;
+		}
+
 		let fill: string;
 		let stroke: string;
 		if (isSelected) {
@@ -524,7 +727,7 @@ export function drawSeatMap(ctx: CanvasRenderingContext2D, o: RenderOptions): vo
 		ctx.globalAlpha = 1;
 	}
 
-	// ── Builder chrome: element selection outlines ──
+	// ── Builder chrome: element selection outlines and handles ──
 	if (o.selectedElementIds?.size) {
 		ctx.strokeStyle = '#ec4899';
 		ctx.lineWidth = 2 / vp.zoom;
@@ -534,6 +737,17 @@ export function drawSeatMap(ctx: CanvasRenderingContext2D, o: RenderOptions): vo
 			ctx.strokeRect(el.x - 3, el.y - 3, el.width + 6, el.height + 6);
 		}
 		ctx.setLineDash([]);
+
+		/**
+		 * Handles only for a single selection. With several selected the
+		 * handles of each would overlap the others' bodies, and there is
+		 * no unambiguous box to resize — alignment and distribution in the
+		 * inspector are the multi-select tools.
+		 */
+		if (o.selectedElementIds.size === 1 && o.showHandles !== false) {
+			const only = (o.elements ?? []).find((el) => o.selectedElementIds!.has(el.id));
+			if (only && !only.locked) drawHandles(ctx, only, vp.zoom);
+		}
 	}
 
 	// ── Alignment guides ──

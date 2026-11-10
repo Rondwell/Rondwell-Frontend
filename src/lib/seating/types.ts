@@ -290,7 +290,9 @@ export interface MaterializationError {
 		| 'NO_SEATS'
 		| 'TOO_MANY_SEATS'
 		| 'SEAT_TYPE_WITHOUT_TICKET_TYPE'
-		| 'UNKNOWN_SEAT_TYPE';
+		| 'UNKNOWN_SEAT_TYPE'
+		/** An obsolete database index from a previous schema is blocking writes. */
+		| 'STALE_INDEX';
 	message: string;
 	detail?: string[];
 }

@@ -34,7 +34,8 @@
 		NO_SEATS: 'No seats to publish',
 		TOO_MANY_SEATS: 'Too many seats',
 		SEAT_TYPE_WITHOUT_TICKET_TYPE: 'Seat type not for sale',
-		UNKNOWN_SEAT_TYPE: 'Missing seat type'
+		UNKNOWN_SEAT_TYPE: 'Missing seat type',
+		STALE_INDEX: 'Database needs attention — not your layout'
 	};
 
 	/** What each blocking error means and how to clear it. */
@@ -46,7 +47,9 @@
 		NO_SEATS: 'Add a seat row, block or table before publishing.',
 		TOO_MANY_SEATS: 'Split the venue across fewer seats, or contact support to raise the limit.',
 		SEAT_TYPE_WITHOUT_TICKET_TYPE: 'Attach a ticket type to each seat type so its seats can be priced.',
-		UNKNOWN_SEAT_TYPE: 'Some elements point at a seat type that was deleted. Reassign them.'
+		UNKNOWN_SEAT_TYPE: 'Some elements point at a seat type that was deleted. Reassign them.',
+		STALE_INDEX:
+			'Nothing is wrong with your design — the database is still enforcing a rule from an older version of the seating system. Send this message to your developer; it is a one-command fix.'
 	};
 </script>
 

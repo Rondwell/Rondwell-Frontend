@@ -141,7 +141,7 @@
 		<div class="{isEventPage ? '' : 'bg'} flex w-full flex-1 flex-col px-3 py-4 md:p-6 lg:p-8">
 			<!-- Mobile SubMenu (Events / People / Collections root only) -->
 			{#if isSubMenuVisible && isMobile && menuItems.length > 0}
-				<div style={`isSettingsMenuVisible ? 'mb-0':'mb-4'`}>
+				<div class="mb-4 md:hidden">
 					<SideMenu items={menuItems} {activeItem} />
 				</div>
 			{/if}
@@ -159,10 +159,13 @@
 
 <style>
 	.bg {
-		background: rgba(255, 255, 255, 0.08);
+		background: rgba(255, 255, 255, 0.58);
+		backdrop-filter: blur(20px) saturate(180%);
+		-webkit-backdrop-filter: blur(20px) saturate(180%);
+		border: 1px solid rgba(255, 255, 255, 0.8);
 		box-shadow:
-			0px 0px 0px 1px rgba(64, 87, 109, 0.04),
-			0px 6px 20px -4px rgba(64, 87, 109, 0.3);
-		border-radius: 12px;
+			0 12px 36px -8px rgba(18, 16, 36, 0.08),
+			inset 0 1px 0 rgba(255, 255, 255, 0.85);
+		border-radius: 24px;
 	}
 </style>

@@ -73,9 +73,37 @@
 	];
 
 	let activeIndex = 0;
+	let touchStartX = 0;
+	let touchStartY = 0;
 
 	function selectEdition(idx: number) {
 		activeIndex = idx;
+	}
+
+	function nextEdition() {
+		activeIndex = (activeIndex + 1) % heroEditions.length;
+	}
+
+	function prevEdition() {
+		activeIndex = (activeIndex - 1 + heroEditions.length) % heroEditions.length;
+	}
+
+	function handleTouchStart(e: TouchEvent) {
+		const touch = e.touches[0];
+		if (!touch) return;
+		touchStartX = touch.clientX;
+		touchStartY = touch.clientY;
+	}
+
+	function handleTouchEnd(e: TouchEvent) {
+		const touch = e.changedTouches[0];
+		if (!touch) return;
+		const dx = touch.clientX - touchStartX;
+		const dy = touch.clientY - touchStartY;
+		if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy)) {
+			if (dx < 0) nextEdition();
+			else prevEdition();
+		}
 	}
 
 	function orderedDeck(current: number): { item: HeroEdition; offset: number; origIdx: number }[] {
@@ -95,7 +123,7 @@
 	/>
 </svelte:head>
 
-<section class="relative mx-auto w-full max-w-7xl px-4 pt-6 pb-14 sm:px-6 md:pt-12 md:pb-20 lg:px-8">
+<section class="relative mx-auto w-full max-w-7xl overflow-x-clip px-4 pt-6 pb-14 sm:px-6 md:pt-12 md:pb-20 lg:px-8">
 	<div class="grid items-center gap-10 lg:grid-cols-12 lg:gap-8">
 		<!-- LEFT COLUMN: Editorial Headline, Interactive CTAs, Edition Controls -->
 		<div class="relative z-10 text-center lg:col-span-6 lg:text-left">
@@ -186,8 +214,16 @@
 
 		<!-- RIGHT COLUMN: Interactive 3D Collector Ticket Depth Stage -->
 		<div class="relative flex flex-col items-center justify-center lg:col-span-6">
-			<!-- Desktop Fanned 3-Card Stage -->
-			<div class="relative hidden h-[440px] w-full max-w-[490px] items-center justify-center sm:flex">
+			<!-- Unified Responsive Fanned 3-Card Stage (Mobile + Desktop) -->
+			<div
+				class="hero-deck-stage relative flex w-full max-w-[490px] touch-pan-y items-center justify-center"
+				on:touchstart={handleTouchStart}
+				on:touchend={handleTouchEnd}
+			>
+				<div
+					class="pointer-events-none absolute h-60 w-60 rounded-full bg-gradient-to-tr from-[#DB3E6C]/20 via-[#AB46DD]/18 to-[#513BE2]/15 blur-3xl sm:h-72 sm:w-72"
+				></div>
+
 				{#each stageCards as { item, offset, origIdx } (item.id)}
 					{@const isFront = offset === 0}
 					{@const isRight = offset === 1}
@@ -202,14 +238,11 @@
 								selectEdition(origIdx);
 							}
 						}}
-						class="absolute w-[285px] cursor-pointer transition-all duration-500 ease-out"
-						style={
-							isFront
-								? 'z-index: 30; transform: translate3d(0, 0, 0) rotate(0deg) scale(1); opacity: 1;'
-								: isRight
-									? 'z-index: 20; transform: translate3d(104px, 18px, 0) rotate(7deg) scale(0.88); opacity: 0.9;'
-									: 'z-index: 10; transform: translate3d(-104px, 22px, 0) rotate(-7deg) scale(0.88); opacity: 0.88;'
-						}
+						class="deck-card absolute cursor-pointer {isFront
+							? 'deck-front'
+							: isRight
+								? 'deck-right'
+								: 'deck-left'}"
 					>
 						<EventCard
 							event={item.event}
@@ -221,19 +254,90 @@
 				{/each}
 			</div>
 
-			<!-- Mobile Single Active Showcase Stage (No crowded overlaps!) -->
-			<div class="w-full max-w-[320px] sm:hidden">
-				<EventCard
-					event={heroEditions[activeIndex].event}
-					variant="ticket"
-					disableLink={true}
-				/>
+			<!-- Interactive Pill Indicator Switcher -->
+			<div class="mt-2 flex items-center justify-center gap-1.5" role="tablist" aria-label="Featured card styles">
+				{#each heroEditions as ed, idx}
+					<button
+						type="button"
+						role="tab"
+						aria-selected={activeIndex === idx}
+						aria-label={`Show ${ed.tabLabel} card`}
+						on:click={() => selectEdition(idx)}
+						class={`h-2 rounded-full transition-all duration-300 ${
+							activeIndex === idx ? 'w-6 bg-[#17161E]' : 'w-2 bg-black/20 hover:bg-black/35'
+						}`}
+					></button>
+				{/each}
 			</div>
 
-			<div class="mt-3 flex items-center gap-2 text-xs text-[#6B6878]">
+			<div class="mt-2.5 flex items-center gap-2 text-xs text-[#6B6878]">
 				<Icon icon="solar:cursor-bold-duotone" class="h-3.5 w-3.5 text-[#DB3E6C]" />
-				<span>Click any card or style pill to inspect live theme choreography</span>
+				<span>Swipe or tap any card to inspect live theme choreography</span>
 			</div>
 		</div>
 	</div>
 </section>
+
+<style>
+	.hero-deck-stage {
+		height: 390px;
+		--card-w: 234px;
+		--fan-x: 48px;
+		--fan-y-r: 14px;
+		--fan-y-l: 18px;
+		--fan-scale: 0.84;
+		--fan-rot: 6.5deg;
+	}
+
+	@media (min-width: 400px) {
+		.hero-deck-stage {
+			height: 410px;
+			--card-w: 254px;
+			--fan-x: 62px;
+			--fan-y-r: 16px;
+			--fan-y-l: 20px;
+			--fan-scale: 0.86;
+			--fan-rot: 7deg;
+		}
+	}
+
+	@media (min-width: 640px) {
+		.hero-deck-stage {
+			height: 440px;
+			--card-w: 285px;
+			--fan-x: 104px;
+			--fan-y-r: 18px;
+			--fan-y-l: 22px;
+			--fan-scale: 0.88;
+			--fan-rot: 7deg;
+		}
+	}
+
+	.deck-card {
+		width: var(--card-w);
+		transition:
+			transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
+			opacity 420ms ease,
+			filter 420ms ease;
+		will-change: transform;
+	}
+
+	.deck-front {
+		z-index: 30;
+		transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+		opacity: 1;
+		filter: drop-shadow(0 24px 38px rgba(18, 15, 36, 0.22));
+	}
+
+	.deck-right {
+		z-index: 20;
+		transform: translate3d(var(--fan-x), var(--fan-y-r), 0) rotate(var(--fan-rot)) scale(var(--fan-scale));
+		opacity: 0.92;
+	}
+
+	.deck-left {
+		z-index: 10;
+		transform: translate3d(calc(var(--fan-x) * -1), var(--fan-y-l), 0) rotate(calc(var(--fan-rot) * -1)) scale(var(--fan-scale));
+		opacity: 0.9;
+	}
+</style>

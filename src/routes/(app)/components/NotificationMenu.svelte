@@ -201,28 +201,33 @@
 
 <style>
 	.bg {
-		background: #f4f5f6;
-		box-shadow: 0px 0px 80px rgba(0, 0, 0, 0.08);
-		border-radius: 8px;
+		background: rgba(255, 255, 255, 0.94);
+		backdrop-filter: blur(24px) saturate(180%);
+		-webkit-backdrop-filter: blur(24px) saturate(180%);
+		border: 1px solid rgba(255, 255, 255, 0.88);
+		box-shadow:
+			0 24px 60px -12px rgba(18, 15, 36, 0.22),
+			0 0 0 1px rgba(18, 15, 36, 0.06);
+		border-radius: 22px;
 	}
 	@media (min-width: 739px) {
 		.triangle::before {
 			content: '';
 			position: absolute;
-			left: -18px;
-			bottom: 16px;
+			left: -16px;
+			bottom: 18px;
 			border-width: 8px;
 			border-style: solid;
-			border-color: transparent #f8f8f8 transparent transparent;
+			border-color: transparent rgba(255, 255, 255, 0.94) transparent transparent;
 		}
 		.triangle::after {
 			content: '';
 			position: absolute;
-			left: -18px;
-			bottom: 16px;
+			left: -17px;
+			bottom: 18px;
 			border-width: 8px;
 			border-style: solid;
-			border-color: transparent rgba(0, 0, 0, 0.08) transparent transparent;
+			border-color: transparent rgba(18, 15, 36, 0.08) transparent transparent;
 			z-index: -1;
 		}
 	}

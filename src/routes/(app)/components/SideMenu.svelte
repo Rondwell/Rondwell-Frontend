@@ -93,20 +93,22 @@
 		<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
 	</a>
 
-	<div class="w-full space-y-2">
+	<div class="w-full space-y-1.5">
 		{#each items as item}
 			<button
-				class="flex w-full cursor-pointer items-center gap-3 rounded-lg px-4 py-2.5
-					{item.label === activeItem ? 'selected text-[#DB3EC6]' : 'text-[#808080]'}"
+				class="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all
+					{item.label === activeItem
+						? 'bg-white/85 text-[#17161E] shadow-xs ring-1 ring-black/8'
+						: 'text-[#6B6878] hover:bg-white/50 hover:text-[#17161E]'}"
 				on:click={() => {
 					goto(item.nav);
 					activeItem = item.label;
 				}}
 			>
 				{#if item.icon}
-					<p class="h-5 w-5">{@html item.icon}</p>
+					<span class="flex h-5 w-5 items-center justify-center [&>svg]:h-4.5 [&>svg]:w-4.5">{@html item.icon}</span>
 				{/if}
-				<span class="text-sm font-light">{item.label}</span>
+				<span>{item.label}</span>
 			</button>
 		{/each}
 	</div>

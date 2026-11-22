@@ -272,17 +272,32 @@
 		</div>
 	</div>
 {:else}
-	<div class="w-full">
-		<!-- Welcome Aboard Sections -->
-		<div class="mb-8">
-			<h1 class="mb-4 text-3xl font-medium">Welcome Aboard</h1>
+	<div class="w-full space-y-8">
+		<!-- Welcome Header -->
+		<div class="space-y-6">
+			<div class="flex flex-wrap items-center justify-between gap-4">
+				<div>
+					<span class="inline-flex items-center gap-1.5 rounded-full bg-white/75 px-3 py-1 text-[11px] font-semibold tracking-wide text-[#513BE2] uppercase ring-1 ring-black/6 backdrop-blur-md">
+						<Icon icon="solar:home-smile-bold-duotone" class="h-3.5 w-3.5" />
+						Organizer Telemetry
+					</span>
+					<h1 class="mt-2 text-2xl font-bold tracking-tight text-[#17161E] sm:text-3xl">Welcome Aboard</h1>
+				</div>
+				<a
+					href="/create-event"
+					class="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#17161E] px-5 text-xs font-semibold text-white no-underline shadow-xs transition hover:bg-[#2C2C34]"
+				>
+					<Icon icon="solar:add-circle-bold" class="h-4 w-4" />
+					<span>Create Event</span>
+				</a>
+			</div>
 
-			<!-- Stats Cards -->
-			<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+			<!-- Bento Stats Cards -->
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				{#each statsCards as card}
-					<div class="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md">
+					<div class="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/85 bg-white/88 p-5 shadow-[0_8px_24px_-6px_rgba(18,16,36,0.05)] backdrop-blur-md transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
 						<div class="mb-3 flex items-center justify-between">
-							<div class="flex h-10 w-10 items-center justify-center rounded-full" style="background-color: {card.bg}">
+							<div class="flex h-10 w-10 items-center justify-center rounded-xl" style="background-color: {card.bg}">
 								{#if card.icon === 'revenue'}
 									<svg width="20" height="20" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
 										<path d="M6.5625 10.6875C6.5625 11.5275 7.2075 12.2025 8.0025 12.2025H9.6225C10.3125 12.2025 10.875 11.6175 10.875 10.8975C10.875 10.1175 10.53 9.84 10.0275 9.66L7.41 8.7375C6.9075 8.5575 6.5625 8.28 6.5625 7.5C6.5625 6.78 7.125 6.195 7.815 6.195H9.435C10.23 6.195 10.875 6.87 10.875 7.71" stroke="{card.color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -326,23 +341,23 @@
 
 			<!-- Subscription Tier Card -->
 			{#if $subscriptionStore.loaded}
-				<div class="mb-6 flex items-center justify-between rounded-2xl border {$isPlusUser ? 'border-pink-200 bg-gradient-to-r from-pink-50 to-purple-50' : 'border-gray-100 bg-white'} p-4 shadow-sm transition hover:shadow-md">
+				<div class="flex items-center justify-between rounded-3xl border {$isPlusUser ? 'border-pink-200/80 bg-gradient-to-r from-pink-50/90 to-purple-50/90' : 'border-white/85 bg-white/88'} p-4 shadow-xs backdrop-blur-md transition hover:shadow-md sm:px-6">
 					<div class="flex items-center gap-3">
-						<div class="flex h-10 w-10 items-center justify-center rounded-full {$isPlusUser ? 'bg-pink-100' : 'bg-gray-100'}">
-							<Icon icon={$isPlusUser ? 'mdi:star-circle' : 'mdi:account-circle-outline'} class="{$isPlusUser ? 'text-xl text-pink-500' : 'text-xl text-gray-400'}" />
+						<div class="flex h-10 w-10 items-center justify-center rounded-2xl {$isPlusUser ? 'bg-pink-100' : 'bg-black/5'}">
+							<Icon icon={$isPlusUser ? 'mdi:star-circle' : 'mdi:account-circle-outline'} class="{$isPlusUser ? 'text-xl text-pink-500' : 'text-xl text-gray-500'}" />
 						</div>
 						<div>
 							<div class="flex items-center gap-2">
-								<span class="text-sm font-semibold text-gray-900">{$subscriptionStore.tier === 'PLUS' ? 'Rondwell PLUS' : 'Rondwell FREE'}</span>
+								<span class="text-sm font-bold text-[#17161E]">{$subscriptionStore.tier === 'PLUS' ? 'Rondwell PLUS' : 'Rondwell FREE'}</span>
 								{#if $subscriptionStore.subscriptionStatus}
-									<span class="rounded-full px-1.5 py-0.5 text-[9px] font-medium uppercase
-										{$subscriptionStore.subscriptionStatus === 'ACTIVE' ? 'bg-green-100 text-green-700' : ''}
+									<span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase
+										{$subscriptionStore.subscriptionStatus === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : ''}
 										{$subscriptionStore.subscriptionStatus === 'TRIALING' ? 'bg-blue-100 text-blue-700' : ''}
-										{$subscriptionStore.subscriptionStatus === 'PAST_DUE' ? 'bg-red-100 text-red-700' : ''}
+										{$subscriptionStore.subscriptionStatus === 'PAST_DUE' ? 'bg-rose-100 text-rose-700' : ''}
 									">{$subscriptionStore.subscriptionStatus.toLowerCase().replace('_', ' ')}</span>
 								{/if}
 							</div>
-							<p class="text-xs text-gray-500">
+							<p class="text-xs text-[#6B6878]">
 								{#if $isPlusUser}
 									{$subscriptionStore.feePercent}% platform fee · {$subscriptionStore.billingCycle?.toLowerCase() ?? ''} billing
 								{:else}
@@ -353,7 +368,7 @@
 					</div>
 					<button
 						on:click={() => goto('/subscription')}
-						class="rounded-lg {$isPlusUser ? 'border border-pink-300 bg-white text-pink-700 hover:bg-pink-50' : 'bg-pink-600 text-white hover:bg-pink-700'} px-4 py-2 text-xs font-medium transition"
+						class="rounded-full {$isPlusUser ? 'border border-pink-300 bg-white text-pink-700 hover:bg-pink-50' : 'bg-gradient-to-r from-[#DB3E6C] to-[#AB46DD] text-white hover:opacity-95'} px-5 py-2 text-xs font-semibold shadow-xs transition"
 					>
 						{$isPlusUser ? 'Manage' : 'Upgrade'}
 					</button>
@@ -387,17 +402,19 @@
 		<!-- Latest Event Section -->
 		<div class="mb-8 w-full">
 			<div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<h2 class="text-2xl font-medium">Latest Event</h2>
+				<h2 class="text-xl font-bold tracking-tight text-[#17161E] sm:text-2xl">Latest Event</h2>
 
-				<div class="flex h-[42px] w-fit shrink-0 rounded bg-[#E0E9EC] p-1 text-[#98A1A4] sm:h-[50px]">
+				<div class="flex w-fit shrink-0 rounded-full bg-white/75 p-1 ring-1 ring-black/8 backdrop-blur-md">
 					<button
-						class={`h-full cursor-pointer rounded px-4 py-1 text-sm whitespace-nowrap ${activeTab === 'Created' ? 'bg-white text-black shadow-md' : ''}`}
+						type="button"
+						class={`cursor-pointer rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${activeTab === 'Created' ? 'bg-[#17161E] text-white shadow-xs' : 'text-[#6B6878] hover:text-[#17161E]'}`}
 						on:click={() => (activeTab = 'Created')}
 					>
 						Created
 					</button>
 					<button
-						class={`h-full cursor-pointer rounded px-4 py-1 text-sm whitespace-nowrap ${activeTab === 'Attending' ? 'bg-white text-black shadow-md' : ''}`}
+						type="button"
+						class={`cursor-pointer rounded-full px-4 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${activeTab === 'Attending' ? 'bg-[#17161E] text-white shadow-xs' : 'text-[#6B6878] hover:text-[#17161E]'}`}
 						on:click={() => (activeTab = 'Attending')}
 					>
 						Attending

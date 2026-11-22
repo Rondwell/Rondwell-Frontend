@@ -70,43 +70,49 @@
 	}));
 </script>
 
-<section class="relative max-w-6xl">
+<section class="relative w-full max-w-6xl">
 	<div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-		<h1 class="text-xl font-bold">
-			{searchQuery ? `Exhibitors matching “${searchQuery}”` : 'Exhibitors'}
-		</h1>
-		{#if !loading && !failed && total}
-			<span class="text-xs font-semibold text-gray-400">{total.toLocaleString()} exhibitors</span>
-		{/if}
+		<div class="flex items-baseline gap-2.5">
+			<h1 class="text-xl font-bold tracking-tight text-[#17161E] sm:text-2xl">
+				{searchQuery ? `Exhibitors matching “${searchQuery}”` : 'Exhibitors'}
+			</h1>
+			{#if !loading && !failed && total}
+				<span class="rounded-full bg-black/5 px-2.5 py-0.5 text-xs font-semibold text-[#6B6878]">
+					{total.toLocaleString()} {total === 1 ? 'exhibitor' : 'exhibitors'}
+				</span>
+			{/if}
+		</div>
 	</div>
 
 	{#if loading}
-		<div class="grid gap-4 py-5 animate-pulse lg:grid-cols-2">
+		<div class="grid gap-5 py-5 animate-pulse lg:grid-cols-2">
 			{#each [1, 2, 3, 4] as _}
-				<div class="h-48 rounded-xl bg-gray-200"></div>
+				<div class="h-44 rounded-[22px] border border-black/8 bg-white/85 backdrop-blur-md"></div>
 			{/each}
 		</div>
 	{:else if failed}
-		<div class="flex h-48 flex-col items-center justify-center gap-3">
-			<Icon icon="mdi:cloud-off-outline" class="h-7 w-7 text-gray-300" />
-			<p class="text-sm text-gray-500">We couldn't load exhibitors just now.</p>
+		<div class="mt-6 flex h-56 flex-col items-center justify-center gap-3 rounded-3xl border border-black/8 bg-white/80 p-6 text-center backdrop-blur-md">
+			<Icon icon="solar:cloud-cross-bold-duotone" class="h-9 w-9 text-[#DB3E6C]" />
+			<p class="text-sm font-medium text-[#555362]">We couldn't load exhibitors just now.</p>
 			<button
-				class="rounded-lg bg-gray-900 px-4 py-2 text-xs font-semibold text-white"
+				type="button"
+				class="rounded-full bg-[#17161E] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#2E2D38]"
 				on:click={() => loadExhibitors(searchQuery, currentPage)}
 			>
 				Try again
 			</button>
 		</div>
 	{:else if exhibitors.length === 0}
-		<div class="flex h-48 flex-col items-center justify-center gap-2">
-			<Icon icon="mdi:store-search-outline" class="h-7 w-7 text-gray-300" />
-			<p class="text-base font-semibold text-gray-500">No exhibitors found</p>
-			<p class="text-sm text-gray-400">
-				{searchQuery ? 'Try a different search term' : 'Check back later for new exhibitors'}
+		<div class="mt-6 flex h-60 flex-col items-center justify-center gap-2 rounded-3xl border border-dashed border-black/15 bg-white/75 p-6 text-center backdrop-blur-md">
+			<Icon icon="solar:buildings-2-bold-duotone" class="h-9 w-9 text-[#AB46DD]" />
+			<p class="text-base font-bold text-[#17161E]">No exhibitors found</p>
+			<p class="max-w-sm text-xs text-[#6B6878]">
+				{searchQuery ? 'Try a different search term or check another category.' : 'Check back later for new exhibitors'}
 			</p>
 			{#if searchQuery}
 				<button
-					class="mt-1 rounded-lg border border-purple-500 px-4 py-2 text-xs font-semibold text-purple-600 transition hover:bg-purple-50"
+					type="button"
+					class="mt-2 rounded-full border border-black/15 bg-white px-4 py-1.5 text-xs font-semibold text-[#17161E] transition hover:bg-black/5"
 					on:click={() => setSearch('')}
 				>
 					Clear search
@@ -114,35 +120,40 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="mb-8 grid grid-cols-1 gap-4 py-5 lg:grid-cols-2">
+		<div class="mb-8 grid grid-cols-1 gap-5 py-5 lg:grid-cols-2">
 			{#each displayExhibitors as exhibitor (exhibitor._id)}
 				<!-- Opens in a new tab, matching the behaviour of the event cards. -->
 				<a href={exhibitor.href} target="_blank" rel="noopener noreferrer"
-					class="group flex gap-4 overflow-hidden rounded-2xl bg-white p-4 no-underline transition-shadow hover:shadow-md">
+					class="group flex gap-4 overflow-hidden rounded-[22px] border border-black/8 bg-white/88 p-4 sm:p-5 no-underline shadow-[0_1px_3px_rgba(19,21,23,0.04)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-black/15 hover:shadow-[0_12px_30px_-10px_rgba(19,21,23,0.12)]">
 					<!-- Logo -->
-					<div class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
+					<div class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-2xl bg-black/5 ring-1 ring-black/6">
 						{#if exhibitor.logoUrl || exhibitor.profilePictureUrl}
 							<img src={exhibitor.logoUrl || exhibitor.profilePictureUrl} alt={exhibitor.companyName || exhibitor.name}
-								class="h-full w-full object-cover" />
+								class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" />
 						{:else}
-							<div class="flex h-full w-full items-center justify-center text-xl font-bold text-gray-300">
+							<div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0EA5E9]/15 to-[#6366F1]/15 text-xl font-bold text-[#0284C7]">
 								{(exhibitor.companyName || exhibitor.name || '?')[0].toUpperCase()}
 							</div>
 						{/if}
 					</div>
 					<!-- Info -->
-					<div class="flex-1">
-						<h3 class="text-sm font-semibold text-gray-900">{exhibitor.companyName || exhibitor.name}</h3>
-						{#if exhibitor.industry}
-							<span class="mt-1 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">{exhibitor.industry}</span>
-						{/if}
+					<div class="min-w-0 flex-1">
+						<div class="flex items-start justify-between gap-2">
+							<h3 class="text-sm font-bold tracking-tight text-[#17161E] transition-colors group-hover:text-[#0284C7] sm:text-base">{exhibitor.companyName || exhibitor.name}</h3>
+						</div>
+						<div class="mt-1 flex flex-wrap items-center gap-1.5">
+							<span class="rounded-full bg-[#0EA5E9]/10 px-2 py-0.5 text-[10px] font-semibold text-[#0284C7]">Exhibitor</span>
+							{#if exhibitor.industry}
+								<span class="rounded-full bg-[#6366F1]/10 px-2.5 py-0.5 text-[10px] font-semibold text-[#4F46E5]">{exhibitor.industry}</span>
+							{/if}
+						</div>
 						{#if exhibitor.companyDescription}
-							<p class="mt-1 text-xs text-gray-500 line-clamp-2">{exhibitor.companyDescription}</p>
+							<p class="mt-1.5 text-xs leading-relaxed text-[#5F5C6D] line-clamp-2">{exhibitor.companyDescription}</p>
 						{/if}
 						{#if exhibitor.businessLocation}
-							<p class="mt-1 flex items-center gap-1 text-xs text-gray-400">
-								<Icon icon="mdi:map-marker-outline" class="h-3 w-3" />
-								{exhibitor.businessLocation}
+							<p class="mt-1.5 flex items-center gap-1 text-xs text-[#6B6878]">
+								<Icon icon="solar:map-point-bold-duotone" class="h-3.5 w-3.5 flex-shrink-0 text-[#8E8B99]" />
+								<span class="truncate">{exhibitor.businessLocation}</span>
 							</p>
 						{/if}
 					</div>
@@ -151,15 +162,17 @@
 		</div>
 
 		{#if pagination.totalPages > 1}
-			<div class="flex items-center justify-center gap-2 pb-8">
+			<div class="flex items-center justify-center gap-3 pb-8">
 				<button
-					class="rounded-lg px-3 py-1.5 text-sm {currentPage <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'}"
+					type="button"
+					class="rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold text-[#17161E] transition {currentPage <= 1 ? 'cursor-not-allowed opacity-40' : 'hover:bg-black/5'}"
 					disabled={currentPage <= 1}
 					on:click={() => goToPage(currentPage - 1)}
 				>Previous</button>
-				<span class="text-sm text-gray-500">Page {pagination.currentPage} of {pagination.totalPages}</span>
+				<span class="text-xs font-semibold text-[#6B6878]">Page {pagination.currentPage} of {pagination.totalPages}</span>
 				<button
-					class="rounded-lg px-3 py-1.5 text-sm {currentPage >= pagination.totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'}"
+					type="button"
+					class="rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold text-[#17161E] transition {currentPage >= pagination.totalPages ? 'cursor-not-allowed opacity-40' : 'hover:bg-black/5'}"
 					disabled={currentPage >= pagination.totalPages}
 					on:click={() => goToPage(currentPage + 1)}
 				>Next</button>

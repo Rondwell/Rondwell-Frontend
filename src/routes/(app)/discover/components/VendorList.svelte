@@ -108,14 +108,18 @@
 	$: total = pagination?.total ?? pagination?.totalItems ?? 0;
 </script>
 
-<section class="relative max-w-6xl">
+<section class="relative w-full max-w-6xl">
 	<div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-		<h1 class="text-xl font-bold">
-			{searchQuery ? `Vendors matching “${searchQuery}”` : 'Vendors & Service Providers'}
-		</h1>
-		{#if !loading && !failed && total}
-			<span class="text-xs font-semibold text-gray-400">{total.toLocaleString()} vendors</span>
-		{/if}
+		<div class="flex items-baseline gap-2.5">
+			<h1 class="text-xl font-bold tracking-tight text-[#17161E] sm:text-2xl">
+				{searchQuery ? `Vendors matching “${searchQuery}”` : 'Vendors & Service Providers'}
+			</h1>
+			{#if !loading && !failed && total}
+				<span class="rounded-full bg-black/5 px-2.5 py-0.5 text-xs font-semibold text-[#6B6878]">
+					{total.toLocaleString()} {total === 1 ? 'vendor' : 'vendors'}
+				</span>
+			{/if}
+		</div>
 	</div>
 
 	<!-- GAP 8 — category chips. "Planning & Coordination" leads. -->
@@ -125,9 +129,9 @@
 				type="button"
 				aria-pressed={businessType === cat.value}
 				on:click={() => toggleCategory(cat.value)}
-				class="rounded-full px-3 py-1.5 text-xs font-medium transition-colors {businessType === cat.value
-					? 'bg-gray-900 text-white'
-					: 'bg-[#EBECED] text-[#5D646F] hover:bg-gray-200'}"
+				class="rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all {businessType === cat.value
+					? 'bg-[#17161E] text-white shadow-xs'
+					: 'border border-black/8 bg-white/80 text-[#555362] backdrop-blur-sm hover:bg-white hover:text-[#17161E]'}"
 			>
 				{cat.label}
 			</button>
@@ -136,7 +140,7 @@
 			<button
 				type="button"
 				on:click={() => (businessType = '')}
-				class="rounded-full px-3 py-1.5 text-xs font-medium text-[#83808D] underline"
+				class="rounded-full border border-black/10 bg-white/80 px-3 py-1.5 text-xs font-semibold text-[#6B6878] transition hover:text-[#17161E]"
 			>
 				Clear
 			</button>
@@ -144,32 +148,34 @@
 	</div>
 
 	{#if loading}
-		<div class="grid gap-4 py-5 animate-pulse lg:grid-cols-2">
+		<div class="grid gap-5 py-5 animate-pulse lg:grid-cols-2">
 			{#each [1, 2, 3, 4] as _}
-				<div class="h-48 rounded-xl bg-gray-200"></div>
+				<div class="h-48 rounded-[22px] border border-black/8 bg-white/85 backdrop-blur-md"></div>
 			{/each}
 		</div>
 	{:else if failed}
-		<div class="flex h-48 flex-col items-center justify-center gap-3">
-			<Icon icon="mdi:cloud-off-outline" class="h-7 w-7 text-gray-300" />
-			<p class="text-sm text-gray-500">We couldn't load vendors just now.</p>
+		<div class="mt-6 flex h-56 flex-col items-center justify-center gap-3 rounded-3xl border border-black/8 bg-white/80 p-6 text-center backdrop-blur-md">
+			<Icon icon="solar:cloud-cross-bold-duotone" class="h-9 w-9 text-[#DB3E6C]" />
+			<p class="text-sm font-medium text-[#555362]">We couldn't load vendors just now.</p>
 			<button
-				class="rounded-lg bg-gray-900 px-4 py-2 text-xs font-semibold text-white"
+				type="button"
+				class="rounded-full bg-[#17161E] px-5 py-2 text-xs font-semibold text-white transition hover:bg-[#2E2D38]"
 				on:click={() => loadVendors(searchQuery, currentPage)}
 			>
 				Try again
 			</button>
 		</div>
 	{:else if displayVendors.length === 0}
-		<div class="flex h-48 flex-col items-center justify-center gap-2">
-			<Icon icon="mdi:store-search-outline" class="h-7 w-7 text-gray-300" />
-			<p class="text-base font-semibold text-gray-500">No vendors found</p>
-			<p class="text-sm text-gray-400">
-				{searchQuery ? 'Try a different search term' : 'Check back later for new vendors'}
+		<div class="mt-6 flex h-60 flex-col items-center justify-center gap-2 rounded-3xl border border-dashed border-black/15 bg-white/75 p-6 text-center backdrop-blur-md">
+			<Icon icon="solar:shop-2-bold-duotone" class="h-9 w-9 text-[#AB46DD]" />
+			<p class="text-base font-bold text-[#17161E]">No vendors found</p>
+			<p class="max-w-sm text-xs text-[#6B6878]">
+				{searchQuery ? 'Try a different search term or clear your filters.' : 'Check back later for new vendors'}
 			</p>
 			{#if searchQuery}
 				<button
-					class="mt-1 rounded-lg border border-purple-500 px-4 py-2 text-xs font-semibold text-purple-600 transition hover:bg-purple-50"
+					type="button"
+					class="mt-2 rounded-full border border-black/15 bg-white px-4 py-1.5 text-xs font-semibold text-[#17161E] transition hover:bg-black/5"
 					on:click={() => setSearch('')}
 				>
 					Clear search
@@ -177,22 +183,24 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="mb-8 grid grid-cols-1 gap-4 py-5 lg:grid-cols-2">
+		<div class="mb-8 grid grid-cols-1 gap-5 py-5 lg:grid-cols-2">
 			{#each displayVendors as vendor (vendor.slug)}
 				<VendorCard {vendor} newTab />
 			{/each}
 		</div>
 
 		{#if pagination.totalPages > 1}
-			<div class="flex items-center justify-center gap-2 pb-8">
+			<div class="flex items-center justify-center gap-3 pb-8">
 				<button
-					class="rounded-lg px-3 py-1.5 text-sm {currentPage <= 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'}"
+					type="button"
+					class="rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold text-[#17161E] transition {currentPage <= 1 ? 'cursor-not-allowed opacity-40' : 'hover:bg-black/5'}"
 					disabled={currentPage <= 1}
 					on:click={() => goToPage(currentPage - 1)}
 				>Previous</button>
-				<span class="text-sm text-gray-500">Page {pagination.page} of {pagination.totalPages}</span>
+				<span class="text-xs font-semibold text-[#6B6878]">Page {pagination.page} of {pagination.totalPages}</span>
 				<button
-					class="rounded-lg px-3 py-1.5 text-sm {currentPage >= pagination.totalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'}"
+					type="button"
+					class="rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-semibold text-[#17161E] transition {currentPage >= pagination.totalPages ? 'cursor-not-allowed opacity-40' : 'hover:bg-black/5'}"
 					disabled={currentPage >= pagination.totalPages}
 					on:click={() => goToPage(currentPage + 1)}
 				>Next</button>

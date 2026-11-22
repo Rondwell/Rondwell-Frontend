@@ -49,6 +49,9 @@ function loadFromStorage(): Partial<AuthState> {
     const profileRaw = localStorage.getItem('auth_active_profile');
     const user = userRaw ? JSON.parse(userRaw) : null;
     const activeProfile = profileRaw ? JSON.parse(profileRaw) : null;
+    if (activeProfile?._id) {
+      localStorage.setItem('active_profile_id', activeProfile._id);
+    }
     return { token, user, activeProfile };
   } catch {
     return {};
@@ -141,6 +144,9 @@ export async function setUser(
 export function setActiveProfile(profile: ActiveProfile) {
   if (browser) {
     localStorage.setItem('auth_active_profile', JSON.stringify(profile));
+    if (profile?._id) {
+      localStorage.setItem('active_profile_id', profile._id);
+    }
   }
   authState.update((s) => ({ ...s, activeProfile: profile }));
 }
@@ -153,6 +159,7 @@ function clearLocalAuthState() {
     localStorage.removeItem('auth_refresh_token');
     localStorage.removeItem('auth_user');
     localStorage.removeItem('auth_active_profile');
+    localStorage.removeItem('active_profile_id');
     localStorage.removeItem('post_auth_redirect');
   }
   authState.update((s) => ({

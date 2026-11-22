@@ -80,19 +80,35 @@
 		}
 		return {
 			id: e._id ?? e.id,
+			startDateTime: e.startDateTime,
+			endDateTime: e.endDateTime,
 			date: e.startDateTime ? new Date(e.startDateTime).toISOString().split('T')[0] : '',
 			time: e.startDateTime
 				? new Date(e.startDateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 				: '',
 			title: e.title ?? 'Untitled Event',
-			organizers: '',
+			organizers: e.eventOrganizerName ?? '',
+			organizer: e.eventOrganizerName ?? '',
 			location,
+			locationDetails: e.locationDetails,
 			locationIcon,
+			eventType: e.eventType,
 			status: e.eventStatus ?? 'DRAFT',
 			availability: '',
 			attendees: e.attendeeCount ?? 0,
+			attendeeCount: e.attendeeCount ?? 0,
 			image: e.displayPictureUrl ?? e.coverPictureUrl ?? '/events.png',
+			displayPictureUrl: e.displayPictureUrl,
+			coverPictureUrl: e.coverPictureUrl,
 			tag: e.tags?.[0] ?? '',
+			tags: Array.isArray(e.tags) ? e.tags : [],
+			category: e.category ?? '',
+			customLinkSlug: e.customLinkSlug ?? '',
+			slug: e.customLinkSlug ?? e.slug ?? '',
+			themeColor: e.themeColor,
+			themeFont: e.themeFont,
+			registrationType: e.registrationType,
+			registrationOpen: e.registrationOpen,
 		};
 	}
 
@@ -404,12 +420,12 @@
 						</div>
 						<div class="flex w-full max-w-[687px] flex-col gap-4">
 							{#if activeTab === 'Created'}
-								<a href={`/events/${latestEvent.id}`} class="no-underline">
-									<EventCard event={latestEvent} type="mine" />
+								<a href={`/events/${latestEvent.id}`} class="block no-underline">
+									<EventCard event={latestEvent} type="mine" variant="landscape" disableLink={true} />
 								</a>
 							{:else}
-								<a href={`/event-page/${latestEvent.id}`} class="no-underline">
-									<EventCard event={latestEvent} type="attending" />
+								<a href={`/event-page/${latestEvent.id}`} class="block no-underline">
+									<EventCard event={latestEvent} type="attending" variant="landscape" disableLink={true} />
 								</a>
 							{/if}
 						</div>

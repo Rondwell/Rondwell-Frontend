@@ -1,5 +1,5 @@
 <!-- src/lib/components/Sidebar.svelte -->
-<script>
+<script lang="ts">
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -21,9 +21,11 @@
 	let activeItem = '';
 	let showSignInModal = false;
 	let switchingToOrganizer = false;
+	let avatarBroken = false;
 
 	$: activeProfile = $authState.activeProfile;
 	$: avatarUrl = activeProfile?.profilePictureUrl || '/you-rondwell.png';
+	$: if (avatarUrl) avatarBroken = false;
 
 	// Nav items that require authentication
 	const authRequiredIds = new Set(['event', 'collections', 'experience']);
@@ -31,7 +33,7 @@
 	// Organizer-only pages — if user is on a non-organizer profile, switch back first
 	const organizerPageIds = new Set(['event', 'collections', 'experience', 'create']);
 
-	async function handleNavClick(item) {
+	async function handleNavClick(item: any) {
 		if (authRequiredIds.has(item.id) && !$isAuthenticated) {
 			showSignInModal = true;
 			return;
@@ -147,7 +149,17 @@
 	onMount(() => {
 		checkScreenSize();
 		window.addEventListener('resize', checkScreenSize);
-		if ($isAuthenticated) startUnreadPolling();
+		if ($isAuthenticated) {
+			startUnreadPolling();
+			if (!$authState.activeProfile) {
+				getAllProfiles()
+					.then((all) => {
+						const org = all.find((p) => p.role === 'ORGANIZER') || all[0];
+						if (org) setActiveProfile(org);
+					})
+					.catch(() => {});
+			}
+		}
 		return () => {
 			window.removeEventListener('resize', checkScreenSize);
 			stopUnreadPolling();
@@ -162,7 +174,7 @@
 	}
 
 	$: if ($page && $page.url) {
-		let path = $page.url.pathname; // e.g., '/discover'
+		let path: string = $page.url.pathname; // e.g., '/discover'
 		if (path === '/discover') {
 			path = `${path}?show=true`;
 		}
@@ -192,31 +204,47 @@
 <ProfileSwitchOverlay visible={switchingToOrganizer} roleName="Organizer" roleColor="#7C3AED" />
 
 {#if isMobile}
-	<div class="z-50">
-		<div class="items-center justify-between px-4 py-3 md:hidden {show ? 'flex' : 'hidden'}">
-			<div use:clickOutside={() => (showMenu = false)}>
+	<div class="relative z-40">
+		<div class="relative z-40 items-center justify-between px-4 py-2.5 md:hidden {show ? 'flex' : 'hidden'}">
+			<div class="relative" use:clickOutside={() => (showMenu = false)}>
 				<button
+					type="button"
 					on:click={() => {
 						showMenu = !showMenu;
 					}}
+					aria-label="Open account menu"
+					class="relative flex h-[38px] w-[38px] items-center justify-center rounded-full border border-white/80 bg-white/75 p-0.5 shadow-[0_4px_14px_rgba(17,15,28,0.08)] ring-1 ring-black/8 backdrop-blur-xl transition active:scale-95"
 				>
-					<img src={avatarUrl} alt="profile" class="h-9 w-9 rounded-full object-cover" />
+					{#if !avatarBroken}
+						<img
+							src={avatarUrl}
+							alt="profile"
+							class="h-full w-full rounded-full object-cover"
+							on:error={() => (avatarBroken = true)}
+						/>
+					{:else}
+						<svg class="h-5 w-5 text-[#513BE2]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+							<circle cx="12" cy="8" r="4" />
+							<path d="M5 20c0-3.5 3.1-6 7-6s7 2.5 7 6" stroke-linecap="round" />
+						</svg>
+					{/if}
 				</button>
-				<ProfileMenu bind:showMenu className="absolute top-15 left-5 md:hidden" />
+				<ProfileMenu bind:showMenu className="fixed top-14 left-4 md:hidden" />
 			</div>
-			<button on:click={goHome}>
-				<img src="/logo.svg" alt="Rondwell Logo" class="h-8 w-auto" />
+			<button type="button" on:click={goHome} aria-label="Rondwell home" class="relative flex items-center justify-center">
+				<img src="/logo.svg" alt="Rondwell Logo" class="h-7 w-auto" />
 			</button>
 			<div class="relative" use:clickOutside={() => (showNotifications = false)}>
 				<button
+					type="button"
 					on:click={() => (showNotifications = !showNotifications)}
-					class="relative"
+					class="relative flex h-[38px] w-[38px] items-center justify-center rounded-full border border-white/80 bg-white/75 shadow-[0_4px_14px_rgba(17,15,28,0.08)] ring-1 ring-black/8 backdrop-blur-xl transition active:scale-95"
 					aria-label="Notifications"
 				>
-					<img src="/notification.svg" alt="Notifications" />
+					<img src="/notification.svg" alt="Notifications" class="h-[18px] w-[18px]" />
 					{#if $unreadCount > 0}
 						<span
-							class="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#DB3EC6] px-1 text-[10px] font-semibold text-white"
+							class="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#DB3EC6] px-1 text-[10px] font-semibold text-white"
 						>
 							{$unreadCount > 99 ? '99+' : $unreadCount}
 						</span>
@@ -225,42 +253,44 @@
 				<NotificationMenu bind:showMenu={showNotifications} className="absolute top-12 right-0 z-50" />
 			</div>
 		</div>
-		<!-- Mobile Bottom Navigation -->
-		<!-- background_color is driven by the active page theme so the bar matches
-		     the notification/URL-bar tint. The safe-area padding extends that same
-		     colour into the phone's gesture/navigation strip for a premium fill. -->
+		<!-- Floating Glassmorphic Mobile Bottom Navigation -->
 		<nav
-			class="fixed right-0 bottom-0 left-0 z-50 flex h-[106px] items-end justify-around border-t py-2 md:hidden"
-			style="background-color: {background_color || 'var(--theme-chrome, #f4f5f6)'}; padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));"
+			class="fixed right-3.5 left-3.5 z-50 mx-auto flex h-[60px] max-w-[396px] items-center justify-around rounded-full border border-white/75 px-2 py-1 shadow-[0_14px_36px_-6px_rgba(18,15,36,0.16),0_2px_8px_rgba(18,15,36,0.06),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-2xl transition-all duration-200 md:hidden"
+			style="bottom: calc(0.6rem + env(safe-area-inset-bottom)); background-color: color-mix(in srgb, {background_color || 'var(--theme-chrome, #ffffff)'} 68%, rgba(255, 255, 255, 0.72));"
 		>
-			<div class="flex h-full w-full items-end justify-around">
+			<div class="flex h-full w-full items-center justify-around">
 				{#each mobileMenuItems as item}
 					<button
-						class={`flex h-full flex-col items-center justify-center text-gray-500`}
+						type="button"
+						class="flex h-full min-w-[54px] flex-col items-center justify-center gap-0.5 text-gray-500 transition-transform duration-150 active:scale-92"
 						aria-label={item.label}
 						on:click={() => handleNavClick(item)}
 					>
 						{#if item.icon === 'plus'}
 							<div
-								class="flex h-[48px] w-[48px] items-center justify-center rounded-full text-white"
-								style="background: linear-gradient(90deg, #DB3EC6 0%, #963DD4 50%, #513BE2 100%);"
+								class="relative flex h-[38px] w-[38px] items-center justify-center rounded-full text-white ring-2 ring-white/85 transition-transform duration-200 hover:scale-105 active:scale-90"
+								style="background: linear-gradient(135deg, #DB3EC6 0%, #963DD4 52%, #513BE2 100%); box-shadow: 0 6px 16px -2px rgba(150, 61, 212, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.45);"
 								title="Create Event"
 							>
-								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<svg class="h-[17px] w-[17px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path
 										stroke-linecap="round"
 										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+										stroke-width="2.2"
+										d="M12 5v14m7-7H5"
 									/>
 								</svg>
 							</div>
 						{:else}
-							<div class={activeItem === item.id ? 'selected' : ''}>
-								<p>{@html item.icon}</p>
+							<div
+								class="flex h-7 w-10 items-center justify-center rounded-full transition-all duration-200 {activeItem === item.id
+									? 'bg-[#513BE2]/12 text-[#513BE2] ring-1 ring-[#513BE2]/25'
+									: 'text-gray-500'}"
+							>
+								<span class="flex items-center justify-center [&>svg]:h-[19px] [&>svg]:w-[19px]">{@html item.icon}</span>
 							</div>
 							<span
-								class="mt-1 text-xs {activeItem === item.id
+								class="text-[10px] leading-none font-semibold tracking-tight {activeItem === item.id
 									? 'text-[#513BE2]'
 									: 'text-gray-500'} transition-colors">{item.label}</span
 							>

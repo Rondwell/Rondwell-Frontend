@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { bulkReplaceEventDays, createEvent, getMyCollections, uploadEventPhoto, type EventDayPayload } from '$lib/services/event.services';
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
 	import { stockImageToFile, triggerStockImageDownload } from '$lib/services/stockImages.services';
 	import { setEventTheme } from '$lib/stores/eventTheme';
+	import { applyThemeColor } from '$lib/stores/themeColor';
 	import { toast } from '$lib/stores/toast.store';
 	import { DEFAULT_THEME, findTheme, themeSwatch, type Color } from '$lib/utils/colors';
 	import {
@@ -414,6 +416,7 @@
 
 	// Persist theme to store whenever organizer changes it
 	$: setEventTheme('pending', selectedColor);
+	$: if (browser) applyThemeColor(selectedColor);
 	// Load the chosen pairing so the live preview renders in the real faces.
 	$: ensureThemeFontLoaded(selectedFont);
 
@@ -773,7 +776,7 @@
 
 	<!-- Sidebar -->
 
-	<div class="md:w-[117px]">
+	<div class="relative z-30 md:w-[117px]">
 		<Sidebar background_color={selectedColor.bg} />
 	</div>
 

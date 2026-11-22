@@ -127,7 +127,7 @@
 
 	<!-- Sidebar -->
 	<div class="relative md:min-w-[117px]">
-		<Sidebar background_color={isEventPage ? eventPageBg : '#f4f5f6'} />
+		<Sidebar background_color={isEventPage ? eventPageBg : ''} />
 	</div>
 
 	{#if isSubMenuVisible}

@@ -469,7 +469,6 @@
 <svelte:head>
 	<title>Rondwell — All-In-One Event Infrastructure</title>
 	<meta name="description" content="Every event. Every person. One connected platform. Explore Rondwell's complete architecture and capabilities." />
-	<meta name="theme-color" content="#070614" />
 
 	<!-- OpenGraph -->
 	<meta property="og:title" content="Rondwell — All-In-One Event Infrastructure" />

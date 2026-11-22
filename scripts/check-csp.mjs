@@ -76,7 +76,7 @@ function walk(dir, out = []) {
 	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
 		const full = path.join(dir, entry.name);
 		if (entry.isDirectory()) {
-			if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+			if (entry.name === 'node_modules' || entry.name.startsWith('.') || entry.name === 'entriqs') continue;
 			walk(full, out);
 		} else if (SCAN_EXT.has(path.extname(entry.name))) {
 			out.push(full);

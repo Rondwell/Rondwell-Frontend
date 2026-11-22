@@ -64,7 +64,6 @@
 
 <svelte:head>
 	<title>Help Center | Rondwell</title>
-	<meta name="theme-color" content="#f5efec" />
 	<meta name="description" content="Get help with Rondwell. Browse guides, tutorials, and support articles for event management." />
 	<meta property="og:title" content="Help Center | Rondwell" />
 	<meta property="og:description" content="Get help with Rondwell. Browse guides, tutorials, and support articles for event management." />

@@ -51,11 +51,14 @@
 			map.get(dateKey)!.push({
 				...event,
 				id: event._id ?? event.id,
+				slug: event.customLinkSlug ?? event.slug ?? '',
 				date: dateKey,
 				time: new Date(event.startDateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
 				location: event.eventType === 'HYBRID' ? 'Hybrid' : event.eventType === 'VIRTUAL' ? (event.locationDetails?.virtual?.platform ?? 'Virtual') : (event.locationDetails?.physical?.venueName ?? 'Physical'),
 				locationIcon: event.eventType === 'HYBRID' ? '/hybrid.svg' : event.eventType === 'VIRTUAL' ? '/zoom.svg' : '/location.svg',
 				attendees: event.attendeeCount ?? 0,
+				attendeeCount: event.attendeeCount ?? 0,
+				organizer: event.eventOrganizerName ?? '',
 				image: event.displayPictureUrl || event.coverPictureUrl || '/events.png',
 				category: event.category ?? '',
 			});
@@ -63,7 +66,7 @@
 		return map;
 	})();
 
-	let type = 'mine';
+	let type: 'mine' | 'attending' | 'discover' = 'mine';
 
 	async function handleEventAdded() {
 		closeAllModals();
@@ -171,8 +174,8 @@
 					</div>
 					<div class="flex w-full flex-col gap-4 overflow-hidden md:max-w-[687px]">
 						{#each dayEvents as event, index (event._id ?? index)}
-							<a href={`/events/${event.id}`} class="no-underline">
-								<EventCard {event} {type} />
+							<a href={`/events/${event.id}`} class="block no-underline">
+								<EventCard {event} {type} variant="landscape" disableLink={true} />
 							</a>
 						{/each}
 					</div>

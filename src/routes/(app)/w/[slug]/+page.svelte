@@ -7,11 +7,13 @@
 	confirmation email so a guest can mark a gift bought or release it.
 -->
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import Icon from '@iconify/svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import GiftRegistryView from '$lib/components/GiftRegistryView.svelte';
+	import { applyThemeColor } from '$lib/stores/themeColor';
 	import { colors, type Color } from '$lib/utils/colors';
 	import { toast } from '$lib/stores/toast.store';
 	import {
@@ -30,6 +32,7 @@
 	// default palette — still routed through `colors`, never hardcoded, so a
 	// per-registry theme can be added later without touching the markup.
 	const themeColor: Color = colors[0];
+	$: if (browser) applyThemeColor(themeColor);
 
 	let view: PublicWishlistView | null = data?.preloaded ?? null;
 	let loading = !data?.preloaded;

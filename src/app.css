@@ -125,17 +125,24 @@
 		@apply border-border outline-ring/50;
 	}
 
+	html {
+		background-color: var(--theme-chrome, #ffffff);
+		transition: background-color 220ms ease;
+	}
+
 	body {
-		/* Ensure body has pure white background - removed all padding */
 		@apply text-foreground font-sans;
-		background: #ffffff !important;
-		height: 100%;
+		background-color: var(--theme-chrome, #ffffff);
+		min-height: 100%;
+		transition: background-color 220ms ease;
 	}
 }
 
 a,
-button {
+button,
+[role='button'] {
 	cursor: pointer;
+	touch-action: manipulation;
 }
 
 @layer utilities {

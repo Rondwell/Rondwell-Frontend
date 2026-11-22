@@ -9,11 +9,13 @@
 	hardcoded, so the page looks like the person whose link it is.
 -->
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import Icon from '@iconify/svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import ThemeBackdrop from '$lib/components/ThemeBackdrop.svelte';
+	import { applyThemeColor } from '$lib/stores/themeColor';
 	import { resolveTheme, type Color } from '$lib/utils/colors';
 	import { formatMoney, majorToKobo } from '$lib/utils/money';
 	import { toast } from '$lib/stores/toast.store';
@@ -42,6 +44,7 @@
 	// the whole page is themed the way they set it up.
 	// `resolveTheme` maps retired palettes to their replacement.
 	$: themeColor = resolveTheme(link?.themeColor);
+	$: if (browser && link) applyThemeColor(themeColor);
 
 	$: occasionMeta = GIFT_OCCASIONS.find((o) => o.value === link?.occasion) ?? GIFT_OCCASIONS[5];
 

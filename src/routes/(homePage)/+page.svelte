@@ -8,7 +8,6 @@
 
 <svelte:head>
 	<title>Rondwell — Create, Manage & Grow Unforgettable Events</title>
-	<meta name="theme-color" content="#FBDBE7" />
 	<meta name="description" content="Rondwell is the all-in-one event platform for organizers. Create events, sell tickets, manage check-ins, engage attendees with community chat, and track everything with real-time analytics. Free to start." />
 
 	<!-- Open Graph -->
@@ -46,10 +45,7 @@
 
 <main class="relative w-full">
 	<div class="hero-section">
-		<div class="highlight highlight-1"></div>
-		<div class="highlight highlight-2"></div>
-		<div class="highlight highlight-3"></div>
-		<div class="highlight highlight-4"></div>
+		<div class="hero-mesh" aria-hidden="true"></div>
 		<Header />
 
 		<!-- Landing Section -->
@@ -69,53 +65,18 @@
 <style>
 	.hero-section {
 		position: relative;
-		overflow: hidden;
-		background:
-			linear-gradient(0deg, rgba(251, 219, 231, 0.33), rgba(251, 219, 231, 0.33)), #ffffff;
+		overflow-x: clip;
+		background: linear-gradient(180deg, #fbdbe7 0%, #fef4f8 46%, #ffffff 100%);
 	}
 
-	/* highlight */
-	.highlight {
+	.hero-mesh {
+		pointer-events: none;
 		position: absolute;
-		border-radius: 50%;
-		z-index: 1;
-	}
-
-	/* Example highlight 1 */
-	.highlight-1 {
-		width: 693px;
-		height: 662px;
-		left: -60px;
-		top: 58px;
-		background: rgba(255, 117, 169, 0.55);
-		filter: blur(189px);
-	}
-
-	/* Example highlight 2 */
-	.highlight-2 {
-		width: 547px;
-		height: 549px;
-		left: 892px;
-		top: 58px;
-		background: rgba(255, 195, 124, 0.44);
-		filter: blur(189px);
-	}
-
-	.highlight-3 {
-		width: 312px;
-		height: 299px;
-		left: 210px;
-		top: 683px;
-		background: #ff7eaf;
-		filter: blur(189px);
-	}
-
-	.highlight-4 {
-		width: 609px;
-		height: 613px;
-		left: 1044px;
-		top: 817px;
-		background: rgba(231, 126, 231, 0.66);
-		filter: blur(189px);
+		inset: 0;
+		background:
+			radial-gradient(60% 42% at 15% 12%, rgba(219, 62, 108, 0.16) 0%, rgba(219, 62, 108, 0) 70%),
+			radial-gradient(52% 40% at 88% 18%, rgba(171, 70, 221, 0.16) 0%, rgba(171, 70, 221, 0) 72%),
+			radial-gradient(65% 45% at 50% 62%, rgba(226, 216, 255, 0.45) 0%, rgba(255, 255, 255, 0) 75%);
+		transform: translateZ(0);
 	}
 </style>

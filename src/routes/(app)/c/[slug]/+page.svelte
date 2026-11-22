@@ -13,6 +13,7 @@
 	import { DEFAULT_THEME, type Color } from '$lib/utils/colors';
 	import Seo from '$lib/components/Seo.svelte';
 	import ThemeBackdrop from '$lib/components/ThemeBackdrop.svelte';
+	import EventCard from '$lib/components/EventCard.svelte';
 	import Icon from '@iconify/svelte';
 	import { onDestroy, onMount } from 'svelte';
 	/**
@@ -56,6 +57,7 @@
 	let searchQuery = '';
 	let showTypeDropdown = false;
 	let showFullDescription = false;
+	let viewMode: 'ticket' | 'landscape' = 'ticket';
 
 	const eventTypes = [
 		{ value: '', label: 'All Types' },
@@ -367,6 +369,32 @@
 							style="background-color: {themeColor.cover}; color: {themeColor.text}; border-color: {themeColor.toggle}; --tw-placeholder-opacity: 1;"
 						/>
 					</div>
+
+					<!-- View toggle (Ticket Gallery vs Compact Stub) -->
+					<div class="ml-auto flex items-center rounded-xl p-1" style="background-color: {themeColor.toggle}">
+						<button
+							type="button"
+							aria-label="Ticket gallery view"
+							on:click={() => (viewMode = 'ticket')}
+							class="flex h-8 w-8 items-center justify-center rounded-lg transition"
+							style={viewMode === 'ticket'
+								? `background-color: ${themeColor.bg}; color: ${themeColor.text}; box-shadow: 0 1px 3px rgba(0,0,0,0.08)`
+								: `color: ${themeColor.lightText}`}
+						>
+							<Icon icon="solar:widget-4-bold-duotone" class="h-4 w-4" />
+						</button>
+						<button
+							type="button"
+							aria-label="Compact stub view"
+							on:click={() => (viewMode = 'landscape')}
+							class="flex h-8 w-8 items-center justify-center rounded-lg transition"
+							style={viewMode === 'landscape'
+								? `background-color: ${themeColor.bg}; color: ${themeColor.text}; box-shadow: 0 1px 3px rgba(0,0,0,0.08)`
+								: `color: ${themeColor.lightText}`}
+						>
+							<Icon icon="solar:list-bold-duotone" class="h-4 w-4" />
+						</button>
+					</div>
 				</div>
 
 				{#if eventTags.length > 0}
@@ -406,90 +434,16 @@
 							</p>
 						</div>
 					{:else}
-						<div class="grid gap-4 sm:grid-cols-2">
+						<div class={viewMode === 'ticket' ? 'grid gap-5 sm:grid-cols-2 lg:grid-cols-3' : 'grid gap-4 lg:grid-cols-2'}>
 							{#each filteredEvents as event (event._id)}
-								{@const dt = formatEventDate(event.startDateTime)}
-								{@const loc = event.locationDetails?.physical?.venueName ?? (event.eventType === 'VIRTUAL' ? (event.locationDetails?.virtual?.platform ?? 'Online') : event.eventType === 'HYBRID' ? 'Hybrid' : 'TBD')}
-
-								<a href={event.customLinkSlug ? `/e/${event.customLinkSlug}` : `/event-page/${event._id}`}
-									target="_blank" rel="noopener noreferrer"
-									class="group flex flex-col gap-4 overflow-hidden rounded-2xl p-4 no-underline transition-shadow hover:shadow-md md:flex-row md:p-5"
-									style="background-color: {themeColor.cover}">
-									<!-- Event Image -->
-									<div class="relative h-44 w-full flex-shrink-0 overflow-hidden rounded-xl md:h-32 md:w-32">
-										{#if event.displayPictureUrl || event.coverPictureUrl}
-											<img src={event.displayPictureUrl || event.coverPictureUrl} alt={event.title}
-												class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-										{:else}
-											<div class="flex h-full w-full items-center justify-center" style="background-color: {themeColor.smallCover}">
-												<svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-													<rect x="3" y="4" width="18" height="18" rx="2" stroke="{themeColor.lightText}" stroke-width="1.5"/>
-													<path d="M3 10h18M8 2v4M16 2v4" stroke="{themeColor.lightText}" stroke-width="1.5" stroke-linecap="round"/>
-													<circle cx="12" cy="16" r="2" stroke="{themeColor.lightText}" stroke-width="1.5"/>
-												</svg>
-											</div>
-										{/if}
-										<!-- Date badge -->
-										<div class="absolute top-2 left-2 flex flex-col items-center rounded-lg px-2 py-1 text-center shadow-sm"
-											style="background-color: {themeColor.bg}">
-											<span class="text-[9px] font-bold" style="color: {themeColor.button}">{dt.month}</span>
-											<span class="text-base font-bold leading-tight" style="color: {themeColor.text}">{dt.day}</span>
-										</div>
-										<!-- Type badge -->
-										<div class="absolute top-2 right-2 rounded-md px-2 py-0.5 text-[10px] font-medium"
-											style="background-color: {themeColor.bg}; color: {themeColor.text}">
-											{event.eventType}
-										</div>
-									</div>
-
-									<!-- Event Info -->
-									<div class="flex flex-1 flex-col justify-between">
-										<div>
-											<p class="text-xs font-medium" style="color: {themeColor.button}">{dt.full}, {dt.time}</p>
-											<h3 class="mt-1 text-base font-semibold leading-snug" style="color: {themeColor.text}">{event.title}</h3>
-											{#if event.eventOrganizerName}
-												<div class="mt-1.5 flex items-center gap-1.5">
-													{#if event.organizerAvatarUrl}
-														<img src={event.organizerAvatarUrl} alt="" class="h-4 w-4 rounded-full object-cover" />
-													{/if}
-													<span class="text-xs" style="color: {themeColor.lightText}">By {event.eventOrganizerName}</span>
-												</div>
-											{/if}
-											<div class="mt-2 flex items-center gap-1.5">
-												<!-- Location icon (inline SVG for theme compatibility) -->
-												{#if event.eventType === 'VIRTUAL'}
-													<svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-														<path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" stroke="{themeColor.lightText}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-													</svg>
-												{:else}
-													<svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-														<path d="M12 21C12 21 20 15 20 9.5C20 5.36 16.42 2 12 2C7.58 2 4 5.36 4 9.5C4 15 12 21 12 21Z" stroke="{themeColor.lightText}" stroke-width="1.5"/>
-														<circle cx="12" cy="9.5" r="2.5" stroke="{themeColor.lightText}" stroke-width="1.5"/>
-													</svg>
-												{/if}
-												<span class="text-xs" style="color: {themeColor.lightText}">{loc}</span>
-											</div>
-										</div>
-										<div class="mt-3 flex items-center justify-between">
-											<div class="flex items-center gap-1.5">
-												<!-- People icon -->
-												<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-													<path d="M17 20c0-1.657-2.239-3-5-3s-5 1.343-5 3" stroke="{themeColor.lightText}" stroke-width="1.5" stroke-linecap="round"/>
-													<circle cx="12" cy="10" r="3" stroke="{themeColor.lightText}" stroke-width="1.5"/>
-													<path d="M20 18c0-1.105-1.343-2-3-2-.552 0-1.072.1-1.533.28" stroke="{themeColor.lightText}" stroke-width="1.5" stroke-linecap="round"/>
-													<circle cx="17" cy="10" r="2" stroke="{themeColor.lightText}" stroke-width="1.5"/>
-												</svg>
-												<span class="text-xs font-medium" style="color: {themeColor.lightText}">
-													{event.attendeeCount ?? 0} attending
-												</span>
-											</div>
-											<span class="rounded-full px-2.5 py-0.5 text-[10px] font-medium"
-												style="background-color: {themeColor.smallCover}; color: {themeColor.text}">
-												{event.registrationType === 'FREE' ? 'Free' : 'Paid'}
-											</span>
-										</div>
-									</div>
-								</a>
+								<EventCard
+									{event}
+									eventId={event._id}
+									slug={event.customLinkSlug}
+									theme={themeColor}
+									variant={viewMode}
+									interactiveTilt={viewMode === 'ticket'}
+								/>
 							{/each}
 						</div>
 					{/if}

@@ -88,7 +88,6 @@
 
 <svelte:head>
 	<title>Discover | Rondwell</title>
-	<meta name="theme-color" content="#e6e6fa" />
 	<meta name="description" content="Discover events, vendors, speakers, and exhibitors on Rondwell. Find conferences, meetups, workshops, and more." />
 	<meta property="og:title" content="Discover | Rondwell" />
 	<meta property="og:description" content="Discover events, vendors, speakers, and exhibitors on Rondwell." />

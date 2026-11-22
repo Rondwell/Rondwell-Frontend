@@ -69,15 +69,17 @@
 
 	{#each items as item}
 		<button
-			class={`flex flex-shrink-0 cursor-pointer items-center gap-3 rounded-md px-4 py-2 transition ${
-				activeItem === item.label ? 'selected text-[#DB3EC6]' : 'text-[#808080]'
+			class={`flex flex-shrink-0 cursor-pointer items-center gap-2.5 rounded-full px-3.5 py-1.5 text-xs font-semibold backdrop-blur-md transition active:scale-95 ${
+				activeItem === item.label
+					? 'border border-[#DB3EC6]/40 bg-[#DB3EC6]/15 text-[#DB3EC6] shadow-xs'
+					: 'border border-white/75 bg-white/65 text-[#5F6066] shadow-xs'
 			}`}
 			on:click={() => {
 				goto(item.nav);
 				activeItem = item.label;
 			}}
 		>
-			<span>{@html item.icon}</span>
+			<span class="[&>svg]:h-4 [&>svg]:w-4">{@html item.icon}</span>
 			{item.label}
 		</button>
 	{/each}

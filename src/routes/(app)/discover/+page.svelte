@@ -2,6 +2,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
+	import Icon from '@iconify/svelte';
 	import Footer from '../../(homePage)/components/Footer.svelte';
 	import Sidebar from '../components/Sidebar.svelte';
 	import EventList from './components/EventList.svelte';
@@ -107,16 +108,16 @@
 	<link rel="canonical" href="https://rondwell.com/discover" />
 </svelte:head>
 
-<div class="relative flex min-h-screen bg-[#F4F5F6] text-sm font-medium">
+<div class="relative flex min-h-screen text-sm font-medium" style="background: linear-gradient(180deg, #e6e6fa 0%, #f1effa 14%, #f4f5f6 34%);">
 	<!-- Sidebar -->
 	<div class="relative md:min-w-[117px] {show ? '' : 'hidden'}">
-		<Sidebar background_color="#F4F5F6" show={false} />
+		<Sidebar background_color="" {show} />
 	</div>
 	<main class="relative h-full w-full {show ? 'mb-[106px] md:mb-0' : ''}">
 		<div class={show ? 'hidden' : ''}>
 			<Header />
 		</div>
-		<div class="px-2 pt-7 md:px-3 lg:flex lg:pt-10">
+		<div class="mx-auto max-w-7xl px-2 pt-6 md:flex md:gap-5 md:px-4 lg:gap-6 lg:pt-10">
 			<!-- Sidebar -->
 			<DiscoverSidebar />
 
@@ -135,10 +136,12 @@
 				{:else if $discoverTab === 'Exhibitors'}
 					<ExhibitorList />
 				{:else if $discoverTab === 'Community'}
-					<div class="flex flex-col items-center justify-center gap-4 rounded-2xl bg-white py-20">
-						<p class="text-5xl">💬</p>
-						<h3 class="text-lg font-semibold text-gray-900">Community</h3>
-						<p class="max-w-sm text-center text-sm text-gray-500">Community features are coming soon. Stay tuned!</p>
+					<div class="flex flex-col items-center justify-center gap-3 rounded-3xl border border-black/8 bg-white/80 px-6 py-20 text-center shadow-[0_1px_3px_rgba(19,21,23,0.04)] backdrop-blur-md">
+						<div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#059669]/10 text-[#059669] ring-1 ring-[#059669]/15">
+							<Icon icon="solar:users-group-rounded-bold-duotone" class="h-7 w-7" />
+						</div>
+						<h3 class="text-lg font-bold tracking-tight text-[#17161E]">Community</h3>
+						<p class="max-w-sm text-sm text-[#5F5C6D]">Community spaces and curated event threads are coming soon. Stay tuned!</p>
 					</div>
 				{:else}
 					<EventList />

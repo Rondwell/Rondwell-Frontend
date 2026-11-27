@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { authState, isAuthenticated } from '$lib/stores/auth.store';
+	import { discoverTab, setTab, type DiscoverTab } from '$lib/stores/discover.store';
 	import { clickOutside } from '$lib/utils/constant';
 	import Icon from '@iconify/svelte';
 	import { onDestroy } from 'svelte';
@@ -13,18 +14,27 @@
 		currentUser = state.user;
 	});
 
-	const mobileNavLinks = [
+	const mobileNavLinks: Array<{
+		label: string;
+		subtitle: string;
+		href: string;
+		tab?: DiscoverTab;
+		icon: string;
+		iconBg: string;
+	}> = [
 		{
 			label: 'Discover Events',
 			subtitle: 'Concerts, summits & community mixers',
 			href: '/discover',
+			tab: 'Events',
 			icon: 'solar:compass-big-bold-duotone',
 			iconBg: 'bg-gradient-to-br from-[#DB3E6C]/15 to-[#AB46DD]/15 text-[#DB3E6C] ring-1 ring-[#DB3E6C]/15'
 		},
 		{
 			label: 'Marketplace',
 			subtitle: 'Verified vendors, speakers & exhibitors',
-			href: '/marketplace',
+			href: '/discover?tab=vendors',
+			tab: 'Vendors',
 			icon: 'solar:shop-2-bold-duotone',
 			iconBg: 'bg-gradient-to-br from-[#8B5CF6]/15 to-[#6366F1]/15 text-[#7C3AED] ring-1 ring-[#7C3AED]/15'
 		},
@@ -61,7 +71,15 @@
 
 		<!-- Center Links (Desktop) -->
 		<div class="hidden items-center gap-1 rounded-full border border-black/8 bg-white/80 p-1 text-sm font-medium text-[#3C3B47] md:flex">
-			<a href="/discover" class="flex items-center gap-1.5 rounded-full bg-black/5 px-3.5 py-1.5 font-semibold text-[#17161E] no-underline transition">
+			<a
+				href="/discover"
+				on:click={() => setTab('Events')}
+				class={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 no-underline transition ${
+					$discoverTab !== 'Vendors'
+						? 'bg-black/5 font-semibold text-[#17161E]'
+						: 'hover:bg-black/5'
+				}`}
+			>
 				<Icon icon="solar:compass-big-bold-duotone" class="h-4 w-4 text-[#DB3E6C]" />
 				<span>Discover</span>
 			</a>
@@ -69,7 +87,15 @@
 				<Icon icon="solar:verified-check-bold-duotone" class="h-4 w-4 text-[#059669]" />
 				<span>Pricing</span>
 			</a>
-			<a href="/marketplace" class="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 no-underline transition hover:bg-black/5">
+			<a
+				href="/discover?tab=vendors"
+				on:click={() => setTab('Vendors')}
+				class={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 no-underline transition ${
+					$discoverTab === 'Vendors'
+						? 'bg-black/5 font-semibold text-[#17161E]'
+						: 'hover:bg-black/5'
+				}`}
+			>
 				<Icon icon="solar:shop-2-bold-duotone" class="h-4 w-4 text-[#AB46DD]" />
 				<span>Marketplace</span>
 			</a>
@@ -137,7 +163,10 @@
 				{#each mobileNavLinks as item}
 					<a
 						href={item.href}
-						on:click={() => (isOpen = false)}
+						on:click={() => {
+							if (item.tab) setTab(item.tab);
+							isOpen = false;
+						}}
 						class="group flex items-center gap-3.5 rounded-2xl p-2.5 text-left no-underline transition-all hover:bg-black/[0.04] active:scale-[0.99]"
 					>
 						<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl {item.iconBg}">

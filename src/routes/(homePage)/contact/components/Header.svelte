@@ -38,7 +38,7 @@
 		{
 			label: 'Marketplace',
 			subtitle: 'Verified vendors, speakers & exhibitors',
-			href: '/marketplace',
+			href: '/discover?tab=vendors',
 			icon: 'solar:shop-2-bold-duotone',
 			iconBg: 'bg-gradient-to-br from-[#8B5CF6]/15 to-[#6366F1]/15 text-[#7C3AED] ring-1 ring-[#7C3AED]/15'
 		},

@@ -1,204 +1,268 @@
 <script lang="ts">
-	// Per-icon path, not the `lucide-svelte` barrel. The barrel re-exports ~3,000
-	// icon modules, and in dev SSR Vite fetches each one individually — one
-	// `Mail` import pulled the whole set into the module graph for `/`, pushing
-	// the first request past Vite's 60s transport timeout.
-	import Mail from 'lucide-svelte/icons/mail';
+	import Icon from '@iconify/svelte';
+
+	const currentYear = new Date().getFullYear();
+
+	const platformLinks = [
+		{ label: 'Discover Events', href: '/discover' },
+		{ label: 'Vendor Marketplace', href: '/discover?tab=vendors' },
+		{ label: 'Speakers Directory', href: '/discover?tab=speakers' },
+		{ label: 'Exhibitors', href: '/discover?tab=exhibitors' },
+		{ label: 'Create an Event', href: '/create-event' },
+		{ label: 'Pricing', href: '/pricing' }
+	];
+
+	const developerLinks = [
+		{ label: 'API & Web SDK Docs', href: '/api-docs' },
+		{ label: 'Event Page SDK', href: '/api-docs#sdk-event-page' },
+		{ label: 'Collection Web SDK', href: '/api-docs#sdk-collection' },
+		{ label: 'Webhooks & Security', href: '/api-docs#webhooks' },
+		{ label: 'Interactive Console', href: '/api-docs#console' },
+		{ label: 'Developer Settings', href: '/settings?tab=developers' }
+	];
+
+	const resourceLinks = [
+		{ label: 'Help Center', href: '/help-center' },
+		{ label: 'FAQ', href: '/faq' },
+		{ label: 'Contact Support', href: '/contact' },
+		{ label: 'Selling Tickets', href: '/help-center/selling-tickets' },
+		{ label: 'Understanding Analytics', href: '/help-center/understanding-analytics' }
+	];
+
+	const legalLinks = [
+		{ label: 'Terms of Service', href: '/terms' },
+		{ label: 'Privacy Policy', href: '/privacy' },
+		{ label: 'Refund Policy', href: '/legal/refund-policy' },
+		{ label: 'AML Policy', href: '/legal/aml-policy' },
+		{ label: 'KYC Policy', href: '/legal/kyc-policy' },
+		{ label: 'Data Retention', href: '/legal/data-retention' },
+		{ label: 'Vendor Payouts', href: '/legal/vendor-payout-policy' },
+		{ label: 'PCI Scope', href: '/legal/pci-scope' }
+	];
 </script>
 
-<footer class="flex min-h-[300px] w-full items-center justify-center bg-[#F4F5F6] px-4">
-	<div
-		class="flex h-[200px] w-full items-center justify-center border-t border-[#E2E4E5] py-6 md:h-[150px] md:max-w-5xl"
-	>
-		<div class="flex w-full flex-wrap items-center justify-between gap-4">
-			<div class="flex w-full flex-col gap-3 md:w-auto">
-				<div class="flex w-full gap-5">
-					<!-- Logo -->
-					<a href="/" class="text-xl font-bold text-indigo-600">
-						<img
-							src="/logo.svg"
-							alt="Rondwell Logo"
-							class="h-[20.98px] w-[68.18px] object-contain"
-						/>
+<footer class="w-full border-t border-black/8 bg-[#FAF9FC] text-[#17161E]">
+	<div class="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+		<!-- Obsidian Brand & Developer CTA Banner -->
+		<div
+			class="relative overflow-hidden rounded-[24px] border border-white/10 bg-[#14131A] p-6 text-white shadow-[0_24px_60px_-20px_rgba(20,19,26,0.45)] sm:rounded-[28px] sm:p-8 lg:p-10"
+		>
+			<div
+				class="pointer-events-none absolute -top-24 -left-16 h-64 w-64 rounded-full bg-[#DB3E6C]/25 blur-3xl"
+				aria-hidden="true"
+			></div>
+			<div
+				class="pointer-events-none absolute -right-16 -bottom-24 h-72 w-72 rounded-full bg-[#513BE2]/30 blur-3xl"
+				aria-hidden="true"
+			></div>
+
+			<div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+				<div class="max-w-2xl space-y-2.5">
+					<span
+						class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-[0.12em] text-purple-200 uppercase"
+					>
+						<Icon icon="solar:bolt-bold-duotone" class="h-3.5 w-3.5 text-[#F472B6]" />
+						<span>Rondwell Event Infrastructure</span>
+					</span>
+					<h2 class="text-xl font-bold tracking-tight text-white sm:text-2xl lg:text-3xl">
+						Host unforgettable rooms — or embed Rondwell inside your own product.
+					</h2>
+					<p class="text-xs leading-relaxed text-slate-300 sm:text-sm">
+						From sold-out concerts and tech conferences to programmable REST APIs, interactive seat pickers, and drop-in Web SDK modals.
+					</p>
+				</div>
+
+				<div class="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row sm:items-center lg:shrink-0">
+					<a
+						href="/create-event"
+						class="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#DB3E6C] via-[#AB46DD] to-[#513BE2] px-5 py-2.5 text-sm font-semibold text-white no-underline shadow-lg transition hover:opacity-95 sm:w-auto"
+					>
+						<Icon icon="solar:magic-stick-3-bold-duotone" class="h-4 w-4" />
+						<span>Create an Event</span>
 					</a>
-
-					<!-- Nav Links -->
-					<div class="flex flex-row space-x-8">
-						<a
-							href="/api-docs"
-							class="merriweather-sans text-[15px] font-bold text-nowrap text-[#7A7B7E] transition-colors hover:text-[#111827]"
-							>API Docs</a
-						>
-						<a
-							href="/discover"
-							class="merriweather-sans text-[15px] font-bold text-[#7A7B7E] transition-colors"
-							>Discover</a
-						>
-						<a
-							href="/pricing"
-							class="merriweather-sans text-[15px] font-bold text-[#7A7B7E] transition-colors"
-							>Pricing</a
-						>
-					</div>
-				</div>
-				<div class="flex flex-wrap space-x-8">
 					<a
-						href="/terms"
-						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
-						>Terms</a
+						href="/api-docs"
+						class="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white no-underline backdrop-blur-md transition hover:bg-white/15 sm:w-auto"
 					>
-					<a
-						href="/privacy"
-						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
-						>Privacy Policy</a
-					>
-					<a
-						href="/faq"
-						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
-						>FAQ</a
-					>
-
-					<a
-						href="/help-center"
-						class="merriweather-sans text-[15px] font-normal text-[#A9AAAA] transition-colors"
-						>Help Center</a
-					>
-				</div>
-				<!-- FE-P4-10 — Compliance documentation links. -->
-				<div class="flex flex-wrap gap-x-5 gap-y-1">
-					<a
-						href="/legal/refund-policy"
-						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
-						>Refund Policy</a
-					>
-					<a
-						href="/legal/aml-policy"
-						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
-						>AML</a
-					>
-					<a
-						href="/legal/kyc-policy"
-						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
-						>KYC</a
-					>
-					<a
-						href="/legal/data-retention"
-						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
-						>Data Retention</a
-					>
-					<a
-						href="/legal/vendor-payout-policy"
-						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
-						>Vendor Payouts</a
-					>
-					<a
-						href="/legal/pci-scope"
-						class="merriweather-sans text-[12.5px] font-normal text-[#A9AAAA]/80 transition-colors"
-						>PCI</a
-					>
+						<Icon icon="solar:code-square-bold-duotone" class="h-4 w-4 text-purple-200" />
+						<span>Explore API &amp; SDKs</span>
+					</a>
 				</div>
 			</div>
-			<div class="flex w-full flex-col gap-2 md:w-auto md:items-end md:gap-1">
-				<div class="flex w-full flex-row gap-5 md:w-auto">
-					<a
-						href="tel:+ +2349165904428"
-						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"
-						aria-label="Phone"
-					>
-						<svg
-							width="21"
-							height="21"
-							viewBox="0 0 21 21"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								d="M13.85 12.94C13.27 12.82 12.69 13.01 12.27 13.43L11.37 14.33C9.77 13.46 8.45 12.14 7.58 10.54L8.49 9.63C8.91 9.21 9.1 8.63 8.98 8.05L8.46 5.92C8.32 5.33 7.8 4.92 7.19 4.92H5.78C4.66 4.92 3.74 5.84 3.8 6.96C4.25 14.1 9.9 19.75 17.04 20.2C18.16 20.26 19.08 19.34 19.08 18.22V16.81C19.08 16.2 18.67 15.68 18.08 15.54L15.95 15.02Z"
-								stroke="#AEA3C8"
-								stroke-width="1.5"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-						</svg>
+		</div>
+
+		<!-- Main Multi-Column Navigation -->
+		<div class="mt-10 grid grid-cols-2 gap-x-6 gap-y-10 sm:mt-12 sm:grid-cols-3 lg:grid-cols-12">
+			<!-- Brand Column -->
+			<div class="col-span-2 space-y-5 sm:col-span-3 lg:col-span-4">
+				<div class="space-y-3">
+					<a href="/" class="inline-flex items-center gap-2 no-underline">
+						<img src="/logo.svg" alt="Rondwell" class="h-7 w-auto object-contain" />
 					</a>
+					<p class="max-w-sm text-xs leading-relaxed text-[#5F5C6D] sm:text-sm">
+						Africa’s modern event infrastructure for ticketing, spatial seating, exhibitor ecosystems, real-time analytics, and developer-first Web SDKs.
+					</p>
+				</div>
+
+				<a
+					href="/api-docs"
+					class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1 text-xs font-medium text-emerald-800 no-underline transition hover:bg-emerald-100"
+				>
+					<span class="relative flex h-2 w-2">
+						<span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+						<span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+					</span>
+					<span>All systems operational · API v1</span>
+				</a>
+
+				<div class="space-y-2 text-xs text-[#5F5C6D]">
+					<div class="flex items-center gap-2">
+						<Icon icon="solar:map-point-bold-duotone" class="h-4 w-4 shrink-0 text-[#AB46DD]" />
+						<span>Surulere, Lagos State, Nigeria</span>
+					</div>
+					<div class="flex items-center gap-2">
+						<Icon icon="solar:letter-bold-duotone" class="h-4 w-4 shrink-0 text-[#DB3E6C]" />
+						<a href="mailto:info@rondwell.com" class="text-[#3C3947] no-underline transition hover:text-[#17161E]">
+							info@rondwell.com
+						</a>
+					</div>
+					<div class="flex items-center gap-2">
+						<Icon icon="solar:phone-calling-rounded-bold-duotone" class="h-4 w-4 shrink-0 text-[#513BE2]" />
+						<a href="tel:+2349165904428" class="text-[#3C3947] no-underline transition hover:text-[#17161E]">
+							+234 916 590 4428
+						</a>
+					</div>
+				</div>
+
+				<!-- Social & Contact Icon Pills -->
+				<div class="flex flex-wrap items-center gap-2.5 pt-1">
 					<a
 						href="https://www.linkedin.com/company/rondwell"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"
-						aria-label="LinkedIn"
+						aria-label="Rondwell on LinkedIn"
+						class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-[#4A4754] shadow-2xs transition hover:-translate-y-0.5 hover:border-[#7C3AED]/40 hover:text-[#7C3AED]"
 					>
-						<svg
-							width="18"
-							height="18"
-							viewBox="0 0 18 18"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
+						<svg class="h-4 w-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
 							<path
-								d="M0 1.27797C0 0.572165 0.572164 0 1.27796 0H16.7265C17.4323 0 18.0045 0.572166 18.0045 1.27797V16.7265C18.0045 17.4323 17.4323 18.0045 16.7265 18.0045H1.27797C0.572165 18.0045 0 17.4323 0 16.7265V1.27797Z"
-								fill="#AEA3C8"
+								d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"
 							/>
-							<path
-								d="M4.04089 5.59131C4.9035 5.59131 5.60278 4.89203 5.60278 4.02942C5.60278 3.16681 4.9035 2.46753 4.04089 2.46753C3.17828 2.46753 2.479 3.16681 2.479 4.02942C2.479 4.89203 3.17828 5.59131 4.04089 5.59131Z"
-								fill="white"
-							/>
-							<path
-								d="M7.0332 6.74559H9.62175V7.93142C9.62175 7.93142 10.3242 6.52654 12.2354 6.52654C13.9403 6.52654 15.3527 7.36642 15.3527 9.92644V15.3248H12.6702V10.5806C12.6702 9.07041 11.8639 8.90431 11.2496 8.90431C9.97456 8.90431 9.75627 10.0041 9.75627 10.7776V15.3248H7.0332V6.74559Z"
-								fill="white"
-							/>
-							<path d="M2.67935 6.7456H5.40243V15.3248H2.67935V6.7456Z" fill="white" />
 						</svg>
 					</a>
 					<a
 						href="https://web.facebook.com/rondwellhq/"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"
-						aria-label="Facebook"
+						aria-label="Rondwell on Facebook"
+						class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-[#4A4754] shadow-2xs transition hover:-translate-y-0.5 hover:border-[#7C3AED]/40 hover:text-[#7C3AED]"
 					>
-						<svg
-							width="21"
-							height="21"
-							viewBox="0 0 21 21"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
+						<svg class="h-4 w-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
 							<path
-								d="M12.3 8.06998V10.68H14.64C14.82 10.68 14.91 10.86 14.91 11.04L14.55 12.75C14.55 12.84 14.37 12.93 14.28 12.93H12.3V19.5H9.60005V13.02H8.07005C7.89005 13.02 7.80005 12.93 7.80005 12.75V11.04C7.80005 10.86 7.89005 10.77 8.07005 10.77H9.60005V7.79998C9.60005 6.26998 10.77 5.09998 12.3 5.09998H14.73C14.91 5.09998 15 5.18998 15 5.36998V7.52998C15 7.70998 14.91 7.79998 14.73 7.79998H12.57C12.39 7.79998 12.3 7.88998 12.3 8.06998Z"
-								stroke="#AEA3C8"
-								stroke-width="1.5"
-								stroke-miterlimit="10"
-								stroke-linecap="round"
-							/>
-							<path
-								d="M13.2 19.5H7.8C3.3 19.5 1.5 17.7 1.5 13.2V7.8C1.5 3.3 3.3 1.5 7.8 1.5H13.2C17.7 1.5 19.5 3.3 19.5 7.8V13.2C19.5 17.7 17.7 19.5 13.2 19.5Z"
-								stroke="#AEA3C8"
-								stroke-width="1.5"
-								stroke-linecap="round"
-								stroke-linejoin="round"
+								d="M14 13.5h2.5l1-4H14v-2c0-1.03 0-2 2-2h1.5V2.14c-.326-.043-1.557-.14-2.857-.14C11.928 2 10 3.657 10 6.7v2.8H7v4h3V22h4v-8.5z"
 							/>
 						</svg>
 					</a>
 					<a
 						href="mailto:info@rondwell.com"
-						target="_blank"
-						rel="noopener noreferrer"
-						class="merriweather-sans text-[15px] font-light text-[#A9AAAA] transition-colors"
+						aria-label="Email Rondwell"
+						class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-[#4A4754] shadow-2xs transition hover:-translate-y-0.5 hover:border-[#DB3E6C]/40 hover:text-[#DB3E6C]"
 					>
-						<Mail size={18} />
+						<Icon icon="solar:letter-linear" class="h-4 w-4" />
+					</a>
+					<a
+						href="tel:+2349165904428"
+						aria-label="Call Rondwell"
+						class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-[#4A4754] shadow-2xs transition hover:-translate-y-0.5 hover:border-[#513BE2]/40 hover:text-[#513BE2]"
+					>
+						<Icon icon="solar:phone-linear" class="h-4 w-4" />
 					</a>
 				</div>
-				<p class="text-sm text-[#A9AAAA]">Surulere, Lagos State, Nigeria.</p>
 			</div>
-			<div class="w-full md:mt-4 md:text-center">
-				<div
-					class="merriweather-sans flex items-center gap-1 bg-gradient-to-r from-[#DB3EC6] to-[#513BE2] bg-clip-text text-[14.25px] text-transparent md:justify-center"
-				>
-					Organize your event with Rondwell
 
-					<img src="/send-icon.svg" alt="send icon" class="self-start" />
-				</div>
+			<!-- Platform Links -->
+			<div class="col-span-1 lg:col-span-2">
+				<h3 class="text-[11px] font-bold tracking-[0.14em] text-[#7A7787] uppercase">Platform</h3>
+				<ul class="mt-3.5 space-y-2.5 text-sm">
+					{#each platformLinks as link}
+						<li>
+							<a href={link.href} class="text-[#3D3A49] no-underline transition hover:text-[#17161E]">
+								{link.label}
+							</a>
+						</li>
+					{/each}
+				</ul>
+			</div>
+
+			<!-- Developers Links -->
+			<div class="col-span-1 lg:col-span-2">
+				<h3 class="text-[11px] font-bold tracking-[0.14em] text-[#7A7787] uppercase">Developers</h3>
+				<ul class="mt-3.5 space-y-2.5 text-sm">
+					{#each developerLinks as link}
+						<li>
+							<a href={link.href} class="text-[#3D3A49] no-underline transition hover:text-[#7C3AED]">
+								{link.label}
+							</a>
+						</li>
+					{/each}
+				</ul>
+			</div>
+
+			<!-- Resources Links -->
+			<div class="col-span-1 lg:col-span-2">
+				<h3 class="text-[11px] font-bold tracking-[0.14em] text-[#7A7787] uppercase">Resources</h3>
+				<ul class="mt-3.5 space-y-2.5 text-sm">
+					{#each resourceLinks as link}
+						<li>
+							<a href={link.href} class="text-[#3D3A49] no-underline transition hover:text-[#17161E]">
+								{link.label}
+							</a>
+						</li>
+					{/each}
+				</ul>
+			</div>
+
+			<!-- Legal & Compliance Links (FE-P4-10) -->
+			<div class="col-span-1 lg:col-span-2">
+				<h3 class="text-[11px] font-bold tracking-[0.14em] text-[#7A7787] uppercase">Legal &amp; Trust</h3>
+				<ul class="mt-3.5 space-y-2.5 text-sm">
+					{#each legalLinks as link}
+						<li>
+							<a href={link.href} class="text-[#5F5C6D] no-underline transition hover:text-[#17161E]">
+								{link.label}
+							</a>
+						</li>
+					{/each}
+				</ul>
+			</div>
+		</div>
+
+		<!-- Bottom Trust & Copyright Bar -->
+		<div
+			class="mt-12 flex flex-col gap-4 border-t border-black/8 pt-6 text-xs text-[#6B6878] sm:flex-row sm:items-center sm:justify-between"
+		>
+			<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+				<span>© {currentYear} Rondwell. All rights reserved.</span>
+				<span class="hidden text-black/20 sm:inline">•</span>
+				<span
+					class="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#DB3E6C] via-[#AB46DD] to-[#513BE2] bg-clip-text font-semibold text-transparent"
+				>
+					Organize unforgettable events with Rondwell
+					<img src="/send-icon.svg" alt="" class="h-3.5 w-3.5 object-contain" />
+				</span>
+			</div>
+
+			<div class="flex flex-wrap items-center gap-2">
+				<span class="inline-flex items-center gap-1 rounded-full border border-black/8 bg-white px-2.5 py-1 text-[11px] font-medium text-[#4A4754]">
+					<Icon icon="solar:shield-check-bold-duotone" class="h-3.5 w-3.5 text-emerald-600" />
+					PCI-Scoped Checkout
+				</span>
+				<span class="inline-flex items-center gap-1 rounded-full border border-black/8 bg-white px-2.5 py-1 text-[11px] font-medium text-[#4A4754]">
+					<Icon icon="solar:key-minimalistic-square-2-bold-duotone" class="h-3.5 w-3.5 text-purple-600" />
+					HMAC Webhooks
+				</span>
+				<span class="inline-flex items-center gap-1 rounded-full border border-black/8 bg-white px-2.5 py-1 text-[11px] font-medium text-[#4A4754]">
+					NGN · USD Multi-Currency
+				</span>
 			</div>
 		</div>
 	</div>

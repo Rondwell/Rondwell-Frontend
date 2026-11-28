@@ -47,6 +47,13 @@
 			href: '/help-center',
 			icon: 'solar:question-circle-bold-duotone',
 			iconBg: 'bg-gradient-to-br from-[#0EA5E9]/15 to-[#2563EB]/15 text-[#2563EB] ring-1 ring-[#2563EB]/15'
+		},
+		{
+			label: 'Developers & API',
+			subtitle: 'REST APIs, Web SDK modals & webhooks',
+			href: '/api-docs',
+			icon: 'solar:code-square-bold-duotone',
+			iconBg: 'bg-gradient-to-br from-[#7C3AED]/15 to-[#513BE2]/15 text-[#7C3AED] ring-1 ring-[#7C3AED]/15'
 		}
 	];
 
@@ -100,6 +107,13 @@
 			>
 				<Icon icon="solar:shop-2-bold-duotone" class="h-4 w-4 text-[#AB46DD]" />
 				<span>Marketplace</span>
+			</a>
+			<a
+				href="/api-docs"
+				class="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium text-[#2A2933] no-underline transition hover:bg-black/5"
+			>
+				<Icon icon="solar:code-square-bold-duotone" class="h-4 w-4 text-[#7C3AED]" />
+				<span>Developers</span>
 			</a>
 		</nav>
 

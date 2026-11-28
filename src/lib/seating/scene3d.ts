@@ -428,6 +428,7 @@ export function createSeatScene(
 		sceneSeats[i] = { ...sceneSeats[i], status };
 		seatMesh.setColorAt(i, tmpColor.setHex(colorFor(sceneSeats[i])));
 		if (seatMesh.instanceColor) seatMesh.instanceColor.needsUpdate = true;
+		requestRender();
 	}
 
 	function setSelection(seatIds: string[]) {
@@ -446,6 +447,7 @@ export function createSeatScene(
 			seatMesh.setColorAt(i, tmpColor.setHex(colorFor(sceneSeats[i])));
 		}
 		if (seatMesh.instanceColor) seatMesh.instanceColor.needsUpdate = true;
+		requestRender();
 	}
 
 	/**
@@ -544,7 +546,28 @@ export function createSeatScene(
 	canvas.addEventListener('pointerdown', onPointerDown);
 	canvas.addEventListener('pointerup', onPointerUp);
 
-	// ── Render loop ───────────────────────────────────────────────────
+	// ── Demand-driven render loop ─────────────────────────────────────
+	let renderQueued = false;
+	let frame = 0;
+
+	function requestRender() {
+		if (disposed || renderQueued) return;
+		renderQueued = true;
+		frame = requestAnimationFrame(() => {
+			renderQueued = false;
+			if (disposed) return;
+			// OrbitControls damping returns true while momentum is settling.
+			const dampingActive = controls.update();
+			renderer.render(scene, camera);
+			if (!ready) {
+				ready = true;
+				opts.onReady?.();
+			}
+			if (dampingActive) requestRender();
+		});
+	}
+
+	controls.addEventListener('change', requestRender);
 
 	function resize() {
 		const parent = canvas.parentElement;
@@ -553,21 +576,12 @@ export function createSeatScene(
 		renderer.setSize(w, h, false);
 		camera.aspect = w / h;
 		camera.updateProjectionMatrix();
+		requestRender();
 	}
 	resize();
 
-	let frame = 0;
-	function loop() {
-		if (disposed) return;
-		frame = requestAnimationFrame(loop);
-		controls.update();
-		renderer.render(scene, camera);
-		if (!ready) {
-			ready = true;
-			opts.onReady?.();
-		}
-	}
-	loop();
+	// Trigger initial frame after scene setup
+	requestRender();
 
 	// ── Teardown ──────────────────────────────────────────────────────
 
@@ -575,6 +589,7 @@ export function createSeatScene(
 		if (disposed) return;
 		disposed = true;
 		cancelAnimationFrame(frame);
+		controls.removeEventListener('change', requestRender);
 
 		canvas.removeEventListener('pointermove', onPointerMove);
 		canvas.removeEventListener('pointerdown', onPointerDown);

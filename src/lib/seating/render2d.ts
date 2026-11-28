@@ -516,6 +516,11 @@ export function drawSeatMap(ctx: CanvasRenderingContext2D, o: RenderOptions): vo
 	const { viewport: vp, width, height } = o;
 	const dark = o.theme === 'dark';
 
+	// Preserve any DPR transform already applied by `sizeCanvas()`. Calling
+	// `ctx.setTransform(vp.zoom, ...)` wiped `dpr` and rendered blurry 1x on Retina.
+	const currentTransform = ctx.getTransform();
+	const dpr = currentTransform.a || 1;
+
 	ctx.save();
 	ctx.clearRect(0, 0, width, height);
 	ctx.fillStyle = dark ? '#0b0b12' : '#f8f7fa';
@@ -527,7 +532,7 @@ export function drawSeatMap(ctx: CanvasRenderingContext2D, o: RenderOptions): vo
 	const viewMaxX = (width - vp.x) / vp.zoom;
 	const viewMaxY = (height - vp.y) / vp.zoom;
 
-	ctx.setTransform(vp.zoom, 0, 0, vp.zoom, vp.x, vp.y);
+	ctx.setTransform(vp.zoom * dpr, 0, 0, vp.zoom * dpr, vp.x * dpr, vp.y * dpr);
 
 	// ── Grid ──
 	if (o.showGrid) {
@@ -782,7 +787,6 @@ export function drawSeatMap(ctx: CanvasRenderingContext2D, o: RenderOptions): vo
 	}
 
 	ctx.restore();
-	ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 /**

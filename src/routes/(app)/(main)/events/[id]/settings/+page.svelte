@@ -10,6 +10,7 @@
 	import CloneEventModal from './components/CloneEventModal.svelte';
 	import DeleteEventModal from './components/DeleteEventModal.svelte';
 	import TransferEventModal from './components/TransferEventModal.svelte';
+	import EventDeveloperStudio from './components/EventDeveloperStudio.svelte';
 
 	$: eventId = $page.params.id;
 
@@ -1127,141 +1128,7 @@
 	</div>
 
 	{:else if activeTab === 'developer-tools'}
-
-	<!-- Embed Event Section -->
-	<div class="mb-6 sm:mb-8">
-		<h2 class="mb-2 text-lg font-semibold sm:text-xl">Embed Event</h2>
-		<p class="mb-4 text-xs text-gray-600 sm:mb-6 sm:text-sm">
-			Have your own site? Embed the event to let visitors know about it.
-		</p>
-
-		<div class="my-4 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-			{#each embedAs as embed}
-				<button
-					class="flex w-full items-center justify-between gap-2 rounded-[12.75px] bg-[#FDFDFD] p-2.5 text-xs font-medium shadow-sm transition-all hover:shadow-md sm:w-70 sm:p-2 sm:text-sm"
-					on:click={() => (selectedEmbed = embed.name)}
-				>
-					<div class="flex min-w-0 items-center gap-2">
-						<div class="flex h-[44px] w-[44px] flex-shrink-0 items-center justify-center rounded-sm bg-[#FBDEEC]">
-							<p>{@html embed.svg}</p>
-						</div>
-						<span class="truncate">{embed.name}</span>
-					</div>
-					{#if selectedEmbed === embed.name}
-						<div class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#F31A7C]">
-							<Icon icon="mdi:tick" class="text-xl text-white" />
-						</div>
-					{/if}
-				</button>
-			{/each}
-		</div>
-
-		<div class="my-4 sm:my-6">
-			<p class="mb-2 text-sm text-gray-600 sm:mb-3 sm:text-base">
-				Paste the following HTML code snippet to your page.
-			</p>
-			<div class="relative md:max-w-158 lg:max-w-auto">
-				<div class="custom-scrollbar overflow-x-auto rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-sm sm:p-5 sm:text-sm">
-					<pre class=""><code>{escapeHtml(eventData.embedCode)}</code></pre>
-				</div>
-				<button
-					on:click={() => copyToClipboard(eventData.embedCode)}
-					class="absolute top-3 right-3 flex items-center gap-1 rounded-md bg-[#F6F6F6] p-2 text-xs font-medium text-[#616265] transition-colors hover:bg-gray-100 sm:top-4 sm:right-4"
-				>
-					<img src="/copy.svg" alt="" />
-					Copy
-				</button>
-			</div>
-		</div>
-
-		<div class="mb-4 sm:mb-6">
-			<p class="my-2 text-xs text-gray-600 sm:my-3 sm:text-sm">
-				This gives you the following button. Click to see it in action!
-			</p>
-			<div class="relative flex justify-center overflow-hidden rounded-lg">
-				<img src="/embed-bg.png" alt="" class="h-full min-h-40 w-full object-cover sm:min-h-48" />
-				<button class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform rounded-xl bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 sm:px-6 sm:py-3 sm:text-base">
-					Register for Event
-				</button>
-			</div>
-		</div>
-
-		<div class="mb-4 sm:mb-6">
-			<p class="mb-2 text-xs text-gray-600 sm:mb-3 sm:text-sm">
-				If you want to use your own styling for the button, simply remove the luma-checkout--button
-				class from the snippet above.
-			</p>
-			<p class="text-xs text-gray-600 sm:text-sm">
-				For advanced usage, check out our <span class="cursor-pointer font-medium text-pink-600 hover:text-pink-700">example code and documentation</span>.
-			</p>
-		</div>
-	</div>
-
-	<!-- SDK Setup Section -->
-	<div class="mt-6 mb-6 border-t pt-6 sm:mt-8 sm:mb-8 sm:pt-8">
-		<h2 class="mb-2 text-lg font-semibold sm:text-xl">SDK Setup</h2>
-		<p class="mb-4 text-xs text-gray-600 sm:mb-6 sm:text-sm">
-			Integrate Rondwell into your application using our SDK. Access event data, manage registrations, and more programmatically.
-		</p>
-
-		<div class="space-y-4">
-			<div class="rounded-lg border border-gray-200 bg-white p-4">
-				<div class="flex items-center gap-3 mb-3">
-					<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FBDEEC]">
-						<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.66667 7.5L3.33333 10L6.66667 12.5" stroke="#F31A7C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.3333 7.5L16.6667 10L13.3333 12.5" stroke="#F31A7C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.6667 5L8.33333 15" stroke="#F31A7C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</div>
-					<div>
-						<p class="text-sm font-medium text-gray-900">JavaScript SDK</p>
-						<p class="text-xs text-gray-500">npm install @rondwell/sdk</p>
-					</div>
-				</div>
-				<div class="relative">
-					<div class="custom-scrollbar overflow-x-auto rounded-lg border border-gray-200 bg-[#F9FAFB] p-3 text-xs sm:text-sm">
-						<pre><code>import Rondwell from '@rondwell/sdk';
-
-const rondwell = new Rondwell('your-api-key');
-
-// Fetch event details
-const event = await rondwell.events.get('EVENT_ID');
-
-// List registrations
-const registrations = await rondwell.events.registrations('EVENT_ID');</code></pre>
-					</div>
-				</div>
-			</div>
-
-			<div class="rounded-lg border border-gray-200 bg-white p-4">
-				<div class="flex items-center gap-3 mb-3">
-					<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E2E8FC]">
-						<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 18.3333C14.6024 18.3333 18.3333 14.6024 18.3333 10C18.3333 5.39763 14.6024 1.66667 10 1.66667C5.39763 1.66667 1.66667 5.39763 1.66667 10C1.66667 14.6024 5.39763 18.3333 10 18.3333Z" stroke="#146AEB" stroke-width="1.5"/><path d="M6.66667 10H13.3333" stroke="#146AEB" stroke-width="1.5" stroke-linecap="round"/><path d="M10 6.66667V13.3333" stroke="#146AEB" stroke-width="1.5" stroke-linecap="round"/></svg>
-					</div>
-					<div>
-						<p class="text-sm font-medium text-gray-900">REST API</p>
-						<p class="text-xs text-gray-500">Base URL: https://api.rondwell.com/v1</p>
-					</div>
-				</div>
-				<p class="text-xs text-gray-600 sm:text-sm">
-					Access the full API documentation at <span class="cursor-pointer font-medium text-pink-600 hover:text-pink-700">docs.rondwell.com/api</span>
-				</p>
-			</div>
-
-			<div class="rounded-lg border border-gray-200 bg-white p-4">
-				<div class="flex items-center gap-3 mb-3">
-					<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FFF3E0]">
-						<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.5 5.83333V14.1667C17.5 16.6667 16.25 18.3333 13.3333 18.3333H6.66667C3.75 18.3333 2.5 16.6667 2.5 14.1667V5.83333C2.5 3.33333 3.75 1.66667 6.66667 1.66667H13.3333C16.25 1.66667 17.5 3.33333 17.5 5.83333Z" stroke="#FF9800" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M12.0833 3.75V5.41667C12.0833 6.33333 12.8333 7.08333 13.75 7.08333H15.4167" stroke="#FF9800" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.66667 10.8333H10" stroke="#FF9800" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.66667 14.1667H13.3333" stroke="#FF9800" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
-					</div>
-					<div>
-						<p class="text-sm font-medium text-gray-900">Webhooks</p>
-						<p class="text-xs text-gray-500">Receive real-time event notifications</p>
-					</div>
-				</div>
-				<p class="text-xs text-gray-600 sm:text-sm">
-					Configure webhook endpoints to receive notifications for registrations, check-ins, and payment events.
-				</p>
-			</div>
-		</div>
-	</div>
-
+	<EventDeveloperStudio event={rawEvent} eventId={eventId ?? ''} />
 	{/if}
 </div>
 {/if}

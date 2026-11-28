@@ -25,8 +25,8 @@
 					<!-- Nav Links -->
 					<div class="flex flex-row space-x-8">
 						<a
-							href="https://rondwell.com/api-docs"
-							class="merriweather-sans text-[15px] font-bold text-nowrap text-[#7A7B7E] transition-colors"
+							href="/api-docs"
+							class="merriweather-sans text-[15px] font-bold text-nowrap text-[#7A7B7E] transition-colors hover:text-[#111827]"
 							>API Docs</a
 						>
 						<a

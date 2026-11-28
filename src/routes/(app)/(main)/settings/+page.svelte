@@ -9,6 +9,7 @@
 	import PaymentMethods from './Components/PaymentMethods.svelte';
 	import Subscription from './Components/Subscription.svelte';
 	import Wallet from './Components/Wallet.svelte';
+	import DevelopersTab from './Components/developers/DevelopersTab.svelte';
 
 	let activeTab = 'account';
 
@@ -66,6 +67,11 @@
 			id: 'orders',
 			label: 'Orders',
 			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 2.5H3.83333L5.5 12.5H15.5L17.5 5.83333H4.83333" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.66667 17.5C7.35702 17.5 7.91667 16.9404 7.91667 16.25C7.91667 15.5596 7.35702 15 6.66667 15C5.97631 15 5.41667 15.5596 5.41667 16.25C5.41667 16.9404 5.97631 17.5 6.66667 17.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.1667 17.5C14.857 17.5 15.4167 16.9404 15.4167 16.25C15.4167 15.5596 14.857 15 14.1667 15C13.4763 15 12.9167 15.5596 12.9167 16.25C12.9167 16.9404 13.4763 17.5 14.1667 17.5Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+		},
+		{
+			id: 'developers',
+			label: 'Developers & API',
+			icon: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 6.5L2.5 10L6.5 13.5M13.5 6.5L17.5 10L13.5 13.5M11.5 4.5L8.5 15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 		}
 	];
 </script>
@@ -99,5 +105,7 @@
 		<Subscription />
 	{:else if activeTab === 'orders'}
 		<Orders />
+	{:else if activeTab === 'developers'}
+		<DevelopersTab />
 	{/if}
 </div>

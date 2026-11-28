@@ -1,268 +1,267 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { writable } from 'svelte/store';
-	import SelectDropdown from '../../components/SelectDropdown.svelte';
+	import { page } from '$app/stores';
+	import { getMyCollections, updateCollection } from '$lib/services/event.services';
+	import { listApiKeys, type ApiKeyItem } from '$lib/services/developer.services';
+	import { toast } from '$lib/stores/toast.store';
 
-	let selected: string | null = null;
-	const options = ['Main', 'New Tag', 'Crypto'];
+	$: collectionId = $page.params.id ?? '';
 
-	type Theme = 'light' | 'dark';
+	let loading = true;
+	let saving = false;
+	let collectionSlug = '';
+	let collectionName = 'Collection';
+	let publishableKeys: ApiKeyItem[] = [];
+	let selectedPk = 'rw_live_pub_your_publishable_key';
+	let snippetTab: 'html' | 'js' | 'react' | 'iframe' = 'html';
 
-	const theme = writable<Theme>('light');
-	let mounted = false;
+	// Collection SDK configuration
+	let layout: 'grid' | 'list' | 'cards' = 'grid';
+	let theme: 'light' | 'dark' = 'light';
+	let primaryColor = '#7C3AED';
+	let backgroundColor = '#FFFFFF';
+	let textColor = '#111827';
+	let borderRadius = 12;
+	let openMode: 'modal' | 'inline' | 'new_tab' = 'modal';
+	let showSearch = true;
+	let showTags = true;
+	let showPastEvents = false;
+	let redirectUrl = '';
 
-	onMount(() => {
-		mounted = true;
-
-		const stored = localStorage.getItem('theme') as Theme | null;
-		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-		if (stored) {
-			theme.set(stored);
-		} else if (prefersDark) {
-			theme.set('dark');
-		}
-
-		const unsubscribe = theme.subscribe((value) => {
-			localStorage.setItem('theme', value);
-
-			if (value === 'dark') {
-				document.documentElement.classList.add('dark');
-			} else {
-				document.documentElement.classList.remove('dark');
+	onMount(async () => {
+		try {
+			const [cols, keys] = await Promise.all([
+				getMyCollections(),
+				listApiKeys().catch(() => []),
+			]);
+			const col = (cols ?? []).find((c: any) => (c._id ?? c.id) === collectionId);
+			if (col) {
+				collectionSlug = col.slug || collectionId;
+				collectionName = col.name || 'Collection';
+				const cfg = col.embedConfig || {};
+				layout = cfg.layout || 'grid';
+				theme = cfg.theme === 'dark' ? 'dark' : 'light';
+				primaryColor = cfg.primaryColor || '#7C3AED';
+				backgroundColor = cfg.backgroundColor || (theme === 'dark' ? '#0B0F19' : '#FFFFFF');
+				textColor = cfg.textColor || (theme === 'dark' ? '#F8FAFC' : '#111827');
+				borderRadius = cfg.borderRadius ?? 12;
+				openMode = cfg.openMode || 'modal';
+				showSearch = cfg.showSearch !== false;
+				showTags = cfg.showTags !== false;
+				showPastEvents = cfg.showPastEvents === true;
+				redirectUrl = cfg.redirectUrl || '';
 			}
-		});
-
-		return unsubscribe;
+			publishableKeys = (keys || []).filter((k) => k.keyType === 'PUBLISHABLE' && k.status === 'ACTIVE');
+			if (publishableKeys[0]?.keyPrefix) selectedPk = `${publishableKeys[0].keyPrefix}...`;
+		} catch {
+			/* defaults */
+		} finally {
+			loading = false;
+		}
 	});
 
-	function setTheme(value: Theme) {
-		theme.set(value);
-	}
+	$: identifier = collectionSlug || collectionId;
+	$: queryStr = new URLSearchParams({
+		layout,
+		theme,
+		primary: primaryColor,
+		bg: backgroundColor,
+		text: textColor,
+		radius: String(borderRadius),
+		openMode,
+		showSearch: String(showSearch),
+		showTags: String(showTags),
+		showPastEvents: String(showPastEvents),
+		...(redirectUrl ? { redirectUrl } : {}),
+	}).toString();
 
-	let copied = false;
+	$: previewSrc = `/embed/collection/${encodeURIComponent(identifier)}?${queryStr}`;
 
-	// csp-ignore-next-line — a copyable code SAMPLE the organizer pastes on THEIR
-	// site. This app never creates this iframe, so it needs no frame-src entry.
-		const embedCode = `<iframe 
-  src="https://rondwell.com/embed/calendar/cal-QxJCmyPBjw5PKsT/events?" 
-  width="600" 
-  height="450" 
-  frameborder="0" 
-  style="border: 1px solid #bfcbda88; border-radius: 4px;" 
-  allowfullscreen=" 
-  aria-hidden="false" 
-  tabindex="0" 
-X/iframe>`;
-	function escapeHtml(str: any) {
-		return str
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;')
-			.replace(/'/g, '&#039;');
-	}
+	$: htmlSnippet =
+		`<div\n  data-rondwell-collection="${identifier}"\n  data-rondwell-pk="${selectedPk}"\n  data-rondwell-layout="${layout}"\n  data-rondwell-theme="${theme}"\n  data-rondwell-primary="${primaryColor}"\n  data-rondwell-radius="${borderRadius}"\n  data-rondwell-open-mode="${openMode}"${redirectUrl ? `\n  data-rondwell-redirect="${redirectUrl}"` : ''}\n></div>\n\n` +
+		// csp-ignore-next-line — copyable external SDK script snippet for organizer websites
+		`<script src="https://rondwell.com/sdk/v1/rondwell.js" async><\/script>`;
 
-	const copyToClipboard = (text: string) => {
-		navigator.clipboard
-			.writeText(text)
-			.then(() => {
-				console.log('Copied to clipboard');
-			})
-			.catch((err) => {
-				console.error('Failed to copy: ', err);
+	$: jsSnippet = `import Rondwell from '@rondwell/web-sdk';\n\nRondwell.init({ publishableKey: '${selectedPk}' });\n\nRondwell.mountCollection('#rondwell-events', '${identifier}', {\n  layout: '${layout}',\n  theme: '${theme}',\n  primaryColor: '${primaryColor}',\n  borderRadius: ${borderRadius},\n  openMode: '${openMode}',\n  showSearch: ${showSearch},\n  showTags: ${showTags},\n  showPastEvents: ${showPastEvents},${redirectUrl ? `\n  redirectUrl: '${redirectUrl}',` : ''}\n  onSuccess: (reg) => console.log('Registered:', reg.registrationId),\n});`;
+
+	$: reactSnippet = `import { useEffect, useRef } from 'react';\nimport { mountRondwellCollection } from '@rondwell/web-sdk/react';\n\nexport function CollectionEvents() {\n  const ref = useRef<HTMLDivElement>(null);\n  useEffect(() => mountRondwellCollection(ref.current, '${identifier}', {\n    publishableKey: '${selectedPk}',\n    layout: '${layout}',\n    theme: '${theme}',\n    primaryColor: '${primaryColor}',\n    openMode: '${openMode}',\n  }), []);\n  return <div ref={ref} />;\n}`;
+
+	$: iframeSnippet =
+		// csp-ignore-next-line — copyable HTML iframe snippet for organizer websites
+		`<iframe\n  src="https://rondwell.com/embed/collection/${identifier}?${queryStr}"\n  style="width:100%;min-height:620px;border:0;border-radius:${borderRadius}px;"\n  allow="payment *"\n></iframe>`;
+
+	async function saveConfig() {
+		if (!collectionId) return;
+		saving = true;
+		try {
+			await updateCollection(collectionId, {
+				embedConfig: {
+					enabled: true,
+					layout,
+					theme,
+					primaryColor,
+					backgroundColor,
+					textColor,
+					borderRadius: Number(borderRadius),
+					openMode,
+					showSearch,
+					showTags,
+					showPastEvents,
+					redirectUrl: redirectUrl.trim(),
+				},
 			});
-	};
+			toast.success('Collection SDK settings saved.');
+		} catch (e: any) {
+			toast.error(e?.message || 'Failed to save Collection SDK settings');
+		} finally {
+			saving = false;
+		}
+	}
+
+	function copyCode(text: string) {
+		navigator.clipboard?.writeText(text);
+		toast.success('Copied to clipboard');
+	}
 </script>
 
-<section class="p-4">
-	<div class="mb-4 flex flex-col justify-between gap-2">
-		<h2 class="text-lg font-semibold">Embed Collection</h2>
-		<p class="text-[#8C8F93]">
-			Have your own site? Embed your collection to easily share a live view of your upcoming events.
-		</p>
-	</div>
-
-	<div
-		class="lg:w-154.5 w-full rounded-md bg-gray-50 p-4 transition-colors duration-300 dark:bg-gray-950"
-	>
-		<div class="flex w-full flex-col items-center justify-between gap-2 lg:flex-row">
-			<div class="lg:gap-15 flex w-full justify-between px-8 lg:justify-start lg:px-0">
-				<div class="flex items-center justify-between gap-2 rounded-md bg-[#F4F4F4] p-1">
-					{#if mounted}
-						<button
-							on:click={() => setTheme('light')}
-							class="rounded-lg p-2 shadow-sm transition hover:scale-105"
-							aria-label="Toggle theme"
-						>
-							<svg
-								width="18"
-								height="18"
-								viewBox="0 0 18 18"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M9.06641 1.00488C13.1415 1.20045 16.3857 4.56689 16.3857 8.69043V9.31055C16.3857 13.4341 13.1415 16.7995 9.06641 16.9951V1.00488Z"
-									fill="#131517"
-									stroke="#131517"
-									stroke-width="0.75"
-								/>
-								<circle cx="9" cy="9" r="7.875" stroke="#131517" stroke-width="2.25" />
-							</svg>
-						</button>
-
-						<button
-							class="rounded-lg shadow-sm transition hover:scale-105"
-							aria-label="Toggle theme"
-						>
-							<svg
-								width="18"
-								height="18"
-								viewBox="0 0 18 18"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M13.6291 3.93359L13.5318 4.00398L9.0539 8.90641L8.99414 8.99735L9.01673 9.00701L13.6224 9.01422L13.6291 8.99735L17.9976 4.70878L13.6291 3.93359Z"
-									fill="#A3A4A4"
-								/>
-								<path
-									d="M13.6291 14.0638L13.6016 14.0702L9.01213 9.05751L8.99414 9H13.6291L17.9976 13.2355L13.6291 14.0638Z"
-									fill="#A3A4A4"
-								/>
-								<path
-									d="M8.99737 9L13.6323 14.0638L13.4182 18.0013L8.99737 13.4985L8.98593 13.4568L8.97656 9.06073L8.99737 9Z"
-									fill="#A3A4A4"
-								/>
-								<path
-									d="M4.08978 13.7816L4.08398 13.735L8.93964 9.03558L8.9982 9L8.99761 13.4988L4.60811 18.0016L4.08978 13.7816Z"
-									fill="#A3A4A4"
-								/>
-								<path
-									d="M8.9978 8.99781L4.08938 13.7794L0 13.2204L4.63729 8.99781L4.66271 8.97588L8.94236 8.97266L8.9978 8.99781Z"
-									fill="#A3A4A4"
-								/>
-								<path
-									d="M8.9978 9.00034L8.93924 8.90113L4.164 4.22396L4.08938 4.21875L0 4.81789L4.63729 9.00034H8.9978Z"
-									fill="#A3A4A4"
-								/>
-								<path
-									d="M4.08984 4.21742L8.99826 8.99901L9.02026 8.88063V4.58684L8.99767 4.5002L4.60252 0L4.08984 4.21742Z"
-									fill="#A3A4A4"
-								/>
-								<path
-									d="M8.99414 8.99871L13.6291 3.93495L13.3665 0L8.99414 4.5002V8.99871Z"
-									fill="#A3A4A4"
-								/>
-							</svg>
-						</button>
-
-						<div class=" ">
-							<button
-								on:click={() => setTheme('dark')}
-								class="rounded-lg p-2 shadow-sm transition hover:scale-105"
-								aria-label="Toggle theme"
-							>
-								<svg
-									class="h-5 w-5 text-gray-700"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-									/>
-								</svg>
-							</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="flex gap-2 rounded-md bg-[#F4F4F4] p-1">
-					<button
-						class="rounded-lg p-2 shadow-sm transition hover:scale-105"
-						aria-label="Toggle theme"
-					>
-						<svg
-							width="18"
-							height="18"
-							viewBox="0 0 18 18"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path
-								opacity="0.4"
-								d="M12.1425 1.5H5.8575C3.1275 1.5 1.5 3.1275 1.5 5.8575V12.135C1.5 14.8725 3.1275 16.5 5.8575 16.5H12.135C14.865 16.5 16.4925 14.8725 16.4925 12.1425V5.8575C16.5 3.1275 14.8725 1.5 12.1425 1.5Z"
-								fill="#292D32"
-							/>
-							<path
-								d="M11.8125 7.3125H6.1875C5.88 7.3125 5.625 7.0575 5.625 6.75C5.625 6.4425 5.88 6.1875 6.1875 6.1875H11.8125C12.12 6.1875 12.375 6.4425 12.375 6.75C12.375 7.0575 12.12 7.3125 11.8125 7.3125Z"
-								fill="#292D32"
-							/>
-							<path
-								d="M11.8125 11.8125H6.1875C5.88 11.8125 5.625 11.5575 5.625 11.25C5.625 10.9425 5.88 10.6875 6.1875 10.6875H11.8125C12.12 10.6875 12.375 10.9425 12.375 11.25C12.375 11.5575 12.12 11.8125 11.8125 11.8125Z"
-								fill="#292D32"
-							/>
-						</svg>
-					</button>
-
-					<button
-						class="rounded-lg p-2.5 shadow-sm transition hover:scale-105"
-						aria-label="Toggle theme"
-					>
-						<svg
-							width="17"
-							height="15"
-							viewBox="0 0 17 15"
-							fill="none"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<ellipse cx="1.5" cy="1.125" rx="1.5" ry="1.125" fill="#A5A6A5" />
-							<ellipse cx="1.5" cy="6.375" rx="1.5" ry="1.125" fill="#A5A6A5" />
-							<ellipse cx="1.5" cy="13.125" rx="1.5" ry="1.125" fill="#A5A6A5" />
-							<rect x="5.25" width="11.25" height="2.25" rx="1.125" fill="#A5A6A5" />
-							<rect x="5.25" y="6" width="11.25" height="2.25" rx="1.125" fill="#A5A6A5" />
-							<rect x="5.25" y="12" width="11.25" height="2.25" rx="1.125" fill="#A5A6A5" />
-						</svg>
-					</button>
-				</div>
-			</div>
-
-			<div class="item-center flex w-full justify-center">
-				<SelectDropdown bind:value={selected} {options} placeholder="All Events" />
-			</div>
+<div class="space-y-6 py-6">
+	<div class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5">
+		<div>
+			<h2 class="text-lg font-bold text-gray-900">Collection Web SDK &amp; Embed Studio</h2>
+			<p class="mt-0.5 text-sm text-gray-600">
+				Stream all events in <span class="font-semibold">{collectionName}</span> into your website with instant modal registration.
+			</p>
 		</div>
-
-		<div class="mt-4 flex flex-col items-center justify-center gap-4 rounded-md bg-[#F4F5F6] pb-20">
-			<img src="/noEvent.svg" alt="No Events" class="ml-4 h-60 w-60" />
-			<h2 class="text-lg font-semibold text-[#646568]">No Upcoming Events, yet</h2>
-			<p class="max-w-md text-center text-[#A2ACB2]">Check back later for new events.</p>
+		<div class="flex gap-2">
+			<a href="/settings?tab=developers" class="rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-semibold text-gray-800 hover:bg-gray-50">
+				Manage SDK Keys
+			</a>
+			<a href="/api-docs#sdk-collection" class="rounded-lg bg-gray-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-gray-800">
+				Collection SDK Docs
+			</a>
 		</div>
 	</div>
 
-	<div class="my-4 sm:my-6">
-		<p class="mb-2 text-sm text-[#838486] sm:mb-3 sm:text-base">Code to Copy</p>
-		<div class="md:max-w-158 lg:max-w-auto relative">
-			<div
-				class="custom-scrollbar overflow-x-auto rounded-lg border border-gray-200 bg-white p-3 text-xs shadow-sm sm:p-5 sm:text-sm"
-			>
-				<pre class=""><code>{escapeHtml(embedCode)}</code></pre>
+	<div class="grid gap-6 lg:grid-cols-12">
+		<div class="space-y-4 rounded-xl border border-gray-200 bg-white p-5 lg:col-span-5">
+			<h3 class="text-sm font-bold text-gray-900">Appearance &amp; Behavior</h3>
+
+			<div>
+				<label class="text-xs font-semibold text-gray-700">Publishable SDK Key</label>
+				{#if publishableKeys.length > 0}
+					<select bind:value={selectedPk} class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs font-mono">
+						{#each publishableKeys as k}
+							<option value="{k.keyPrefix}...">{k.name} ({k.keyPrefix}…)</option>
+						{/each}
+					</select>
+				{:else}
+					<p class="mt-1 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">
+						<a href="/settings?tab=developers" class="font-semibold underline">Generate a Publishable Key</a> in Account Settings.
+					</p>
+				{/if}
 			</div>
+
+			<div class="grid grid-cols-2 gap-3">
+				<div>
+					<label class="text-xs font-semibold text-gray-700">Layout</label>
+					<select bind:value={layout} class="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-2 text-xs">
+						<option value="grid">Grid</option>
+						<option value="list">List</option>
+						<option value="cards">Compact Cards</option>
+					</select>
+				</div>
+				<div>
+					<label class="text-xs font-semibold text-gray-700">Theme</label>
+					<select bind:value={theme} class="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-2 text-xs">
+						<option value="light">Light</option>
+						<option value="dark">Dark</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="grid grid-cols-3 gap-3">
+				<div>
+					<label class="text-xs font-semibold text-gray-700">Accent</label>
+					<input type="color" bind:value={primaryColor} class="mt-1 h-9 w-full cursor-pointer rounded border border-gray-300" />
+				</div>
+				<div>
+					<label class="text-xs font-semibold text-gray-700">Background</label>
+					<input type="color" bind:value={backgroundColor} class="mt-1 h-9 w-full cursor-pointer rounded border border-gray-300" />
+				</div>
+				<div>
+					<label class="text-xs font-semibold text-gray-700">Radius ({borderRadius}px)</label>
+					<input type="range" min="0" max="24" bind:value={borderRadius} class="mt-3 w-full" />
+				</div>
+			</div>
+
+			<div>
+				<label class="text-xs font-semibold text-gray-700">When Visitor Clicks Register</label>
+				<select bind:value={openMode} class="mt-1 w-full rounded-lg border border-gray-300 px-2.5 py-2 text-xs">
+					<option value="modal">Open Event Page SDK Modal (Recommended)</option>
+					<option value="inline">Open Inline Inside Widget</option>
+					<option value="new_tab">Open in New Tab</option>
+				</select>
+			</div>
+
+			<div>
+				<label class="text-xs font-semibold text-gray-700">Post-Registration Redirect URL (Optional)</label>
+				<!-- csp-ignore-next-line — placeholder text -->
+				<input bind:value={redirectUrl} placeholder="https://yoursite.com/registered" class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs" />
+			</div>
+
+			<div class="grid grid-cols-2 gap-2 text-xs">
+				<label class="flex items-center gap-2"><input type="checkbox" bind:checked={showSearch} /> Search Bar</label>
+				<label class="flex items-center gap-2"><input type="checkbox" bind:checked={showTags} /> Tag Filters</label>
+				<label class="flex items-center gap-2"><input type="checkbox" bind:checked={showPastEvents} /> Include Past Events</label>
+			</div>
+
 			<button
-				on:click={() => copyToClipboard(embedCode)}
-				class="absolute right-3 top-3 flex items-center gap-1 rounded-md bg-[#F6F6F6] p-2 text-xs font-medium text-[#616265] transition-colors hover:bg-gray-100 sm:right-4 sm:top-4"
+				type="button"
+				disabled={saving}
+				on:click={saveConfig}
+				class="w-full rounded-lg bg-gray-900 py-2.5 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
 			>
-				<img src="/copy.svg" alt="" />
-				Copy
+				{saving ? 'Saving…' : 'Save Collection SDK Settings'}
 			</button>
 		</div>
-	</div>
 
-	<div class="text-md mt-4 rounded-md px-3 py-1 text-[#838486] transition">
-		You can change the width and height attributes above to fit the size of your page.
+		<div class="space-y-5 lg:col-span-7">
+			<div class="rounded-xl border border-gray-200 bg-white p-5">
+				<h3 class="mb-3 text-sm font-bold text-gray-900">Live Collection SDK Preview</h3>
+				{#if !loading && identifier}
+					<iframe
+						title="Collection SDK Preview"
+						src={previewSrc}
+						class="h-[460px] w-full rounded-xl border border-gray-200"
+					></iframe>
+				{:else}
+					<div class="h-64 animate-pulse rounded-xl bg-gray-100"></div>
+				{/if}
+			</div>
+
+			<div class="rounded-xl border border-gray-200 bg-white p-5">
+				<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+					<div class="flex gap-1.5">
+						{#each [['html', 'HTML Web SDK'], ['js', 'JS SDK'], ['react', 'React'], ['iframe', 'iFrame']] as [id, label]}
+							<button
+								type="button"
+								on:click={() => (snippetTab = id as any)}
+								class="rounded-lg px-3 py-1.5 text-xs font-semibold {snippetTab === id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}"
+							>
+								{label}
+							</button>
+						{/each}
+					</div>
+					<button
+						type="button"
+						on:click={() => copyCode(snippetTab === 'html' ? htmlSnippet : snippetTab === 'js' ? jsSnippet : snippetTab === 'react' ? reactSnippet : iframeSnippet)}
+						class="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+					>
+						Copy Code
+					</button>
+				</div>
+				<pre class="max-h-72 overflow-auto rounded-lg bg-slate-950 p-4 font-mono text-xs text-slate-100"><code>{snippetTab === 'html' ? htmlSnippet : snippetTab === 'js' ? jsSnippet : snippetTab === 'react' ? reactSnippet : iframeSnippet}</code></pre>
+			</div>
+		</div>
 	</div>
-</section>
+</div>

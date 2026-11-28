@@ -35,6 +35,24 @@ export async function getEventAnalyticsOverview(eventId: string) {
   return fetchJSON<any>(`${ANALYTICS_API}/events/${eventId}/overview`);
 }
 
+export async function getEventComprehensiveAnalytics(eventId: string) {
+  return fetchJSON<any>(`${ANALYTICS_API}/events/${eventId}/comprehensive`);
+}
+
+export async function getEventAttendanceAnalytics(eventId: string) {
+  return fetchJSON<any>(`${ANALYTICS_API}/events/${eventId}/attendance`);
+}
+
+export async function getEventSeatingAnalytics(eventId: string) {
+  return fetchJSON<any>(`${ANALYTICS_API}/events/${eventId}/seating`);
+}
+
+export async function exportEventAnalytics(eventId: string, format: 'json' | 'csv' = 'json') {
+  const res = await authFetch(`${ANALYTICS_API}/events/${eventId}/export?format=${format}`);
+  if (!res.ok) return null;
+  return format === 'csv' ? res.text() : (await res.json())?.data;
+}
+
 export async function getEventRegistrations(eventId: string) {
   return fetchJSON<any>(`${ANALYTICS_API}/events/${eventId}/registrations`);
 }

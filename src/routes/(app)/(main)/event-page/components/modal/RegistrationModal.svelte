@@ -32,6 +32,10 @@
 	export let registrationFields: any[] = [];
 	export let ticketQuantity: number = 1;
 	export let isGroupRegistration: boolean = false;
+	export let eventIdOverride: string = '';
+	export let embedMode: boolean = false;
+	export let themeOverride: Color | null = null;
+	export let onRegistrationSuccess: ((payload: any) => void) | null = null;
 	/**
 	 * Celebration-layer flags RESOLVED by the server (`/public` → `features`).
 	 *
@@ -41,8 +45,23 @@
 	 */
 	export let features: any = null;
 
-	$: eventId = $page.params.id ?? '';
-	$: themeColor = eventId ? getEventTheme(eventId) : colors[0];
+	$: eventId = eventIdOverride || $page.params.id || eventData?._id || '';
+	$: themeColor = themeOverride ?? (eventId ? getEventTheme(eventId) : colors[0]);
+
+	function emitRegistrationSuccess(reg: any) {
+		if (!onRegistrationSuccess || !reg) return;
+		onRegistrationSuccess({
+			registrationId: reg.registration_id,
+			attendeeId: reg.attendeeId,
+			eventId,
+			ticketTypeId: selectedTicketId || reg.ticketTypeId,
+			seatId: reg.registration_data?.linked_seat_id || undefined,
+			status: reg.attendee_status || 'ATTENDING',
+			email: reg.attendee_details?.email || email.trim().toLowerCase(),
+			firstName: reg.attendee_details?.firstName || firstName.trim(),
+			lastName: reg.attendee_details?.lastName || lastName.trim(),
+		});
+	}
 
 	/**
 	 * GAP 9 — the promoter code this visitor arrived with, if any.
@@ -653,6 +672,7 @@
 					// (every seat finalized, invites sent) inside register/group, so
 					// there is nothing to finalize from here. Just show the ticket.
 					registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
+					emitRegistrationSuccess(registrationResult);
 					step = nextStepAfterRegistration();
 				}
 				return;
@@ -718,6 +738,7 @@
 				if (finalizeRes.ok) {
 					registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
 				}
+				emitRegistrationSuccess(registrationResult);
 				step = nextStepAfterRegistration();
 			}
 		} catch (e: any) {
@@ -1096,6 +1117,7 @@
 								if (confirmed) {
 									registrationResult.attendee_status = selectedTicket?.requiresApproval ? 'UNAPPROVED' : 'ATTENDING';
 									pendingConfirmation = false;
+									emitRegistrationSuccess(registrationResult);
 								} else {
 									// Leave the status as the server last reported it and tell
 									// the user their ticket is still being confirmed, rather

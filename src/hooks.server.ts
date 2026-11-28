@@ -30,6 +30,12 @@ import { verifySession, SESSION_COOKIE } from '$lib/server/session';
  */
 const PROTECTED_PREFIXES = [
 	'/dashboard',
+	'/overview',
+	'/events',
+	'/collection',
+	'/gift',
+	'/promotions',
+	'/subscription',
 	'/settings',
 	'/account',
 	'/wallet',
@@ -120,20 +126,33 @@ export const handle: Handle = async ({ event, resolve }) => {
 		throw redirect(302, `/auth?returnUrl=${encodeURIComponent(returnTo)}`);
 	}
 
+	const isEmbed = event.url.pathname.startsWith('/embed/');
+	const isCheckinEmbed = event.url.pathname.startsWith('/embed/checkin');
+
 	const response = await resolve(event);
 
 	/**
 	 * M-07 — the security headers a CSP does not cover.
 	 *
-	 * The `Content-Security-Policy` itself is generated per request by
-	 * SvelteKit from `svelte.config.js` (`kit.csp`, nonce mode) — it is not set
-	 * here, because SvelteKit has to know the nonce it stamped into the page.
-	 * These are the rest, and before this change the app sent none of them.
+	 * Embed routes (`/embed/*`) intentionally run inside partner iframes, so we
+	 * omit `X-Frame-Options: DENY` and relax `frame-ancestors` strictly for `/embed/*`
+	 * while keeping full clickjacking protection everywhere else.
 	 */
-
-	// Belt and braces with `frame-ancestors 'none'`, for browsers that predate
-	// CSP Level 2.
-	response.headers.set('X-Frame-Options', 'DENY');
+	if (isEmbed) {
+		response.headers.delete('X-Frame-Options');
+		const csp = response.headers.get('Content-Security-Policy');
+		if (csp) {
+			response.headers.set(
+				'Content-Security-Policy',
+				csp.replace(
+					/frame-ancestors\s+'none'/i,
+					"frame-ancestors 'self' https: http://localhost:* http://127.0.0.1:*"
+				)
+			);
+		}
+	} else {
+		response.headers.set('X-Frame-Options', 'DENY');
+	}
 
 	// Stops a browser MIME-sniffing a JSON or text response into something
 	// executable — the classic way an upload endpoint becomes an XSS vector.
@@ -145,35 +164,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// to third-party sites in a Referer header.
 	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-	/**
-	 * Deny the powerful APIs this app never uses, so an injected script cannot
-	 * reach for them either.
-	 *
-	 * `geolocation` and `payment` are NOT among them, and denying them broke two
-	 * shipped features silently:
-	 *
-	 *   - `geolocation=()` denies the API to every origin **including this one**,
-	 *     so `navigator.geolocation.getCurrentPosition` never even prompts. Three
-	 *     live call sites depend on it — the Create Event region/timezone
-	 *     prefill, `AddressAutocomplete`'s proximity bias, and
-	 *     `ExternalEventModal`. The permission prompt simply stopped appearing,
-	 *     which reads as "the location picker is broken".
-	 *   - `payment=()` disables the Payment Request API, which is how Paystack
-	 *     and Stripe offer Apple Pay / Google Pay inside their checkout frames.
-	 *
-	 * Both are now `(self ...)` rather than open: this origin may use them, and
-	 * for `payment` the two payment frames may too. Everything the app genuinely
-	 * never touches stays denied.
-	 *
-	 * `interest-cohort` is dropped. FLoC was removed from Chrome, and naming a
-	 * feature the browser does not know logs
-	 * `Error with Permissions-Policy header: Unrecognized feature` on every
-	 * response — noise that trains people to ignore the console.
-	 */
 	response.headers.set(
 		'Permissions-Policy',
 		[
-			'camera=()',
+			isCheckinEmbed ? 'camera=(self)' : 'camera=()',
 			'microphone=()',
 			'usb=()',
 			'geolocation=(self)',

@@ -1,0 +1,14 @@
+{
+  "name": "@rondwell/web-sdk",
+  "version": "1.0.0",
+  "description": "Rondwell Web SDK for embeddable Event Page registration modals, seat maps, and Collection widgets.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "src"],
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react.ts"
+  },
+  "keywords": ["rondwell", "events", "tickets", "seating", "sdk", "embed"],
+  "license": "MIT"
+}

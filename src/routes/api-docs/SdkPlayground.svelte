@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
 	import Icon from '@iconify/svelte';
+	import { portal } from '$lib/utils/portal';
 	import CustomSelect, { type SelectOption } from '$lib/components/CustomSelect.svelte';
 
 	let sdkType: 'event' | 'collection' = 'event';
@@ -159,7 +160,8 @@
 {#if modalOpen && previewUrl}
 	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-2 backdrop-blur-sm sm:px-4"
+		use:portal
+		class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-2 backdrop-blur-sm sm:px-4"
 		role="dialog"
 		aria-modal="true"
 		aria-label="Web SDK interactive preview"

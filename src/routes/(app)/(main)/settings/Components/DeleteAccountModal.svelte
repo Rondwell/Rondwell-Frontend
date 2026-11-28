@@ -15,8 +15,10 @@
 	import { confirmAccountDeletion, requestAccountDeletion } from '$lib/services/wallet.services';
 	import { clearUser } from '$lib/stores/auth.store';
 	import { goto } from '$app/navigation';
+	import { portal } from '$lib/utils/portal';
 	import Icon from '@iconify/svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { fade, scale } from 'svelte/transition';
 
 	export let open = false;
 
@@ -91,18 +93,21 @@
 
 {#if open}
 	<div
+		use:portal
 		on:click={close}
 		on:keydown={(e) => e.key === 'Escape' && close()}
-		class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-3"
+		class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
 		role="dialog"
 		aria-modal="true"
 		tabindex="-1"
+		transition:fade={{ duration: 140 }}
 	>
 		<div
-			class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
+			class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-gray-100 bg-white p-5 shadow-2xl"
 			role="document"
 			on:click|stopPropagation
 			on:keydown|stopPropagation
+			transition:scale={{ duration: 160, start: 0.97 }}
 		>
 			{#if mode === 'done'}
 				<!-- Deletion complete — brief confirmation before redirect. -->

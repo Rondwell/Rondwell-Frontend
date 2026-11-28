@@ -9,8 +9,10 @@
 	import { authState } from '$lib/stores/auth.store';
 	import { financialErrorMessage } from '$lib/utils/financialErrorCopy';
 	import { clickOutside } from '$lib/utils/constant';
+	import { portal } from '$lib/utils/portal';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
+	import { fade, scale } from 'svelte/transition';
 	import SettingsLinkCard from './SettingsLinkCard.svelte';
 
 	$: isOrganizer = $authState.activeProfile?.role === 'ORGANIZER';
@@ -238,8 +240,23 @@
 
 <!-- Add Bank Modal -->
 {#if showAddBankModal}
-<div on:click={() => (showAddBankModal = false)} on:keydown={(e) => e.key === 'Escape' && (showAddBankModal = false)} class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3" role="dialog" aria-modal="true" tabindex="-1">
-<div class="w-full max-w-md overflow-hidden rounded-xl bg-[#F4F5F6] shadow-xl" role="document" on:click|stopPropagation on:keydown|stopPropagation>
+<div
+	use:portal
+	on:click={() => (showAddBankModal = false)}
+	on:keydown={(e) => e.key === 'Escape' && (showAddBankModal = false)}
+	class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+	role="dialog"
+	aria-modal="true"
+	tabindex="-1"
+	transition:fade={{ duration: 140 }}
+>
+<div
+	class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-gray-100 bg-[#F4F5F6] shadow-2xl"
+	role="document"
+	on:click|stopPropagation
+	on:keydown|stopPropagation
+	transition:scale={{ duration: 160, start: 0.97 }}
+>
 	<div class="px-6 py-6">
 		<div class="mb-5 flex items-center justify-between">
 			<h2 class="text-xl font-semibold">Add Bank Account</h2>

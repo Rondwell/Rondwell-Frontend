@@ -2,6 +2,7 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { fade, scale } from 'svelte/transition';
 	import Icon from '@iconify/svelte';
+	import { portal } from '$lib/utils/portal';
 	import {
 		createWebhook,
 		deleteWebhook,
@@ -302,7 +303,8 @@
 {#if showCreate}
 	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+		use:portal
+		class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
 		role="dialog"
 		aria-modal="true"
 		aria-label="Add webhook endpoint"

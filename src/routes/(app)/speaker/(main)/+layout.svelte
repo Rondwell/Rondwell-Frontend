@@ -171,11 +171,12 @@
 </div>
 
 <style>
+	/* Do NOT put backdrop-filter / transform / filter on .bg: it wraps <slot />
+	   and creates a containing block that traps all `position: fixed` modals
+	   inside the scrollable main column instead of the viewport. */
 	.bg {
-		background: rgba(255, 255, 255, 0.58);
-		backdrop-filter: blur(20px) saturate(180%);
-		-webkit-backdrop-filter: blur(20px) saturate(180%);
-		border: 1px solid rgba(255, 255, 255, 0.8);
+		background: rgba(255, 255, 255, 0.72);
+		border: 1px solid rgba(255, 255, 255, 0.85);
 		box-shadow:
 			0 12px 36px -8px rgba(18, 16, 36, 0.08),
 			inset 0 1px 0 rgba(255, 255, 255, 0.85);

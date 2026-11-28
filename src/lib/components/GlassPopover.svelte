@@ -28,6 +28,7 @@
 	/** Force the panel to the trigger's width (used by the hero search field). */
 	export let matchAnchorWidth = false;
 	export let sheetOnMobile = true;
+	export let dark = false;
 	export let label = '';
 	export let panelClass = '';
 	/** Extra elements that should not count as "outside" (e.g. a second trigger). */
@@ -195,7 +196,7 @@
 		{#if isSheet}
 			<div class="sheet-grip" aria-hidden="true"></div>
 		{/if}
-		<div class="glass-panel {panelClass}" style="--gp-max-h:{availableHeight}px">
+		<div class="glass-panel {dark ? 'is-dark' : ''} {panelClass}" style="--gp-max-h:{availableHeight}px">
 			<slot maxHeight={availableHeight} />
 		</div>
 	</div>
@@ -241,6 +242,22 @@
 		pointer-events: none;
 	}
 
+	.glass-panel.is-dark {
+		border-color: rgba(148, 163, 184, 0.22);
+		background:
+			linear-gradient(158deg, rgba(23, 22, 30, 0.96) 0%, rgba(15, 23, 42, 0.94) 55%, rgba(28, 22, 52, 0.95) 100%);
+		color: #f8fafc;
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.12),
+			inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+			0 8px 18px -4px rgba(2, 6, 23, 0.55),
+			0 28px 60px -16px rgba(2, 6, 23, 0.72);
+	}
+
+	.glass-panel.is-dark::before {
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
+	}
+
 	.glass-popover.is-sheet .glass-panel {
 		border-radius: 22px;
 	}
@@ -257,6 +274,9 @@
 	@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
 		.glass-panel {
 			background: #fdfcff;
+		}
+		.glass-panel.is-dark {
+			background: #0f172a;
 		}
 	}
 
